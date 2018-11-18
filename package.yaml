@@ -1,0 +1,91 @@
+name:               yet-another-haskell-discord-library
+version:            0.1.0.0
+github:             "nitros12/yet-another-haskell-discord-library"
+license:            BSD3
+author:             "Ben Simms"
+maintainer:         "ben@bensimms.moe"
+copyright:          "2018 Ben Simms"
+
+extra-source-files:
+- README.md
+- ChangeLog.md
+
+# Metadata used when publishing your package
+# synopsis:            Short description of your package
+# category:            Web
+
+# To avoid duplicated efforts in documentation and dealing with the
+# complications of embedding Haddock markup inside cabal files, it is
+# common to point users to the README.md file.
+description:        Please see the README on GitHub at <https://github.com/nitros12/yet-another-haskell-discord-library#readme>
+
+dependencies:
+- base-noprelude >= 4.7 && < 5
+- websockets >= 0.12
+- wuss >= 1.1
+- wreq >= 0.5
+- lens >= 4.17
+- stm >= 2.4
+- http-types >= 0.12
+- aeson >= 1.4
+- lens-aeson >= 1.0
+- freer-simple >= 1.2
+- typerep-map >= 0.3
+- protolude >= 0.2
+- streamly >= 0.5
+
+
+library:
+  source-dirs: src
+
+default-extensions:
+  - NoMonomorphismRestriction
+  - AutoDeriveTypeable
+  - BangPatterns
+  - BinaryLiterals
+  - ConstraintKinds
+  - DataKinds
+  - DefaultSignatures
+  - DeriveDataTypeable
+  - DeriveFoldable
+  - DeriveFunctor
+  - DeriveGeneric
+  - DeriveTraversable
+  - DoAndIfThenElse
+  - EmptyDataDecls
+  - ExistentialQuantification
+  - FlexibleContexts
+  - FlexibleInstances
+  - FunctionalDependencies
+  - GADTs
+  - GeneralizedNewtypeDeriving
+  - InstanceSigs
+  - KindSignatures
+  - LambdaCase
+  - MonadFailDesugaring
+  - MultiParamTypeClasses
+  - MultiWayIf
+  - NamedFieldPuns
+  - OverloadedStrings
+  - PartialTypeSignatures
+  - PatternGuards
+  - PolyKinds
+  - RankNTypes
+  - RecordWildCards
+  - ScopedTypeVariables
+  - StandaloneDeriving
+  - TupleSections
+  - TypeFamilies
+  - TypeSynonymInstances
+  - ViewPatterns
+
+tests:
+  yet-another-haskell-discord-library-test:
+    main:                Spec.hs
+    source-dirs:         test
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - yet-another-haskell-discord-library
