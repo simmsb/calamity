@@ -33,6 +33,9 @@ dependencies:
 - typerep-map >= 0.3
 - protolude >= 0.2
 - streamly >= 0.5
+- generic-lens >= 1.0
+- transformers >= 0.5
+- text >= 0.2
 
 
 library:
@@ -76,8 +79,10 @@ default-extensions:
   - StandaloneDeriving
   - TupleSections
   - TypeFamilies
+  - TypeApplications
   - TypeSynonymInstances
   - ViewPatterns
+  - DuplicateRecordFields
 
 tests:
   yet-another-haskell-discord-library-test:

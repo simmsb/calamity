@@ -1,7 +1,16 @@
--- |
+-- | Prelude for this library
 
 module Prelude
   ( module Protolude
-  ) where
+  , module Data.Generics.Sum
+  , module Data.Generics.Product
+  , module Control.Lens
+  )
+where
 
-import Protolude
+import           Protolude               hiding ( HasField
+                                                , getField
+                                                )
+import           Data.Generics.Product   hiding ( list )
+import           Data.Generics.Sum
+import           Control.Lens                   ( (^.) )

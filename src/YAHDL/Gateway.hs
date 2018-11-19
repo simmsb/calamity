@@ -1,7 +1,7 @@
 -- |
 
 module YAHDL.Gateway
-  ( module YAHDL.Gateway.Gateway
+  ( module YAHDL.Gateway.Shard
   ) where
 
-import YAHDL.Gateway.Gateway
+import YAHDL.Gateway.Shard
