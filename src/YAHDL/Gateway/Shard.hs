@@ -7,6 +7,7 @@ module YAHDL.Gateway.Shard
 where
 
 import           Control.Monad.Trans.Maybe
+import           Control.Monad.Trans.Except
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
 import           Data.Text.Strict.Lens
@@ -85,7 +86,7 @@ shardLoop shard = outerloop >> pure ()
   mergedStream wsConn = S.async controlStream (discordStream wsConn)
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
-  outerloop = runMaybeT . liftIO . forever $ do
+  outerloop = runExceptT . liftIO . forever $ do
     host <- isEmptyMVar (shard ^. field @"wsHost") >>= \case
       True -> do
         host <- getGatewayHost
@@ -100,5 +101,6 @@ shardLoop shard = outerloop >> pure ()
   innerloop wsConn =
     S.runStream $ mergedStream wsConn & S.mapM (atomically . handleMsg)
 
+  -- | Handlers for each message, not sure what they'll need to do exactly yet
   handleMsg (Discord msg) = pure ()
   handleMsg (Control msg) = pure ()
