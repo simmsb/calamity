@@ -36,6 +36,7 @@ dependencies:
 - generic-lens >= 1.0
 - transformers >= 0.5
 - text >= 0.2
+- concurrent-state >= 0.6
 
 
 library:

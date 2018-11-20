@@ -45,6 +45,8 @@ extra-deps:
   - streamly-0.5.2@sha256:5a00c20700bfbe37b356dcdca5db8866d41661223bf8593cbbe4906ef553df36
   - base-noprelude-4.11.1.0
   - primitive-0.6.4.0@sha256:5b6a2c3cc70a35aabd4565fcb9bb1dd78fe2814a36e62428a9a1aae8c32441a1
+  - github: nitros12/concurrent-state
+    commit: 35423e9b42925dcb80a44f6e3dc70775baafca37
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
