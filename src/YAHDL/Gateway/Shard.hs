@@ -21,27 +21,27 @@ import           Network.WebSockets             ( Connection
                                                 , sendClose
                                                 , sendTextData
                                                 )
-import           Data.Aeson
+import qualified Data.Aeson                    as A
 
 import           YAHDL.Gateway.Types
 
 newShardState :: ShardState
-newShardState = ShardState None None None False
+newShardState = ShardState Nothing Nothing Nothing False
 
 -- | Creates and launches a shard
 newShard :: Integer -> Text -> TChan () -> IO (Shard, Async ())
 newShard id token evtChan = do
   cmdChan' <- newTChanIO
-  stateVar  <- newTVarIO newShardState
+  stateVar <- newTVarIO newShardState
 
   let shard = Shard id evtChan cmdChan' stateVar token
 
-  thread' <- async . shardLoop $ shard
+  thread' <- async . runShardM shard . shardLoop $ shard
 
   pure (shard, thread')
 
 runShardM :: Shard -> ShardM a -> IO a
-runShardM shard action = evalStateC (unShardM action) (shard ^. field @"shardState")
+runShardM shard action = evalStateC action (shard ^. shardState)
 
 extractMaybeStream :: (S.IsStream t, Monad m) => t m (Maybe a) -> t m a
 extractMaybeStream = S.mapMaybe identity
@@ -58,43 +58,32 @@ shardLoop :: Shard -> ShardM ()
 shardLoop shard = outerloop $> ()
  where
   controlStream = S.repeatM $ do
-    msg <- atomically . readTChan $ (shard ^. field @"cmdChan")
+    msg <- atomically . readTChan $ (shard ^. cmdChan)
     pure . Control $ msg
 
   discordStream wsConn = extractMaybeStream . S.repeatM . runMaybeT $ do
     msg <- liftIO $ receiveData wsConn
-    d   <- liftMaybe . decode $ msg
+    d   <- liftMaybe . A.decode $ msg
     pure . Discord $ d
 
   mergedStream wsConn = S.async controlStream (discordStream wsConn)
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
-  outerloop = runExceptT . liftIO . forever $ do
+  -- Currently if this goes to the error path we just exit the forever loop
+  -- and the shard stops, maybe we might want to do some extra logic to reboot
+  -- the shard, or maybe force a resharding
+  outerloop = runExceptT . forever $ do
     state <- get
 
-    host <- case state ^. field @"wsHost" of
-      Just host ->
-        pure host
-      Nothing -> do
+    host  <- case state ^. wsHost of
+      Just host -> pure host
+      Nothing   -> do
         host <- liftIO getGatewayHost
-        field @"wsHost" .= host
+        wsHost ?= host
         pure host
 
-    -- host <- get >>= (field @"wsHost" %= \case
-    --                    Just field -> pure field
-    --                    Nothing -> do
-    --                      host <- getGatewayHost
-
-    --                    )
-
-    -- host <- isEmptyMVar (shard ^. field @"wsHost") >>= \case
-    --   True -> do
-    --     host <- getGatewayHost
-    --     putMVar (shard ^. field @"wsHost") host
-    --     pure host
-    --   _ -> readMVar (shard ^. field @"wsHost")
-
-    liftIO $ runSecureClient (host ^. unpacked) 443 "/?v=7&encoding=json" innerloop
+    liftIO
+      $ runSecureClient (host ^. unpacked) 443 "/?v=7&encoding=json" innerloop
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- | and then decides what to do with it
@@ -106,15 +95,14 @@ shardLoop shard = outerloop $> ()
   handleMsg (Control msg) = pure ()
 
 
-sendHeartBeat :: Shard -> IO ()
-sendHeartBeat shard = undefined
+sendHeartBeat :: Shard -> ShardM ()
+sendHeartBeat shard = pure ()
 
-
-heartBeatLoop :: Shard -> IO ()
-heartBeatLoop shard = loop >> final
+heartBeatLoop :: Shard -> ShardM ()
+heartBeatLoop shard = liftIO loop >> final
  where
   loop = forever . runMaybeT $ do
     pure ()
     pure ()
 
-  final = tryTakeMVar (shard ^. field @"hbThread") $> ()
+  final = hbThread .= Nothing
