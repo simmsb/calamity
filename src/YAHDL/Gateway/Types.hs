@@ -18,6 +18,7 @@ import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.STM.TMVar
 import           Control.Monad.State.Concurrent.Strict
+import           Network.WebSockets.Connection  ( Connection )
 
 -- TODO: change this from RawDiscordMessage to DiscordMessage, add decoder & handler
 data ShardMsg = Discord RawDiscordMessage | Control ControlMessage
@@ -44,10 +45,13 @@ data Shard = Shard
   } deriving (Generic)
 
 data ShardState = ShardState
-  { _seqNum :: Maybe Integer
+  { _shardS :: Shard
+  , _seqNum :: Maybe Integer
   , _hbThread :: Maybe (Async ())
   , _wsHost :: Maybe Text
   , _wsResponse :: Bool
+  , _sessionID :: Maybe Integer
+  , _wsConn :: Maybe Connection
   } deriving (Generic)
 
 makeLenses ''Shard

@@ -17,4 +17,6 @@ import           Protolude               hiding ( HasField
 import           Control.Lens                   ( (^.)
                                                 , (.=)
                                                 , (?=)
+                                                , (%=)
+                                                , use
                                                 )
