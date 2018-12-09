@@ -37,6 +37,7 @@ dependencies:
 - transformers >= 0.5
 - text >= 0.2
 - concurrent-state >= 0.6
+- monad-log >= 0.1
 
 
 library:
@@ -47,6 +48,7 @@ default-extensions:
   - AutoDeriveTypeable
   - BangPatterns
   - BinaryLiterals
+  - UndecidableInstances
   - ConstraintKinds
   - DataKinds
   - DefaultSignatures

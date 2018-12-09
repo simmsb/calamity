@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-12.17
+resolver: nightly-2018-12-08
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -38,13 +38,9 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
-  - lens-4.17@sha256:534febcd710980b3c30efe12813e865b09fc6086a4ed6b7a6a8885f27caee3a6
-  - aeson-1.4.1.0@sha256:a72639fbf44d5c2d5270fb6d9484629ed332d3029987fafd7580b5204265fb8b
-  - freer-simple-1.2.0.0@sha256:8e48416a24a066dc3595ecdc525323183f4862f2c2909a686898af4a6dd1e37c
   - typerep-map-0.3.0@sha256:db693ef3ebbbd44722c5547a78ebbd29efc746923d8cb18744c2049acbe35480
-  - streamly-0.5.2@sha256:5a00c20700bfbe37b356dcdca5db8866d41661223bf8593cbbe4906ef553df36
-  - base-noprelude-4.11.1.0
-  - primitive-0.6.4.0@sha256:5b6a2c3cc70a35aabd4565fcb9bb1dd78fe2814a36e62428a9a1aae8c32441a1
+  - monad-log-0.1.1.0@sha256:35297bec3e2c8483b8e291ff62e5cb5d2aa01e24a7563812648f213e1b1eace2
+  - text-show-3.7.5@sha256:9acf5d44bf2d577eca2caf4ebf8b2dd9f9e102c4345e304141a4d89ae2fd0ced
   - github: nitros12/concurrent-state
     commit: 35423e9b42925dcb80a44f6e3dc70775baafca37
 
