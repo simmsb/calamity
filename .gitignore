@@ -20,3 +20,5 @@ cabal.sandbox.config
 *.eventlog
 cabal.project.local
 .HTF/
+tags
+TAGS
