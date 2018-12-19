@@ -38,6 +38,7 @@ dependencies:
 - text >= 0.2
 - concurrent-state >= 0.6
 - monad-log >= 0.1
+- exceptions >= 0.10
 
 
 library:
