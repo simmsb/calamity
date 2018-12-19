@@ -49,7 +49,7 @@ newShard id token logEnv evtChan = mdo
 
 runShardM :: Shard -> Logger env -> ShardM env a -> IO a
 runShardM shard logEnv = evalStateC' . runLogTSafe logEnv . unShardM
-  where evalStateC' s = evalStateC s (shard ^. shardState)
+  where evalStateC' s = evalStateC s (shard ^. #shardState)
 
 extractMaybeStream :: (S.IsStream t, Monad m) => t m (Maybe a) -> t m a
 extractMaybeStream = S.mapMaybe identity
@@ -66,7 +66,7 @@ shardLoop :: ShardM env ()
 shardLoop = outerloop $> ()
  where
   controlStream shard = S.repeatM $ do
-    msg <- atomically . readTChan $ (shard ^. cmdChan)
+    msg <- atomically . readTChan $ (shard ^. #cmdChan)
     pure . Control $ msg
 
   discordStream ws = extractMaybeStream . S.repeatM . runMaybeT $ do
@@ -83,13 +83,13 @@ shardLoop = outerloop $> ()
   outerloop :: ShardM env (Either e a)
   outerloop = runExceptT . forever $ do
     state <- get
-    shard <- use shardS
+    shard <- use #shardS
 
-    host  <- case state ^. wsHost of
+    host  <- case state ^. #wsHost of
       Just host -> pure host
       Nothing   -> do
         host <- liftIO getGatewayHost
-        wsHost ?= host
+        #wsHost ?= host
         pure host
 
     -- TODO: handle result of innerloop
@@ -104,12 +104,12 @@ shardLoop = outerloop $> ()
   -- | and then decides what to do with it
   innerloop :: Connection -> ShardM env ()
   innerloop ws = do
-    shard <- use shardS
-    wsConn ?= ws
+    shard <- use #shardS
+    #wsConn ?= ws
     logEnv <- askLogger
     liftIO $ S.runStream $ mergedStream shard ws & S.mapM
       (runShardM shard logEnv . handleMsg)
-    wsConn .= Nothing
+    #wsConn .= Nothing
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
   handleMsg (Discord msg) = pure ()
@@ -118,7 +118,7 @@ shardLoop = outerloop $> ()
 startHeartBeatLoop :: ShardM env ()
 startHeartBeatLoop = do
   haltHeartBeat -- cancel any currently running hb thread
-  shard  <- use shardS
+  shard  <- use #shardS
   logEnv <- askLogger
   liftIO
     $  finally (async . runShardM shard logEnv $ heartBeatLoop)
@@ -127,11 +127,11 @@ startHeartBeatLoop = do
 
 haltHeartBeat :: ShardM env ()
 haltHeartBeat = do
-  thread <- use hbThread
+  thread <- use #hbThread
   case thread of
     Just t  -> liftIO $ cancel t $> ()
     Nothing -> pure ()
-  hbThread .= Nothing
+  #hbThread .= Nothing
 
 sendHeartBeat :: ShardM env ()
 sendHeartBeat = pure ()
