@@ -31,7 +31,7 @@ data ReceivedDiscordMessage
   = Dispatch DispatchData
   | HeartBeatReq
   | Reconnect
-  | InvalidSession
+  | InvalidSession Bool
   | Hello Int
   | HeartBeatAck
   deriving (Show, Generic)
@@ -50,7 +50,8 @@ instance FromJSON ReceivedDiscordMessage where
 
       7 -> pure Reconnect
 
-      9 -> pure InvalidSession
+      9 -> InvalidSession
+        <$> v .: "d"
 
       10 -> Hello <$> do
         d <- v .: "d"
@@ -63,7 +64,7 @@ instance FromJSON ReceivedDiscordMessage where
 data SentDiscordMessage
   = StatusUpdate StatusUpdateData
   | Identify IdentifyData
-  | HeartBeat (Maybe Integer)
+  | HeartBeat (Maybe Int)
   | VoiceStatusUpdate VoiceStateUpdateData
   | Resume ResumeData
   | RequestGuildMembers RequestGuildMembersData
@@ -139,12 +140,12 @@ data DispatchData = DispatchData
   } deriving (Show, Generic)
 
 data IdentifyData = IdentifyData
-  { dataToken :: Text
-  , dataProperties :: IdentifyProps
-  , dataCompress :: Maybe Bool
-  , dataLargeThreshold :: Maybe Int
-  , dataShard :: Maybe Int
-  , dataPresence :: Maybe PresenceData
+  { token          :: Text
+  , properties     :: IdentifyProps
+  , compress       :: Bool
+  , largeThreshold :: Int
+  , shard          :: (Int, Int)
+  , presence       :: Maybe PresenceData
   } deriving (Show, Generic)
 
 instance ToJSON IdentifyData where
@@ -152,10 +153,10 @@ instance ToJSON IdentifyData where
 
 
 data StatusUpdateData = StatusUpdateData
-  { updateDataSince :: Maybe Integer
-  , updateDataGame :: Maybe Value -- TODO: activity object
-  , updateDataStatus :: Text
-  , updateDataAfk :: Bool
+  { since  :: Maybe Integer
+  , game   :: Maybe Value -- TODO: activity object
+  , status :: Text
+  , afk    :: Bool
   } deriving (Show, Generic)
 
 instance ToJSON StatusUpdateData where
@@ -165,19 +166,18 @@ instance FromJSON StatusUpdateData where
   parseJSON = genericParseJSON jsonOptions
 
 
-
 -- TODO: move this to the general types module
 data VoiceStateUpdateData = VoiceStateUpdateData
-  { guildID :: Maybe (Snowflake ())
+  { guildID   :: Maybe (Snowflake ())
   , channelID :: Maybe (Snowflake ())
-  , userID :: Snowflake ()
-  , member :: Maybe Value -- TODO: member object
+  , userID    :: Snowflake ()
+  , member    :: Maybe Value -- TODO: member object
   , sessionID :: Text
-  , deaf :: Bool
-  , mute :: Bool
-  , selfDeaf :: Bool
-  , selfMute :: Bool
-  , suppress :: Bool
+  , deaf      :: Bool
+  , mute      :: Bool
+  , selfDeaf  :: Bool
+  , selfMute  :: Bool
+  , suppress  :: Bool
   } deriving (Show, Generic)
 
 instance ToJSON VoiceStateUpdateData where
@@ -188,9 +188,9 @@ instance FromJSON VoiceStateUpdateData where
 
 
 data ResumeData = ResumeData
-  { token :: Text
+  { token     :: Text
   , sessionID :: Text
-  , seq :: Int
+  , seq       :: Int
   } deriving (Show, Generic)
 
 instance ToJSON ResumeData where
@@ -202,8 +202,8 @@ instance FromJSON ResumeData where
 
 data RequestGuildMembersData = RequestGuildMembersData
   { guildID :: Snowflake ()
-  , query :: Maybe Text
-  , limit :: Maybe Int
+  , query   :: Maybe Text
+  , limit   :: Maybe Int
   } deriving (Show, Generic)
 
 instance ToJSON RequestGuildMembersData where
@@ -216,23 +216,22 @@ instance ToJSON RequestGuildMembersData where
 -- TODO: Work on filling out data types and aeson stuff
 
 data IdentifyProps = IdentifyProps
-  { propsOs :: Text
-  , propsBrowser :: Text
-  , propsDevice :: Text
+  { os      :: Text
+  , browser :: Text
+  , device  :: Text
   } deriving (Show, Generic)
 
 instance ToJSON IdentifyProps where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON IdentifyProps where
-  parseJSON = genericParseJSON jsonOptions
-
+  toEncoding IdentifyProps{..} =
+    pairs ("$os" .= os <>
+           "$browser" .= browser <>
+           "$device" .= device)
 
 data PresenceData = PresenceData
-  { dataSince :: Maybe Int
-  , dataGame :: Maybe Value -- TODO: activity object
-  , dataStatus :: Text
-  , dataAfk :: Bool
+  { since  :: Maybe Int
+  , game   :: Maybe Value -- TODO: activity object
+  , status :: Text
+  , afk    :: Bool
   } deriving (Show, Generic)
 
 instance ToJSON PresenceData where
@@ -247,21 +246,22 @@ data ControlMessage = Restart | ShutDown
 instance Exception ControlMessage
 
 data Shard = Shard
-  { shardID :: Integer
-  , evtChan :: TChan ShardMsg
-  , cmdChan :: TChan ControlMessage
+  { shardID    :: Int
+  , shardCount :: Int
+  , evtChan    :: TChan ShardMsg
+  , cmdChan    :: TChan ControlMessage
   , shardState :: TVar ShardState
-  , token :: Text
+  , token      :: Text
   } deriving (Generic)
 
 data ShardState = ShardState
-  { shardS :: Shard
-  , seqNum :: Maybe Integer
-  , hbThread :: Maybe (Async ())
+  { shardS     :: Shard
+  , seqNum     :: Maybe Int
+  , hbThread   :: Maybe (Async ())
   , hbResponse :: Bool
-  , wsHost :: Maybe Text
-  , sessionID :: Maybe Text
-  , wsConn :: Maybe Connection
+  , wsHost     :: Maybe Text
+  , sessionID  :: Maybe Text
+  , wsConn     :: Maybe Connection
   } deriving (Generic)
 
 newtype ShardM env a = ShardM

@@ -17,6 +17,7 @@ import           Control.Monad.Log              ( Logger
                                                 , runLogTSafe
                                                 )
 import           Control.Lens                   ( (.=) )
+import           Control.Lens.Lens
 import           Control.Monad.State.Concurrent.Strict
 import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Maybe
@@ -39,12 +40,12 @@ newShardState shard =
   ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: Integer -> Text -> Logger env -> TChan ShardMsg -> IO (Shard, Async ())
-newShard id token logEnv evtChan = mdo
+newShard :: Int -> Int -> Text -> Logger env -> TChan ShardMsg -> IO (Shard, Async ())
+newShard id count token logEnv evtChan = mdo
   cmdChan' <- newTChanIO
   stateVar <- newTVarIO (newShardState shard)
 
-  let shard = Shard id evtChan cmdChan' stateVar token
+  let shard = Shard id count evtChan cmdChan' stateVar token
 
   thread' <- async . runShardM shard logEnv $ shardLoop
 
@@ -69,20 +70,28 @@ sendToWs data' = do
   wsConn <- fromJust <$> use #wsConn
   liftIO . sendTextData wsConn . A.encode $ data'
 
+mergeEither :: Either a a -> a
+mergeEither (Left x)  = x
+mergeEither (Right x) = x
+
 -- | The loop a shard will run on
 shardLoop :: ShardM env ()
 shardLoop = outerloop $> ()
  where
-  controlStream shard = S.repeatM $ do
-    msg <- liftIO . atomically . readTChan $ (shard ^. #cmdChan)
-    pure . Control $ msg
+  controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
 
-  discordStream ws = extractMaybeStream . S.repeatM . runMaybeT $ do
+  discordStream ws = runMaybeT $ do
     msg <- liftIO $ receiveData ws
     d   <- liftMaybe . A.decode $ msg
     pure . Discord $ d
 
-  mergedStream shard ws = S.async (controlStream shard) (discordStream ws)
+  mergedStream shard ws = do
+    res <- race (controlStream shard) (discordStream ws)
+
+    case res of
+      Left x         -> pure x
+      Right (Just x) -> pure x
+      Right Nothing  -> mergedStream shard ws
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
   -- Currently if this goes to the error path we just exit the forever loop
@@ -100,7 +109,6 @@ shardLoop = outerloop $> ()
         #wsHost ?= host
         pure host
 
-    -- TODO: handle result of innerloop
     logEnv <- askLogger
 
     innerLoopVal <- liftIO $ runSecureClient (host ^. unpacked)
@@ -117,28 +125,68 @@ shardLoop = outerloop $> ()
   -- | The inner loop, handles receiving a message from discord or a command message
   -- | and then decides what to do with it
   innerloop :: Connection -> ShardM env (Either ControlMessage a)
-  innerloop ws = runExceptT . forever $ do
+  innerloop ws = do
     shard <- use #shardS
     #wsConn ?= ws
     logEnv <- askLogger
 
-    -- rather nasty, use IO exceptions to break the stream
-    -- so use this to convert back to ExceptT stuff
+    seqNum'    <- use #seqNum
+    sessionID' <- use #sessionID
 
-    err :: Either ControlMessage () <- liftIO . try . S.mapM_ handleMsg $ mergedStream shard ws
+    case (seqNum', sessionID') of
+      (Just n, Just s) ->
+        sendToWs (Resume ResumeData
+                  { token = shard ^. #token
+                  , sessionID = s
+                  , seq = n
+                  })
+      _ ->
+        sendToWs (Identify IdentifyData
+                  { token = shard ^. #token
+                  , properties = IdentifyProps
+                                 { os = "Linux" -- TODO: correct
+                                 , browser = "YetAnotherHaskellLib: "
+                                 , device = "YetAnotherHaskellLib"
+                                 }
+                  , compress = False
+                  , largeThreshold = 250
+                  , shard = (shard ^. #shardID,
+                             shard ^. #shardCount)
+                  , presence = Nothing
+                  })
 
-    case err of
-      Left x -> throwE x
-      _      -> pure ()
+    result <- runExceptT . forever $ liftIO (mergedStream shard ws) >>= handleMsg
 
     #wsConn .= Nothing
+    pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
-  -- handleMsg :: ShardMsg -> ShardM env ()
-  handleMsg (Discord msg) = pure ()
+  handleMsg :: ShardMsg -> ExceptT ControlMessage (ShardM env) ()
+  handleMsg (Discord msg) = case msg of
+    Dispatch data' ->
+      pure () -- TODO: dispatch events
+
+    HeartBeatReq ->
+      lift sendHeartBeat
+
+    Reconnect ->
+      throwE Restart
+
+    InvalidSession resumable -> do
+      unless resumable $ do
+        #sessionID .= Nothing
+        #seqNum .= Nothing
+      throwE Restart
+
+    Hello interval ->
+      lift $ startHeartBeatLoop interval
+
+    HeartBeatAck ->
+      lift $ #hbResponse .= True
+
   handleMsg (Control msg) = case msg of
-    Restart  -> liftIO $ throwIO Restart
-    ShutDown -> liftIO $ throwIO ShutDown
+    Restart  -> throwE Restart
+    ShutDown -> throwE ShutDown
 
 startHeartBeatLoop :: Int -> ShardM env ()
 startHeartBeatLoop interval = do
@@ -162,11 +210,11 @@ sendHeartBeat :: ShardM env ()
 sendHeartBeat = do
   seq <- use #seqNum
   sendToWs $ HeartBeat seq
+  #hbResponse .= False
 
 heartBeatLoop :: Int -> ShardM env ()
 heartBeatLoop interval = ($> ()) . runMaybeT . forever $ do
   lift sendHeartBeat
-  #hbResponse .= False
   liftIO . threadDelay $ interval * 1000
   hasResp <- use #hbResponse
   unless hasResp mzero -- exit the loop, we had no response
