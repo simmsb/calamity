@@ -39,12 +39,14 @@ dependencies:
 - concurrent-state >= 0.6
 - monad-log >= 0.1
 - exceptions >= 0.10
+- fmt >= 0.6
 
 
 library:
   source-dirs: src
 
 default-extensions:
+  - BlockArguments
   - NoMonomorphismRestriction
   - AutoDeriveTypeable
   - BangPatterns

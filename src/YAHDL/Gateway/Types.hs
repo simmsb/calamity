@@ -24,11 +24,12 @@ import           GHC.Generics
 import           Network.WebSockets.Connection  ( Connection )
 
 import           YAHDL.Types.Snowflake
+import           YAHDL.Types.General
 
 data ShardMsg = Discord ReceivedDiscordMessage | Control ControlMessage
 
 data ReceivedDiscordMessage
-  = Dispatch DispatchData
+  = Dispatch InnerDispatch
   | HeartBeatReq
   | Reconnect
   | InvalidSession Bool
@@ -41,7 +42,7 @@ instance FromJSON ReceivedDiscordMessage where
     op :: Int <- v .: "op"
     case op of
       0 -> Dispatch <$>
-        (DispatchData
+        (InnerDispatch
          <$> v .: "d"
          <*> v .: "t"
          <*> v .: "s")
@@ -65,7 +66,7 @@ data SentDiscordMessage
   = StatusUpdate StatusUpdateData
   | Identify IdentifyData
   | HeartBeat (Maybe Int)
-  | VoiceStatusUpdate VoiceStateUpdateData
+  | VoiceStatusUpdate VoiceState
   | Resume ResumeData
   | RequestGuildMembers RequestGuildMembersData
   deriving (Show, Generic)
@@ -80,7 +81,7 @@ instance ToJSON SentDiscordMessage where
   toEncoding (StatusUpdate data') =
     pairs ("op" .= (3 :: Int) <> "d" .= data')
 
-  toEncoding (VoiceStatusUpdate data') =
+  toEncoding (Voice data') =
     pairs ("op" .= (4 :: Int) <> "d" .= data')
 
   toEncoding (Resume data') =
@@ -91,7 +92,7 @@ instance ToJSON SentDiscordMessage where
 
 -- Thanks sbrg:
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs
-data EventType
+data DispatchType
     = READY
     | CHANNEL_CREATE
     | CHANNEL_UPDATE
@@ -124,19 +125,17 @@ data EventType
     | VOICE_STATE_UPDATE
     | VOICE_SERVER_UPDATE
     | WEBHOOKS_UPDATE
-    deriving (Show, Eq, Generic)
+    deriving (Show, Eq, Enum, Generic)
 
-instance ToJSON EventType where
-  toEncoding = genericToEncoding jsonOptions
+instance ToJSON DispatchType
 
-instance FromJSON EventType where
-  parseJSON = genericParseJSON jsonOptions
+instance FromJSON DispatchType
 
-
-data DispatchData = DispatchData
-  { dispatchData :: Value
-  , dispatchType :: EventType
-  , sequenceNum  :: Int
+-- TODO: write fromjson instance for dispatchdata, etc
+data InnerDispatch = InnerDispatch
+  { data' :: Value
+  , type' :: DispatchType
+  , seq   :: Int
   } deriving (Show, Generic)
 
 data IdentifyData = IdentifyData
@@ -145,12 +144,11 @@ data IdentifyData = IdentifyData
   , compress       :: Bool
   , largeThreshold :: Int
   , shard          :: (Int, Int)
-  , presence       :: Maybe PresenceData
+  , presence       :: Maybe StatusUpdateData
   } deriving (Show, Generic)
 
 instance ToJSON IdentifyData where
   toEncoding = genericToEncoding jsonOptions
-
 
 data StatusUpdateData = StatusUpdateData
   { since  :: Maybe Integer
@@ -160,31 +158,7 @@ data StatusUpdateData = StatusUpdateData
   } deriving (Show, Generic)
 
 instance ToJSON StatusUpdateData where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON StatusUpdateData where
-  parseJSON = genericParseJSON jsonOptions
-
-
--- TODO: move this to the general types module
-data VoiceStateUpdateData = VoiceStateUpdateData
-  { guildID   :: Maybe (Snowflake ())
-  , channelID :: Maybe (Snowflake ())
-  , userID    :: Snowflake ()
-  , member    :: Maybe Value -- TODO: member object
-  , sessionID :: Text
-  , deaf      :: Bool
-  , mute      :: Bool
-  , selfDeaf  :: Bool
-  , selfMute  :: Bool
-  , suppress  :: Bool
-  } deriving (Show, Generic)
-
-instance ToJSON VoiceStateUpdateData where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON VoiceStateUpdateData where
-  parseJSON = genericParseJSON jsonOptions
+  toEncoding = genericToEncoding jsonOptionsKeepNothing
 
 
 data ResumeData = ResumeData
@@ -201,7 +175,7 @@ instance FromJSON ResumeData where
 
 
 data RequestGuildMembersData = RequestGuildMembersData
-  { guildID :: Snowflake ()
+  { guildID :: Snowflake Guild
   , query   :: Maybe Text
   , limit   :: Maybe Int
   } deriving (Show, Generic)
@@ -227,23 +201,16 @@ instance ToJSON IdentifyProps where
            "$browser" .= browser <>
            "$device" .= device)
 
-data PresenceData = PresenceData
-  { since  :: Maybe Int
-  , game   :: Maybe Value -- TODO: activity object
-  , status :: Text
-  , afk    :: Bool
-  } deriving (Show, Generic)
-
-instance ToJSON PresenceData where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON PresenceData where
-  parseJSON = genericParseJSON jsonOptions
-
-data ControlMessage = Restart | ShutDown
+data ControlMessage
+  = Restart
+  | ShutDown
+  | SendPresence StatusUpdateData
   deriving (Show)
 
-instance Exception ControlMessage
+data ShardException = ShardExcRestart | ShardExcShutDown
+  deriving (Show)
+
+instance Exception ShardException
 
 data Shard = Shard
   { shardID    :: Int
@@ -262,6 +229,7 @@ data ShardState = ShardState
   , wsHost     :: Maybe Text
   , sessionID  :: Maybe Text
   , wsConn     :: Maybe Connection
+  , setExc     :: Maybe ShardException
   } deriving (Generic)
 
 newtype ShardM env a = ShardM
@@ -273,9 +241,3 @@ instance MonadState s m => MonadState s (LogT env m) where
   get   = lift get
   put   = lift . put
   state = lift . state
-
-jsonOptions :: Options
-jsonOptions = defaultOptions { sumEncoding        = UntaggedValue
-                             , fieldLabelModifier = camelTo2 '_'
-                             , omitNothingFields  = True
-                             }

@@ -15,6 +15,13 @@ import           Control.Concurrent.STM.TVar
 import           Control.Monad.Log              ( Logger
                                                 , askLogger
                                                 , runLogTSafe
+                                                , formatter
+                                                , defaultFormatter
+                                                , toLogStr
+                                                , TextShow
+                                                , Level
+                                                , FormattedTime
+                                                , LogStr
                                                 )
 import           Control.Lens                   ( (.=) )
 import           Control.Lens.Lens
@@ -37,7 +44,7 @@ import           YAHDL.Gateway.Types
 
 newShardState :: Shard -> ShardState
 newShardState shard =
-  ShardState shard Nothing Nothing False Nothing Nothing Nothing
+  ShardState shard Nothing Nothing False Nothing Nothing Nothing Nothing
 
 -- | Creates and launches a shard
 newShard :: Int -> Int -> Text -> Logger env -> TChan ShardMsg -> IO (Shard, Async ())
@@ -54,6 +61,12 @@ newShard id count token logEnv evtChan = mdo
 runShardM :: Shard -> Logger env -> ShardM env a -> IO a
 runShardM shard logEnv = evalStateC' . runLogTSafe logEnv . unShardM
   where evalStateC' s = evalStateC s (shard ^. #shardState)
+
+        withShardIDLog logEnv = logEnv { formatter = shardIDFormatter }
+
+        shardIDFormatter :: TextShow env => Level -> FormattedTime -> env -> Text -> LogStr
+        shardIDFormatter level time env msg = (toLogStr $ ("[ShardID: "+|shard ^. #shardID|+"]" :: Text))
+          <> defaultFormatter level time env msg
 
 extractMaybeStream :: (S.IsStream t, Monad m) => t m (Maybe a) -> t m a
 extractMaybeStream = S.mapMaybe identity
@@ -85,8 +98,17 @@ shardLoop = outerloop $> ()
     d   <- liftMaybe . A.decode $ msg
     pure . Discord $ d
 
+  mergedStream :: Shard -> Connection -> ExceptT ShardException (ShardM env) ShardMsg
   mergedStream shard ws = do
-    res <- race (controlStream shard) (discordStream ws)
+    setExc <- use #setExc
+    #setExc .= Nothing
+
+    -- someone set an exception (probably the heartbeat loop, shove it downstream)
+    case setExc of
+      Just x -> throwE x
+      _      -> pure ()
+
+    res <- liftIO $ race (controlStream shard) (discordStream ws)
 
     case res of
       Left x         -> pure x
@@ -97,7 +119,7 @@ shardLoop = outerloop $> ()
   -- Currently if this goes to the error path we just exit the forever loop
   -- and the shard stops, maybe we might want to do some extra logic to reboot
   -- the shard, or maybe force a resharding
-  outerloop :: ShardM env (Either ControlMessage a)
+  outerloop :: ShardM env (Either ShardException ())
   outerloop = runExceptT . forever $ do
     state <- get
     shard <- use #shardS
@@ -117,14 +139,18 @@ shardLoop = outerloop $> ()
                     (runShardM shard logEnv . innerloop)
 
     case innerLoopVal of
-      Left ShutDown -> throwE ShutDown
+      Left ShardExcShutDown -> do
+        debug "Shutting down shard"
+        throwE ShardExcShutDown
 
-      Left Restart -> pure () -- we restart normally
+      Left ShardExcRestart ->
+        debug "Restaring shard"
+        -- we restart normally when we loop
       _ -> pure ()
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- | and then decides what to do with it
-  innerloop :: Connection -> ShardM env (Either ControlMessage a)
+  innerloop :: Connection -> ShardM env (Either ShardException a)
   innerloop ws = do
     shard <- use #shardS
     #wsConn ?= ws
@@ -134,13 +160,15 @@ shardLoop = outerloop $> ()
     sessionID' <- use #sessionID
 
     case (seqNum', sessionID') of
-      (Just n, Just s) ->
+      (Just n, Just s) -> do
+        debug $ "Resuming shard (sessionID: "+|s|+", seq: "+|n|+")"
         sendToWs (Resume ResumeData
                   { token = shard ^. #token
                   , sessionID = s
                   , seq = n
                   })
-      _ ->
+      _ -> do
+        debug "Identifying shard"
         sendToWs (Identify IdentifyData
                   { token = shard ^. #token
                   , properties = IdentifyProps
@@ -155,38 +183,53 @@ shardLoop = outerloop $> ()
                   , presence = Nothing
                   })
 
-    result <- runExceptT . forever $ liftIO (mergedStream shard ws) >>= handleMsg
+    result <- runExceptT . forever $ (mergedStream shard ws) >>= handleMsg
 
     #wsConn .= Nothing
     pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
-  handleMsg :: ShardMsg -> ExceptT ControlMessage (ShardM env) ()
+  handleMsg :: ShardMsg -> ExceptT ShardException (ShardM env) ()
   handleMsg (Discord msg) = case msg of
     Dispatch data' ->
+      when (data' ^. #type' == READY) $ do
+        #sessionID ?= (data' ^. #data' . "session_id")
+
       pure () -- TODO: dispatch events
 
-    HeartBeatReq ->
+    HeartBeatReq -> do
+      debug "Received heartbeat request"
       lift sendHeartBeat
 
-    Reconnect ->
-      throwE Restart
+    Reconnect -> do
+      debug "Being asked to restart by Discord"
+      throwE ShardExcRestart
 
-    InvalidSession resumable -> do
-      unless resumable $ do
+    InvalidSession resumable ->
+      if resumable
+      then do
+        debug "Received non-resumable invalid session"
         #sessionID .= Nothing
         #seqNum .= Nothing
-      throwE Restart
+        liftIO $ threadDelay 1500000
+      else do
+        debug "Received resumable invalid session"
+        throwE ShardExcRestart
 
-    Hello interval ->
+    Hello interval -> do
+      debug $ "Received hello, beginning to heartbeat at an interval of "+|interval|+"ms"
       lift $ startHeartBeatLoop interval
 
-    HeartBeatAck ->
+    HeartBeatAck -> do
+      debug "Received heartbeat ack"
       lift $ #hbResponse .= True
 
   handleMsg (Control msg) = case msg of
-    Restart  -> throwE Restart
-    ShutDown -> throwE ShutDown
+    SendPresence data' -> do
+      debug $ "Sending presence: ("+||data'||+")"
+      lift . sendToWs $ StatusUpdate data'
+    Restart            -> throwE ShardExcRestart
+    ShutDown           -> throwE ShardExcShutDown
 
 startHeartBeatLoop :: Int -> ShardM env ()
 startHeartBeatLoop interval = do
@@ -209,6 +252,7 @@ haltHeartBeat = do
 sendHeartBeat :: ShardM env ()
 sendHeartBeat = do
   seq <- use #seqNum
+  debug $ "Sending heartbeat (seq: "+|seq|+")"
   sendToWs $ HeartBeat seq
   #hbResponse .= False
 
@@ -217,4 +261,7 @@ heartBeatLoop interval = ($> ()) . runMaybeT . forever $ do
   lift sendHeartBeat
   liftIO . threadDelay $ interval * 1000
   hasResp <- use #hbResponse
-  unless hasResp mzero -- exit the loop, we had no response
+  unless hasResp $ do
+    debug "No heartbeat response, restarting shard"
+    #setExc ?= ShardExcRestart
+    mzero -- exit the loop, we had no response
