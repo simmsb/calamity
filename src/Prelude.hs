@@ -7,6 +7,8 @@ module Prelude
   , module Control.Lens
   , module Control.Monad.Log
   , module Fmt
+  , jsonOptions
+  , jsonOptionsKeepNothing
   )
 where
 

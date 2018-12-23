@@ -2,6 +2,7 @@
 
 module YAHDL.Types.DispatchEvents where
 
+import           Data.Aeson
 import           YAHDL.Types.General
 
 data DispatchData
@@ -9,6 +10,7 @@ data DispatchData
   | ChannelCreate ChannelCreateData
   | ChannelUpdate ChannelUpdateData
   | ChannelDelete ChannelDeleteData
+  | ChannelPinsUpdate ChannelPinsUpdateData
   | GuildCreate GuildCreateData
   | GuildUpdate GuildUpdateData
   | GuildDelete GuildDeleteData
@@ -36,43 +38,46 @@ data DispatchData
   | VoiceStateUpdate VoiceStateUpdateData
   | VoiceServerUpdate VoiceServerUpdateData
   | WebhooksUpdate WebhooksUpdateData
-
+  deriving (Show, Generic)
 
 data ReadyData = ReadyData
-  { v    :: Integer
-  , user :: User
-  , guilds :: [Guild]
+  { v         :: Integer
+  , user      :: User
+  , guilds    :: [Guild]
   , sessionID :: Text
-  }
+  } deriving (Show, Generic)
 
+instance FromJSON ReadyData where
+  parseJSON = genericParseJSON jsonOptions
 
-type ChannelCreate = Value
-type ChannelUpdate = Value
-type ChannelDelete = Value
-type GuildCreate = Value
-type GuildUpdate = Value
-type GuildDelete = Value
-type GuildBanAdd = Value
-type GuildBanRemove = Value
-type GuildEmojisUpdate = Value
-type GuildIntegrationsUpdate = Value
-type GuildMemberAdd = Value
-type GuildMemberRemove = Value
-type GuildMemberUpdate = Value
-type GuildMembersChunk = Value
-type GuildRoleCreate = Value
-type GuildRoleUpdate = Value
-type GuildRoleDelete = Value
-type MessageCreate = Value
-type MessageUpdate = Value
-type MessageDelete = Value
-type MessageDeleteBulk = Value
-type MessageReactionAdd = Value
-type MessageReactionRemove = Value
-type MessageReactionRemoveAll = Value
-type PresenceUpdate = Value
-type TypingStart = Value
-type UserUpdate = Value
-type VoiceStateUpdate = Value
-type VoiceServerUpdate = Value
-type WebhooksUpdate = Value
+type ChannelCreateData            = Value
+type ChannelUpdateData            = Value
+type ChannelDeleteData            = Value
+type ChannelPinsUpdateData        = Value
+type GuildCreateData              = Value
+type GuildUpdateData              = Value
+type GuildDeleteData              = Value
+type GuildBanAddData              = Value
+type GuildBanRemoveData           = Value
+type GuildEmojisUpdateData        = Value
+type GuildIntegrationsUpdateData  = Value
+type GuildMemberAddData           = Value
+type GuildMemberRemoveData        = Value
+type GuildMemberUpdateData        = Value
+type GuildMembersChunkData        = Value
+type GuildRoleCreateData          = Value
+type GuildRoleUpdateData          = Value
+type GuildRoleDeleteData          = Value
+type MessageCreateData            = Value
+type MessageUpdateData            = Value
+type MessageDeleteData            = Value
+type MessageDeleteBulkData        = Value
+type MessageReactionAddData       = Value
+type MessageReactionRemoveData    = Value
+type MessageReactionRemoveAllData = Value
+type PresenceUpdateData           = Value
+type TypingStartData              = Value
+type UserUpdateData               = Value
+type VoiceStateUpdateData         = Value
+type VoiceServerUpdateData        = Value
+type WebhooksUpdateData           = Value

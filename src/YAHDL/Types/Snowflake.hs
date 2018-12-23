@@ -13,7 +13,6 @@ import           Data.Aeson
 newtype Snowflake t = Snowflake Word64
   deriving (Show, Eq)
 
-
 instance ToJSON (Snowflake t) where
   toJSON (Snowflake s) = String . show $ s
 

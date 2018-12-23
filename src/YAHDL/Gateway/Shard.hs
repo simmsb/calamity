@@ -41,13 +41,14 @@ import qualified Streamly.Prelude              as S
 import           Wuss
 
 import           YAHDL.Gateway.Types
+import           YAHDL.Types.DispatchEvents
 
 newShardState :: Shard -> ShardState
 newShardState shard =
   ShardState shard Nothing Nothing False Nothing Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: Int -> Int -> Text -> Logger env -> TChan ShardMsg -> IO (Shard, Async ())
+newShard :: Int -> Int -> Text -> Logger env -> TChan DispatchData -> IO (Shard, Async ())
 newShard id count token logEnv evtChan = mdo
   cmdChan' <- newTChanIO
   stateVar <- newTVarIO (newShardState shard)
@@ -65,11 +66,8 @@ runShardM shard logEnv = evalStateC' . runLogTSafe logEnv . unShardM
         withShardIDLog logEnv = logEnv { formatter = shardIDFormatter }
 
         shardIDFormatter :: TextShow env => Level -> FormattedTime -> env -> Text -> LogStr
-        shardIDFormatter level time env msg = (toLogStr $ ("[ShardID: "+|shard ^. #shardID|+"]" :: Text))
+        shardIDFormatter level time env msg = (toLogStr ("[ShardID: "+|shard ^. #shardID|+"]" :: Text))
           <> defaultFormatter level time env msg
-
-extractMaybeStream :: (S.IsStream t, Monad m) => t m (Maybe a) -> t m a
-extractMaybeStream = S.mapMaybe identity
 
 -- TODO: correct this, add compression
 getGatewayHost :: IO Text
@@ -82,10 +80,6 @@ sendToWs :: SentDiscordMessage -> ShardM env ()
 sendToWs data' = do
   wsConn <- fromJust <$> use #wsConn
   liftIO . sendTextData wsConn . A.encode $ data'
-
-mergeEither :: Either a a -> a
-mergeEither (Left x)  = x
-mergeEither (Right x) = x
 
 -- | The loop a shard will run on
 shardLoop :: ShardM env ()
@@ -183,7 +177,7 @@ shardLoop = outerloop $> ()
                   , presence = Nothing
                   })
 
-    result <- runExceptT . forever $ (mergedStream shard ws) >>= handleMsg
+    result <- runExceptT . forever $ mergedStream shard ws >>= handleMsg
 
     #wsConn .= Nothing
     pure result
@@ -191,11 +185,18 @@ shardLoop = outerloop $> ()
   -- | Handlers for each message, not sure what they'll need to do exactly yet
   handleMsg :: ShardMsg -> ExceptT ShardException (ShardM env) ()
   handleMsg (Discord msg) = case msg of
-    Dispatch data' ->
-      when (data' ^. #type' == READY) $ do
-        #sessionID ?= (data' ^. #data' . "session_id")
+    Dispatch seq data' -> do
+      debug $ "Handling event: ("+||data'||+")"
+      #seqNum ?= seq
 
-      pure () -- TODO: dispatch events
+      case data' of
+        Ready rdata' ->
+          #sessionID ?= (rdata' ^. #sessionID)
+
+        _ -> pure ()
+
+      shard <- lift $ use #shardS
+      liftIO . atomically $ writeTChan (shard ^. #evtChan) data'
 
     HeartBeatReq -> do
       debug "Received heartbeat request"
@@ -205,16 +206,16 @@ shardLoop = outerloop $> ()
       debug "Being asked to restart by Discord"
       throwE ShardExcRestart
 
-    InvalidSession resumable ->
+    InvalidSession resumable -> do
       if resumable
       then do
         debug "Received non-resumable invalid session"
         #sessionID .= Nothing
         #seqNum .= Nothing
         liftIO $ threadDelay 1500000
-      else do
+      else
         debug "Received resumable invalid session"
-        throwE ShardExcRestart
+      throwE ShardExcRestart
 
     Hello interval -> do
       debug $ "Received hello, beginning to heartbeat at an interval of "+|interval|+"ms"
@@ -228,6 +229,7 @@ shardLoop = outerloop $> ()
     SendPresence data' -> do
       debug $ "Sending presence: ("+||data'||+")"
       lift . sendToWs $ StatusUpdate data'
+
     Restart            -> throwE ShardExcRestart
     ShutDown           -> throwE ShardExcShutDown
 
