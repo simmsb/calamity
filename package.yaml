@@ -40,6 +40,9 @@ dependencies:
 - monad-log >= 0.1
 - exceptions >= 0.10
 - fmt >= 0.6
+- stm-containers >= 0.2
+- concurrent-extra >= 0.7
+- focus >= 1.0
 
 
 library:

@@ -66,8 +66,8 @@ runShardM shard logEnv = evalStateC' . runLogTSafe logEnv . unShardM
         withShardIDLog logEnv = logEnv { formatter = shardIDFormatter }
 
         shardIDFormatter :: TextShow env => Level -> FormattedTime -> env -> Text -> LogStr
-        shardIDFormatter level time env msg = (toLogStr ("[ShardID: "+|shard ^. #shardID|+"]" :: Text))
-          <> defaultFormatter level time env msg
+        shardIDFormatter level time env msg = toLogStr ("[ShardID: "+|shard ^. #shardID|+"]" :: Text)
+                                              <> defaultFormatter level time env msg
 
 -- TODO: correct this, add compression
 getGatewayHost :: IO Text
@@ -81,13 +81,22 @@ sendToWs data' = do
   wsConn <- fromJust <$> use #wsConn
   liftIO . sendTextData wsConn . A.encode $ data'
 
+untilResult :: Monad m => m (Maybe a) -> m a
+untilResult m = m >>= \case
+  Just a  -> pure a
+  Nothing -> untilResult m
+
+mergeEither :: Either a a -> a
+mergeEither (Left a)  = a
+mergeEither (Right a) = a
+
 -- | The loop a shard will run on
 shardLoop :: ShardM env ()
 shardLoop = outerloop $> ()
  where
   controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
 
-  discordStream ws = runMaybeT $ do
+  discordStream ws = untilResult . runMaybeT $ do
     msg <- liftIO $ receiveData ws
     d   <- liftMaybe . A.decode $ msg
     pure . Discord $ d
@@ -102,12 +111,7 @@ shardLoop = outerloop $> ()
       Just x -> throwE x
       _      -> pure ()
 
-    res <- liftIO $ race (controlStream shard) (discordStream ws)
-
-    case res of
-      Left x         -> pure x
-      Right (Just x) -> pure x
-      Right Nothing  -> mergedStream shard ws
+    liftIO (mergeEither <$> race (controlStream shard) (discordStream ws))
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
   -- Currently if this goes to the error path we just exit the forever loop
@@ -209,7 +213,7 @@ shardLoop = outerloop $> ()
     InvalidSession resumable -> do
       if resumable
       then do
-        debug "Received non-resumable invalid session"
+        debug "Received non-resumable invalid session, sleeping for 15 seconds then retrying"
         #sessionID .= Nothing
         #seqNum .= Nothing
         liftIO $ threadDelay 1500000

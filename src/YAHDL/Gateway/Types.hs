@@ -264,6 +264,7 @@ data Shard = Shard
   , token      :: Text
   } deriving (Generic)
 
+-- TODO: more shardS into a reader monad
 data ShardState = ShardState
   { shardS     :: Shard
   , seqNum     :: Maybe Int
