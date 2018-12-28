@@ -43,9 +43,13 @@ dependencies:
 - stm-containers >= 0.2
 - concurrent-extra >= 0.7
 - focus >= 1.0
-
+- data-default >= 0.7
+- singletons >= 2.5
+- hashable >= 1.2
 
 library:
+  ghc-options:
+    - -Wall
   source-dirs: src
 
 default-extensions:

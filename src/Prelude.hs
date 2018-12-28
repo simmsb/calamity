@@ -16,11 +16,12 @@ import           Data.Aeson
 
 import           Protolude               hiding ( HasField
                                                 , getField
-                                                , (.=)
                                                 )
 -- import           Data.Generics.Product   hiding ( list )
 -- import           Data.Generics.Sum
 import           Control.Lens                   ( (^.)
+                                                , (.~)
+                                                , (?~)
                                                 , (?=)
                                                 , (%=)
                                                 , use

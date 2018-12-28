@@ -8,9 +8,7 @@ module YAHDL.Gateway.Shard
   )
 where
 
--- import Control
 import           Control.Concurrent.STM.TChan
-import           Control.Concurrent.STM.TMVar
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Log              ( Logger
                                                 , askLogger
@@ -18,15 +16,12 @@ import           Control.Monad.Log              ( Logger
                                                 , formatter
                                                 , defaultFormatter
                                                 , toLogStr
-                                                , TextShow
                                                 , Level
                                                 , FormattedTime
                                                 , LogStr
                                                 )
 import           Control.Lens                   ( (.=) )
-import           Control.Lens.Lens
 import           Control.Monad.State.Concurrent.Strict
-import           Control.Monad.Trans.Except
 import           Control.Monad.Trans.Maybe
 import qualified Data.Aeson                    as A
 import           Data.Text.Strict.Lens
@@ -36,8 +31,6 @@ import           Network.WebSockets             ( Connection
                                                 , sendClose
                                                 , sendTextData
                                                 )
-import qualified Streamly                      as S
-import qualified Streamly.Prelude              as S
 import           Wuss
 
 import           YAHDL.Gateway.Types
@@ -48,7 +41,7 @@ newShardState shard =
   ShardState shard Nothing Nothing False Nothing Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: Int -> Int -> Text -> Logger env -> TChan DispatchData -> IO (Shard, Async ())
+newShard :: Int -> Int -> Text -> Logger Text -> TChan DispatchData -> IO (Shard, Async ())
 newShard id count token logEnv evtChan = mdo
   cmdChan' <- newTChanIO
   stateVar <- newTVarIO (newShardState shard)
@@ -59,13 +52,13 @@ newShard id count token logEnv evtChan = mdo
 
   pure (shard, thread')
 
-runShardM :: Shard -> Logger env -> ShardM env a -> IO a
-runShardM shard logEnv = evalStateC' . runLogTSafe logEnv . unShardM
+runShardM :: Shard -> Logger Text -> ShardM a -> IO a
+runShardM shard logEnv = evalStateC' . runLogTSafe (withShardIDLog logEnv) . unShardM
   where evalStateC' s = evalStateC s (shard ^. #shardState)
 
-        withShardIDLog logEnv = logEnv { formatter = shardIDFormatter }
+        withShardIDLog env = env { formatter = shardIDFormatter }
 
-        shardIDFormatter :: TextShow env => Level -> FormattedTime -> env -> Text -> LogStr
+        shardIDFormatter :: Level -> FormattedTime -> Text -> Text -> LogStr
         shardIDFormatter level time env msg = toLogStr ("[ShardID: "+|shard ^. #shardID|+"]" :: Text)
                                               <> defaultFormatter level time env msg
 
@@ -76,7 +69,7 @@ getGatewayHost = pure "gateway.discord.gg"
 liftMaybe :: (MonadPlus m) => Maybe a -> m a
 liftMaybe = maybe mzero return
 
-sendToWs :: SentDiscordMessage -> ShardM env ()
+sendToWs :: SentDiscordMessage -> ShardM ()
 sendToWs data' = do
   wsConn <- fromJust <$> use #wsConn
   liftIO . sendTextData wsConn . A.encode $ data'
@@ -91,7 +84,7 @@ mergeEither (Left a)  = a
 mergeEither (Right a) = a
 
 -- | The loop a shard will run on
-shardLoop :: ShardM env ()
+shardLoop :: ShardM ()
 shardLoop = outerloop $> ()
  where
   controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
@@ -101,7 +94,7 @@ shardLoop = outerloop $> ()
     d   <- liftMaybe . A.decode $ msg
     pure . Discord $ d
 
-  mergedStream :: Shard -> Connection -> ExceptT ShardException (ShardM env) ShardMsg
+  mergedStream :: Shard -> Connection -> ExceptT ShardException (ShardM) ShardMsg
   mergedStream shard ws = do
     setExc <- use #setExc
     #setExc .= Nothing
@@ -117,12 +110,12 @@ shardLoop = outerloop $> ()
   -- Currently if this goes to the error path we just exit the forever loop
   -- and the shard stops, maybe we might want to do some extra logic to reboot
   -- the shard, or maybe force a resharding
-  outerloop :: ShardM env (Either ShardException ())
+  outerloop :: ShardM (Either ShardException ())
   outerloop = runExceptT . forever $ do
-    state <- get
+    state' <- get
     shard <- use #shardS
 
-    host  <- case state ^. #wsHost of
+    host  <- case state' ^. #wsHost of
       Just host -> pure host
       Nothing   -> do
         host <- liftIO getGatewayHost
@@ -148,11 +141,10 @@ shardLoop = outerloop $> ()
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- | and then decides what to do with it
-  innerloop :: Connection -> ShardM env (Either ShardException a)
+  innerloop :: Connection -> ShardM (Either ShardException a)
   innerloop ws = do
     shard <- use #shardS
     #wsConn ?= ws
-    logEnv <- askLogger
 
     seqNum'    <- use #seqNum
     sessionID' <- use #sessionID
@@ -187,7 +179,7 @@ shardLoop = outerloop $> ()
     pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
-  handleMsg :: ShardMsg -> ExceptT ShardException (ShardM env) ()
+  handleMsg :: ShardMsg -> ExceptT ShardException (ShardM) ()
   handleMsg (Discord msg) = case msg of
     Dispatch seq data' -> do
       debug $ "Handling event: ("+||data'||+")"
@@ -237,7 +229,7 @@ shardLoop = outerloop $> ()
     Restart            -> throwE ShardExcRestart
     ShutDown           -> throwE ShardExcShutDown
 
-startHeartBeatLoop :: Int -> ShardM env ()
+startHeartBeatLoop :: Int -> ShardM ()
 startHeartBeatLoop interval = do
   haltHeartBeat -- cancel any currently running hb thread
   shard  <- use #shardS
@@ -247,7 +239,7 @@ startHeartBeatLoop interval = do
                (runShardM shard logEnv haltHeartBeat)
     $> ()
 
-haltHeartBeat :: ShardM env ()
+haltHeartBeat :: ShardM ()
 haltHeartBeat = do
   thread <- use #hbThread
   case thread of
@@ -255,14 +247,14 @@ haltHeartBeat = do
     Nothing -> pure ()
   #hbThread .= Nothing
 
-sendHeartBeat :: ShardM env ()
+sendHeartBeat :: ShardM ()
 sendHeartBeat = do
   seq <- use #seqNum
   debug $ "Sending heartbeat (seq: "+|seq|+")"
   sendToWs $ HeartBeat seq
   #hbResponse .= False
 
-heartBeatLoop :: Int -> ShardM env ()
+heartBeatLoop :: Int -> ShardM ()
 heartBeatLoop interval = ($> ()) . runMaybeT . forever $ do
   lift sendHeartBeat
   liftIO . threadDelay $ interval * 1000

@@ -1,5 +1,7 @@
 -- | Types for shards
 
+{-# OPTIONS_GHC -Wno-orphans #-}
+
 module YAHDL.Gateway.Types where
   -- ( Shard(..)
   -- , ShardState(..)
@@ -10,9 +12,7 @@ module YAHDL.Gateway.Types where
   -- , ControlMessage(..)
   -- )
 
-import           Control.Exception
 import           Control.Concurrent.STM.TChan
-import           Control.Concurrent.STM.TMVar
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Log              ( LogT
                                                 , MonadLog
@@ -21,7 +21,6 @@ import           Control.Monad.State.Concurrent.Strict
 import           Data.Aeson
 import qualified Data.Aeson.Types              as AT
 import           Data.Generics.Labels           ( )
-import           GHC.Generics
 import           Network.WebSockets.Connection  ( Connection )
 
 import           YAHDL.Types.Snowflake
@@ -62,7 +61,7 @@ instance FromJSON ReceivedDiscordMessage where
 
       11 -> pure HeartBeatAck
 
-      op -> fail $ "invalid opcode: " <> show op
+      _ -> fail $ "invalid opcode: " <> show op
 
 parseDispatchData :: DispatchType -> Value -> AT.Parser DispatchData
 parseDispatchData READY          data' = Ready <$> parseJSON data'
@@ -276,9 +275,9 @@ data ShardState = ShardState
   , setExc     :: Maybe ShardException
   } deriving (Generic)
 
-newtype ShardM env a = ShardM
-  { unShardM :: LogT env (StateC ShardState IO) a
-  } deriving (Applicative, Monad, MonadIO, MonadLog env,
+newtype ShardM a = ShardM
+  { unShardM :: LogT Text (StateC ShardState IO) a
+  } deriving (Applicative, Monad, MonadIO, MonadLog Text,
               Functor, MonadState ShardState)
 
 instance MonadState s m => MonadState s (LogT env m) where
