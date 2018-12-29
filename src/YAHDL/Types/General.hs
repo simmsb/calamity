@@ -6,6 +6,15 @@ import           Data.Aeson
 
 import           YAHDL.Types.Snowflake
 
+data Token
+  = Bot ByteString
+  | User ByteString
+  deriving (Generic, Show)
+
+formatToken :: Token -> ByteString
+formatToken (Bot t)  = "Bot" <> t
+formatToken (User t) = t
+
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
   , channelID :: Maybe (Snowflake Channel)
