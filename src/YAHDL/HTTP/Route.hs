@@ -5,24 +5,23 @@
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module YAHDL.HTTP.Route
-  -- ( mkRouteBuilder
-  -- , giveID
-  -- , buildRoute
-  -- , RouteBuilder
-  -- , Route
-  -- , SFragment(..)
-  -- , ID(..)
-  -- , RouteFragmentable(..)
-  -- , RouteMethod(..)
-  -- )
+  ( mkRouteBuilder
+  , giveID
+  , buildRoute
+  , RouteBuilder
+  , Route
+  , SFragment(..)
+  , ID(..)
+  , RouteFragmentable(..)
+  , RouteMethod(..)
+  )
 where
 
 import           Data.Maybe                     ( fromJust )
-import           Data.Singletons.Prelude.List
 import           Data.Singletons.Prelude
 import           Data.Singletons.TH
 import           Data.List                      ( lookup )
-import qualified Data.Text as T
+import qualified Data.Text                     as T
 
 import           YAHDL.Types.Snowflake
 import           YAHDL.Types.General
@@ -62,8 +61,7 @@ mkRouteBuilder method = UnsafeMkRouteBuilder method [] []
 
 giveID
   :: forall k ids
-   . (-- Lookup k ids ~ 'Just 'Required,
-      Typeable k)
+   . Typeable k
   => RouteBuilder ids
   -> Snowflake k
   -> RouteBuilder ('(k, 'Satisfied) ': ids)
@@ -75,15 +73,19 @@ type family MyLookup (x :: k) (l :: [(k, v)]) :: Maybe v where
   MyLookup k ('(_, v) ': xs) = MyLookup k xs
   MyLookup _ '[]             = 'Nothing
 
+type family MyElem (x :: k) (l :: [k]) :: Bool where
+  MyElem _ '[]      = 'False
+  MyElem k (k : _)  = 'True
+  MyElem k (_ : xs) = MyElem k xs
+
 type family EnsureFulfilled (ids :: [(k, RouteRequirement)]) :: Bool where
   EnsureFulfilled ids = EnsureFulfilledInner ids '[] 'True
 
 type family EnsureFulfilledInner (ids :: [(k, RouteRequirement)]) (seen :: [k]) (ok :: Bool) :: Bool where
-  EnsureFulfilledInner '[] _ ok = ok
+  EnsureFulfilledInner '[]                      _    ok = ok
   EnsureFulfilledInner ('(k, 'NotNeeded) ': xs) seen ok = EnsureFulfilledInner xs (k ': seen) ok
   EnsureFulfilledInner ('(k, 'Satisfied) ': xs) seen ok = EnsureFulfilledInner xs (k ': seen) ok
-  EnsureFulfilledInner ('(k, 'Required) ': xs) seen ok = EnsureFulfilledInner xs (k ': seen) (Elem k seen && ok)
-
+  EnsureFulfilledInner ('(k, 'Required)  ': xs) seen ok = EnsureFulfilledInner xs (k ': seen) (MyElem k seen && ok)
 
 type family AddRequired k (ids :: [(Type, RouteRequirement)]) :: [(Type, RouteRequirement)] where
   AddRequired k ids = '(k, AddRequiredInner (MyLookup k ids)) ': ids
@@ -120,32 +122,19 @@ instance Hashable Route where
   hashWithSalt s (Route m _ ident c g) = hashWithSalt s (m, ident, c, g)
 
 buildRoute
-  :: forall (ids :: [(Type, RouteRequirement)]).
-     EnsureFulfilled ids ~ 'True
+  :: forall (ids :: [(Type, RouteRequirement)])
+   . EnsureFulfilled ids ~ 'True
   => RouteBuilder ids
   -> Route
-buildRoute (UnsafeMkRouteBuilder method route ids) = Route method
-                                                           (map goR route)
-                                                           (T.concat (map goIdent route))
-                                                           (Snowflake <$> lookup (typeRep (Proxy :: Proxy Channel)) ids)
-                                                           (Snowflake <$> lookup (typeRep (Proxy :: Proxy Guild)) ids)
+buildRoute (UnsafeMkRouteBuilder method route ids) = Route
+  method
+  (map goR route)
+  (T.concat (map goIdent route))
+  (Snowflake <$> lookup (typeRep (Proxy :: Proxy Channel)) ids)
+  (Snowflake <$> lookup (typeRep (Proxy :: Proxy Guild)) ids)
  where
   goR (SFragment' t) = t
   goR (ID'        t) = show . fromJust $ lookup t ids
 
   goIdent (SFragment' t) = t
-  goIdent (ID' t)        = show t
-
-
-test = let r   = SFragment "Aaa" !:! mkRouteBuilder POST
-           b   = buildRoute r
-       in b
-
-test'' :: DefaultEq a b ~ 'True => a -> b -> ()
-test'' _ _ = ()
-
--- test' = let r   = (ID :: ID Guild) !:! (ID :: ID Channel) !:! SFragment "Aaa" !:! mkRouteBuilder POST
---             r'  = giveID r (Snowflake @Channel 1234)
---             r'' = giveID r' (Snowflake @Guild 4321)
---             b   = buildRoute r''
---         in r
+  goIdent (ID'        t) = show t
