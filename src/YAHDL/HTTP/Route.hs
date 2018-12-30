@@ -133,3 +133,7 @@ buildRoute (UnsafeMkRouteBuilder method route ids) = Route method
   goIdent (ID' t)        = show t
 
 
+test = let r  = (ID :: ID Channel) !:! SFragment "Aaa" !:! mkRouteBuilder POST
+           r' = giveID r (Snowflake @Channel 1234)
+           b  = buildRoute r'
+       in r'
