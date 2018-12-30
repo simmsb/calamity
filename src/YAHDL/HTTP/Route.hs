@@ -6,35 +6,32 @@
 
 module YAHDL.HTTP.Route
   ( mkRouteBuilder
-  , giveChanID
-  , giveGuildID
+  , giveID
   , buildRoute
   , RouteBuilder
   , Route
   , SFragment(..)
-  , ChanID(..)
-  , GuildID(..)
+  , ID(..)
   , RouteFragmentable(..)
   , RouteMethod(..)
   )
 where
 
 import           Data.Maybe                     ( fromJust )
+import           Data.Singletons.Prelude.List
 import           Data.Singletons.Prelude
 import           Data.Singletons.TH
+import           Data.List                      ( lookup )
 
 import           YAHDL.Types.Snowflake
-import           YAHDL.Types.General
 
 data RouteFragment
   = SFragment' Text
-  | ChanID'
-  | GuildID'
+  | ID' TypeRep
   deriving (Generic, Show, Eq)
 
 newtype SFragment = SFragment Text
-data ChanID    = ChanID
-data GuildID   = GuildID
+data ID a = ID
 
 instance Hashable RouteFragment
 
@@ -52,61 +49,61 @@ $(singletons [d|
     deriving (Generic, Show, Eq)
   |])
 
-data RouteBuilder (cIDState :: RouteRequirement) (gIDState :: RouteRequirement) = UnsafeMkRouteBuilder
+data RouteBuilder (idState :: [(Type, RouteRequirement)]) = UnsafeMkRouteBuilder
   { method  :: RouteMethod
   , route   :: [RouteFragment]
-  , chanID  :: Maybe (Snowflake Channel)
-  , guildID :: Maybe (Snowflake Guild)
-  } deriving (Generic, Show)
+  , ids     :: [(TypeRep, Word64)]
+  }
 
-mkRouteBuilder :: RouteMethod -> RouteBuilder 'NotNeeded 'NotNeeded
-mkRouteBuilder method = UnsafeMkRouteBuilder method [] Nothing Nothing
+mkRouteBuilder :: RouteMethod -> RouteBuilder '[]
+mkRouteBuilder method = UnsafeMkRouteBuilder method [] []
 
-giveChanID
-  :: RouteBuilder 'Required gids
-  -> Snowflake Channel
-  -> RouteBuilder 'Satisfied gids
-giveChanID (UnsafeMkRouteBuilder method route _ guildID) chanID =
-  UnsafeMkRouteBuilder method route (Just chanID) guildID
-
-giveGuildID
-  :: RouteBuilder cids 'Required
-  -> Snowflake Channel
-  -> RouteBuilder cids 'Satisfied
-giveGuildID (UnsafeMkRouteBuilder method route chanID _) guildID =
-  UnsafeMkRouteBuilder method route chanID (Just guildID)
+giveID
+  :: forall k ids
+   . (Lookup k ids ~ 'Just 'Required, Typeable k)
+  => RouteBuilder ids
+  -> Snowflake k
+  -> RouteBuilder ('(k, 'Satisfied) ': ids)
+giveID (UnsafeMkRouteBuilder method route ids) (Snowflake id) =
+  UnsafeMkRouteBuilder method route ((typeRep (Proxy :: Proxy k), id) : ids)
 
 $(singletons [d|
-  isFulfilled :: RouteRequirement -> Bool
-  isFulfilled NotNeeded = True
-  isFulfilled Satisfied = True
-  isFulfilled Required  = False
-
-  addRequired :: RouteRequirement -> RouteRequirement
-  addRequired NotNeeded = Required
-  addRequired Required  = Required
-  addRequired Satisfied = Satisfied
+  isFulfilled :: forall k. Eq k => [(k, RouteRequirement)] -> Bool
+  isFulfilled = go []
+    where go :: [k] -> [(k, RouteRequirement)] -> Bool
+          go _ [] = True
+          go seen ((k, NotNeeded) : xs) = go (k : seen) xs
+          go seen ((k, Satisfied) : xs) = go (k : seen) xs
+          go seen ((k, Required) : xs) = (elem k seen && go seen xs)
   |])
 
-class RouteFragmentable a cids gids where
-  type ConsRes a cids gids
+$(singletons [d|
+  addRequired :: Eq k => k -> [(k, RouteRequirement)] -> [(k, RouteRequirement)]
+  addRequired k l = (k, go e) : l
+    where go :: Maybe RouteRequirement -> RouteRequirement
+          go (Just NotNeeded) = Required
+          go (Just Required)  = Required
+          go (Just Satisfied) = Satisfied
+          go Nothing          = Required
+          e = lookup k l
+  |])
 
-  (!:!) :: a -> RouteBuilder cids gids -> ConsRes a cids gids
+class Typeable a => RouteFragmentable a ids where
+  type ConsRes a ids
 
-instance RouteFragmentable SFragment cids gids where
-  type ConsRes SFragment cids gids = RouteBuilder cids gids
+  (!:!) :: a -> RouteBuilder ids -> ConsRes a ids
 
-  (SFragment t) !:! (UnsafeMkRouteBuilder m r c g) = UnsafeMkRouteBuilder m (SFragment' t : r) c g
+instance RouteFragmentable SFragment ids where
+  type ConsRes SFragment ids = RouteBuilder ids
 
-instance RouteFragmentable ChanID cids gids where
-  type ConsRes ChanID cids gids = RouteBuilder (AddRequired cids) gids
+  (SFragment t) !:! (UnsafeMkRouteBuilder m r ids) =
+    UnsafeMkRouteBuilder m (SFragment' t : r) ids
 
-  _ !:! (UnsafeMkRouteBuilder m r c g) = UnsafeMkRouteBuilder m (ChanID' : r) c g
+instance Typeable a => RouteFragmentable (ID (a :: Type)) (ids :: [(Type, RouteRequirement)]) where
+  type ConsRes (ID a) ids = RouteBuilder (AddRequired a ids)
 
-instance RouteFragmentable GuildID cids gids where
-  type ConsRes GuildID cids gids = RouteBuilder cids (AddRequired gids)
-
-  _ !:! (UnsafeMkRouteBuilder m r c g) = UnsafeMkRouteBuilder m (GuildID' : r) c g
+  ID !:! (UnsafeMkRouteBuilder m r ids) =
+    UnsafeMkRouteBuilder m (ID' (typeRep (Proxy :: Proxy a)) : r) ids
 
 infixr 5 !:!
 
@@ -116,13 +113,11 @@ data Route = Route RouteMethod [Text]
 instance Hashable Route
 
 buildRoute
-  :: (IsFulfilled cids ~ 'True, IsFulfilled gids ~ 'True)
-  => RouteBuilder cids gids
+  :: IsFulfilled ids ~ 'True
+  => RouteBuilder (ids :: [(Type, RouteRequirement)])
   -> Route
-buildRoute (UnsafeMkRouteBuilder method route chanID guildID) = Route
-  method
-  (map go route)
+buildRoute (UnsafeMkRouteBuilder method route ids) = Route method
+                                                           (map go route)
  where
   go (SFragment' t) = t
-  go ChanID'        = show . fromSnowflake . fromJust $ chanID
-  go GuildID'       = show . fromSnowflake . fromJust $ guildID
+  go (ID'        t) = show . fromJust $ lookup t ids

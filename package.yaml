@@ -98,6 +98,7 @@ default-extensions:
   - TypeSynonymInstances
   - ViewPatterns
   - DuplicateRecordFields
+  - TypeOperators
 
 tests:
   yet-another-haskell-discord-library-test:
