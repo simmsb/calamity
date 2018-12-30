@@ -22,8 +22,10 @@ import           Data.Singletons.Prelude.List
 import           Data.Singletons.Prelude
 import           Data.Singletons.TH
 import           Data.List                      ( lookup )
+import qualified Data.Text as T
 
 import           YAHDL.Types.Snowflake
+import           YAHDL.Types.General
 
 data RouteFragment
   = SFragment' Text
@@ -60,7 +62,8 @@ mkRouteBuilder method = UnsafeMkRouteBuilder method [] []
 
 giveID
   :: forall k ids
-   . (Lookup k ids ~ 'Just 'Required, Typeable k)
+   . (-- Lookup k ids ~ 'Just 'Required,
+      Typeable k)
   => RouteBuilder ids
   -> Snowflake k
   -> RouteBuilder ('(k, 'Satisfied) ': ids)
@@ -69,7 +72,7 @@ giveID (UnsafeMkRouteBuilder method route ids) (Snowflake id) =
 
 $(singletons [d|
   isFulfilled :: forall k. Eq k => [(k, RouteRequirement)] -> Bool
-  isFulfilled = go []
+  isFulfilled reqs = go [] reqs
     where go :: [k] -> [(k, RouteRequirement)] -> Bool
           go _ [] = True
           go seen ((k, NotNeeded) : xs) = go (k : seen) xs
@@ -107,17 +110,26 @@ instance Typeable a => RouteFragmentable (ID (a :: Type)) (ids :: [(Type, RouteR
 
 infixr 5 !:!
 
-data Route = Route RouteMethod [Text]
+data Route = Route RouteMethod [Text] Text (Maybe (Snowflake Channel)) (Maybe (Snowflake Guild))
   deriving (Generic, Show, Eq)
 
-instance Hashable Route
+instance Hashable Route where
+  hashWithSalt s (Route m _ ident c g) = hashWithSalt s (m, ident, c, g)
 
 buildRoute
   :: IsFulfilled ids ~ 'True
   => RouteBuilder (ids :: [(Type, RouteRequirement)])
   -> Route
 buildRoute (UnsafeMkRouteBuilder method route ids) = Route method
-                                                           (map go route)
+                                                           (map goR route)
+                                                           (T.concat (map goIdent route))
+                                                           (Snowflake <$> lookup (typeRep (Proxy :: Proxy Channel)) ids)
+                                                           (Snowflake <$> lookup (typeRep (Proxy :: Proxy Guild)) ids)
  where
-  go (SFragment' t) = t
-  go (ID'        t) = show . fromJust $ lookup t ids
+  goR (SFragment' t) = t
+  goR (ID'        t) = show . fromJust $ lookup t ids
+
+  goIdent (SFragment' t) = t
+  goIdent (ID' t)        = show t
+
+

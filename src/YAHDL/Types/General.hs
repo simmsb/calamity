@@ -7,13 +7,13 @@ import           Data.Aeson
 import           YAHDL.Types.Snowflake
 
 data Token
-  = Bot ByteString
-  | User ByteString
+  = BotToken ByteString
+  | UserToken ByteString
   deriving (Generic, Show)
 
 formatToken :: Token -> ByteString
-formatToken (Bot t)  = "Bot" <> t
-formatToken (User t) = t
+formatToken (BotToken  t) = "Bot" <> t
+formatToken (UserToken t) = t
 
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
@@ -35,7 +35,11 @@ instance FromJSON VoiceState where
   parseJSON = genericParseJSON jsonOptions
 
 -- TODO: these types
-type User    = Value
-type Channel = Value
-type Guild   = Value
-type Member  = Value
+newtype User    = User Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+newtype Channel = Channel Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+newtype Guild   = Guild Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+newtype Member  = Member Value
+  deriving (Show, Generic, ToJSON, FromJSON)
