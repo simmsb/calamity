@@ -1,6 +1,10 @@
 -- | The snowflake type
 
-module YAHDL.Types.Snowflake where
+module YAHDL.Types.Snowflake
+  ( Snowflake(..)
+  , fromSnowflake
+  )
+where
 
 import           Text.Read                      ( read )
 import           Data.Text                      ( unpack )

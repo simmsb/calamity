@@ -20,6 +20,7 @@ import           Protolude               hiding ( HasField
 -- import           Data.Generics.Product   hiding ( list )
 -- import           Data.Generics.Sum
 import           Control.Lens                   ( (^.)
+                                                , (^?)
                                                 , (.~)
                                                 , (?~)
                                                 , (?=)

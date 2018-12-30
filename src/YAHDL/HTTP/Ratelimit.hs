@@ -10,11 +10,11 @@ import           Focus
 import           Control.Retry
 import           Network.Wreq
 
-import           YAHDL.Types.General            ( Token
-                                                , formatToken
-                                                )
 import           YAHDL.HTTP.Route               ( Route
                                                 , RouteBuilder
+                                                )
+import           YAHDL.Types.General            ( Token
+                                                , formatToken
                                                 )
 
 data RateLimitState = RateLimitState

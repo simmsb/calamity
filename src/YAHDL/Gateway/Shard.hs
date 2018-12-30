@@ -94,7 +94,7 @@ shardLoop = outerloop $> ()
     d   <- liftMaybe . A.decode $ msg
     pure . Discord $ d
 
-  mergedStream :: Shard -> Connection -> ExceptT ShardException (ShardM) ShardMsg
+  mergedStream :: Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
   mergedStream shard ws = do
     setExc <- use #setExc
     #setExc .= Nothing
@@ -179,7 +179,7 @@ shardLoop = outerloop $> ()
     pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
-  handleMsg :: ShardMsg -> ExceptT ShardException (ShardM) ()
+  handleMsg :: ShardMsg -> ExceptT ShardException ShardM ()
   handleMsg (Discord msg) = case msg of
     Dispatch seq data' -> do
       debug $ "Handling event: ("+||data'||+")"

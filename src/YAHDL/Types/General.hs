@@ -1,6 +1,16 @@
 -- | General data types
 
-module YAHDL.Types.General where
+module YAHDL.Types.General
+  ( Token(..)
+  , formatToken
+  , VoiceState(..)
+  , User(..)
+  , Channel(..)
+  , Guild(..)
+  , Member(..)
+  , Message(..)
+  )
+where
 
 import           Data.Aeson
 
@@ -37,9 +47,15 @@ instance FromJSON VoiceState where
 -- TODO: these types
 newtype User    = User Value
   deriving (Show, Generic, ToJSON, FromJSON)
+
 newtype Channel = Channel Value
   deriving (Show, Generic, ToJSON, FromJSON)
+
 newtype Guild   = Guild Value
   deriving (Show, Generic, ToJSON, FromJSON)
+
 newtype Member  = Member Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype Message = Message Value
   deriving (Show, Generic, ToJSON, FromJSON)
