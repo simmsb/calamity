@@ -8,7 +8,7 @@ import           Control.Concurrent.STM.TChan
 import qualified Streamly                      as S
 import qualified Streamly.Prelude              as S
 
-mkChanRecvStream :: S.IsStream t => STM (t IO a, TChan a)
+mkChanRecvStream :: STM (S.Serial a, TChan a)
 mkChanRecvStream = do
   chan <- newTChan
 

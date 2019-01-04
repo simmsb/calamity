@@ -2,7 +2,6 @@
 
 module YAHDL.Types.Snowflake
   ( Snowflake(..)
-  , fromSnowflake
   )
 where
 

@@ -1,18 +1,20 @@
 -- | Module containing ratelimit stuff
 
-module YAHDL.HTTP.Ratelimit where
+module YAHDL.HTTP.Ratelimit
+  ( RateLimitState(..)
+  , newRateLimitState
+  , getRateLimit
+  )
+where
 
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.Lock    ( Lock )
 import qualified Control.Concurrent.STM.Lock   as L
-import qualified StmContainers.Map             as SC
-import           Focus
 import           Control.Retry
-import           Network.Wreq
+import           Focus
+import qualified StmContainers.Map             as SC
 
-import           YAHDL.HTTP.Route               ( Route
-                                                , RouteBuilder
-                                                )
+import           YAHDL.HTTP.Route
 import           YAHDL.Types.General            ( Token
                                                 , formatToken
                                                 )
@@ -30,15 +32,6 @@ getRateLimit s h = SC.focus (lookupWithDefaultM L.new) h (rateLimits s)
 
 -- TODO: routes with hashes (just steal from haskord :^^^))
 -- TODO: bot state reader (token, rl states, etc)
-
-defaultRequestOptions :: Options
-defaultRequestOptions =
-  defaults & header "User-Agent" .~ ["YAHDL (https://github.com/nitros12/yet-another-haskell-discord-library)"]
-           & checkResponse ?~ (\_ _ -> pure ())
-
-requestOptions :: Token -> Options
-requestOptions t =
-  defaultRequestOptions & header "Authorization" .~ [formatToken t]
 
 -- TODO: write functions for each method
 -- TODO: write types to contain parameters/ data for each route

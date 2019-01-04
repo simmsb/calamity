@@ -1,12 +1,14 @@
 -- |
 
 module YAHDL.Client.Client
-  ( Client(..)
+  ( runBotM
   )
 where
 
-import           YAHDL.Gateway.Shard
--- import           YAHDL.Client.ShardManager
-import           Control.Concurrent.STM.TVar
+import           Control.Monad.Log              ( Logger
+                                                , runLogTSafe
+                                                )
+import           YAHDL.Client.Types
 
-newtype Client = Client { shards :: TVar [(Shard, Async ())] }
+runBotM :: ClientState -> Logger Text -> BotM a -> IO a
+runBotM cstate logEnv = (`runReaderT` cstate) . runLogTSafe logEnv . unBotM
