@@ -10,5 +10,5 @@ import           Control.Monad.Log              ( Logger
                                                 )
 import           YAHDL.Client.Types
 
-runBotM :: ClientState -> Logger Text -> BotM a -> IO a
+runBotM :: Client -> Logger Text -> BotM a -> IO a
 runBotM cstate logEnv = (`runReaderT` cstate) . runLogTSafe logEnv . unBotM

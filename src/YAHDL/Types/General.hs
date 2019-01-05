@@ -6,6 +6,7 @@ module YAHDL.Types.General
   , VoiceState(..)
   , User(..)
   , Channel(..)
+  , DM(..)
   , Guild(..)
   , Member(..)
   , Message(..)
@@ -45,16 +46,19 @@ instance FromJSON VoiceState where
   parseJSON = genericParseJSON jsonOptions
 
 -- TODO: these types
-newtype User    = User Value
+newtype User = User Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype DM = DM Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype Channel = Channel Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
-newtype Guild   = Guild Value
+newtype Guild = Guild Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
-newtype Member  = Member Value
+newtype Member = Member Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype Message = Message Value

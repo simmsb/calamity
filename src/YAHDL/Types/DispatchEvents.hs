@@ -50,34 +50,95 @@ data ReadyData = ReadyData
 instance FromJSON ReadyData where
   parseJSON = genericParseJSON jsonOptions
 
-type ChannelCreateData            = Value
-type ChannelUpdateData            = Value
-type ChannelDeleteData            = Value
-type ChannelPinsUpdateData        = Value
-type GuildCreateData              = Value
-type GuildUpdateData              = Value
-type GuildDeleteData              = Value
-type GuildBanAddData              = Value
-type GuildBanRemoveData           = Value
-type GuildEmojisUpdateData        = Value
-type GuildIntegrationsUpdateData  = Value
-type GuildMemberAddData           = Value
-type GuildMemberRemoveData        = Value
-type GuildMemberUpdateData        = Value
-type GuildMembersChunkData        = Value
-type GuildRoleCreateData          = Value
-type GuildRoleUpdateData          = Value
-type GuildRoleDeleteData          = Value
-type MessageCreateData            = Value
-type MessageUpdateData            = Value
-type MessageDeleteData            = Value
-type MessageDeleteBulkData        = Value
-type MessageReactionAddData       = Value
-type MessageReactionRemoveData    = Value
-type MessageReactionRemoveAllData = Value
-type PresenceUpdateData           = Value
-type TypingStartData              = Value
-type UserUpdateData               = Value
-type VoiceStateUpdateData         = Value
-type VoiceServerUpdateData        = Value
-type WebhooksUpdateData           = Value
+newtype ChannelCreateData = ChannelCreateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype ChannelUpdateData = ChannelUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype ChannelDeleteData = ChannelDeleteData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype ChannelPinsUpdateData = ChannelPinsUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildCreateData = GuildCreateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildUpdateData = GuildUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildDeleteData = GuildDeleteData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildBanAddData = GuildBanAddData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildBanRemoveData = GuildBanRemoveData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildEmojisUpdateData = GuildEmojisUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildIntegrationsUpdateData = GuildIntegrationsUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildMemberAddData = GuildMemberAddData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildMemberRemoveData = GuildMemberRemoveData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildMemberUpdateData = GuildMemberUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildMembersChunkData = GuildMembersChunkData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildRoleCreateData = GuildRoleCreateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildRoleUpdateData = GuildRoleUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype GuildRoleDeleteData = GuildRoleDeleteData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype MessageCreateData = MessageCreateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype MessageUpdateData = MessageUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype MessageDeleteData = MessageDeleteData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype MessageDeleteBulkData = MessageDeleteBulkData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype MessageReactionAddData = MessageReactionAddData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype MessageReactionRemoveData = MessageReactionRemoveData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype MessageReactionRemoveAllData = MessageReactionRemoveAllData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype PresenceUpdateData = PresenceUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype TypingStartData = TypingStartData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype UserUpdateData = UserUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype VoiceStateUpdateData = VoiceStateUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype VoiceServerUpdateData = VoiceServerUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype WebhooksUpdateData = WebhooksUpdateData Value
+  deriving (Show, Generic, ToJSON, FromJSON)

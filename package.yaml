@@ -48,6 +48,7 @@ dependencies:
 - singletons >= 2.5
 - hashable >= 1.2
 - retry >= 0.7
+- time >= 1.8  # aeson dep
 
 library:
   ghc-options:

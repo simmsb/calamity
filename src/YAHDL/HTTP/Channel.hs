@@ -1,5 +1,7 @@
 -- | Channel endpoints
 
+{-# LANGUAGE TypeApplications #-}
+
 module YAHDL.HTTP.Channel where
 
 import           Data.Aeson

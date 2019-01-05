@@ -249,9 +249,9 @@ haltHeartBeat = do
 
 sendHeartBeat :: ShardM ()
 sendHeartBeat = do
-  seq <- use #seqNum
-  debug $ "Sending heartbeat (seq: "+|seq|+")"
-  sendToWs $ HeartBeat seq
+  seqNum <- use #seqNum
+  debug $ "Sending heartbeat (seq: "+|seqNum|+")"
+  sendToWs $ HeartBeat seqNum
   #hbResponse .= False
 
 heartBeatLoop :: Int -> ShardM ()
