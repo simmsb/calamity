@@ -1,14 +1,8 @@
--- |
+-- | The client
 
 module YAHDL.Client.Client
-  ( runBotM
+  ( module YAHDL.Client.Types
   )
 where
 
-import           Control.Monad.Log              ( Logger
-                                                , runLogTSafe
-                                                )
 import           YAHDL.Client.Types
-
-runBotM :: Client -> Logger Text -> BotM a -> IO a
-runBotM cstate logEnv = (`runReaderT` cstate) . runLogTSafe logEnv . unBotM

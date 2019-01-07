@@ -10,6 +10,9 @@ module YAHDL.Types.General
   , Guild(..)
   , Member(..)
   , Message(..)
+  , Emoji(..)
+  , Role(..)
+  , Reaction(..)
   )
 where
 
@@ -62,4 +65,14 @@ newtype Member = Member Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype Message = Message Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype Emoji = Emoji Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+newtype Role = Role Value
+  deriving (Show, Generic, ToJSON, FromJSON)
+
+-- Needs to have user, message and emoji
+newtype Reaction = Reaction Value
   deriving (Show, Generic, ToJSON, FromJSON)

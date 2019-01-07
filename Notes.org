@@ -1,0 +1,7 @@
+#+TITLE: Notes
+
+* TODO Things to test
+- Test using text-short and intern for certain strings
+
+* Presence info
+- linky :: https://discordapp.com/developers/docs/topics/gateway#presence-update
