@@ -272,7 +272,6 @@ data ShardState = ShardState
   , wsHost     :: Maybe Text
   , sessionID  :: Maybe Text
   , wsConn     :: Maybe Connection
-  , setExc     :: Maybe ShardException
   } deriving (Generic)
 
 newtype ShardM a = ShardM

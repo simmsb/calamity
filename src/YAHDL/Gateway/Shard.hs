@@ -28,8 +28,9 @@ import           Data.Text.Strict.Lens
 import           Data.Maybe
 import           Network.WebSockets             ( Connection
                                                 , receiveData
-                                                , sendClose
+                                                , sendCloseCode
                                                 , sendTextData
+                                                , ConnectionException(..)
                                                 )
 import           Wuss
 
@@ -38,7 +39,7 @@ import           YAHDL.Types.DispatchEvents
 
 newShardState :: Shard -> ShardState
 newShardState shard =
-  ShardState shard Nothing Nothing False Nothing Nothing Nothing Nothing
+  ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
 newShard :: Int -> Int -> Text -> Logger Text -> TChan DispatchData -> IO (Shard, Async ())
@@ -79,9 +80,19 @@ untilResult m = m >>= \case
   Just a  -> pure a
   Nothing -> untilResult m
 
-mergeEither :: Either a a -> a
-mergeEither (Left a)  = a
-mergeEither (Right a) = a
+fromEither :: Either a a -> a
+fromEither (Left a)  = a
+fromEither (Right a) = a
+
+-- | Catches ws close events and decides if we can restart or not
+checkWSClose :: IO a -> IO (Either ControlMessage a)
+checkWSClose m = (Right <$> m) `catch` \case
+  e@(CloseRequest code _) ->
+    if code `elem` [1000, 4004, 4010, 4011]
+    then pure . Left $ Restart
+    else throwIO e
+
+  e -> throwIO e
 
 -- | The loop a shard will run on
 shardLoop :: ShardM ()
@@ -90,21 +101,18 @@ shardLoop = outerloop $> ()
   controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
 
   discordStream ws = untilResult . runMaybeT $ do
-    msg <- liftIO $ receiveData ws
-    d   <- liftMaybe . A.decode $ msg
-    pure . Discord $ d
+    msg <- liftIO . checkWSClose $ receiveData ws
+    case msg of
+      Left c ->
+        pure . Control $ c
+
+      Right msg' -> do
+        d <- liftMaybe . A.decode $ msg'
+        pure . Discord $ d
 
   mergedStream :: Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
-  mergedStream shard ws = do
-    setExc <- use #setExc
-    #setExc .= Nothing
-
-    -- someone set an exception (probably the heartbeat loop, shove it downstream)
-    case setExc of
-      Just x -> throwE x
-      _      -> pure ()
-
-    liftIO (mergeEither <$> race (controlStream shard) (discordStream ws))
+  mergedStream shard ws =
+    liftIO (fromEither <$> race (controlStream shard) (discordStream ws))
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
   -- Currently if this goes to the error path we just exit the forever loop
@@ -141,7 +149,7 @@ shardLoop = outerloop $> ()
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- | and then decides what to do with it
-  innerloop :: Connection -> ShardM (Either ShardException a)
+  innerloop :: Connection -> ShardM (Either ShardException Void)
   innerloop ws = do
     shard <- use #shardS
     #wsConn ?= ws
@@ -181,9 +189,9 @@ shardLoop = outerloop $> ()
   -- | Handlers for each message, not sure what they'll need to do exactly yet
   handleMsg :: ShardMsg -> ExceptT ShardException ShardM ()
   handleMsg (Discord msg) = case msg of
-    Dispatch seq data' -> do
+    Dispatch seqNum data' -> do
       debug $ "Handling event: ("+||data'||+")"
-      #seqNum ?= seq
+      #seqNum ?= seqNum
 
       case data' of
         Ready rdata' ->
@@ -261,5 +269,6 @@ heartBeatLoop interval = ($> ()) . runMaybeT . forever $ do
   hasResp <- use #hbResponse
   unless hasResp $ do
     debug "No heartbeat response, restarting shard"
-    #setExc ?= ShardExcRestart
+    wsConn <- fromJust <$> use #wsConn
+    liftIO $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: Text)
     mzero -- exit the loop, we had no response
