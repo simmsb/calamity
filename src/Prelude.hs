@@ -7,25 +7,29 @@ module Prelude
   , module Control.Lens
   , module Control.Monad.Log
   , module Fmt
+  , module Data.Aeson.Lens
   , jsonOptions
   , jsonOptionsKeepNothing
   )
 where
 
 import           Data.Aeson
+import           Data.Aeson.Lens
 
 import           Protolude               hiding ( HasField
                                                 , getField
                                                 )
 -- import           Data.Generics.Product   hiding ( list )
 -- import           Data.Generics.Sum
-import           Control.Lens                   ( (^.)
-                                                , (^?)
-                                                , (.~)
-                                                , (?~)
-                                                , (?=)
-                                                , (%=)
-                                                , use
+import           Control.Lens            hiding ( Strict
+                                                , Level
+                                                , uncons
+                                                , unsnoc
+                                                , from
+                                                , to
+                                                , op
+                                                , (<.>)
+                                                , (.=)
                                                 )
 import           Control.Monad.Log              ( debug
                                                 , info

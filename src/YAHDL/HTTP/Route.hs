@@ -1,4 +1,5 @@
 -- | The route type
+-- | Why I did this I don't know
 
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE EmptyCase #-}
@@ -124,11 +125,13 @@ buildRoute
   => RouteBuilder ids
   -> Route
 buildRoute (UnsafeMkRouteBuilder route ids) = Route
-  (T.intercalate "/" (baseURL : map goR route))
-  (T.concat (map goIdent route))
+  (T.intercalate "/" (baseURL : map goR route'))
+  (T.concat (map goIdent route'))
   (Snowflake <$> lookup (typeRep (Proxy :: Proxy Channel)) ids)
   (Snowflake <$> lookup (typeRep (Proxy :: Proxy Guild)) ids)
  where
+  route' = reverse route
+
   goR (S'  t) = t
   goR (ID' t) = show . fromJust $ lookup t ids
 

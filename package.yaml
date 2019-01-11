@@ -49,6 +49,7 @@ dependencies:
 - retry >= 0.7
 - time >= 1.8  # aeson dep
 - unordered-containers >= 0.2
+- http-date >= 0.0.8
 
 library:
   ghc-options:

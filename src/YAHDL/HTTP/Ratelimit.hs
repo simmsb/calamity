@@ -1,5 +1,7 @@
 -- | Module containing ratelimit stuff
 
+{-# LANGUAGE MultiWayIf #-}
+
 module YAHDL.HTTP.Ratelimit
   ( RateLimitState(..)
   , newRateLimitState
@@ -7,6 +9,14 @@ module YAHDL.HTTP.Ratelimit
   )
 where
 
+import           Network.HTTP.Date
+import           Data.Time
+import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
+import           Data.Aeson
+import           Data.Maybe
+import           Network.Wreq
+import           Network.HTTP.Types
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.Lock    ( Lock )
 import qualified Control.Concurrent.STM.Lock   as L
@@ -24,11 +34,50 @@ data RateLimitState = RateLimitState
   , globalLock :: Lock
   } deriving (Generic)
 
+data DiscordResponseType
+  -- | A good response
+  = Good Value
+  -- | We got a response but also exhausted the bucket
+  | ExhaustedBucket Value
+    Int -- ^ Retry after (milliseconds)
+  -- | We hit a 429, no response and ratelimited
+  | Ratelimited
+    Int -- ^ Retry after (milliseconds)
+    Bool -- ^ Global ratelimit
+  -- | Discord's error, we should retry (HTTP 5XX)
+  | ServerError Int
+  -- | Our error, we should fail
+  | ClientError Int Value
+
 newRateLimitState :: STM RateLimitState
 newRateLimitState = RateLimitState <$> SC.new <*> L.new
 
 getRateLimit :: RateLimitState -> Route -> STM Lock
 getRateLimit s h = SC.focus (lookupWithDefaultM L.new) h (rateLimits s)
+
+doDiscordRequest :: IO (Response a) -> IO DiscordResponseType
+doDiscordRequest r = do
+  r' <- r
+  let status = r' ^. responseStatus
+  if
+    | -- TODO: this
+      statusIsSuccessful status -> do
+      pure undefined
+
+
+parseDiscordTime :: ByteString -> Maybe UTCTime
+parseDiscordTime s = httpDateToUTC <$> parseHTTPDate s
+
+computeDiscordTimeDiff :: Integer -> UTCTime -> Integer
+computeDiscordTimeDiff end now = round $ diffUTCTime end' now
+  where end' = end & fromInteger & posixSecondsToUTCTime
+
+-- | Parse a ratelimit header returning the number of seconds until it resets
+parseRateLimitHeader :: Response a -> Integer
+parseRateLimitHeader r = computeDiscordTimeDiff end now
+ where
+  end = r ^?! responseHeader "X-Ratelimit-Reset" . _Integer
+  now = r ^?! responseHeader "Date" & parseDiscordTime & fromJust
 
 -- TODO: routes with hashes (just steal from haskord :^^^))
 -- TODO: bot state reader (token, rl states, etc)

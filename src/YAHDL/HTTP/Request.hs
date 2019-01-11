@@ -8,6 +8,7 @@ import           Network.Wreq
 
 import           YAHDL.HTTP.Route
 import           YAHDL.Types.General
+import           YAHDL.Client.Types
 
 
 class Request a where
@@ -18,7 +19,7 @@ class Request a where
   url :: a -> String
   url r = path (toRoute r) ^. unpacked
 
-  invokeRequest :: a -> RespVal a -- TODO: bot monad goes here
+  invokeRequest :: a -> BotM (RespVal a)
 
 
 defaultRequestOptions :: Options

@@ -5,8 +5,8 @@
 
 module YAHDL.Client.Types
   ( Client(..)
-  , runBotM
   , BotM(..)
+  , runBotM
   , EventM
   , runEventM
   , syncEventM
@@ -16,8 +16,8 @@ where
 
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Catch            ( MonadMask )
-import           Control.Monad.Log              ( Logger )
-import           Control.Monad.Log              ( LogT(..)
+import           Control.Monad.Log              ( Logger
+                                                , LogT(..)
                                                 , MonadLog
                                                 , runLogTSafe
                                                 )
@@ -44,11 +44,11 @@ data Cache = Cache
   } deriving (Generic)
 
 data Client = Client
-  { shards      :: TVar [(Shard, Async ())]
-  , token       :: Token
-  , rlState     :: RateLimitState
-  , eventStream :: S.Serial DispatchData
-  , cache       :: TVar Cache
+  { shards        :: TVar [(Shard, Async ())]
+  , token         :: Token
+  , rlState       :: RateLimitState
+  , eventStream   :: S.Serial DispatchData
+  , cache         :: TVar Cache
   , eventHandlers :: EventHandlers
   } deriving (Generic)
 
