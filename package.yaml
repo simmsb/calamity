@@ -50,6 +50,7 @@ dependencies:
 - time >= 1.8  # aeson dep
 - unordered-containers >= 0.2
 - http-date >= 0.0.8
+- bytestring >= 0.10
 
 library:
   ghc-options:

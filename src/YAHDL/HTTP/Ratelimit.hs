@@ -9,19 +9,22 @@ module YAHDL.HTTP.Ratelimit
   )
 where
 
-import           Network.HTTP.Date
-import           Data.Time
-import           Data.Time.Clock
-import           Data.Time.Clock.POSIX
-import           Data.Aeson
-import           Data.Maybe
-import           Network.Wreq
-import           Network.HTTP.Types
+import qualified Control.Concurrent.Event      as E
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.Lock    ( Lock )
 import qualified Control.Concurrent.STM.Lock   as L
+import           Control.Monad
 import           Control.Retry
+import           Data.Aeson
+import qualified Data.ByteString.Lazy          as LB
+import           Data.Maybe
+import           Data.Time
+import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
 import           Focus
+import           Network.HTTP.Date
+import           Network.HTTP.Types      hiding ( statusCode )
+import           Network.Wreq
 import qualified StmContainers.Map             as SC
 
 import           YAHDL.HTTP.Route
@@ -31,7 +34,7 @@ import           YAHDL.Types.General            ( Token
 
 data RateLimitState = RateLimitState
   { rateLimits :: SC.Map Route Lock
-  , globalLock :: Lock
+  , globalLock :: E.Event
   } deriving (Generic)
 
 data DiscordResponseType
@@ -39,31 +42,40 @@ data DiscordResponseType
   = Good Value
   -- | We got a response but also exhausted the bucket
   | ExhaustedBucket Value
-    Int -- ^ Retry after (milliseconds)
+    Integer -- ^ Retry after (milliseconds)
   -- | We hit a 429, no response and ratelimited
   | Ratelimited
-    Int -- ^ Retry after (milliseconds)
+    Integer -- ^ Retry after (milliseconds)
     Bool -- ^ Global ratelimit
   -- | Discord's error, we should retry (HTTP 5XX)
   | ServerError Int
   -- | Our error, we should fail
   | ClientError Int Value
 
-newRateLimitState :: STM RateLimitState
-newRateLimitState = RateLimitState <$> SC.new <*> L.new
+newRateLimitState :: IO RateLimitState
+newRateLimitState = RateLimitState <$> SC.newIO <*> E.newSet
 
 getRateLimit :: RateLimitState -> Route -> STM Lock
 getRateLimit s h = SC.focus (lookupWithDefaultM L.new) h (rateLimits s)
 
-doDiscordRequest :: IO (Response a) -> IO DiscordResponseType
+doDiscordRequest :: IO (Response LB.ByteString) -> IO DiscordResponseType
 doDiscordRequest r = do
   r' <- r
   let status = r' ^. responseStatus
   if
-    | -- TODO: this
-      statusIsSuccessful status -> do
-      pure undefined
-
+    | statusIsSuccessful status -> do
+      val <- (^. responseBody) <$> asValue r'
+      pure $ if isExhausted r'
+        then ExhaustedBucket val $ parseRateLimitHeader r'
+        else Good val
+    | statusIsServerError status -> pure $ ServerError (status ^. statusCode)
+    | status == status429 -> do
+      rv <- asValue r'
+      pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
+    | statusIsClientError status -> do
+      val <- (^. responseBody) <$> asValue r'
+      pure $ ClientError (status ^. statusCode) val
+    | otherwise -> fail "Bogus response, discord fix your shit"
 
 parseDiscordTime :: ByteString -> Maybe UTCTime
 parseDiscordTime s = httpDateToUTC <$> parseHTTPDate s
@@ -78,6 +90,16 @@ parseRateLimitHeader r = computeDiscordTimeDiff end now
  where
   end = r ^?! responseHeader "X-Ratelimit-Reset" . _Integer
   now = r ^?! responseHeader "Date" & parseDiscordTime & fromJust
+
+isExhausted :: Response a -> Bool
+isExhausted r = r ^?! responseHeader "X-Ratelimit-Remaining" == "0"
+
+parseRetryAfter :: Response Value -> Integer
+parseRetryAfter r =
+  r ^?! responseBody . key "retry_after" . _Integer `div` 1000
+
+isGlobal :: Response Value -> Bool
+isGlobal r = r ^? responseBody . key "global" . _Bool == Just True
 
 -- TODO: routes with hashes (just steal from haskord :^^^))
 -- TODO: bot state reader (token, rl states, etc)

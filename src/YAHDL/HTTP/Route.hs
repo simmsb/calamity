@@ -11,7 +11,7 @@ module YAHDL.HTTP.Route
   , giveID
   , buildRoute
   , RouteBuilder
-  , Route(..)
+  , Route(path)
   , S(..)
   , ID(..)
   , RouteFragmentable(..)
