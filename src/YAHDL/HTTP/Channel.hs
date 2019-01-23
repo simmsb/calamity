@@ -16,7 +16,7 @@ data ChannelRequest a where
   CreateMessage :: Snowflake Channel -> Text -> {- TODO: embed -} ChannelRequest Message
 
 instance Request (ChannelRequest a) where
-  type RespVal (ChannelRequest a) = Maybe a
+  type RespVal (ChannelRequest a) = a
 
   toRoute (CreateMessage id _) = mkRouteBuilder
     & (S "channels" !:!)
@@ -25,6 +25,4 @@ instance Request (ChannelRequest a) where
     & giveID id
     & buildRoute
 
-  invokeRequest q@(CreateMessage _ t) = do
-    r <- liftIO $ asJSON =<< post (url q) (object ["content" .= t])
-    pure $ r ^? responseBody
+  toAction q@(CreateMessage _ t) = post (url q) (object ["content" .= t])
