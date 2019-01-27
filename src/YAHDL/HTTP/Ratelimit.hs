@@ -35,6 +35,7 @@ newRateLimitState = RateLimitState <$> SC.newIO <*> E.newSet
 getRateLimit :: RateLimitState -> Route -> STM Lock
 getRateLimit s h = SC.focus (lookupWithDefaultM L.new) h (rateLimits s)
 
+-- TODO: Add logging here
 doDiscordRequest :: IO (Response LB.ByteString) -> IO DiscordResponseType
 doDiscordRequest r = do
   r' <- r
@@ -85,6 +86,7 @@ data ShouldRetry a b
   | RFail a
   | RGood b
 
+-- TODO: add logging here
 retryRequest :: Monad m => Int -- ^ number of retries
       -> m (ShouldRetry a b) -- ^ action to perform
       -> m ()  -- ^ action to run if max number of retries was reached
@@ -101,13 +103,13 @@ retryRequest max_retries action failAction = retryInner 0
     where
       doFail v = failAction >> pure v
 
--- | Return a instantly after unlocking l
+-- | Return `a` instantly after unlocking `l`
 unlockAndPure :: Lock -> a -> IO a
 unlockAndPure l a = do
   atomically $ L.release l
   pure a
 
--- | Return a instantly, after scheduling l to be unlocked after d milliseconds
+-- | Return `a` instantly, after scheduling `l` to be unlocked after `d` milliseconds
 scheduleUnlockAndPure :: Lock -> Int -> a -> IO a
 scheduleUnlockAndPure l d r = do
   void . forkIO $ do
@@ -115,6 +117,7 @@ scheduleUnlockAndPure l d r = do
     atomically $ L.release l
   pure r
 
+-- TODO: Add logging here
 doSingleRequest :: Event -> Lock -> IO (Response LB.ByteString) -> IO (ShouldRetry RestError Value)
 doSingleRequest gl l r = do
   r' <- doDiscordRequest r
