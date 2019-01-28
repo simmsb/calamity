@@ -86,8 +86,7 @@ data ShouldRetry a b
   | RFail a
   | RGood b
 
--- TODO: add logging here
-retryRequest :: Monad m => Int -- ^ number of retries
+retryRequest :: (Monad m, MonadLog Text m) => Int -- ^ number of retries
       -> m (ShouldRetry a b) -- ^ action to perform
       -> m ()  -- ^ action to run if max number of retries was reached
       -> m (Either a b)
@@ -96,9 +95,13 @@ retryRequest max_retries action failAction = retryInner 0
   retryInner num_retries = do
     res <- action
     case res of
-      Retry r | num_retries > max_retries -> doFail $ Left r
+      Retry r | num_retries > max_retries -> do
+                  info $ "Request failed after "+|max_retries|+" retries."
+                  doFail $ Left r
       Retry _ -> retryInner (succ num_retries)
-      RFail r -> doFail $ Left r
+      RFail r -> do
+        info $ "Request failed due to error response."
+        doFail $ Left r
       RGood r -> pure $ Right r
     where
       doFail v = failAction >> pure v
@@ -117,28 +120,35 @@ scheduleUnlockAndPure l d r = do
     atomically $ L.release l
   pure r
 
--- TODO: Add logging here
-doSingleRequest :: Event -> Lock -> IO (Response LB.ByteString) -> IO (ShouldRetry RestError Value)
+doSingleRequest :: (Monad m, MonadIO m, MonadLog Text m)
+  => Event -- ^ Global lock
+  -> Lock -- ^ Local lock
+  -> IO (Response LB.ByteString) -- ^ Request action
+  -> m (ShouldRetry RestError Value)
 doSingleRequest gl l r = do
-  r' <- doDiscordRequest r
+  r' <- liftIO $ doDiscordRequest r
   case r' of
     Good v ->
       unlockAndPure l $ RGood v
 
-    ExhaustedBucket v d ->
+    ExhaustedBucket v d -> do
+      info "Exhausted bucket"
       scheduleUnlockAndPure l d $ RGood v
 
     Ratelimited d False -> do
+      info "429 ratelimited on route"
       threadDelay $ 1000 * d
       pure $ Retry (HTTPError 429 Nothing)
 
     Ratelimited d True -> do
+      info "429 ratelimited globally"
       E.clear gl
       threadDelay $ 1000 * d
       E.set gl
       pure $ Retry (HTTPError 429 Nothing)
 
-    ServerError c ->
+    ServerError c -> do
+      info "Server failed, retrying"
       pure $ Retry (HTTPError c Nothing)
 
     ClientError c v ->
@@ -161,7 +171,6 @@ doRequest rlState route action = do
 
 
 -- TODO: routes with hashes (just steal from haskord :^^^))
--- TODO: bot state reader (token, rl states, etc)
 
 -- TODO: write functions for each method
 -- TODO: write types to contain parameters/ data for each
