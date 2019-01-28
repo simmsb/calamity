@@ -31,7 +31,8 @@ import           Control.Lens            hiding ( Strict
                                                 , (<.>)
                                                 , (.=)
                                                 )
-import           Control.Monad.Log              ( debug
+import           Control.Monad.Log              ( MonadLog
+                                                , debug
                                                 , info
                                                 , warning
                                                 , error
