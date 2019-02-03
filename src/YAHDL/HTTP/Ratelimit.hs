@@ -102,7 +102,7 @@ retryRequest max_retries action failAction = retryInner 0
         doFail $ Left r
       Retry _ -> retryInner (succ num_retries)
       RFail r -> do
-        info $ "Request failed due to error response."
+        info "Request failed due to error response."
         doFail $ Left r
       RGood r -> pure $ Right r
     where doFail v = failAction >> pure v
