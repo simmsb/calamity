@@ -38,7 +38,9 @@ class Request a where
     where inner :: ExceptT RestError BotM a
           inner = do
             rlState' <- asks rlState
-            resp <- liftIO $ doRequest rlState' (toRoute r) (toAction r)
+            -- TODO: insert route log formatter here, currently it just uses the default bot formatter
+            -- which isn't what we want
+            resp <- doRequest rlState' (toRoute r) (toAction r)
 
             resp' <- extractRight resp
 

@@ -9,7 +9,7 @@ module YAHDL.HTTP.Ratelimit
   )
 where
 
-import           Control.Concurrent.Event      ( Event)
+import           Control.Concurrent.Event       ( Event )
 import qualified Control.Concurrent.Event      as E
 import           Control.Concurrent.STM.Lock    ( Lock )
 import qualified Control.Concurrent.STM.Lock   as L
@@ -25,7 +25,7 @@ import           Network.HTTP.Types      hiding ( statusCode )
 import           Network.Wreq
 import qualified StmContainers.Map             as SC
 
-import YAHDL.HTTP.Types
+import           YAHDL.HTTP.Types
 import           YAHDL.HTTP.Route
 
 
@@ -86,41 +86,43 @@ data ShouldRetry a b
   | RFail a
   | RGood b
 
-retryRequest :: (Monad m, MonadLog Text m) => Int -- ^ number of retries
-      -> m (ShouldRetry a b) -- ^ action to perform
-      -> m ()  -- ^ action to run if max number of retries was reached
-      -> m (Either a b)
+retryRequest
+  :: (MonadLog Text m)
+  => Int -- ^ number of retries
+  -> m (ShouldRetry a b) -- ^ action to perform
+  -> m ()  -- ^ action to run if max number of retries was reached
+  -> m (Either a b)
 retryRequest max_retries action failAction = retryInner 0
  where
   retryInner num_retries = do
     res <- action
     case res of
       Retry r | num_retries > max_retries -> do
-                  info $ "Request failed after "+|max_retries|+" retries."
-                  doFail $ Left r
+        info $ "Request failed after " +| max_retries |+ " retries."
+        doFail $ Left r
       Retry _ -> retryInner (succ num_retries)
       RFail r -> do
         info $ "Request failed due to error response."
         doFail $ Left r
       RGood r -> pure $ Right r
-    where
-      doFail v = failAction >> pure v
+    where doFail v = failAction >> pure v
 
 -- | Return `a` instantly after unlocking `l`
-unlockAndPure :: Lock -> a -> IO a
+unlockAndPure :: MonadIO m => Lock -> a -> m a
 unlockAndPure l a = do
-  atomically $ L.release l
+  liftIO . atomically $ L.release l
   pure a
 
 -- | Return `a` instantly, after scheduling `l` to be unlocked after `d` milliseconds
-scheduleUnlockAndPure :: Lock -> Int -> a -> IO a
+scheduleUnlockAndPure :: MonadIO m => Lock -> Int -> a -> m a
 scheduleUnlockAndPure l d r = do
-  void . forkIO $ do
+  liftIO . void . forkIO $ do
     threadDelay $ 1000 * d
     atomically $ L.release l
   pure r
 
-doSingleRequest :: (Monad m, MonadIO m, MonadLog Text m)
+doSingleRequest
+  :: (MonadIO m, MonadLog Text m)
   => Event -- ^ Global lock
   -> Lock -- ^ Local lock
   -> IO (Response LB.ByteString) -- ^ Request action
@@ -128,8 +130,7 @@ doSingleRequest :: (Monad m, MonadIO m, MonadLog Text m)
 doSingleRequest gl l r = do
   r' <- liftIO $ doDiscordRequest r
   case r' of
-    Good v ->
-      unlockAndPure l $ RGood v
+    Good v              -> unlockAndPure l $ RGood v
 
     ExhaustedBucket v d -> do
       info "Exhausted bucket"
@@ -137,35 +138,40 @@ doSingleRequest gl l r = do
 
     Ratelimited d False -> do
       info "429 ratelimited on route"
-      threadDelay $ 1000 * d
+      liftIO . threadDelay $ 1000 * d
       pure $ Retry (HTTPError 429 Nothing)
 
     Ratelimited d True -> do
       info "429 ratelimited globally"
-      E.clear gl
-      threadDelay $ 1000 * d
-      E.set gl
+      liftIO $ do
+        E.clear gl
+        threadDelay $ 1000 * d
+        E.set gl
       pure $ Retry (HTTPError 429 Nothing)
 
     ServerError c -> do
       info "Server failed, retrying"
       pure $ Retry (HTTPError c Nothing)
 
-    ClientError c v ->
-      pure $ RFail (HTTPError c (Just v))
+    ClientError c v -> pure $ RFail (HTTPError c (Just v))
 
-doRequest :: RateLimitState -> Route -> IO (Response LB.ByteString) -> IO (Either RestError Value)
+doRequest
+  :: (MonadIO m, MonadLog Text m)
+  => RateLimitState
+  -> Route
+  -> IO (Response LB.ByteString)
+  -> m (Either RestError Value)
 doRequest rlState route action = do
-  E.wait (globalLock rlState)
+  liftIO $ E.wait (globalLock rlState)
 
-  ratelimit <- atomically $ do
+  ratelimit <- liftIO . atomically $ do
     lock <- getRateLimit rlState route
     L.acquire lock
     pure lock
 
   retryRequest 5
     (doSingleRequest (globalLock rlState) ratelimit action)
-    (atomically $ L.release  ratelimit)
+    (liftIO . atomically $ L.release ratelimit)
 
 
 
