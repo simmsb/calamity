@@ -2,6 +2,14 @@
 
 module YAHDL.HTTP.Request where
 
+import           Control.Monad.Log              ( formatter
+                                                , defaultFormatter
+                                                , localLogger
+                                                , toLogStr
+                                                , Level
+                                                , FormattedTime
+                                                , LogStr
+                                                )
 import           Data.Aeson              hiding ( Options )
 import qualified Data.ByteString.Lazy          as LB
 import           Data.String                    ( String )
@@ -23,33 +31,39 @@ extractRight :: Monad m => Either a b -> ExceptT a m b
 extractRight (Left  a) = throwE a
 extractRight (Right a) = pure a
 
-class Request a where
-  type RespVal a
-
+class Request a r | a -> r where
   toRoute :: a -> Route
 
   url :: a -> String
   url r = path (toRoute r) ^. unpacked
 
-  toAction :: a -> IO (Response LB.ByteString)
+  toAction :: a -> Options -> IO (Response LB.ByteString)
 
-  invokeRequest :: FromJSON a => a -> BotM (Either RestError a)
+  invokeRequest :: FromJSON r => a -> BotM (Either RestError r)
   invokeRequest r = runExceptT inner
-    where inner :: ExceptT RestError BotM a
+    where inner :: ExceptT RestError BotM r
           inner = do
             rlState' <- asks rlState
-            -- TODO: insert route log formatter here, currently it just uses the default bot formatter
-            -- which isn't what we want
-            resp <- doRequest rlState' (toRoute r) (toAction r)
+            token' <- asks token
+
+            resp <- localLogger withRequestLog $ doRequest rlState' (toRoute r) (toAction r $ requestOptions token')
 
             resp' <- extractRight resp
 
             fromResult . fromJSON $ resp'
 
+          withRequestLog env = env { formatter = requestFormatter }
+
+          requestFormatter :: Level -> FormattedTime -> Text -> Text -> LogStr
+          requestFormatter level time env msg = toLogStr ("[Request Route: "+|toRoute r ^. #path|+"]" :: Text)
+                                                <> defaultFormatter level time env msg
+
 defaultRequestOptions :: Options
 defaultRequestOptions =
-  defaults & header "User-Agent" .~ ["YAHDL (https://github.com/nitros12/yet-another-haskell-discord-library)"]
-           & checkResponse ?~ (\_ _ -> pure ())
+  defaults
+    & header "User-Agent" .~ [ "YAHDL (https://github.com/nitros12/yet-another-haskell-discord-library)" ]
+    & checkResponse
+    ?~ (\_ _ -> pure ())
 
 
 requestOptions :: Token -> Options

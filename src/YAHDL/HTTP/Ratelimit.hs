@@ -105,13 +105,11 @@ retryRequest max_retries action failAction = retryInner 0
         info "Request failed due to error response."
         doFail $ Left r
       RGood r -> pure $ Right r
-    where doFail v = failAction >> pure v
+    where doFail v = failAction $> v
 
 -- | Return `a` instantly after unlocking `l`
 unlockAndPure :: MonadIO m => Lock -> a -> m a
-unlockAndPure l a = do
-  liftIO . atomically $ L.release l
-  pure a
+unlockAndPure l a = liftIO . atomically $ L.release l $> a
 
 -- | Return `a` instantly, after scheduling `l` to be unlocked after `d` milliseconds
 scheduleUnlockAndPure :: MonadIO m => Lock -> Int -> a -> m a
@@ -121,6 +119,9 @@ scheduleUnlockAndPure l d r = do
     atomically $ L.release l
   pure r
 
+-- Run a single request
+-- NOTE: this function will only unlock the ratelimit lock if the request
+-- gave a response, otherwise it will stay locked so that it can be retried again
 doSingleRequest
   :: (MonadIO m, MonadLog Text m)
   => Event -- ^ Global lock
