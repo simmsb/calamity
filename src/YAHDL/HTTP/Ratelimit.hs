@@ -36,22 +36,30 @@ getRateLimit :: RateLimitState -> Route -> STM Lock
 getRateLimit s h = SC.focus (lookupWithDefaultM L.new) h (rateLimits s)
 
 -- TODO: Add logging here
-doDiscordRequest :: IO (Response LB.ByteString) -> IO DiscordResponseType
+doDiscordRequest
+  :: (MonadIO m, MonadLog Text m)
+  => IO (Response LB.ByteString)
+  -> m DiscordResponseType
 doDiscordRequest r = do
-  r' <- r
+  r' <- liftIO r
   let status = r' ^. responseStatus
   if
     | statusIsSuccessful status -> do
-      val <- (^. responseBody) <$> asValue r'
+      info "Got good response from discord"
+      val <- liftIO $ (^. responseBody) <$> asValue r'
       pure $ if isExhausted r'
         then ExhaustedBucket val $ parseRateLimitHeader r'
         else Good val
-    | statusIsServerError status -> pure $ ServerError (status ^. statusCode)
+    | statusIsServerError status -> do
+      info $ "Got server error from discord: " +| status ^. statusCode |+ ""
+      pure $ ServerError (status ^. statusCode)
     | status == status429 -> do
-      rv <- asValue r'
+      info "Got 429 from discord, retrying."
+      rv <- liftIO $ asValue r'
       pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
     | statusIsClientError status -> do
-      val <- (^. responseBody) <$> asValue r'
+      val <- liftIO $ (^. responseBody) <$> asValue r'
+      error $ "You fucked up: " +|| val ||+ ""
       pure $ ClientError (status ^. statusCode) val
     | otherwise -> fail "Bogus response, discord fix your shit"
 
@@ -129,7 +137,7 @@ doSingleRequest
   -> IO (Response LB.ByteString) -- ^ Request action
   -> m (ShouldRetry RestError Value)
 doSingleRequest gl l r = do
-  r' <- liftIO $ doDiscordRequest r
+  r' <- doDiscordRequest r
   case r' of
     Good v              -> unlockAndPure l $ RGood v
 
@@ -171,13 +179,5 @@ doRequest rlState route action = do
     pure lock
 
   retryRequest 5
-    (doSingleRequest (globalLock rlState) ratelimit action)
-    (liftIO . atomically $ L.release ratelimit)
-
-
-
-
--- TODO: routes with hashes (just steal from haskord :^^^))
-
--- TODO: write functions for each method
--- TODO: write types to contain parameters/ data for each
+               (doSingleRequest (globalLock rlState) ratelimit action)
+               (liftIO . atomically $ L.release ratelimit)

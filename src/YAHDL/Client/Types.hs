@@ -6,6 +6,9 @@
 module YAHDL.Client.Types
   ( Client(..)
   , BotM(..)
+  , EventHandlers(..)
+  , EventHandler(..)
+  , EHType
   , runBotM
   , EventM
   , runEventM
@@ -14,7 +17,11 @@ module YAHDL.Client.Types
   )
 where
 
+-- import           Control.Monad.Trans.Control
+-- import           Control.Monad.Base
 import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.STM.TChan
+import qualified StmContainers.Set             as TS
 import           Control.Monad.Catch            ( MonadMask )
 import           Control.Monad.Log              ( Logger
                                                 , LogT(..)
@@ -36,6 +43,7 @@ import           YAHDL.Types.General
 import           YAHDL.Types.Snowflake
 import           YAHDL.Types.DispatchEvents
 
+
 data Cache = Cache
   { user    :: Maybe User
   , guilds  :: LH.HashMap (Snowflake Guild) Guild
@@ -45,10 +53,13 @@ data Cache = Cache
 
 data Client = Client
   { shards        :: TVar [(Shard, Async ())]
+  , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState
   , eventStream   :: S.Serial DispatchData
+  , eventChan     :: TChan DispatchData -- ^ for shards to take
   , cache         :: TVar Cache
+  , activeTasks   :: TS.Set (Async ()) -- ^ events currently being handled
   , eventHandlers :: EventHandlers
   } deriving (Generic)
 
@@ -62,6 +73,37 @@ instance (MonadMask m, MonadIO m, MonadReader r m) => MonadReader r (LogT env m)
   local f m = LogT $ \env -> local f (runLogTSafe env m)
   reader    = lift . reader
 
+-- TODO: maybe come back and complete this impl sometime
+-- so that we don't have to manually pull and insert data into the BotM monad for clientLoop
+--
+-- instance MonadTransControl (LogT Text) where
+--   type StT (LogT Text) a =
+
+-- instance MonadBase b m => MonadBase b (LogT Text m) where
+--   liftBase = lift . liftBase
+
+-- instance MonadBaseControl b m => MonadBaseControl b (LogT Text m) where
+--   type StM (LogT Text m) a = ComposeSt (LogT Text) m a
+--   liftBaseWith = defaultLiftBaseWith
+--   restoreM = defaultRestoreM
+--   {-# INLINABLE liftBaseWith #-}
+--   {-# INLINABLE restoreM #-}
+
+
+-- instance MonadBase IO BotM where
+--   liftBase = liftIO
+
+-- newtype StMBotM a = StMBotM { unStMBotM :: StM (LogT Text (ReaderT Client IO)) a }
+
+-- instance MonadBaseControl IO BotM where
+--   type StM BotM a = StMBotM a
+
+--   liftBaseWith f = BotM $ liftBaseWith (\run -> f (liftM StMBotM . run . unBotM))
+
+--   restoreM = BotM . restoreM . unStMBotM
+--   {-# INLINABLE liftBaseWith #-}
+--   {-# INLINABLE restoreM #-}
+
 runBotM :: Client -> Logger Text -> BotM a -> IO a
 runBotM cstate logEnv = (`runReaderT` cstate) . runLogTSafe logEnv . unBotM
 
@@ -72,10 +114,8 @@ newtype EventM a = EventM
   } deriving (Applicative, Monad, MonadIO, MonadLog Text,
               Functor, MonadReader Client, MonadState Cache)
 
-runEventM :: Client -> Logger Text -> EventM a -> IO a
-runEventM cstate logEnv event = do
-  cache <- readTVarIO (cstate ^. #cache)
-  runBotM cstate logEnv . (`evalStateT` cache) . unEventM $ event
+runEventM :: Cache -> EventM a -> BotM a
+runEventM cache event = (`evalStateT` cache) . unEventM $ event
 
 -- | Sync the internal cache of an EventM
 syncEventM :: EventM ()
@@ -86,37 +126,37 @@ syncEventM = do
 
 newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
-newtype EventHandler d = EH [EHType d]
+newtype EventHandler d = EH { unwrapEventHandler :: [EHType d] }
 
 type family EHType d where
   EHType "ready"                    = ReadyData -> EventM ()
-  EHType "channelcreate"            = Channel -> EventM ()
-  EHType "channelupdate"            = Channel -> Channel -> EventM ()
-  EHType "channeldelete"            = Channel -> EventM ()
-  EHType "channelpinsupdate"        = Channel -> UTCTime -> EventM ()
-  EHType "guildcreate"              = Guild -> EventM ()
-  EHType "guildupdate"              = Guild -> Guild -> EventM ()
-  EHType "guilddelete"              = Guild -> Bool -> EventM ()
-  EHType "guildbanadd"              = Guild -> User -> EventM ()
-  EHType "guildbanremove"           = Guild -> User -> EventM ()
-  EHType "guildemojisupdate"        = Guild -> [Emoji] -> EventM ()
-  EHType "guildintegrationsupdate"  = Guild -> EventM ()
-  EHType "guildmemberadd"           = Member -> EventM ()
-  EHType "guildmemberremove"        = Member -> EventM ()
+  EHType "channelcreate"            = Channel   -> EventM ()
+  EHType "channelupdate"            = Channel   -> Channel -> EventM ()
+  EHType "channeldelete"            = Channel   -> EventM ()
+  EHType "channelpinsupdate"        = Channel   -> UTCTime -> EventM ()
+  EHType "guildcreate"              = Guild     -> EventM ()
+  EHType "guildupdate"              = Guild     -> Guild   -> EventM ()
+  EHType "guilddelete"              = Guild     -> Bool    -> EventM ()
+  EHType "guildbanadd"              = Guild     -> User    -> EventM ()
+  EHType "guildbanremove"           = Guild     -> User    -> EventM ()
+  EHType "guildemojisupdate"        = Guild     -> [Emoji] -> EventM ()
+  EHType "guildintegrationsupdate"  = Guild     -> EventM ()
+  EHType "guildmemberadd"           = Member    -> EventM ()
+  EHType "guildmemberremove"        = Member    -> EventM ()
   -- TODO: Member update includes presence update events
-  EHType "guildmemberupdate"        = Member -> Member -> EventM ()
-  EHType "guildrolecreate"          = Role -> EventM ()
-  EHType "guildroleupdate"          = Role -> Role -> EventM ()
-  EHType "guildroledelete"          = Role -> EventM ()
-  EHType "messagecreate"            = Message -> EventM ()
-  EHType "messageupdate"            = Message -> Message -> EventM ()
-  EHType "messagedelete"            = Message -> EventM ()
+  EHType "guildmemberupdate"        = Member    -> Member  -> EventM ()
+  EHType "guildrolecreate"          = Role      -> EventM ()
+  EHType "guildroleupdate"          = Role      -> Role    -> EventM ()
+  EHType "guildroledelete"          = Role      -> EventM ()
+  EHType "messagecreate"            = Message   -> EventM ()
+  EHType "messageupdate"            = Message   -> Message -> EventM ()
+  EHType "messagedelete"            = Message   -> EventM ()
   EHType "messagedeletebulk"        = [Message] -> EventM ()
-  EHType "messagereactionadd"       = Reaction -> EventM ()
-  EHType "messagereactionremove"    = Reaction -> EventM ()
-  EHType "messagereactionremoveall" = Message -> EventM ()
-  EHType "typingstart"              = Member -> EventM ()
-  EHType "userupdate"               = User -> EventM ()
+  EHType "messagereactionadd"       = Reaction  -> EventM ()
+  EHType "messagereactionremove"    = Reaction  -> EventM ()
+  EHType "messagereactionremoveall" = Message   -> EventM ()
+  EHType "typingstart"              = Member    -> EventM ()
+  EHType "userupdate"               = User      -> EventM ()
   -- EHType "voicestateupdate"         = VoiceStateUpdateData -> EventM ()
   -- EHType "voiceserverupdate"        = VoiceServerUpdateData -> EventM ()
   -- EHType "webhooksupdate"           = WebhooksUpdateData -> EventM ()

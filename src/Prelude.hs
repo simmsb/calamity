@@ -36,6 +36,7 @@ import           Control.Monad.Log              ( MonadLog
                                                 , info
                                                 , warning
                                                 , error
+                                                , askLogger
                                                 )
 import           Fmt
 
