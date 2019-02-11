@@ -2,14 +2,6 @@
 
 module YAHDL.HTTP.Request where
 
-import           Control.Monad.Log              ( formatter
-                                                , defaultFormatter
-                                                , localLogger
-                                                , toLogStr
-                                                , Level
-                                                , FormattedTime
-                                                , LogStr
-                                                )
 import           Data.Aeson              hiding ( Options )
 import qualified Data.ByteString.Lazy          as LB
 import           Data.String                    ( String )
@@ -31,6 +23,7 @@ extractRight :: Monad m => Either a b -> ExceptT a m b
 extractRight (Left  a) = throwE a
 extractRight (Right a) = pure a
 
+
 class Request a r | a -> r where
   toRoute :: a -> Route
 
@@ -39,6 +32,9 @@ class Request a r | a -> r where
 
   toAction :: a -> Options -> IO (Response LB.ByteString)
 
+  -- TODO: instead of using BotM, instead use a generic HasRatelimits monad
+  -- so that we can make requests from shards too
+
   invokeRequest :: FromJSON r => a -> BotM (Either RestError r)
   invokeRequest r = runExceptT inner
     where inner :: ExceptT RestError BotM r
@@ -46,17 +42,11 @@ class Request a r | a -> r where
             rlState' <- asks rlState
             token' <- asks token
 
-            resp <- localLogger withRequestLog $ doRequest rlState' (toRoute r) (toAction r $ requestOptions token')
+            resp <- scope ("[Request Route: "+|toRoute r ^. #path|+"]") $ doRequest rlState' (toRoute r) (toAction r $ requestOptions token')
 
             resp' <- extractRight resp
 
             fromResult . fromJSON $ resp'
-
-          withRequestLog env = env { formatter = requestFormatter }
-
-          requestFormatter :: Level -> FormattedTime -> Text -> Text -> LogStr
-          requestFormatter level time env msg = toLogStr ("[Request Route: "+|toRoute r ^. #path|+"]" :: Text)
-                                                <> defaultFormatter level time env msg
 
 defaultRequestOptions :: Options
 defaultRequestOptions =
@@ -68,4 +58,4 @@ defaultRequestOptions =
 
 requestOptions :: Token -> Options
 requestOptions t =
-  defaultRequestOptions & header "Authorization" .~ [formatToken t]
+  defaultRequestOptions & header "Authorization" .~ [encodeUtf8 $ formatToken t]

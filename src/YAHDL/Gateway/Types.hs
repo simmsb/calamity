@@ -14,9 +14,7 @@ module YAHDL.Gateway.Types where
 
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
-import           Control.Monad.Log              ( LogT
-                                                , MonadLog
-                                                )
+import           Control.Monad.Catch
 import           Control.Monad.State.Concurrent.Strict
 import           Data.Aeson
 import qualified Data.Aeson.Types              as AT
@@ -27,7 +25,10 @@ import           YAHDL.Types.Snowflake
 import           YAHDL.Types.General
 import           YAHDL.Types.DispatchEvents
 
-data ShardMsg = Discord ReceivedDiscordMessage | Control ControlMessage
+data ShardMsg
+  = Discord ReceivedDiscordMessage
+  | Control ControlMessage
+  deriving (Show, Generic)
 
 data ReceivedDiscordMessage
   = Dispatch Int DispatchData
@@ -275,11 +276,12 @@ data ShardState = ShardState
   } deriving (Generic)
 
 newtype ShardM a = ShardM
-  { unShardM :: LogT Text (StateC ShardState IO) a
-  } deriving (Applicative, Monad, MonadIO, MonadLog Text,
+  { unShardM :: LogT (StateC ShardState IO) a
+  } deriving (Applicative, Monad, MonadIO, MonadThrow,
+              MonadCatch, MonadMask, MonadLog,
               Functor, MonadState ShardState)
 
-instance MonadState s m => MonadState s (LogT env m) where
+instance MonadState s m => MonadState s (LogT m) where
   get   = lift get
   put   = lift . put
   state = lift . state

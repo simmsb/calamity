@@ -2,7 +2,6 @@
 
 module YAHDL.Types.General
   ( Token(..)
-  , formatToken
   , VoiceState(..)
   , User(..)
   , Channel(..)
@@ -13,6 +12,8 @@ module YAHDL.Types.General
   , Emoji(..)
   , Role(..)
   , Reaction(..)
+  , formatToken
+  , rawToken
   )
 where
 
@@ -21,13 +22,17 @@ import           Data.Aeson
 import           YAHDL.Types.Snowflake
 
 data Token
-  = BotToken ByteString
-  | UserToken ByteString
+  = BotToken Text
+  | UserToken Text
   deriving (Generic, Show)
 
-formatToken :: Token -> ByteString
-formatToken (BotToken  t) = "Bot" <> t
+formatToken :: Token -> Text
+formatToken (BotToken  t) = "Bot " <> t
 formatToken (UserToken t) = t
+
+rawToken :: Token -> Text
+rawToken (BotToken  t) = t
+rawToken (UserToken t) = t
 
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)

@@ -1,6 +1,12 @@
--- |
+-- | Types for the http lib
 
-module YAHDL.HTTP.Types where
+module YAHDL.HTTP.Types
+  ( RestError(..)
+  , RateLimitState(..)
+  , DiscordResponseType(..)
+  , BotGatewayResponse
+  )
+where
 
 import           Data.Aeson
 import qualified StmContainers.Map             as SC
@@ -36,3 +42,11 @@ data DiscordResponseType
   | ServerError Int
   -- | Our error, we should fail
   | ClientError Int Value
+
+data BotGatewayResponse = BotGatewayResponse
+  { url    :: Text
+  , shards :: Int
+  } deriving (Generic, Show)
+
+instance FromJSON BotGatewayResponse where
+  parseJSON = genericParseJSON jsonOptions

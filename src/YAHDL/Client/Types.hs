@@ -19,15 +19,11 @@ where
 
 -- import           Control.Monad.Trans.Control
 -- import           Control.Monad.Base
-import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.STM.TChan
-import qualified StmContainers.Set             as TS
+import           Control.Concurrent.STM.TVar
+import           Control.Monad.Catch
 import           Control.Monad.Catch            ( MonadMask )
-import           Control.Monad.Log              ( Logger
-                                                , LogT(..)
-                                                , MonadLog
-                                                , runLogTSafe
-                                                )
+import           Control.Monad.Trans.Reader     ( runReaderT )
 import           Data.Default
 import qualified Data.HashMap.Lazy             as LH
 import           Data.Time
@@ -35,6 +31,7 @@ import           Data.TypeRepMap                ( TypeRepMap
                                                 , WrapTypeable(..)
                                                 )
 import           GHC.Exts                       ( fromList )
+import qualified StmContainers.Set             as TS
 import qualified Streamly                      as S
 
 import           YAHDL.Gateway.Shard
@@ -64,14 +61,25 @@ data Client = Client
   } deriving (Generic)
 
 newtype BotM a = BotM
-  { unBotM :: LogT Text (ReaderT Client IO) a
-  } deriving (Applicative, Monad, MonadIO, MonadLog Text,
+  { unBotM :: LogT (ReaderT Client IO) a
+  } deriving (Applicative, Monad, MonadIO, MonadThrow,
+              MonadCatch, MonadMask, MonadLog,
               Functor, MonadReader Client)
 
-instance (MonadMask m, MonadIO m, MonadReader r m) => MonadReader r (LogT env m) where
-  ask       = lift ask
-  local f m = LogT $ \env -> local f (runLogTSafe env m)
-  reader    = lift . reader
+instance {-# OVERLAPPABLE #-} MonadReader a m => MonadReader a (LogT m) where
+  ask = lift ask
+  local f m = do
+    b <- ask
+    lift $ local f $ runReaderT (runLogT m) b
+  reader = lift . reader
+
+-- deriving instance MonadReader
+-- deriving instance MonadReader Client m => MonadReader Client (LogT (ReaderT Client m))
+
+-- instance (MonadMask m, MonadIO m, MonadReader r m) => MonadReader r (LogT (ReaderT r m)) where
+--   ask       = lift ask
+--   local f m = LogT $ local f (runLogT m)   -- lift $ local f m -- LogT $ \env -> local f (runLogTSafe m)
+--   reader    = lift . reader
 
 -- TODO: maybe come back and complete this impl sometime
 -- so that we don't have to manually pull and insert data into the BotM monad for clientLoop
@@ -104,18 +112,21 @@ instance (MonadMask m, MonadIO m, MonadReader r m) => MonadReader r (LogT env m)
 --   {-# INLINABLE liftBaseWith #-}
 --   {-# INLINABLE restoreM #-}
 
-runBotM :: Client -> Logger Text -> BotM a -> IO a
-runBotM cstate logEnv = (`runReaderT` cstate) . runLogTSafe logEnv . unBotM
+runBotM :: Client -> Log -> BotM a -> IO a
+runBotM cstate logEnv = (`runReaderT` cstate) . withLog logEnv . unBotM
 
 -- | EventM is an event handler that contains a snapshot of the cache state
 -- | At the time of the invokation
 newtype EventM a = EventM
   { unEventM :: StateT Cache BotM a
-  } deriving (Applicative, Monad, MonadIO, MonadLog Text,
-              Functor, MonadReader Client, MonadState Cache)
+  } deriving (Applicative, Monad, MonadIO, MonadThrow,
+              MonadCatch, MonadMask, MonadLog,
+              Functor, MonadState Cache, MonadReader Client)
+
+-- deriving instance MonadReader Client m => StateT s (LogT (ReaderT Client m))
 
 runEventM :: Cache -> EventM a -> BotM a
-runEventM cache event = (`evalStateT` cache) . unEventM $ event
+runEventM cache = (`evalStateT` cache) . unEventM
 
 -- | Sync the internal cache of an EventM
 syncEventM :: EventM ()

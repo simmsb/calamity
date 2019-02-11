@@ -37,7 +37,6 @@ dependencies:
 - mtl >= 2.2
 - text >= 0.2
 - concurrent-state >= 0.6
-- monad-log >= 0.1
 - exceptions >= 0.10
 - fmt >= 0.6
 - stm-containers >= 0.2
@@ -54,6 +53,19 @@ dependencies:
 - monad-control >= 1.0
 - transformers-base >= 0.4
 - async >= 2.2
+- simple-log >= 0.9
+
+executables:
+  test-yadhl-exe:
+    main: Main.hs
+    source-dirs: app
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-N
+      - -O3
+    dependencies:
+      - yet-another-haskell-discord-library
 
 library:
   ghc-options:

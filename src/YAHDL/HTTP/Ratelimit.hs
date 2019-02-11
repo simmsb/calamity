@@ -37,7 +37,7 @@ getRateLimit s h = SC.focus (lookupWithDefaultM L.new) h (rateLimits s)
 
 -- TODO: Add logging here
 doDiscordRequest
-  :: (MonadIO m, MonadLog Text m)
+  :: (MonadIO m, MonadLog m)
   => IO (Response LB.ByteString)
   -> m DiscordResponseType
 doDiscordRequest r = do
@@ -45,8 +45,8 @@ doDiscordRequest r = do
   let status = r' ^. responseStatus
   if
     | statusIsSuccessful status -> do
-      info "Got good response from discord"
       val <- liftIO $ (^. responseBody) <$> asValue r'
+      info $ "Got good response from discord: " +|| val ||+ ""
       pure $ if isExhausted r'
         then ExhaustedBucket val $ parseRateLimitHeader r'
         else Good val
@@ -59,7 +59,7 @@ doDiscordRequest r = do
       pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
     | statusIsClientError status -> do
       val <- liftIO $ (^. responseBody) <$> asValue r'
-      error $ "You fucked up: " +|| val ||+ ""
+      error $ "You fucked up: " +|| val ||+ " response: " +|| r' ||+ ""
       pure $ ClientError (status ^. statusCode) val
     | otherwise -> fail "Bogus response, discord fix your shit"
 
@@ -95,7 +95,7 @@ data ShouldRetry a b
   | RGood b
 
 retryRequest
-  :: (MonadLog Text m)
+  :: (MonadLog m)
   => Int -- ^ number of retries
   -> m (ShouldRetry a b) -- ^ action to perform
   -> m ()  -- ^ action to run if max number of retries was reached
@@ -131,7 +131,7 @@ scheduleUnlockAndPure l d r = do
 -- NOTE: this function will only unlock the ratelimit lock if the request
 -- gave a response, otherwise it will stay locked so that it can be retried again
 doSingleRequest
-  :: (MonadIO m, MonadLog Text m)
+  :: (MonadIO m, MonadLog m)
   => Event -- ^ Global lock
   -> Lock -- ^ Local lock
   -> IO (Response LB.ByteString) -- ^ Request action
@@ -165,7 +165,7 @@ doSingleRequest gl l r = do
     ClientError c v -> pure $ RFail (HTTPError c (Just v))
 
 doRequest
-  :: (MonadIO m, MonadLog Text m)
+  :: (MonadIO m, MonadLog m)
   => RateLimitState
   -> Route
   -> IO (Response LB.ByteString)

@@ -50,6 +50,8 @@ data ReadyData = ReadyData
 instance FromJSON ReadyData where
   parseJSON = genericParseJSON jsonOptions
 
+-- TODO: literally all of these
+
 newtype ChannelCreateData = ChannelCreateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
