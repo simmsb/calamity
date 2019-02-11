@@ -281,7 +281,4 @@ newtype ShardM a = ShardM
               MonadCatch, MonadMask, MonadLog,
               Functor, MonadState ShardState)
 
-instance MonadState s m => MonadState s (LogT m) where
-  get   = lift get
-  put   = lift . put
-  state = lift . state
+deriving instance MonadState s m => MonadState s (LogT m)
