@@ -2,6 +2,16 @@
 
 * TODO Things to test
 - Test using text-short and intern for certain strings
+* TODO Shards need some way of making requests (get gateway, etc)
+* TODO Function to log out the bot, waiting for all stuff to end, etc
+- we'll need some control messages that tell the client to enter a loop of
+  waiting for all shards to signal that they are closed.
+
+** Shard shutdown process?
+- Send shutdown signal to shard
+- Shard shuts down and sends a control message with it's own thread to the client stating that it is closed?
+- Client removes shard from the set of shards
+
 
 * Presence info
 - linky :: https://discordapp.com/developers/docs/topics/gateway#presence-update

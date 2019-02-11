@@ -256,15 +256,15 @@ data ShardException = ShardExcRestart | ShardExcShutDown
 instance Exception ShardException
 
 data Shard = Shard
-  { shardID    :: Int
-  , shardCount :: Int
-  , evtChan    :: TChan DispatchData
-  , cmdChan    :: TChan ControlMessage
-  , shardState :: TVar ShardState
-  , token      :: Text
+  { shardID     :: Int
+  , shardCount  :: Int
+  , evtChan     :: TChan DispatchData
+  , cmdChan     :: TChan ControlMessage
+  , shardState  :: TVar ShardState
+  , token       :: Text
+  , shardThread :: Async ()
   } deriving (Generic)
 
--- TODO: more shardS into a reader monad
 data ShardState = ShardState
   { shardS     :: Shard
   , seqNum     :: Maybe Int

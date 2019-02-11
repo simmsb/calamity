@@ -1,5 +1,5 @@
 -- | The route type
--- | Why I did this I don't know
+-- Why I did this I don't know
 
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE EmptyCase #-}

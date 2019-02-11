@@ -22,7 +22,6 @@ where
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Catch
-import           Control.Monad.Catch            ( MonadMask )
 import           Control.Monad.Trans.Reader     ( runReaderT )
 import           Data.Default
 import qualified Data.HashMap.Lazy             as LH
@@ -49,7 +48,7 @@ data Cache = Cache
   } deriving (Generic)
 
 data Client = Client
-  { shards        :: TVar [(Shard, Async ())]
+  { shards        :: TVar [(Shard, Async ())] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
   , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState
@@ -66,12 +65,12 @@ newtype BotM a = BotM
               MonadCatch, MonadMask, MonadLog,
               Functor, MonadReader Client)
 
+-- | Let's us have `MonadReader Client`
 instance {-# OVERLAPPABLE #-} MonadReader a m => MonadReader a (LogT m) where
   ask = lift ask
   local f m = do
     b <- ask
     lift $ local f $ runReaderT (runLogT m) b
-  reader = lift . reader
 
 -- deriving instance MonadReader
 -- deriving instance MonadReader Client m => MonadReader Client (LogT (ReaderT Client m))
@@ -116,7 +115,7 @@ runBotM :: Client -> Log -> BotM a -> IO a
 runBotM cstate logEnv = (`runReaderT` cstate) . withLog logEnv . unBotM
 
 -- | EventM is an event handler that contains a snapshot of the cache state
--- | At the time of the invokation
+-- At the time of the invokation
 newtype EventM a = EventM
   { unEventM :: StateT Cache BotM a
   } deriving (Applicative, Monad, MonadIO, MonadThrow,

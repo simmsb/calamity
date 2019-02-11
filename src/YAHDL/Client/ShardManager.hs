@@ -26,6 +26,8 @@ mkChanRecvStream = do
 
   pure (evtStream, chan)
 
+
+-- TODO: delete this
 aa :: Show a => Either a b -> b
 aa (Right x) = x
 aa (Left  x) = Protolude.Error.error $ show x

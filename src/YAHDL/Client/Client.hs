@@ -45,6 +45,7 @@ newClient token eventHandlers = do
                 eventHandlers
 
 -- TODO: user & bot logins
+-- TODO: more login types
 
 startClient :: Client -> IO ()
 startClient client = do
@@ -59,14 +60,14 @@ emptyCache :: Cache
 emptyCache = Cache Nothing LH.empty LH.empty LH.empty
 
 -- | main loop of the client, handles fetching the next event, processing the event
--- | and invoking it's handler functions
+-- and invoking it's handler functions
 clientLoop :: BotM ()
 clientLoop = do
-  stream  <- asks eventStream
+  evtStream  <- asks eventStream
   client' <- ask
   logEnv' <- askLog
   debug "entering clientLoop"
-  liftIO $ S.mapM_ (runBotM client' logEnv' . handleEvent) stream
+  liftIO $ S.mapM_ (runBotM client' logEnv' . handleEvent) evtStream
   debug "exiting clientLoop"
 
 handleEvent :: DispatchData -> BotM ()

@@ -94,7 +94,9 @@ default-extensions:
   - FlexibleInstances
   - FunctionalDependencies
   - GADTs
+  - DerivingStrategies
   - GeneralizedNewtypeDeriving
+  - StandaloneDeriving
   - InstanceSigs
   - KindSignatures
   - LambdaCase
@@ -110,7 +112,6 @@ default-extensions:
   - RankNTypes
   - RecordWildCards
   - ScopedTypeVariables
-  - StandaloneDeriving
   - TupleSections
   - TypeFamilies
   - TypeSynonymInstances

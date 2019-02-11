@@ -8,8 +8,6 @@ module YAHDL.Gateway.Shard
   )
 where
 
-import qualified Data.ByteString.Lazy as LS
-import qualified Control.Exception as E
 import           Control.Concurrent.STM.TChan
 import           Control.Concurrent.STM.TVar
 import           Control.Lens                   ( (.=) )
@@ -37,12 +35,10 @@ newShardState shard =
 
 -- | Creates and launches a shard
 newShard :: Int -> Int -> Token -> Log -> TChan DispatchData -> IO (Shard, Async ())
-newShard id count token logEnv evtChan = do
-  shard <- mdo
-    cmdChan' <- newTChanIO
-    stateVar <- newTVarIO (newShardState shard)
-    let shard = Shard id count evtChan cmdChan' stateVar (rawToken token)
-    pure shard
+newShard id count token logEnv evtChan = mdo
+  cmdChan' <- newTChanIO
+  stateVar <- newTVarIO (newShardState shard)
+  let shard = Shard id count evtChan cmdChan' stateVar (rawToken token) thread'
 
   let action = scope ("[ShardID: "+|id|+"]") shardLoop
 
@@ -63,9 +59,10 @@ liftMaybe = maybe mzero return
 
 sendToWs :: SentDiscordMessage -> ShardM ()
 sendToWs data' = do
-  trace $ "sending "+||data'||+" to gateway"
   wsConn <- fromJust <$> use #wsConn
-  liftIO . sendTextData wsConn . A.encode $ data'
+  let encodedData = A.encode data'
+  debug $ "sending "+||data'||+" encoded to "+|| encodedData ||+" to gateway"
+  liftIO . sendTextData wsConn $ encodedData
   trace "done sending data"
 
 untilResult :: Monad m => m (Maybe a) -> m a
@@ -76,6 +73,10 @@ untilResult m = m >>= \case
 fromEither :: Either a a -> a
 fromEither (Left a)  = a
 fromEither (Right a) = a
+
+fromEitherVoid :: Either a Void -> a
+fromEitherVoid (Left a) = a
+fromEitherVoid (Right a) = absurd a
 
 -- | Catches ws close events and decides if we can restart or not
 checkWSClose :: IO a -> IO (Either ControlMessage a)
@@ -91,7 +92,7 @@ checkWSClose m = (Right <$> m) `catch` \case
 shardLoop :: ShardM ()
 shardLoop = do
   trace "entering shardLoop"
-  void $ outerloop
+  void outerloop
  where
   controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
 
@@ -118,7 +119,7 @@ shardLoop = do
   outerloop = runExceptT . forever $ do
     state' <- get
     shard <- use #shardS
-    info $ "starting up shard "+| shard ^. #shardID |+" of "+| shard ^. #shardCount |+""
+    info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
 
     host  <- case state' ^. #wsHost of
       Just host -> pure host
@@ -135,18 +136,17 @@ shardLoop = do
                     (runShardM shard logEnv . innerloop)
 
     case innerLoopVal of
-      Left ShardExcShutDown -> do
+      ShardExcShutDown -> do
         trace "Shutting down shard"
         throwE ShardExcShutDown
 
-      Left ShardExcRestart ->
+      ShardExcRestart ->
         trace "Restaring shard"
         -- we restart normally when we loop
-      _ -> pure ()
 
   -- | The inner loop, handles receiving a message from discord or a command message
-  -- | and then decides what to do with it
-  innerloop :: Connection -> ShardM (Either ShardException Void)
+  -- and then decides what to do with it
+  innerloop :: Connection -> ShardM ShardException
   innerloop ws = do
     trace "Entering inner loop of shard"
 
@@ -185,7 +185,7 @@ shardLoop = do
     debug "Exiting inner loop of shard"
 
     #wsConn .= Nothing
-    pure result
+    pure . fromEitherVoid $ result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
   handleMsg :: ShardMsg -> ExceptT ShardException ShardM ()
