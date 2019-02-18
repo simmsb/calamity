@@ -32,6 +32,7 @@ aa :: Show a => Either a b -> b
 aa (Right x) = x
 aa (Left  x) = Protolude.Error.error $ show x
 
+-- | Connects the bot to the gateway over n shards
 shardBot :: BotM ()
 shardBot = do
   numShardsVar <- asks numShards
@@ -41,7 +42,7 @@ shardBot = do
   when hasShards $
     fail "don't use shardBot on an already running bot."
 
-  token <- (^. #token) <$> ask
+  token <- asks YAHDL.Client.Types.token
   eventChan <- asks eventChan
   logEnv <- askLog
 

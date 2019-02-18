@@ -54,8 +54,24 @@ instance FromJSON VoiceState where
   parseJSON = genericParseJSON jsonOptions
 
 -- TODO: these types
-newtype User = User Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+data User = User
+  { id            :: Snowflake User
+  , username      :: Text
+  , discriminator :: Text
+  , bot           :: Maybe Bool
+  , avatar        :: Maybe Text
+  , mfaEnabled    :: Maybe Bool
+  , verified      :: Maybe Bool
+  , email         :: Maybe Text
+  , flags         :: Int
+  , premiumType   :: Maybe Int
+  } deriving (Show, Generic)
+
+instance ToJSON User where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON User where
+  parseJSON = genericParseJSON jsonOptions
 
 newtype DM = DM Value
   deriving (Show, Generic, ToJSON, FromJSON)

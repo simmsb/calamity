@@ -66,9 +66,9 @@ clientLoop = do
   evtStream  <- asks eventStream
   client' <- ask
   logEnv' <- askLog
-  debug "entering clientLoop"
+  trace "entering clientLoop"
   liftIO $ S.mapM_ (runBotM client' logEnv' . handleEvent) evtStream
-  debug "exiting clientLoop"
+  trace "exiting clientLoop"
 
 handleEvent :: DispatchData -> BotM ()
 handleEvent data' = do

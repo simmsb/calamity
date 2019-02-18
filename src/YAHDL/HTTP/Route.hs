@@ -57,7 +57,7 @@ giveID
   -> RouteBuilder ids
   -> RouteBuilder ('(k, 'Satisfied) ': ids)
 giveID (Snowflake id) (UnsafeMkRouteBuilder route ids) =
-  UnsafeMkRouteBuilder route ((typeRep (Proxy :: Proxy k), id) : ids)
+  UnsafeMkRouteBuilder route ((typeRep (Proxy @k), id) : ids)
 
 type family MyLookup (x :: k) (l :: [(k, v)]) :: Maybe v where
   MyLookup k ('(k, v) ': xs) = 'Just v
