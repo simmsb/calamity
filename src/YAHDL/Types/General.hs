@@ -4,6 +4,7 @@ module YAHDL.Types.General
   ( Token(..)
   , VoiceState(..)
   , User(..)
+  , Channel(..)
   , TextChannel(..)
   , VoiceChannel(..)
   , GuildChannel(..)
@@ -115,6 +116,18 @@ data GuildChannel
   | GuildVoiceChannel VoiceChannel
   | GuildCategory Category
   deriving (Show, Generic)
+
+data Channel
+  = DMChannel DMChannel
+  | GuildChannel GuildChannel
+  deriving (Show, Generic)
+
+instance FromJSON Channel where
+  parseJSON = withObject "Channel" $ \v -> do
+    chanType :: Int <- v .: "type"
+    if chanType `elem` [0, 2, 4]
+      then GuildChannel <$> parseJSON (Object v)
+      else DMChannel <$> parseJSON (Object v)
 
 instance FromJSON GuildChannel where
   parseJSON = withObject "GuildChannel" $ \v -> do
