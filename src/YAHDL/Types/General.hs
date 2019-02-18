@@ -97,7 +97,7 @@ data GroupDM = GroupDM
   , icon          :: Maybe Text
   , recipients    :: [User]
   , name          :: Text
-  } deriving (Show, Generic, ToJSON, FromJSON)
+  } deriving (Show, Generic)
 
 instance ToJSON GroupDM where
   toEncoding = genericToEncoding jsonOptions
