@@ -140,6 +140,12 @@ data Category = Category
   , guildID              :: Snowflake Guild
   } deriving (Show, Generic)
 
+instance ToJSON Category where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Category where
+  parseJSON = genericParseJSON jsonOptions
+
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
