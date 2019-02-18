@@ -120,16 +120,16 @@ instance FromJSON GuildChannel where
   parseJSON = withObject "GuildChannel" $ \v -> do
     chanType :: Int <- v .: "type"
     case chanType of
-      0 -> GuildTextChannel <$> parseJSON v
-      2 -> GuildVoiceChannel <$> parseJSON v
-      4 -> GuildCategory <$> parseJSON v
+      0 -> GuildTextChannel <$> parseJSON (Object v)
+      2 -> GuildVoiceChannel <$> parseJSON (Object v)
+      4 -> GuildCategory <$> parseJSON (Object v)
 
 instance FromJSON DMChannel where
   parseJSON = withObject "DMChannel" $ \v -> do
     chanType :: Int <- v .: "type"
     case chanType of
-      1 -> SingleDM <$> parseJSON v
-      3 -> GroupDM <$> parseJSON v
+      1 -> Single <$> parseJSON (Object v)
+      3 -> Group <$> parseJSON (Object v)
 
 data Category = Category
   { id                   :: Snowflake Category
