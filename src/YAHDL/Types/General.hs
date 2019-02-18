@@ -41,7 +41,7 @@ rawToken (UserToken t) = t
 
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
-  , channelID :: Maybe (Snowflake Channel)
+  , channelID :: Maybe (Snowflake VoiceChannel)
   , userID    :: Snowflake User
   , member    :: Maybe Member
   , sessionID :: Text
