@@ -2,6 +2,7 @@
 
 module YAHDL.Types.Snowflake
   ( Snowflake(..)
+  , coerceSnowflake
   )
 where
 
@@ -21,3 +22,6 @@ instance ToJSON (Snowflake t) where
 
 instance FromJSON (Snowflake t) where
   parseJSON = withText "Snowflake" $ pure . Snowflake . read . unpack
+
+coerceSnowflake :: Snowflake a -> Snowflake b
+coerceSnowflake (Snowflake t) = Snowflake t
