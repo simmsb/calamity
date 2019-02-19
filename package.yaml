@@ -54,6 +54,7 @@ dependencies:
 - transformers-base >= 0.4
 - async >= 2.2
 - simple-log >= 0.9
+- scientific >= 0.3
 
 executables:
   test-yadhl-exe:
@@ -73,6 +74,7 @@ library:
   source-dirs: src
 
 default-extensions:
+  - AllowAmbiguousTypes
   - BlockArguments
   - NoMonomorphismRestriction
   - AutoDeriveTypeable

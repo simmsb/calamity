@@ -44,7 +44,7 @@ data Cache = Cache
   { user    :: Maybe User
   , guilds  :: LH.HashMap (Snowflake Guild) Guild
   , members :: LH.HashMap (Snowflake User) User
-  , dms     :: LH.HashMap (Snowflake DM) DM
+  , dms     :: LH.HashMap (Snowflake DMChannel) DMChannel
   } deriving (Generic)
 
 data Client = Client
