@@ -57,7 +57,7 @@ startClient client = do
     clientLoop
 
 emptyCache :: Cache
-emptyCache = Cache Nothing LH.empty LH.empty LH.empty
+emptyCache = Cache Nothing LH.empty LH.empty
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions

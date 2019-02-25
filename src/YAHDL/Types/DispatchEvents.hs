@@ -25,7 +25,7 @@ data DispatchData
   | GuildRoleCreate GuildRoleCreateData
   | GuildRoleUpdate GuildRoleUpdateData
   | GuildRoleDelete GuildRoleDeleteData
-  | MessageCreate MessageCreateData
+  | MessageCreate Message
   | MessageUpdate MessageUpdateData
   | MessageDelete MessageDeleteData
   | MessageDeleteBulk MessageDeleteBulkData
@@ -104,9 +104,6 @@ newtype GuildRoleUpdateData = GuildRoleUpdateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype GuildRoleDeleteData = GuildRoleDeleteData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
-
-newtype MessageCreateData = MessageCreateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype MessageUpdateData = MessageUpdateData Value
