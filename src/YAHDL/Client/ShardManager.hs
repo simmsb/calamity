@@ -3,6 +3,7 @@
 module YAHDL.Client.ShardManager
   ( mkChanRecvStream
   , shardBot
+  , shardUserBot
   )
 where
 
@@ -49,11 +50,36 @@ shardBot = do
   gateway <- aa <$> invokeRequest GetGatewayBot
 
   let numShards' = gateway ^. #shards
+  let host = gateway ^. #url
   liftIO $ putMVar numShardsVar numShards'
 
   info $ "Number of shards: "+| numShards' |+""
 
-  shards <- liftIO $ forM [0 .. numShards' - 1] \id ->
-    newShard id numShards' token logEnv eventChan
+  liftIO do
+    shards <- forM [0 .. numShards' - 1] \id ->
+      newShard host id numShards' token logEnv eventChan
 
-  liftIO . atomically $ writeTVar shardsVar shards
+    atomically $ writeTVar shardsVar shards
+
+-- | Connects the bot to the gateway over 1 shard (userbot)
+shardUserBot :: BotM ()
+shardUserBot = do
+  numShardsVar <- asks numShards
+  shardsVar <- asks shards
+
+  hasShards <- liftIO $ (not . null) <$> readTVarIO shardsVar
+  when hasShards $
+    fail "don't use shardUserBot on an already running bot."
+
+  token <- asks YAHDL.Client.Types.token
+  eventChan <- asks eventChan
+  logEnv <- askLog
+
+  gateway <- aa <$> invokeRequest GetGateway
+
+  let host = gateway ^. #url
+  liftIO $ putMVar numShardsVar 1
+
+  liftIO do
+    shard <- newShard host 0 1 token logEnv eventChan
+    atomically $ writeTVar shardsVar [shard]

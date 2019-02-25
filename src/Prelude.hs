@@ -58,12 +58,12 @@ trace = sendLog SLS.Trace
 
 jsonOptions :: Options
 jsonOptions = defaultOptions { sumEncoding        = UntaggedValue
-                             , fieldLabelModifier = camelTo2 '_'
+                             , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
                              , omitNothingFields  = True
                              }
 
 jsonOptionsKeepNothing :: Options
 jsonOptionsKeepNothing = defaultOptions { sumEncoding        = UntaggedValue
-                                        , fieldLabelModifier = camelTo2 '_'
+                                        , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
                                         , omitNothingFields  = False
                                         }

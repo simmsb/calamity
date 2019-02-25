@@ -258,6 +258,7 @@ instance Exception ShardException
 data Shard = Shard
   { shardID     :: Int
   , shardCount  :: Int
+  , gateway     :: Text
   , evtChan     :: TChan DispatchData
   , cmdChan     :: TChan ControlMessage
   , shardState  :: TVar ShardState

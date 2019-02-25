@@ -43,7 +43,7 @@ data DispatchData
 data ReadyData = ReadyData
   { v         :: Integer
   , user      :: User
-  , guilds    :: [Guild]
+  , guilds    :: [UnavailableGuild]
   , sessionID :: Text
   } deriving (Show, Generic)
 
@@ -64,7 +64,7 @@ newtype ChannelDeleteData = ChannelDeleteData Value
 newtype ChannelPinsUpdateData = ChannelPinsUpdateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
-newtype GuildCreateData = GuildCreateData Value
+newtype GuildCreateData = GuildCreateData Guild
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype GuildUpdateData = GuildUpdateData Value
