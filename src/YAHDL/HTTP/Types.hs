@@ -4,6 +4,7 @@ module YAHDL.HTTP.Types
   ( RestError(..)
   , RateLimitState(..)
   , DiscordResponseType(..)
+  , GatewayResponse
   , BotGatewayResponse
   )
 where
@@ -42,6 +43,13 @@ data DiscordResponseType
   | ServerError Int
   -- | Our error, we should fail
   | ClientError Int Value
+
+data GatewayResponse = GatewayResponse
+  { url :: Text
+  } deriving (Generic, Show)
+
+instance FromJSON GatewayResponse where
+  parseJSON = genericParseJSON jsonOptions
 
 data BotGatewayResponse = BotGatewayResponse
   { url    :: Text

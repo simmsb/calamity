@@ -25,7 +25,7 @@ data DispatchData
   | GuildRoleCreate GuildRoleCreateData
   | GuildRoleUpdate GuildRoleUpdateData
   | GuildRoleDelete GuildRoleDeleteData
-  | MessageCreate MessageCreateData
+  | MessageCreate Message
   | MessageUpdate MessageUpdateData
   | MessageDelete MessageDeleteData
   | MessageDeleteBulk MessageDeleteBulkData
@@ -43,7 +43,7 @@ data DispatchData
 data ReadyData = ReadyData
   { v         :: Integer
   , user      :: User
-  , guilds    :: [Guild]
+  , guilds    :: [UnavailableGuild]
   , sessionID :: Text
   } deriving (Show, Generic)
 
@@ -64,7 +64,7 @@ newtype ChannelDeleteData = ChannelDeleteData Value
 newtype ChannelPinsUpdateData = ChannelPinsUpdateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
-newtype GuildCreateData = GuildCreateData Value
+newtype GuildCreateData = GuildCreateData Guild
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype GuildUpdateData = GuildUpdateData Value
@@ -104,9 +104,6 @@ newtype GuildRoleUpdateData = GuildRoleUpdateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype GuildRoleDeleteData = GuildRoleDeleteData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
-
-newtype MessageCreateData = MessageCreateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype MessageUpdateData = MessageUpdateData Value

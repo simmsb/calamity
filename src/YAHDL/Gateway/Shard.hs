@@ -14,8 +14,10 @@ import           Control.Lens                   ( (.=) )
 import           Control.Monad.State.Concurrent.Strict
 import           Control.Monad.Trans.Maybe
 import qualified Data.Aeson                    as A
+import           Data.Text                      ( stripPrefix )
 import           Data.Text.Strict.Lens
 import           Data.Maybe
+import qualified System.Log.Simple             as SLS
 import           Network.WebSockets             ( Connection
                                                 , receiveData
                                                 , sendCloseCode
@@ -34,11 +36,11 @@ newShardState shard =
   ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: Int -> Int -> Token -> Log -> TChan DispatchData -> IO (Shard, Async ())
-newShard id count token logEnv evtChan = mdo
+newShard :: Text -> Int -> Int -> Token -> Log -> TChan DispatchData -> IO (Shard, Async ())
+newShard gateway id count token logEnv evtChan = mdo
   cmdChan' <- newTChanIO
   stateVar <- newTVarIO (newShardState shard)
-  let shard = Shard id count evtChan cmdChan' stateVar (rawToken token) thread'
+  let shard = Shard id count gateway evtChan cmdChan' stateVar (rawToken token) thread'
 
   let action = scope ("[ShardID: "+|id|+"]") shardLoop
 
@@ -49,13 +51,6 @@ newShard id count token logEnv evtChan = mdo
 runShardM :: Shard -> Log -> ShardM a -> IO a
 runShardM shard logEnv = evalStateC' . withLog logEnv . unShardM
   where evalStateC' s = evalStateC s (shard ^. #shardState)
-
--- TODO: correct this, add compression
-getGatewayHost :: IO Text
-getGatewayHost = pure "gateway.discord.gg"
-
-liftMaybe :: (MonadPlus m) => Maybe a -> m a
-liftMaybe = maybe mzero return
 
 sendToWs :: SentDiscordMessage -> ShardM ()
 sendToWs data' = do
@@ -76,7 +71,7 @@ fromEither (Right a) = a
 
 fromEitherVoid :: Either a Void -> a
 fromEitherVoid (Left a) = a
-fromEitherVoid (Right a) = absurd a
+fromEitherVoid (Right a) = absurd a -- yeet
 
 -- | Catches ws close events and decides if we can restart or not
 checkWSClose :: IO a -> IO (Either ControlMessage a)
@@ -96,7 +91,7 @@ shardLoop = do
  where
   controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
 
-  discordStream ws = untilResult . runMaybeT $ do
+  discordStream logEnv ws = untilResult . runMaybeT $ do
     msg <- liftIO . checkWSClose $ receiveData ws
 
     case msg of
@@ -104,12 +99,17 @@ shardLoop = do
         pure . Control $ c
 
       Right msg' -> do
-        d <- liftMaybe . A.decode $ msg'
+        let decoded = A.eitherDecode msg'
+        d <- case decoded of
+          Right a -> pure a
+          Left e -> do
+            SLS.writeLog logEnv SLS.Error $ "Failed to decode: "+|e|+""
+            mzero
         pure . Discord $ d
 
-  mergedStream :: Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
-  mergedStream shard ws =
-    liftIO (fromEither <$> race (controlStream shard) (discordStream ws))
+  mergedStream :: Log -> Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
+  mergedStream logEnv shard ws =
+    liftIO (fromEither <$> race (controlStream shard) (discordStream logEnv ws))
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
   -- Currently if this goes to the error path we just exit the forever loop
@@ -117,20 +117,14 @@ shardLoop = do
   -- the shard, or maybe force a resharding
   outerloop :: ShardM (Either ShardException ())
   outerloop = runExceptT . forever $ do
-    state' <- get
     shard <- use #shardS
+    let host = shard ^. #gateway
+    let host' =  fromMaybe host $ stripPrefix "wss://" host
     info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
-
-    host  <- case state' ^. #wsHost of
-      Just host -> pure host
-      Nothing   -> do
-        host <- liftIO getGatewayHost
-        #wsHost ?= host
-        pure host
 
     logEnv <- askLog
 
-    innerLoopVal <- liftIO $ runSecureClient (host ^. unpacked)
+    innerLoopVal <- liftIO $ runSecureClient (host' ^. unpacked)
                     443
                     "/?v=7&encoding=json"
                     (runShardM shard logEnv . innerloop)
@@ -180,7 +174,8 @@ shardLoop = do
                   , presence = Nothing
                   })
 
-    result <- runExceptT . forever $ (mergedStream shard ws >>= handleMsg)
+    logEnv <- askLog
+    result <- runExceptT . forever $ (mergedStream logEnv shard ws >>= handleMsg)
 
     debug "Exiting inner loop of shard"
 

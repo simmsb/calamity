@@ -4,6 +4,7 @@ module YAHDL.Types.General
   ( Token(..)
   , VoiceState(..)
   , User(..)
+  , FromChannel(..)
   , Channel(..)
   , TextChannel(..)
   , VoiceChannel(..)
@@ -13,20 +14,27 @@ module YAHDL.Types.General
   , GroupDM(..)
   , Category(..)
   , Guild(..)
+  , UnavailableGuild(..)
   , Member(..)
   , Message(..)
   , Emoji(..)
   , Role(..)
   , Reaction(..)
+  , Presence(..)
+  , Embed(..)
+  , Attachment(..)
   , formatToken
   , rawToken
+  , asSpecific
   )
 where
 
 import           Control.Monad
 import           Data.Aeson
+import           Data.Aeson.Types
+import           Data.Generics.Product.Fields
 import           Data.Scientific
-import Data.Generics.Product.Fields
+import           Data.Typeable
 
 import           YAHDL.Types.ISO8601
 import           YAHDL.Types.Snowflake
@@ -63,7 +71,6 @@ instance ToJSON VoiceState where
 instance FromJSON VoiceState where
   parseJSON = genericParseJSON jsonOptions
 
--- TODO: these types
 data User = User
   { id            :: Snowflake User
   , username      :: Text
@@ -73,7 +80,7 @@ data User = User
   , mfaEnabled    :: Maybe Bool
   , verified      :: Maybe Bool
   , email         :: Maybe Text
-  , flags         :: Int
+  , flags         :: Maybe Int
   , premiumType   :: Maybe Int
   } deriving (Show, Eq, Generic)
 
@@ -110,9 +117,8 @@ instance ToJSON Channel where
 instance FromJSON Channel where
   parseJSON = genericParseJSON jsonOptions
 
--- TODO: finish this
 defChannel :: Snowflake a -> ChannelType -> Channel
-defChannel s t = (Channel
+defChannel s t = Channel
                   (coerceSnowflake s)
                   t
                   Nothing
@@ -130,21 +136,43 @@ defChannel s t = (Channel
                   Nothing
                   Nothing
                   Nothing
-                  Nothing)
+                  Nothing
 
 
 -- | Prism typeclass for converting between the generic channel type and specialised channel types
 class FromChannel a where
-  fromChannel :: Channel -> Maybe a
-  toChannel   :: a -> Channel
+  -- | Convert from a channel into a more specific channel type
+  fromChannel :: Channel -> Either Text a
 
--- instance FromChannel a => ToJSON a where
---   toEncoding = toEncoding . toChannel
+  -- | Provide a guild ID to a channel when converting to a more specific type
+  fromChannelWithGuildID :: Snowflake Guild -> Channel -> Either Text a
+  fromChannelWithGuildID guildID channel = channel
+    & field @"guildID" ?~ guildID
+    & fromChannel
 
--- instance FromChannel a => FromJSON a where
---   parseJSON c = case fromChannel . parseJSON $ c of
---     Just c' -> pure c'
---     Nothing -> fail "Failed converting channel to required type"
+  -- | Convert from a specific channel type back to the generic channel type
+  toChannel :: a -> Channel
+
+-- | Prism for viewing a generic channel as a specific channel
+asSpecific :: FromChannel a => Prism' Channel a
+asSpecific = prism' toChannel (rightToMaybe . fromChannel)
+
+toEncodingChannel :: FromChannel a => a -> Encoding
+toEncodingChannel = toEncoding . toChannel
+
+parseJSONChannel :: forall a. (FromChannel a, Typeable a) => Value -> Parser a
+parseJSONChannel c = do
+  parsed <- parseJSON c
+  case fromChannel parsed of
+    Right c' -> pure c'
+    Left e -> fail $ "Failed converting channel to required type: "+||typeOf (Proxy @a)||+", data: "+||parsed||+", error: "+|e|+""
+
+ensureChannelType :: ChannelType -> ChannelType -> Either Text ()
+ensureChannelType a b | a == b = Right ()
+ensureChannelType a b = Left $ "Channel type "+||a||+" does not match expected "+||b||+""
+
+ensureField :: Text -> Maybe a -> Either Text a
+ensureField name = maybeToRight ("Missing field: " <> name)
 
 data SingleDM = SingleDM
   { id            :: Snowflake SingleDM
@@ -154,13 +182,19 @@ data SingleDM = SingleDM
 
 instance FromChannel SingleDM where
   fromChannel c = do
-    guard $ (c ^. field @"type_") == DMType
-    recipients <- c ^. field @"recipients"
+    ensureChannelType (c ^. field @"type_") DMType
+    recipients <- ensureField "recipients" $ c ^. field @"recipients"
     pure $ SingleDM (coerceSnowflake $ c ^. field @"id") (c ^. field @"lastMessageID") recipients
 
   toChannel SingleDM {id, lastMessageID, recipients} = defChannel id DMType
     & field @"lastMessageID" .~ lastMessageID
     & field @"recipients"    ?~ recipients
+
+instance ToJSON SingleDM where
+  toEncoding = toEncodingChannel
+
+instance FromJSON SingleDM where
+  parseJSON = parseJSONChannel
 
 data GroupDM = GroupDM
   { id            :: Snowflake GroupDM
@@ -173,10 +207,10 @@ data GroupDM = GroupDM
 
 instance FromChannel GroupDM where
   fromChannel c = do
-    guard $ (c ^. field @"type_") == GroupDMType
-    owner      <- c ^. field @"ownerID"
-    recipients <- c ^. field @"recipients"
-    name       <- c ^. field @"name"
+    ensureChannelType (c ^. field @"type_") GroupDMType
+    owner      <- ensureField "ownerID"    $ c ^. field @"ownerID"
+    recipients <- ensureField "recipients" $ c ^. field @"recipients"
+    name       <- ensureField "name"       $ c ^. field @"name"
     pure $ GroupDM (coerceSnowflake $ c ^. field @"id") owner (c ^. field @"lastMessageID") (c ^. field @"icon") recipients name
 
   toChannel GroupDM {id, ownerID, lastMessageID, icon, recipients, name} = defChannel id GroupDMType
@@ -185,6 +219,12 @@ instance FromChannel GroupDM where
     & field @"icon"          .~ icon
     & field @"recipients"    ?~ recipients
     & field @"name"          ?~ name
+
+instance ToJSON GroupDM where
+  toEncoding = toEncodingChannel
+
+instance FromJSON GroupDM where
+  parseJSON = parseJSONChannel
 
 data DMChannel
   = Single SingleDM
@@ -195,10 +235,16 @@ instance FromChannel DMChannel where
   fromChannel c@Channel {type_} = case type_ of
     DMType      -> Single <$> fromChannel c
     GroupDMType -> Group  <$> fromChannel c
-    _           -> Nothing
+    _           -> Left "Channel was not one of DMType or GroupDMType"
 
   toChannel (Single dm) = toChannel dm
   toChannel (Group  dm) = toChannel dm
+
+instance ToJSON DMChannel where
+  toEncoding = toEncodingChannel
+
+instance FromJSON DMChannel where
+  parseJSON = parseJSONChannel
 
 data GuildChannel
   = GuildTextChannel TextChannel
@@ -211,11 +257,17 @@ instance FromChannel GuildChannel where
     GuildTextType     -> GuildTextChannel  <$> fromChannel c
     GuildVoiceType    -> GuildVoiceChannel <$> fromChannel c
     GuildCategoryType -> GuildCategory     <$> fromChannel c
-    _                 -> Nothing
+    _                 -> Left "Channel was not one of GuildTextType, GuildVoiceType, or GuildCategoryType"
 
   toChannel (GuildTextChannel  c) = toChannel c
   toChannel (GuildVoiceChannel c) = toChannel c
   toChannel (GuildCategory     c) = toChannel c
+
+instance ToJSON GuildChannel where
+  toEncoding = toEncodingChannel
+
+instance FromJSON GuildChannel where
+  parseJSON = parseJSONChannel
 
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hsfield#L182)
@@ -247,12 +299,12 @@ data Category = Category
 
 instance FromChannel Category where
   fromChannel c = do
-    guard $ (c ^. field @"type_") == GuildCategoryType
-    permissionOverwrites <- c ^. field @"permissionOverwrites"
-    name                 <- c ^. field @"name"
-    nsfw                 <- c ^. field @"nsfw"
-    position             <- c ^. field @"position"
-    guildID              <- c ^. field @"guildID"
+    ensureChannelType (c ^. field @"type_") GuildCategoryType
+    permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
+    name                 <- ensureField "name"                 $ c ^. field @"name"
+    let nsfw             = fromMaybe False                     $ c ^. field @"nsfw"
+    position             <- ensureField "position"             $ c ^. field @"position"
+    guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
     pure $ Category (coerceSnowflake $ c ^. field @"id") permissionOverwrites name nsfw position guildID
 
   toChannel Category {id, permissionOverwrites, name, nsfw, position, guildID} = defChannel id GuildCategoryType
@@ -262,13 +314,20 @@ instance FromChannel Category where
     & field @"position"             ?~ position
     & field @"guildID"              ?~ guildID
 
+instance ToJSON Category where
+  toEncoding = toEncodingChannel
+
+instance FromJSON Category where
+  parseJSON = parseJSONChannel
+
+-- TODO: able to decode channels providing the guild_id
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
   , position             :: Int
   , permissionOverwrites :: [Overwrite]
   , name                 :: Text
-  , topic                :: Text
+  , topic                :: Maybe Text
   , nsfw                 :: Bool
   , lastMessageID        :: Maybe (Snowflake Message)
   , rateLimitPerUser     :: Maybe Int
@@ -277,14 +336,15 @@ data TextChannel = TextChannel
 
 instance FromChannel TextChannel where
   fromChannel c = do
-    guard $ (c ^. field @"type_") == GuildTextType
-    guildID              <- c ^. field @"guildID"
-    position             <- c ^. field @"position"
-    permissionOverwrites <- c ^. field @"permissionOverwrites"
-    name                 <- c ^. field @"name"
-    topic                <- c ^. field @"topic"
-    nsfw                 <- c ^. field @"nsfw"
-    pure $ TextChannel (coerceSnowflake $ c ^. field @"id") guildID position
+    ensureChannelType (c ^. field @"type_") GuildTextType
+    let id               =  (coerceSnowflake $ c ^. field @"id")
+    guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
+    position             <- ensureField "position"             $ c ^. field @"position"
+    permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
+    name                 <- ensureField "name"                 $ c ^. field @"name"
+    let topic            =  c ^. field @"topic"
+    let nsfw             =  fromMaybe False                    $ c ^. field @"nsfw"
+    pure $ TextChannel id guildID position
       permissionOverwrites name topic nsfw
       (c ^. field @"lastMessageID")
       (c ^. field @"rateLimitPerUser")
@@ -301,11 +361,17 @@ instance FromChannel TextChannel where
     & field @"position"             ?~ position
     & field @"permissionOverwrites" ?~ permissionOverwrites
     & field @"name"                 ?~ name
-    & field @"topic"                ?~ topic
+    & field @"topic"                .~ topic
     & field @"nsfw"                 ?~ nsfw
     & field @"lastMessageID"        .~ lastMessageID
     & field @"rateLimitPerUser"     .~ rateLimitPerUser
     & field @"parentID"             .~ parentID
+
+instance ToJSON TextChannel where
+  toEncoding = toEncodingChannel
+
+instance FromJSON TextChannel where
+  parseJSON = parseJSONChannel
 
 data VoiceChannel = VoiceChannel
   { id                   :: Snowflake VoiceChannel
@@ -319,13 +385,13 @@ data VoiceChannel = VoiceChannel
 
 instance FromChannel VoiceChannel where
   fromChannel c = do
-    guard $ (c ^. field @"type_") == GuildVoiceType
-    guildID              <- c ^. field @"guildID"
-    position             <- c ^. field @"position"
-    permissionOverwrites <- c ^. field @"permissionOverwrites"
-    name                 <- c ^. field @"name"
-    bitrate              <- c ^. field @"bitrate"
-    userLimit            <- c ^. field @"userLimit"
+    ensureChannelType (c ^. field @"type_") GuildVoiceType
+    guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
+    position             <- ensureField "position"             $ c ^. field @"position"
+    permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
+    name                 <- ensureField "name"                 $ c ^. field @"name"
+    bitrate              <- ensureField "bitrate"              $ c ^. field @"bitrate"
+    userLimit            <- ensureField "userLimit"            $ c ^. field @"userLimit"
     pure $ VoiceChannel (coerceSnowflake $ c ^. field @"id") guildID position permissionOverwrites name bitrate userLimit
 
   toChannel VoiceChannel {id, guildID, position, permissionOverwrites, name, bitrate, userLimit} = defChannel id GuildVoiceType
@@ -336,13 +402,192 @@ instance FromChannel VoiceChannel where
     & field @"bitrate"               ?~ bitrate
     & field @"userLimit"             ?~ userLimit
 
-newtype Guild = Guild Value
+instance ToJSON VoiceChannel where
+  toEncoding = toEncodingChannel
+
+instance FromJSON VoiceChannel where
+  parseJSON = parseJSONChannel
+
+
+-- TODO: custom decoder to allow owner, permissions, embedEnabled, widgetEnabled etc to default
+data Guild = Guild
+  { id                          :: Snowflake Guild
+  , name                        :: Text
+  , icon                        :: Maybe Text
+  , splash                      :: Maybe Text
+  , owner                       :: Maybe Bool
+  , ownerID                     :: Snowflake User
+  , permissions                 :: Int
+  , region                      :: Text
+  , afkChannelID                :: Maybe (Snowflake GuildChannel)
+  , afkTimeout                  :: Int
+  , embedEnabled                :: Bool
+  , embedChannelID              :: Maybe (Snowflake GuildChannel)
+  , verificationLevel           :: Int
+  , defaultMessageNotifications :: Int
+  , explicitContentFilter       :: Int
+  , roles                       :: [Role]
+  , emojis                      :: [Emoji]
+  , features                    :: [Text]
+  , mfaLevel                    :: Int
+  , applicationID               :: Maybe (Snowflake User)
+  , widgetEnabled               :: Bool
+  , widgetChannelID             :: Maybe (Snowflake GuildChannel)
+  , systemChannelID             :: Maybe (Snowflake GuildChannel)
+  , joinedAt                    :: Maybe ISO8601Timestamp
+  , large                       :: Bool
+  , unavailable                 :: Bool
+  , memberCount                 :: Int
+  , voiceStates                 :: [VoiceState]
+  , members                     :: [Member]
+  , channels                    :: [GuildChannel]
+  , presences                   :: [Presence]
+  } deriving (Eq, Show, Generic)
+
+-- TODO: Inject guild id into more places where required
+instance ToJSON Guild where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Guild where
+  parseJSON = withObject "guild" $ \v -> do
+    id <- v .: "id"
+    channels :: [Channel] <- v .: "channels"
+
+    channels' <- case for channels (fromChannelWithGuildID id) of
+      Left e -> fail $ "Error parsing guild_create channel: "+|e|+""
+      Right a -> pure a
+
+    Guild id <$> v .: "name"
+             <*> v .: "icon"
+             <*> v .:? "splash"
+             <*> v .:? "owner"
+             <*> v .: "owner_id"
+             <*> v .:? "permissions"    .!= 0
+             <*> v .: "region"
+             <*> v .:? "afk_channel_id"
+             <*> v .: "afk_timeout"
+             <*> v .:? "embed_enabled"  .!= False
+             <*> v .:? "embed_channel_id"
+             <*> v .: "verification_level"
+             <*> v .: "default_message_notifications"
+             <*> v .: "explicit_content_filter"
+             <*> v .: "roles"
+             <*> v .: "emojis"
+             <*> v .: "features"
+             <*> v .: "mfa_level"
+             <*> v .:? "application_id"
+             <*> v .:? "widget_enabled" .!= False
+             <*> v .:? "widget_channel_id"
+             <*> v .:? "system_channel_id"
+             <*> v .:? "joined_at"
+             <*> v .: "large"
+             <*> v .: "unavailable"
+             <*> v .: "member_count"
+             <*> v .: "voice_states"
+             <*> v .: "members"
+             <*> pure channels'
+             <*> v .: "presences"
+
+
+data UnavailableGuild = UnavailableGuild
+  { id          :: Snowflake Guild
+  , unavailable :: Bool
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON UnavailableGuild where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON UnavailableGuild where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data Member = Member
+  { user     :: User
+  , nick     :: Maybe Text
+  , roles    :: [Snowflake Role]
+  , joinedAt :: ISO8601Timestamp
+  , deaf     :: Bool
+  , mute     :: Bool
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Member where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Member where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data Message = Message
+  { id              :: Snowflake Message
+  , channelID       :: Snowflake Channel
+  , guildID         :: Maybe (Snowflake Guild)
+  , author          :: User
+  , content         :: Text
+  , timestamp       :: ISO8601Timestamp
+  , editedTimestamp :: Maybe ISO8601Timestamp
+  , tts             :: Bool
+  , mentionEveryone :: Bool
+  , mentions        :: [User]
+  , mentionRoles    :: [Snowflake Role]
+  , attachments     :: [Attachment]
+  , embeds          :: [Embed]
+  , reactions       :: [Reaction]
+  , nonce           :: Maybe (Snowflake Message)
+  , pinned          :: Bool
+  , webhookID       :: Maybe (Snowflake ())
+  , type_           :: MessageType
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Message where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Message where
+  parseJSON = withObject "Message" $ \v -> Message
+    <$> v .: "id"
+    <*> v .: "channel_id"
+    <*> v .:? "guild_id"
+    <*> v .: "author"
+    <*> v .: "content"
+    <*> v .: "timestamp"
+    <*> v .:? "edited_timestamp"
+    <*> v .: "tts"
+    <*> v .: "mention_everyone"
+    <*> v .: "mentions"
+    <*> v .: "mention_roles"
+    <*> v .: "attachments"
+    <*> v .: "embeds"
+    <*> v .:? "reactions" .!= []
+    <*> v .:? "nonce"
+    <*> v .: "pinned"
+    <*> v .:? "webhook_id"
+    <*> v .: "type"
+
+-- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
+data MessageType
+    = Default
+    | RecipientAdd
+    | RecipientRemove
+    | Call
+    | ChannelNameChange
+    | ChannelIconChange
+    | ChannelPinnedMessage
+    | GuildMemberJoin
+    deriving (Eq, Show, Enum)
+
+instance ToJSON MessageType where
+    toJSON t = Number $ fromIntegral (fromEnum t)
+
+instance FromJSON MessageType where
+    parseJSON = withScientific "MessageType"  $ \n ->
+        case toBoundedInteger n of
+            Just v  -> return $ toEnum v
+            Nothing -> fail $ "Invalid MessageType: " ++ show n
+
+
+newtype Embed = Embed Value
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-newtype Member = Member Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
-
-newtype Message = Message Value
+newtype Attachment = Attachment Value
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
 newtype Emoji = Emoji Value
@@ -356,4 +601,7 @@ newtype Overwrite = Overwrite Value
 
 -- Needs to have user, message and emoji
 newtype Reaction = Reaction Value
+  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+
+newtype Presence = Presence Value
   deriving (Eq, Show, Generic, ToJSON, FromJSON)
