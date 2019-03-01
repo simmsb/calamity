@@ -76,7 +76,8 @@ fromEitherVoid (Right a) = absurd a -- yeet
 -- | Catches ws close events and decides if we can restart or not
 checkWSClose :: IO a -> IO (Either ControlMessage a)
 checkWSClose m = (Right <$> m) `catch` \case
-  e@(CloseRequest code _) ->
+  e@(CloseRequest code _) -> do
+    print e
     if code `elem` [1000, 4004, 4010, 4011]
     then pure . Left $ Restart
     else throwIO e
@@ -88,6 +89,7 @@ shardLoop :: ShardM ()
 shardLoop = do
   trace "entering shardLoop"
   void outerloop
+  trace "leaving shardLoop"
  where
   controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
 

@@ -4,7 +4,8 @@
 - Test using text-short and intern for certain strings
 * CANCELLED Shards need some way of making requests (get gateway, etc)
 CLOSED: [2019-02-24 Sun 18:29]
-- [ ] Instead we just pass the gateway url to shards, it never changes, so w/e
+- [X] Instead we just pass the gateway url to shards, it never changes, so w/e
+
 * TODO Function to log out the bot, waiting for all stuff to end, etc
 - we'll need some control messages that tell the client to enter a loop of
   waiting for all shards to signal that they are closed.
@@ -14,6 +15,7 @@ CLOSED: [2019-02-24 Sun 18:29]
 - Shard shuts down and sends a control message with it's own thread to the client stating that it is closed?
 - Client removes shard from the set of shards
 
+* TODO Move from lists of objects to maps of id => object
 
 * Presence info
 - linky :: https://discordapp.com/developers/docs/topics/gateway#presence-update

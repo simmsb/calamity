@@ -38,6 +38,8 @@ import           Data.Typeable
 
 import           YAHDL.Types.ISO8601
 import           YAHDL.Types.Snowflake
+import           YAHDL.Types.SnowflakeMap       ( SnowflakeMap(..) )
+import qualified YAHDL.Types.SnowflakeMap      as SH
 
 data Token
   = BotToken Text
@@ -103,7 +105,7 @@ data Channel = Channel
   , bitrate              :: Maybe Int
   , userLimit            :: Maybe Int
   , rateLimitPerUser     :: Maybe Int
-  , recipients           :: Maybe [User]
+  , recipients           :: Maybe (SnowflakeMap User)
   , icon                 :: Maybe Text
   , ownerID              :: Maybe (Snowflake User)
   , applicationID        :: Maybe (Snowflake User)
@@ -177,7 +179,7 @@ ensureField name = maybeToRight ("Missing field: " <> name)
 data SingleDM = SingleDM
   { id            :: Snowflake SingleDM
   , lastMessageID :: Maybe (Snowflake Message)
-  , recipients    :: [User]
+  , recipients    :: SnowflakeMap User
   } deriving (Show, Eq, Generic)
 
 instance FromChannel SingleDM where
@@ -201,7 +203,7 @@ data GroupDM = GroupDM
   , ownerID       :: Snowflake User
   , lastMessageID :: Maybe (Snowflake Message)
   , icon          :: Maybe Text
-  , recipients    :: [User]
+  , recipients    :: SnowflakeMap User
   , name          :: Text
   } deriving (Show, Eq, Generic)
 
@@ -269,6 +271,8 @@ instance ToJSON GuildChannel where
 instance FromJSON GuildChannel where
   parseJSON = parseJSONChannel
 
+instance {-# OVERLAPS #-} HasID GuildChannel where
+  getID = coerceSnowflake . getID . toChannel
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hsfield#L182)
 data ChannelType
@@ -439,8 +443,8 @@ data Guild = Guild
   , unavailable                 :: Bool
   , memberCount                 :: Int
   , voiceStates                 :: [VoiceState]
-  , members                     :: [Member]
-  , channels                    :: [GuildChannel]
+  , members                     :: SnowflakeMap Member
+  , channels                    :: SnowflakeMap GuildChannel
   , presences                   :: [Presence]
   } deriving (Eq, Show, Generic)
 
@@ -454,8 +458,8 @@ instance FromJSON Guild where
     channels :: [Channel] <- v .: "channels"
 
     channels' <- case for channels (fromChannelWithGuildID id) of
-      Left e -> fail $ "Error parsing guild_create channel: "+|e|+""
       Right a -> pure a
+      Left e -> fail $ "Error parsing guild_create channel: "+|e|+""
 
     Guild id <$> v .: "name"
              <*> v .: "icon"
@@ -485,7 +489,7 @@ instance FromJSON Guild where
              <*> v .: "member_count"
              <*> v .: "voice_states"
              <*> v .: "members"
-             <*> pure channels'
+             <*> (pure $ SH.fromList channels')
              <*> v .: "presences"
 
 
@@ -516,6 +520,8 @@ instance ToJSON Member where
 instance FromJSON Member where
   parseJSON = genericParseJSON jsonOptions
 
+instance HasID Member where
+  getID = coerceSnowflake . getID . (^. field @"user")
 
 data Message = Message
   { id              :: Snowflake Message
@@ -527,9 +533,9 @@ data Message = Message
   , editedTimestamp :: Maybe ISO8601Timestamp
   , tts             :: Bool
   , mentionEveryone :: Bool
-  , mentions        :: [User]
+  , mentions        :: SnowflakeMap User
   , mentionRoles    :: [Snowflake Role]
-  , attachments     :: [Attachment]
+  , attachments     :: [Attachment] -- TODO: snowflakemap these
   , embeds          :: [Embed]
   , reactions       :: [Reaction]
   , nonce           :: Maybe (Snowflake Message)
