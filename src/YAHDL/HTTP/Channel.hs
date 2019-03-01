@@ -21,4 +21,4 @@ instance Request (ChannelRequest a) a where
     & giveID id
     & buildRoute
 
-  toAction q@(CreateMessage _ t) opts = postWith opts (url q) (object ["content" .= t])
+  toAction q@(CreateMessage _ t) opts = postWith opts (YAHDL.HTTP.Request.url q) (object ["content" .= t])

@@ -54,6 +54,12 @@ rawToken :: Token -> Text
 rawToken (BotToken  t) = t
 rawToken (UserToken t) = t
 
+fuseTup2 :: Monad f => (f a, f b) -> f (a, b)
+fuseTup2 (a, b) = do
+  a' <- a
+  b' <- b
+  pure $ (a', b')
+
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
   , channelID :: Maybe (Snowflake VoiceChannel)
@@ -324,7 +330,6 @@ instance ToJSON Category where
 instance FromJSON Category where
   parseJSON = parseJSONChannel
 
--- TODO: able to decode channels providing the guild_id
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
@@ -413,7 +418,6 @@ instance FromJSON VoiceChannel where
   parseJSON = parseJSONChannel
 
 
--- TODO: custom decoder to allow owner, permissions, embedEnabled, widgetEnabled etc to default
 data Guild = Guild
   { id                          :: Snowflake Guild
   , name                        :: Text
@@ -448,7 +452,6 @@ data Guild = Guild
   , presences                   :: [Presence]
   } deriving (Eq, Show, Generic)
 
--- TODO: Inject guild id into more places where required
 instance ToJSON Guild where
   toEncoding = genericToEncoding jsonOptions
 
@@ -590,8 +593,157 @@ instance FromJSON MessageType where
             Nothing -> fail $ "Invalid MessageType: " ++ show n
 
 
-newtype Embed = Embed Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+data Embed = Embed
+  { title       :: Maybe Text
+  , type_       :: Maybe Text
+  , description :: Maybe Text
+  , url         :: Maybe Text
+  , timestamp   :: Maybe ISO8601Timestamp
+  , color       :: Maybe Int
+  , footer      :: Maybe EmbedFooter
+  , image       :: Maybe EmbedImage
+  , thumbnail   :: Maybe EmbedThumbnail
+  , video       :: Maybe EmbedVideo
+  , provider    :: Maybe EmbedProvider
+  , author      :: Maybe EmbedAuthor
+  , fields      :: [EmbedField]
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Embed  where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Embed where
+  parseJSON = withObject "Embed" $ \v -> Embed
+    <$> v .: "title"
+    <*> v .: "type"
+    <*> v .: "description"
+    <*> v .: "url"
+    <*> v .: "timestamp"
+    <*> v .: "color"
+    <*> v .: "footer"
+    <*> v .: "image"
+    <*> v .: "thumbnail"
+    <*> v .: "video"
+    <*> v .: "provider"
+    <*> v .: "author"
+    <*> v .:? "fields" .!= []
+
+data EmbedFooter = EmbedFooter
+  { text         :: Text
+  , iconUrl      :: Maybe Text
+  , proxyIconUrl :: Maybe Text
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON EmbedFooter where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON EmbedFooter where
+  parseJSON = genericParseJSON jsonOptions
+
+data EmbedImage = EmbedImage
+  { url        :: Maybe Text
+  , proxyUrl   :: Maybe Text
+  , dimensions :: Maybe (Int, Int) -- doesn't make sense to have only one of the width or height
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON EmbedImage where
+  toEncoding EmbedImage{url, proxyUrl, dimensions = Just (width, height)} =
+    pairs ("url" .= url <> "proxy_url" .= proxyUrl <>
+           "width" .= width <> "height" .= height)
+
+  toEncoding EmbedImage{url, proxyUrl} =
+    pairs ("url" .= url <> "proxy_url" .= proxyUrl)
+
+instance FromJSON EmbedImage where
+  parseJSON = withObject "EmbedImage" $ \v -> do
+    width  <- v .:? "width"
+    height <- v .:? "height"
+
+    EmbedImage
+      <$> v .: "url"
+      <*> v .: "proxyUrl"
+      <*> (pure $ fuseTup2 (width, height))
+
+data EmbedThumbnail = EmbedThumbnail
+  { url        :: Maybe Text
+  , proxyUrl   :: Maybe Text
+  , dimensions :: Maybe (Int, Int) -- doesn't make sense to have only one of the width or height
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON EmbedThumbnail where
+  toEncoding EmbedThumbnail{url, proxyUrl, dimensions = Just (width, height)} =
+    pairs ("url" .= url <> "proxy_url" .= proxyUrl <>
+           "width" .= width <> "height" .= height)
+
+  toEncoding EmbedThumbnail{url, proxyUrl} =
+    pairs ("url" .= url <> "proxy_url" .= proxyUrl)
+
+instance FromJSON EmbedThumbnail where
+  parseJSON = withObject "EmbedThumbnail" $ \v -> do
+    width  <- v .:? "width"
+    height <- v .:? "height"
+
+    EmbedThumbnail
+      <$> v .: "url"
+      <*> v .: "proxyUrl"
+      <*> (pure $ fuseTup2 (width, height))
+
+data EmbedVideo = EmbedVideo
+  { url        :: Maybe Text
+  , dimensions :: Maybe (Int, Int) -- doesn't make sense to have only one of the width or height
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON EmbedVideo where
+  toEncoding EmbedVideo{url, dimensions = Just (width, height)} =
+    pairs ("url" .= url <> "width" .= width <> "height" .= height)
+
+  toEncoding EmbedVideo{url} =
+    pairs ("url" .= url)
+
+instance FromJSON EmbedVideo where
+  parseJSON = withObject "EmbedVideo" $ \v -> do
+    width <- v .:? "width"
+    height <- v .:? "height"
+
+    EmbedVideo
+      <$> v .: "url"
+      <*> (pure $ fuseTup2 (width, height))
+
+data EmbedProvider = EmbedProvider
+  { name :: Maybe Text
+  , url  :: Maybe Text
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON EmbedProvider where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON EmbedProvider where
+  parseJSON = genericParseJSON jsonOptions
+
+data EmbedAuthor = EmbedAuthor
+  { name         :: Maybe Text
+  , url          :: Maybe Text
+  , iconUrl      :: Maybe Text
+  , proxyIconURL :: Maybe Text
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON EmbedAuthor where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON EmbedAuthor where
+  parseJSON = genericParseJSON jsonOptions
+
+data EmbedField = EmbedField
+  { name   :: Text
+  , value  :: Text
+  , inline :: Bool
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON EmbedField where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON EmbedField where
+  parseJSON = genericParseJSON jsonOptions
 
 newtype Attachment = Attachment Value
   deriving (Eq, Show, Generic, ToJSON, FromJSON)

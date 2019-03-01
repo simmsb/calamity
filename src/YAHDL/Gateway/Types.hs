@@ -224,7 +224,7 @@ data RequestGuildMembersData = RequestGuildMembersData
   } deriving (Show, Generic)
 
 instance ToJSON RequestGuildMembersData where
-  toEncoding RequestGuildMembersData{..} =
+  toEncoding RequestGuildMembersData{guildID, query, limit} =
     pairs ("guild_id" .= guildID <>
            "query" .= fromMaybe "" query <>
            "limit" .= fromMaybe 0 limit)
