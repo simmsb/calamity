@@ -1,7 +1,7 @@
 name:               yet-another-haskell-discord-library
 version:            0.1.0.0
 github:             "nitros12/yet-another-haskell-discord-library"
-license:            BSD3
+license:            MIT
 author:             "Ben Simms"
 maintainer:         "ben@bensimms.moe"
 copyright:          "2018 Ben Simms"

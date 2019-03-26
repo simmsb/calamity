@@ -30,7 +30,7 @@ newClient token eventHandlers = do
   shards'                    <- newTVarIO []
   numShards'                 <- newEmptyMVar
   rlState'                   <- newRateLimitState
-  (eventStream', eventChan') <- mkChanRecvStream
+  (eventStream', eventQueue') <- mkQueueRecvStream
   cache'                     <- newTVarIO emptyCache
   activeTasks'               <- TS.newIO
 
@@ -39,7 +39,7 @@ newClient token eventHandlers = do
                 token
                 rlState'
                 eventStream'
-                eventChan'
+                eventQueue'
                 cache'
                 activeTasks'
                 eventHandlers

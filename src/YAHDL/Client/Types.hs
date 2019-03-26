@@ -19,7 +19,7 @@ where
 
 -- import           Control.Monad.Trans.Control
 -- import           Control.Monad.Base
-import           Control.Concurrent.STM.TChan
+import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Reader     ( runReaderT )
@@ -52,7 +52,7 @@ data Client = Client
   , token         :: Token
   , rlState       :: RateLimitState
   , eventStream   :: S.Serial DispatchData
-  , eventChan     :: TChan DispatchData -- ^ for shards to take
+  , eventQueue    :: TQueue DispatchData -- ^ for shards to take
   , cache         :: TVar Cache
   , activeTasks   :: TS.Set (Async ()) -- ^ events currently being handled
   , eventHandlers :: EventHandlers

@@ -8,7 +8,7 @@ module YAHDL.Gateway.Shard
   )
 where
 
-import           Control.Concurrent.STM.TChan
+import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Lens                   ( (.=) )
 import           Control.Monad.State.Concurrent.Strict
@@ -36,11 +36,11 @@ newShardState shard =
   ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: Text -> Int -> Int -> Token -> Log -> TChan DispatchData -> IO (Shard, Async ())
-newShard gateway id count token logEnv evtChan = mdo
-  cmdChan' <- newTChanIO
+newShard :: Text -> Int -> Int -> Token -> Log -> TQueue DispatchData -> IO (Shard, Async ())
+newShard gateway id count token logEnv evtQueue = mdo
+  cmdQueue' <- newTQueueIO
   stateVar <- newTVarIO (newShardState shard)
-  let shard = Shard id count gateway evtChan cmdChan' stateVar (rawToken token) thread'
+  let shard = Shard id count gateway evtQueue cmdQueue' stateVar (rawToken token) thread'
 
   let action = scope ("[ShardID: "+|id|+"]") shardLoop
 
@@ -91,7 +91,7 @@ shardLoop = do
   void outerloop
   trace "leaving shardLoop"
  where
-  controlStream shard = Control <$> (liftIO . atomically . readTChan $ (shard ^. #cmdChan))
+  controlStream shard = Control <$> (liftIO . atomically . readTQueue $ (shard ^. #cmdQueue))
 
   discordStream logEnv ws = untilResult . runMaybeT $ do
     msg <- liftIO . checkWSClose $ receiveData ws
@@ -198,7 +198,7 @@ shardLoop = do
         _ -> pure ()
 
       shard <- lift $ use #shardS
-      liftIO . atomically $ writeTChan (shard ^. #evtChan) data'
+      liftIO . atomically $ writeTQueue (shard ^. #evtQueue) data'
       seqNum' <- use #seqNum
       trace $ "Done handling event, seq is now: "+||seqNum'||+""
 

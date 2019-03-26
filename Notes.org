@@ -15,7 +15,9 @@ CLOSED: [2019-02-24 Sun 18:29]
 - Shard shuts down and sends a control message with it's own thread to the client stating that it is closed?
 - Client removes shard from the set of shards
 
-* TODO Move from lists of objects to maps of id => object
+* DONE Move from lists of objects to maps of id => object
+CLOSED: [2019-03-05 Tue 02:44]
+* TODO Partial data
 
 * Presence info
 - linky :: https://discordapp.com/developers/docs/topics/gateway#presence-update

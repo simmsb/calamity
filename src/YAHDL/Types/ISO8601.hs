@@ -9,7 +9,7 @@ import           Data.Aeson
 import           Data.Time
 
 
-newtype ISO8601Timestamp = ISO8601Timestamp ZonedTime
+newtype ISO8601Timestamp = ISO8601Timestamp { unISO8601Timestamp :: ZonedTime }
   deriving (Show, Generic, ToJSON, FromJSON)
 
 instance Eq ISO8601Timestamp where

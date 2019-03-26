@@ -12,7 +12,7 @@ module YAHDL.Gateway.Types where
   -- , ControlMessage(..)
   -- )
 
-import           Control.Concurrent.STM.TChan
+import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Catch
 import           Control.Monad.State.Concurrent.Strict
@@ -259,8 +259,8 @@ data Shard = Shard
   { shardID     :: Int
   , shardCount  :: Int
   , gateway     :: Text
-  , evtChan     :: TChan DispatchData
-  , cmdChan     :: TChan ControlMessage
+  , evtQueue    :: TQueue DispatchData
+  , cmdQueue    :: TQueue ControlMessage
   , shardState  :: TVar ShardState
   , token       :: Text
   , shardThread :: Async ()

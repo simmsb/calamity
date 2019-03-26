@@ -1,14 +1,14 @@
 -- | Contains stuff for managing shards
 
 module YAHDL.Client.ShardManager
-  ( mkChanRecvStream
+  ( mkQueueRecvStream
   , shardBot
   , shardUserBot
   )
 where
 
 import qualified Protolude.Error
-import           Control.Concurrent.STM.TChan
+import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad
 import qualified Streamly                      as S
@@ -19,13 +19,13 @@ import           YAHDL.Client.Types
 import           YAHDL.HTTP.MiscRoutes
 import           YAHDL.HTTP.Request
 
-mkChanRecvStream :: IO (S.Serial a, TChan a)
-mkChanRecvStream = do
-  chan <- newTChanIO
+mkQueueRecvStream :: IO (S.Serial a, TQueue a)
+mkQueueRecvStream = do
+  queue <- newTQueueIO
 
-  let evtStream = S.repeatM . atomically . readTChan $ chan
+  let evtStream = S.repeatM . atomically . readTQueue $ queue
 
-  pure (evtStream, chan)
+  pure (evtStream, queue)
 
 
 -- TODO: delete this
@@ -44,7 +44,7 @@ shardBot = do
     fail "don't use shardBot on an already running bot."
 
   token <- asks YAHDL.Client.Types.token
-  eventChan <- asks eventChan
+  eventQueue <- asks eventQueue
   logEnv <- askLog
 
   gateway <- aa <$> invokeRequest GetGatewayBot
@@ -57,7 +57,7 @@ shardBot = do
 
   liftIO do
     shards <- forM [0 .. numShards' - 1] \id ->
-      newShard host id numShards' token logEnv eventChan
+      newShard host id numShards' token logEnv eventQueue
 
     atomically $ writeTVar shardsVar shards
 
@@ -72,7 +72,7 @@ shardUserBot = do
     fail "don't use shardUserBot on an already running bot."
 
   token <- asks YAHDL.Client.Types.token
-  eventChan <- asks eventChan
+  eventQueue <- asks eventQueue
   logEnv <- askLog
 
   gateway <- aa <$> invokeRequest GetGateway
@@ -81,5 +81,5 @@ shardUserBot = do
   liftIO $ putMVar numShardsVar 1
 
   liftIO do
-    shard <- newShard host 0 1 token logEnv eventChan
+    shard <- newShard host 0 1 token logEnv eventQueue
     atomically $ writeTVar shardsVar [shard]

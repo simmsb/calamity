@@ -25,7 +25,6 @@ module YAHDL.Types.General
   , Attachment(..)
   , formatToken
   , rawToken
-  , asSpecific
   )
 where
 
@@ -37,6 +36,7 @@ import           Data.Scientific
 import           Data.Typeable
 
 import           YAHDL.Types.ISO8601
+import           YAHDL.Types.UnixTimestamp
 import           YAHDL.Types.Snowflake
 import           YAHDL.Types.SnowflakeMap       ( SnowflakeMap(..) )
 import qualified YAHDL.Types.SnowflakeMap      as SH
@@ -58,7 +58,7 @@ fuseTup2 :: Monad f => (f a, f b) -> f (a, b)
 fuseTup2 (a, b) = do
   a' <- a
   b' <- b
-  pure $ (a', b')
+  pure (a', b')
 
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
@@ -88,8 +88,8 @@ data User = User
   , mfaEnabled    :: Maybe Bool
   , verified      :: Maybe Bool
   , email         :: Maybe Text
-  , flags         :: Maybe Int
-  , premiumType   :: Maybe Int
+  , flags         :: Maybe Word64
+  , premiumType   :: Maybe Word64
   } deriving (Show, Eq, Generic)
 
 instance ToJSON User where
@@ -97,6 +97,10 @@ instance ToJSON User where
 
 instance FromJSON User where
   parseJSON = genericParseJSON jsonOptions
+
+-- TODO: scrap fromchannel stuff, all raw events get generic channel, we'll
+-- transform into the correct channel sometime later when we meet the cache
+-- TODO: make all specific type channels nicer (ie: categories have nested channels, etc)
 
 data Channel = Channel
   { id                   :: Snowflake Channel
@@ -147,33 +151,21 @@ defChannel s t = Channel
                   Nothing
 
 
--- | Prism typeclass for converting between the generic channel type and specialised channel types
 class FromChannel a where
+  type FromRet a :: *
+  type FromRet a = Either Text a
+
   -- | Convert from a channel into a more specific channel type
-  fromChannel :: Channel -> Either Text a
+  fromChannel :: Proxy a -> Channel -> FromRet a
 
   -- | Provide a guild ID to a channel when converting to a more specific type
-  fromChannelWithGuildID :: Snowflake Guild -> Channel -> Either Text a
-  fromChannelWithGuildID guildID channel = channel
+  fromChannelWithGuildID :: Snowflake Guild -> Proxy a -> Channel -> FromRet a
+  fromChannelWithGuildID guildID p channel = channel
     & field @"guildID" ?~ guildID
-    & fromChannel
+    & (fromChannel p)
 
   -- | Convert from a specific channel type back to the generic channel type
   toChannel :: a -> Channel
-
--- | Prism for viewing a generic channel as a specific channel
-asSpecific :: FromChannel a => Prism' Channel a
-asSpecific = prism' toChannel (rightToMaybe . fromChannel)
-
-toEncodingChannel :: FromChannel a => a -> Encoding
-toEncodingChannel = toEncoding . toChannel
-
-parseJSONChannel :: forall a. (FromChannel a, Typeable a) => Value -> Parser a
-parseJSONChannel c = do
-  parsed <- parseJSON c
-  case fromChannel parsed of
-    Right c' -> pure c'
-    Left e -> fail $ "Failed converting channel to required type: "+||typeOf (Proxy @a)||+", data: "+||parsed||+", error: "+|e|+""
 
 ensureChannelType :: ChannelType -> ChannelType -> Either Text ()
 ensureChannelType a b | a == b = Right ()
@@ -189,7 +181,7 @@ data SingleDM = SingleDM
   } deriving (Show, Eq, Generic)
 
 instance FromChannel SingleDM where
-  fromChannel c = do
+  fromChannel _ c = do
     ensureChannelType (c ^. field @"type_") DMType
     recipients <- ensureField "recipients" $ c ^. field @"recipients"
     pure $ SingleDM (coerceSnowflake $ c ^. field @"id") (c ^. field @"lastMessageID") recipients
@@ -197,12 +189,6 @@ instance FromChannel SingleDM where
   toChannel SingleDM {id, lastMessageID, recipients} = defChannel id DMType
     & field @"lastMessageID" .~ lastMessageID
     & field @"recipients"    ?~ recipients
-
-instance ToJSON SingleDM where
-  toEncoding = toEncodingChannel
-
-instance FromJSON SingleDM where
-  parseJSON = parseJSONChannel
 
 data GroupDM = GroupDM
   { id            :: Snowflake GroupDM
@@ -214,7 +200,7 @@ data GroupDM = GroupDM
   } deriving (Show, Eq, Generic)
 
 instance FromChannel GroupDM where
-  fromChannel c = do
+  fromChannel _ c = do
     ensureChannelType (c ^. field @"type_") GroupDMType
     owner      <- ensureField "ownerID"    $ c ^. field @"ownerID"
     recipients <- ensureField "recipients" $ c ^. field @"recipients"
@@ -228,31 +214,19 @@ instance FromChannel GroupDM where
     & field @"recipients"    ?~ recipients
     & field @"name"          ?~ name
 
-instance ToJSON GroupDM where
-  toEncoding = toEncodingChannel
-
-instance FromJSON GroupDM where
-  parseJSON = parseJSONChannel
-
 data DMChannel
   = Single SingleDM
   | Group GroupDM
   deriving (Show, Eq, Generic)
 
 instance FromChannel DMChannel where
-  fromChannel c@Channel {type_} = case type_ of
-    DMType      -> Single <$> fromChannel c
-    GroupDMType -> Group  <$> fromChannel c
+  fromChannel _ c@Channel {type_} = case type_ of
+    DMType      -> Single <$> fromChannel (Proxy @SingleDM) c
+    GroupDMType -> Group  <$> fromChannel (Proxy @GroupDM) c
     _           -> Left "Channel was not one of DMType or GroupDMType"
 
   toChannel (Single dm) = toChannel dm
   toChannel (Group  dm) = toChannel dm
-
-instance ToJSON DMChannel where
-  toEncoding = toEncodingChannel
-
-instance FromJSON DMChannel where
-  parseJSON = parseJSONChannel
 
 data GuildChannel
   = GuildTextChannel TextChannel
@@ -261,21 +235,15 @@ data GuildChannel
   deriving (Show, Eq, Generic)
 
 instance FromChannel GuildChannel where
-  fromChannel c@Channel {type_} = case type_ of
-    GuildTextType     -> GuildTextChannel  <$> fromChannel c
-    GuildVoiceType    -> GuildVoiceChannel <$> fromChannel c
-    GuildCategoryType -> GuildCategory     <$> fromChannel c
+  fromChannel _ c@Channel {type_} = case type_ of
+    GuildTextType     -> GuildTextChannel  <$> fromChannel (Proxy @TextChannel)  c
+    GuildVoiceType    -> GuildVoiceChannel <$> fromChannel (Proxy @VoiceChannel) c
+    GuildCategoryType -> GuildCategory     <$> fromChannel (Proxy @Category)     c
     _                 -> Left "Channel was not one of GuildTextType, GuildVoiceType, or GuildCategoryType"
 
   toChannel (GuildTextChannel  c) = toChannel c
   toChannel (GuildVoiceChannel c) = toChannel c
   toChannel (GuildCategory     c) = toChannel c
-
-instance ToJSON GuildChannel where
-  toEncoding = toEncodingChannel
-
-instance FromJSON GuildChannel where
-  parseJSON = parseJSONChannel
 
 instance {-# OVERLAPS #-} HasID GuildChannel where
   getID = coerceSnowflake . getID . toChannel
@@ -308,7 +276,9 @@ data Category = Category
   } deriving (Show, Eq, Generic)
 
 instance FromChannel Category where
-  fromChannel c = do
+  -- type FromRet Category = Either Text Category
+
+  fromChannel _ c = do
     ensureChannelType (c ^. field @"type_") GuildCategoryType
     permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
     name                 <- ensureField "name"                 $ c ^. field @"name"
@@ -324,12 +294,6 @@ instance FromChannel Category where
     & field @"position"             ?~ position
     & field @"guildID"              ?~ guildID
 
-instance ToJSON Category where
-  toEncoding = toEncodingChannel
-
-instance FromJSON Category where
-  parseJSON = parseJSONChannel
-
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
@@ -344,9 +308,9 @@ data TextChannel = TextChannel
   } deriving (Show, Eq, Generic)
 
 instance FromChannel TextChannel where
-  fromChannel c = do
+  fromChannel _ c = do
     ensureChannelType (c ^. field @"type_") GuildTextType
-    let id               =  (coerceSnowflake $ c ^. field @"id")
+    let id               =  coerceSnowflake $ c ^. field @"id"
     guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
     position             <- ensureField "position"             $ c ^. field @"position"
     permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
@@ -376,12 +340,6 @@ instance FromChannel TextChannel where
     & field @"rateLimitPerUser"     .~ rateLimitPerUser
     & field @"parentID"             .~ parentID
 
-instance ToJSON TextChannel where
-  toEncoding = toEncodingChannel
-
-instance FromJSON TextChannel where
-  parseJSON = parseJSONChannel
-
 data VoiceChannel = VoiceChannel
   { id                   :: Snowflake VoiceChannel
   , guildID              :: Snowflake Guild
@@ -393,7 +351,7 @@ data VoiceChannel = VoiceChannel
   } deriving (Show, Eq, Generic)
 
 instance FromChannel VoiceChannel where
-  fromChannel c = do
+  fromChannel _ c = do
     ensureChannelType (c ^. field @"type_") GuildVoiceType
     guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
     position             <- ensureField "position"             $ c ^. field @"position"
@@ -411,13 +369,8 @@ instance FromChannel VoiceChannel where
     & field @"bitrate"               ?~ bitrate
     & field @"userLimit"             ?~ userLimit
 
-instance ToJSON VoiceChannel where
-  toEncoding = toEncodingChannel
 
-instance FromJSON VoiceChannel where
-  parseJSON = parseJSONChannel
-
-
+-- TODO: raw guild, complete guild
 data Guild = Guild
   { id                          :: Snowflake Guild
   , name                        :: Text
@@ -425,7 +378,7 @@ data Guild = Guild
   , splash                      :: Maybe Text
   , owner                       :: Maybe Bool
   , ownerID                     :: Snowflake User
-  , permissions                 :: Int
+  , permissions                 :: Word64
   , region                      :: Text
   , afkChannelID                :: Maybe (Snowflake GuildChannel)
   , afkTimeout                  :: Int
@@ -448,7 +401,7 @@ data Guild = Guild
   , memberCount                 :: Int
   , voiceStates                 :: [VoiceState]
   , members                     :: SnowflakeMap Member
-  , channels                    :: SnowflakeMap GuildChannel
+  , channels                    :: SnowflakeMap Channel
   , presences                   :: [Presence]
   } deriving (Eq, Show, Generic)
 
@@ -456,44 +409,38 @@ instance ToJSON Guild where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON Guild where
-  parseJSON = withObject "guild" $ \v -> do
-    id <- v .: "id"
-    channels :: [Channel] <- v .: "channels"
-
-    channels' <- case for channels (fromChannelWithGuildID id) of
-      Right a -> pure a
-      Left e -> fail $ "Error parsing guild_create channel: "+|e|+""
-
-    Guild id <$> v .: "name"
-             <*> v .: "icon"
-             <*> v .:? "splash"
-             <*> v .:? "owner"
-             <*> v .: "owner_id"
-             <*> v .:? "permissions"    .!= 0
-             <*> v .: "region"
-             <*> v .:? "afk_channel_id"
-             <*> v .: "afk_timeout"
-             <*> v .:? "embed_enabled"  .!= False
-             <*> v .:? "embed_channel_id"
-             <*> v .: "verification_level"
-             <*> v .: "default_message_notifications"
-             <*> v .: "explicit_content_filter"
-             <*> v .: "roles"
-             <*> v .: "emojis"
-             <*> v .: "features"
-             <*> v .: "mfa_level"
-             <*> v .:? "application_id"
-             <*> v .:? "widget_enabled" .!= False
-             <*> v .:? "widget_channel_id"
-             <*> v .:? "system_channel_id"
-             <*> v .:? "joined_at"
-             <*> v .: "large"
-             <*> v .: "unavailable"
-             <*> v .: "member_count"
-             <*> v .: "voice_states"
-             <*> v .: "members"
-             <*> (pure $ SH.fromList channels')
-             <*> v .: "presences"
+  parseJSON = withObject "guild" $ \v -> Guild
+    <$> v .: "id"
+    <*> v .: "name"
+    <*> v .: "icon"
+    <*> v .:? "splash"
+    <*> v .:? "owner"
+    <*> v .: "owner_id"
+    <*> v .:? "permissions"    .!= 0
+    <*> v .: "region"
+    <*> v .:? "afk_channel_id"
+    <*> v .: "afk_timeout"
+    <*> v .:? "embed_enabled"  .!= False
+    <*> v .:? "embed_channel_id"
+    <*> v .: "verification_level"
+    <*> v .: "default_message_notifications"
+    <*> v .: "explicit_content_filter"
+    <*> v .: "roles"
+    <*> v .: "emojis"
+    <*> v .: "features"
+    <*> v .: "mfa_level"
+    <*> v .:? "application_id"
+    <*> v .:? "widget_enabled" .!= False
+    <*> v .:? "widget_channel_id"
+    <*> v .:? "system_channel_id"
+    <*> v .:? "joined_at"
+    <*> v .: "large"
+    <*> v .: "unavailable"
+    <*> v .: "member_count"
+    <*> v .: "voice_states"
+    <*> v .: "members"
+    <*> v .: "channels"
+    <*> v .: "presences"
 
 
 data UnavailableGuild = UnavailableGuild
@@ -599,7 +546,7 @@ data Embed = Embed
   , description :: Maybe Text
   , url         :: Maybe Text
   , timestamp   :: Maybe ISO8601Timestamp
-  , color       :: Maybe Int
+  , color       :: Maybe Word64
   , footer      :: Maybe EmbedFooter
   , image       :: Maybe EmbedImage
   , thumbnail   :: Maybe EmbedThumbnail
@@ -614,18 +561,18 @@ instance ToJSON Embed  where
 
 instance FromJSON Embed where
   parseJSON = withObject "Embed" $ \v -> Embed
-    <$> v .: "title"
-    <*> v .: "type"
-    <*> v .: "description"
-    <*> v .: "url"
-    <*> v .: "timestamp"
-    <*> v .: "color"
-    <*> v .: "footer"
-    <*> v .: "image"
-    <*> v .: "thumbnail"
-    <*> v .: "video"
-    <*> v .: "provider"
-    <*> v .: "author"
+    <$> v .:? "title"
+    <*> v .:? "type"
+    <*> v .:? "description"
+    <*> v .:? "url"
+    <*> v .:? "timestamp"
+    <*> v .:? "color"
+    <*> v .:? "footer"
+    <*> v .:? "image"
+    <*> v .:? "thumbnail"
+    <*> v .:? "video"
+    <*> v .:? "provider"
+    <*> v .:? "author"
     <*> v .:? "fields" .!= []
 
 data EmbedFooter = EmbedFooter
@@ -643,7 +590,7 @@ instance FromJSON EmbedFooter where
 data EmbedImage = EmbedImage
   { url        :: Maybe Text
   , proxyUrl   :: Maybe Text
-  , dimensions :: Maybe (Int, Int) -- doesn't make sense to have only one of the width or height
+  , dimensions :: Maybe (Word64, Word64) -- doesn't make sense to have only one of the width or height
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedImage where
@@ -660,14 +607,14 @@ instance FromJSON EmbedImage where
     height <- v .:? "height"
 
     EmbedImage
-      <$> v .: "url"
-      <*> v .: "proxyUrl"
-      <*> (pure $ fuseTup2 (width, height))
+      <$> v .:? "url"
+      <*> v .:? "proxy_url"
+      <*> pure (fuseTup2 (width, height))
 
 data EmbedThumbnail = EmbedThumbnail
   { url        :: Maybe Text
   , proxyUrl   :: Maybe Text
-  , dimensions :: Maybe (Int, Int) -- doesn't make sense to have only one of the width or height
+  , dimensions :: Maybe (Word64, Word64) -- doesn't make sense to have only one of the width or height
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedThumbnail where
@@ -684,13 +631,13 @@ instance FromJSON EmbedThumbnail where
     height <- v .:? "height"
 
     EmbedThumbnail
-      <$> v .: "url"
-      <*> v .: "proxyUrl"
-      <*> (pure $ fuseTup2 (width, height))
+      <$> v .:? "url"
+      <*> v .:? "proxy_url"
+      <*> pure (fuseTup2 (width, height))
 
 data EmbedVideo = EmbedVideo
   { url        :: Maybe Text
-  , dimensions :: Maybe (Int, Int) -- doesn't make sense to have only one of the width or height
+  , dimensions :: Maybe (Word64, Word64) -- doesn't make sense to have only one of the width or height
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedVideo where
@@ -702,12 +649,12 @@ instance ToJSON EmbedVideo where
 
 instance FromJSON EmbedVideo where
   parseJSON = withObject "EmbedVideo" $ \v -> do
-    width <- v .:? "width"
+    width  <- v .:? "width"
     height <- v .:? "height"
 
     EmbedVideo
-      <$> v .: "url"
-      <*> (pure $ fuseTup2 (width, height))
+      <$> v .:? "url"
+      <*> pure (fuseTup2 (width, height))
 
 data EmbedProvider = EmbedProvider
   { name :: Maybe Text
@@ -743,23 +690,236 @@ instance ToJSON EmbedField where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON EmbedField where
+  parseJSON = withObject "EmbedField" $ \v -> EmbedField
+    <$> v .: "name"
+    <*> v .: "value"
+    <*> v .:? "inline" .!= False
+
+data Attachment = Attachment
+  { id         :: Snowflake Attachment
+  , filename   :: Text
+  , size       :: Word64
+  , url        :: Text
+  , proxyUrl   :: Text
+  , dimensions :: Maybe (Word64, Word64)
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Attachment where
+  toEncoding Attachment{id, filename, size, url, proxyUrl,
+                        dimensions = Just (width, height)} =
+    pairs ("id" .= id <> "filename" .= filename <> "size" .= size <>
+           "url" .= url <> "proxy_url" .= proxyUrl <>
+           "width" .= width <> "height" .= height)
+
+  toEncoding Attachment{id, filename, size, url, proxyUrl} =
+    pairs ("id" .= id <> "filename" .= filename <> "size" .= size <>
+           "url" .= url <> "proxy_url" .= proxyUrl)
+
+instance FromJSON Attachment where
+  parseJSON = withObject "Attachment" $ \v -> do
+    width  <- v .:? "width"
+    height <- v .:? "height"
+
+    Attachment
+      <$> v .: "id"
+      <*> v .: "filename"
+      <*> v .: "size"
+      <*> v .: "url"
+      <*> v .: "proxy_url"
+      <*> pure (fuseTup2 (width, height))
+
+data Emoji = Emoji
+  { id            :: Snowflake Emoji
+  , name          :: Text
+  , roles         :: [Snowflake Role]
+  , user          :: Maybe User
+  , requireColons :: Bool
+  , managed       :: Bool
+  , animated      :: Bool
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Emoji where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Emoji where
+  parseJSON = withObject "Emoji" $ \v -> Emoji
+    <$> v .: "id"
+    <*> v .: "name"
+    <*> v .: "roles"
+    <*> v .:? "user"
+    <*> v .:? "requireColons" .!= False
+    <*> v .:? "managed"       .!= False
+    <*> v .:? "animated"      .!= False
+
+data Role = Role
+  { id          :: Snowflake Role
+  , name        :: Text
+  , color       :: Word64
+  , hoist       :: Bool
+  , position    :: Int
+  , permissions :: Word64
+  , managed     :: Bool
+  , mentionable :: Bool
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Role where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Role where
   parseJSON = genericParseJSON jsonOptions
 
-newtype Attachment = Attachment Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-newtype Emoji = Emoji Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+data Overwrite = Overwrite
+  { id    :: Snowflake Overwrite
+  , type_ :: Text
+  , allow :: Word64
+  , deny  :: Word64
+  } deriving (Eq, Show, Generic)
 
-newtype Role = Role Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+instance ToJSON Overwrite where
+  toEncoding = genericToEncoding jsonOptions
 
-newtype Overwrite = Overwrite Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+instance FromJSON Overwrite where
+  parseJSON = genericParseJSON jsonOptions
 
--- Needs to have user, message and emoji
-newtype Reaction = Reaction Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
 
-newtype Presence = Presence Value
-  deriving (Eq, Show, Generic, ToJSON, FromJSON)
+data Reaction = Reaction
+  { userID    :: Snowflake User
+  , channelID :: Snowflake Channel
+  , messageID :: Snowflake Message
+  , guildID   :: Maybe (Snowflake Guild)
+  , emoji     :: Emoji
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Reaction where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Reaction where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data StatusType
+  = Idle
+  | DND
+  | Online
+  | Offline
+  deriving (Eq, Show, Enum, Generic)
+
+instance ToJSON StatusType
+
+instance FromJSON StatusType
+
+
+data Presence = Presence
+  { user       :: User -- TODO: partial user
+  , roles      :: [Snowflake Role]
+  , game       :: Maybe Activity
+  , guildID    :: Snowflake Guild
+  , status     :: StatusType
+  , activities :: [Activity]
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Presence where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Presence where
+  parseJSON = genericParseJSON jsonOptions
+
+data ActivityType
+  = Game
+  | Streaming
+  | Listening
+  deriving (Eq, Generic, Show, Enum)
+
+instance ToJSON ActivityType where
+  toJSON t = Number $ fromIntegral (fromEnum t)
+
+instance FromJSON ActivityType where
+  parseJSON = withScientific "ActivityType"  $ \n ->
+    case toBoundedInteger n of
+      Just v  -> return $ toEnum v
+      Nothing -> fail $ "Invalid ActivityType: " ++ show n
+
+
+data Activity = Activity
+  { name          :: Text
+  , type_         :: ActivityType
+  , url           :: Maybe Text
+  , timestamps    :: Maybe ActivityTimestamps
+  , applicationID :: Maybe (Snowflake ())
+  , details       :: Maybe Text
+  , state         :: Maybe Text
+  , party         :: Maybe ActivityParty
+  , assets        :: Maybe ActivityAssets
+  , secrets       :: Maybe ActivitySecrets
+  , instance_     :: Bool
+  , flags         :: Word64
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON Activity where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON Activity where
+  parseJSON = withObject "Activity" $ \v -> Activity
+    <$> v .: "name"
+    <*> v .: "type"
+    <*> v .:? "url"
+    <*> v .:? "timestamps"
+    <*> v .:? "applicationID"
+    <*> v .:? "details"
+    <*> v .:? "state"
+    <*> v .:? "party"
+    <*> v .:? "assets"
+    <*> v .:? "secrets"
+    <*> v .:? "instance_" .!= False
+    <*> v .:? "flags"     .!= 0
+
+data ActivityTimestamps = ActivityTimestamps
+  { start :: Maybe UnixTimestamp
+  , end   :: Maybe UnixTimestamp
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON ActivityTimestamps where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON ActivityTimestamps where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data ActivityParty = ActivityParty
+  { id   :: Maybe (Snowflake ActivityParty)
+  , size :: Maybe (Int, Int)
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON ActivityParty where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON ActivityParty where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data ActivityAssets = ActivityAssets
+  { largeImage :: Maybe Text
+  , largeText  :: Maybe Text
+  , smallImage :: Maybe Text
+  , smallText  :: Maybe Text
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON ActivityAssets where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON ActivityAssets where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data ActivitySecrets = ActivitySecrets
+  { join     :: Maybe Text
+  , spectate :: Maybe Text
+  , match    :: Maybe Text
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON ActivitySecrets where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON ActivitySecrets where
+  parseJSON = genericParseJSON jsonOptions
