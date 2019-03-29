@@ -60,6 +60,10 @@ fuseTup2 (a, b) = do
   b' <- b
   pure (a', b')
 
+
+data family Partial a
+
+
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
   , channelID :: Maybe (Snowflake VoiceChannel)
@@ -92,15 +96,21 @@ data User = User
   , premiumType   :: Maybe Word64
   } deriving (Show, Eq, Generic)
 
+data instance Partial User = PartialUser
+  { id :: Snowflake User
+  } deriving (Show, Eq, Generic)
+
 instance ToJSON User where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON User where
   parseJSON = genericParseJSON jsonOptions
 
--- TODO: scrap fromchannel stuff, all raw events get generic channel, we'll
--- transform into the correct channel sometime later when we meet the cache
--- TODO: make all specific type channels nicer (ie: categories have nested channels, etc)
+instance ToJSON (Partial User) where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON (Partial User) where
+  parseJSON = genericParseJSON jsonOptions
 
 data Channel = Channel
   { id                   :: Snowflake Channel
@@ -162,7 +172,7 @@ class FromChannel a where
   fromChannelWithGuildID :: Snowflake Guild -> Proxy a -> Channel -> FromRet a
   fromChannelWithGuildID guildID p channel = channel
     & field @"guildID" ?~ guildID
-    & (fromChannel p)
+    & fromChannel p
 
   -- | Convert from a specific channel type back to the generic channel type
   toChannel :: a -> Channel
@@ -231,19 +241,16 @@ instance FromChannel DMChannel where
 data GuildChannel
   = GuildTextChannel TextChannel
   | GuildVoiceChannel VoiceChannel
-  | GuildCategory Category
   deriving (Show, Eq, Generic)
 
 instance FromChannel GuildChannel where
   fromChannel _ c@Channel {type_} = case type_ of
     GuildTextType     -> GuildTextChannel  <$> fromChannel (Proxy @TextChannel)  c
     GuildVoiceType    -> GuildVoiceChannel <$> fromChannel (Proxy @VoiceChannel) c
-    GuildCategoryType -> GuildCategory     <$> fromChannel (Proxy @Category)     c
     _                 -> Left "Channel was not one of GuildTextType, GuildVoiceType, or GuildCategoryType"
 
   toChannel (GuildTextChannel  c) = toChannel c
   toChannel (GuildVoiceChannel c) = toChannel c
-  toChannel (GuildCategory     c) = toChannel c
 
 instance {-# OVERLAPS #-} HasID GuildChannel where
   getID = coerceSnowflake . getID . toChannel
@@ -273,19 +280,20 @@ data Category = Category
   , nsfw                 :: Bool
   , position             :: Int
   , guildID              :: Snowflake Guild
+  , channels             :: SnowflakeMap GuildChannel
   } deriving (Show, Eq, Generic)
 
 instance FromChannel Category where
-  -- type FromRet Category = Either Text Category
+  type FromRet Category = SnowflakeMap GuildChannel -> Either Text Category
 
-  fromChannel _ c = do
+  fromChannel _ c channels = do
     ensureChannelType (c ^. field @"type_") GuildCategoryType
     permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
     name                 <- ensureField "name"                 $ c ^. field @"name"
     let nsfw             = fromMaybe False                     $ c ^. field @"nsfw"
     position             <- ensureField "position"             $ c ^. field @"position"
     guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
-    pure $ Category (coerceSnowflake $ c ^. field @"id") permissionOverwrites name nsfw position guildID
+    pure $ Category (coerceSnowflake $ c ^. field @"id") permissionOverwrites name nsfw position guildID channels
 
   toChannel Category {id, permissionOverwrites, name, nsfw, position, guildID} = defChannel id GuildCategoryType
     & field @"permissionOverwrites" ?~ permissionOverwrites
@@ -369,8 +377,8 @@ instance FromChannel VoiceChannel where
     & field @"bitrate"               ?~ bitrate
     & field @"userLimit"             ?~ userLimit
 
+-- TODO: move all these into internal/ external modules.
 
--- TODO: raw guild, complete guild
 data Guild = Guild
   { id                          :: Snowflake Guild
   , name                        :: Text
@@ -409,7 +417,7 @@ instance ToJSON Guild where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON Guild where
-  parseJSON = withObject "guild" $ \v -> Guild
+  parseJSON = withObject "Guild" $ \v -> Guild
     <$> v .: "id"
     <*> v .: "name"
     <*> v .: "icon"
@@ -807,15 +815,21 @@ data StatusType
 
 instance ToJSON StatusType
 
-instance FromJSON StatusType
+instance FromJSON StatusType where
+  parseJSON = withText "StatusType" $ \case
+    "idle"    -> pure Idle
+    "dnd"     -> pure DND
+    "online"  -> pure Online
+    "offline" -> pure Offline
+    _         -> fail "Unknown status type"
 
 
 data Presence = Presence
-  { user       :: User -- TODO: partial user
+  { user       :: Partial User
   , roles      :: [Snowflake Role]
   , game       :: Maybe Activity
-  , guildID    :: Snowflake Guild
-  , status     :: StatusType
+  , guildID    :: Maybe (Snowflake Guild)
+  , status     :: Maybe StatusType
   , activities :: [Activity]
   } deriving (Eq, Show, Generic)
 
@@ -823,7 +837,14 @@ instance ToJSON Presence where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON Presence where
-  parseJSON = genericParseJSON jsonOptions
+  parseJSON = withObject "Presence" $ \v -> Presence
+    <$> v .: "user"
+    <*> v .:? "roles"      .!= []
+    <*> v .:? "game"
+    <*> v .:? "guild_id"
+    <*> v .:? "status"
+    <*> v .:? "activities" .!= []
+
 
 data ActivityType
   = Game

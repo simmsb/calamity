@@ -96,6 +96,8 @@ shardLoop = do
   discordStream logEnv ws = untilResult . runMaybeT $ do
     msg <- liftIO . checkWSClose $ receiveData ws
 
+    SLS.writeLog logEnv SLS.Trace $ "Received from stream: "+||msg||+""
+
     case msg of
       Left c ->
         pure . Control $ c
