@@ -17,7 +17,8 @@ CLOSED: [2019-02-24 Sun 18:29]
 
 * DONE Move from lists of objects to maps of id => object
 CLOSED: [2019-03-05 Tue 02:44]
-* TODO Partial data
+* DONE Partial data
+CLOSED: [2019-03-29 Fri 13:38]
 
 * Presence info
 - linky :: https://discordapp.com/developers/docs/topics/gateway#presence-update

@@ -1,6 +1,6 @@
 -- | Generic Request type
 
-module YAHDL.HTTP.Request where
+module Calamity.HTTP.Request where
 
 import           Data.Aeson              hiding ( Options )
 import qualified Data.ByteString.Lazy          as LB
@@ -8,11 +8,11 @@ import           Data.String                    ( String )
 import           Data.Text.Strict.Lens
 import           Network.Wreq
 
-import           YAHDL.Client.Types
-import           YAHDL.HTTP.Ratelimit
-import           YAHDL.HTTP.Route
-import           YAHDL.HTTP.Types
-import           YAHDL.Types.General
+import           Calamity.Client.Types
+import           Calamity.HTTP.Ratelimit
+import           Calamity.HTTP.Route
+import           Calamity.HTTP.Types
+import           Calamity.Types.General
 
 
 fromResult :: Monad m => Result a -> ExceptT RestError m a
@@ -51,7 +51,7 @@ class Request a r | a -> r where
 defaultRequestOptions :: Options
 defaultRequestOptions =
   defaults
-    & header "User-Agent" .~ [ "YAHDL (https://github.com/nitros12/yet-another-haskell-discord-library)" ]
+    & header "User-Agent" .~ [ "Calamity (https://github.com/nitros12/yet-another-haskell-discord-library)" ]
     & checkResponse
     ?~ (\_ _ -> pure ())
 

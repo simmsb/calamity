@@ -2,15 +2,15 @@
 
 {-# LANGUAGE TypeApplications #-}
 
-module YAHDL.HTTP.Channel where
+module Calamity.HTTP.Channel where
 
 import           Data.Aeson
 import           Network.Wreq
 
-import           YAHDL.HTTP.Request
-import           YAHDL.HTTP.Route
-import           YAHDL.Types.General
-import           YAHDL.Types.Snowflake
+import           Calamity.HTTP.Request
+import           Calamity.HTTP.Route
+import           Calamity.Types.General
+import           Calamity.Types.Snowflake
 
 data ChannelRequest a where
   CreateMessage :: Snowflake Channel -> Text -> {- TODO: embed -} ChannelRequest Message
@@ -21,4 +21,4 @@ instance Request (ChannelRequest a) a where
     & giveID id
     & buildRoute
 
-  toAction q@(CreateMessage _ t) opts = postWith opts (YAHDL.HTTP.Request.url q) (object ["content" .= t])
+  toAction q@(CreateMessage _ t) opts = postWith opts (Calamity.HTTP.Request.url q) (object ["content" .= t])

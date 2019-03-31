@@ -2,7 +2,7 @@
 
 {-# LANGUAGE MultiWayIf #-}
 
-module YAHDL.HTTP.Ratelimit
+module Calamity.HTTP.Ratelimit
   ( RateLimitState(..)
   , newRateLimitState
   , doRequest
@@ -25,8 +25,8 @@ import           Network.HTTP.Types      hiding ( statusCode )
 import           Network.Wreq
 import qualified StmContainers.Map             as SC
 
-import           YAHDL.HTTP.Types
-import           YAHDL.HTTP.Route
+import           Calamity.HTTP.Types
+import           Calamity.HTTP.Route
 
 
 newRateLimitState :: IO RateLimitState

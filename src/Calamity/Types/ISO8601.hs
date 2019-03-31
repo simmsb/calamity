@@ -1,6 +1,6 @@
 -- | Parsing of iso8601 timestamps
 
-module YAHDL.Types.ISO8601
+module Calamity.Types.ISO8601
   ( ISO8601Timestamp(..)
   )
 where

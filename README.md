@@ -1,1 +1,3 @@
-# yet-another-haskell-discord-library
+# Calamity
+
+A discord library for haskell

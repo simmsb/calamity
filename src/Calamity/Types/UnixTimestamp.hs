@@ -1,6 +1,6 @@
 -- | Parsing of unix timestamps
 
-module YAHDL.Types.UnixTimestamp
+module Calamity.Types.UnixTimestamp
   ( UnixTimestamp(..)
   )
 where

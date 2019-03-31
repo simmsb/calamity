@@ -6,7 +6,7 @@
 {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module YAHDL.HTTP.Route
+module Calamity.HTTP.Route
   ( mkRouteBuilder
   , giveID
   , buildRoute
@@ -24,8 +24,8 @@ import           Data.Singletons.TH
 import           Data.List                      ( lookup )
 import qualified Data.Text                     as T
 
-import           YAHDL.Types.Snowflake
-import           YAHDL.Types.General
+import           Calamity.Types.Snowflake
+import           Calamity.Types.General
 
 data RouteFragment
   = S' Text

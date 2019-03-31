@@ -1,6 +1,6 @@
-name:               yet-another-haskell-discord-library
+name:               calamity
 version:            0.1.0.0
-github:             "nitros12/yet-another-haskell-discord-library"
+github:             "nitros12/calamity"
 license:            MIT
 author:             "Ben Simms"
 maintainer:         "ben@bensimms.moe"
@@ -17,7 +17,7 @@ extra-source-files:
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:        Please see the README on GitHub at <https://github.com/nitros12/yet-another-haskell-discord-library#readme>
+description:        Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 
 dependencies:
 - base-noprelude >= 4.7 && < 5
@@ -58,7 +58,7 @@ dependencies:
 - ekg >= 0.4
 
 executables:
-  test-yadhl-exe:
+  test-calamity-exe:
     main: Main.hs
     source-dirs: app
     ghc-options:
@@ -67,7 +67,7 @@ executables:
       - -with-rtsopts=-T
       - -O3
     dependencies:
-      - yet-another-haskell-discord-library
+      - calamity
 
 library:
   ghc-options:
@@ -124,7 +124,7 @@ default-extensions:
   - TypeApplications
 
 tests:
-  yet-another-haskell-discord-library-test:
+  calamity-test:
     main:                Spec.hs
     source-dirs:         test
     ghc-options:
@@ -132,4 +132,4 @@ tests:
     - -rtsopts
     - -with-rtsopts=-N
     dependencies:
-    - yet-another-haskell-discord-library
+    - calamity

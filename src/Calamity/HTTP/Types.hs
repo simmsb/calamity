@@ -1,6 +1,6 @@
 -- | Types for the http lib
 
-module YAHDL.HTTP.Types
+module Calamity.HTTP.Types
   ( RestError(..)
   , RateLimitState(..)
   , DiscordResponseType(..)
@@ -14,7 +14,7 @@ import qualified StmContainers.Map             as SC
 import           Control.Concurrent.STM.Lock    ( Lock )
 import           Control.Concurrent.Event       ( Event )
 
-import           YAHDL.HTTP.Route
+import           Calamity.HTTP.Route
 
 
 data RestError

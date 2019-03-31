@@ -1,4 +1,4 @@
-module YAHDL
+module Calamity
     ( someFunc
     ) where
 

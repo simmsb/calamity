@@ -1,9 +1,9 @@
 -- | module containing all dispatch events
 
-module YAHDL.Types.DispatchEvents where
+module Calamity.Types.DispatchEvents where
 
 import           Data.Aeson
-import           YAHDL.Types.General
+import           Calamity.Types.General
 
 data DispatchData
   = Ready ReadyData

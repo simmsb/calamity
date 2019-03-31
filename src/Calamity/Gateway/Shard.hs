@@ -2,7 +2,7 @@
 
 {-# LANGUAGE RecursiveDo #-}
 
-module YAHDL.Gateway.Shard
+module Calamity.Gateway.Shard
   ( Shard(..)
   , newShard
   )
@@ -26,9 +26,9 @@ import           Network.WebSockets             ( Connection
                                                 )
 import           Wuss
 
-import           YAHDL.Gateway.Types
-import           YAHDL.Types.DispatchEvents
-import           YAHDL.Types.General
+import           Calamity.Gateway.Types
+import           Calamity.Types.DispatchEvents
+import           Calamity.Types.General
 
 
 newShardState :: Shard -> ShardState

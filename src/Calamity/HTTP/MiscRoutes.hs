@@ -2,13 +2,13 @@
 
 {-# LANGUAGE TypeApplications #-}
 
-module YAHDL.HTTP.MiscRoutes where
+module Calamity.HTTP.MiscRoutes where
 
 import           Network.Wreq
 
-import           YAHDL.HTTP.Request
-import           YAHDL.HTTP.Route
-import           YAHDL.HTTP.Types
+import           Calamity.HTTP.Request
+import           Calamity.HTTP.Route
+import           Calamity.HTTP.Types
 
 data MiscRequest a where
   GetGateway    :: MiscRequest GatewayResponse

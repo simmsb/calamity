@@ -1,6 +1,6 @@
 -- | The snowflake type
 
-module YAHDL.Types.Snowflake
+module Calamity.Types.Snowflake
   ( Snowflake(..)
   , HasID(..)
   , coerceSnowflake

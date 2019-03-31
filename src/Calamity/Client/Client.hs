@@ -1,7 +1,7 @@
 -- | The client
 
-module YAHDL.Client.Client
-  ( module YAHDL.Client.Types
+module Calamity.Client.Client
+  ( module Calamity.Client.Types
   , newClient
   , clientLoop
   , startClient
@@ -17,11 +17,11 @@ import qualified Data.TypeRepMap               as TM
 import qualified StmContainers.Set             as TS
 import qualified Streamly.Prelude              as S
 
-import           YAHDL.Client.ShardManager
-import           YAHDL.Client.Types
-import           YAHDL.HTTP.Ratelimit
-import           YAHDL.Types.DispatchEvents
-import           YAHDL.Types.General
+import           Calamity.Client.ShardManager
+import           Calamity.Client.Types
+import           Calamity.HTTP.Ratelimit
+import           Calamity.Types.DispatchEvents
+import           Calamity.Types.General
 
 -- TODO: merge event handlers with default
 -- and give writerT for adding events

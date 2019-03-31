@@ -1,6 +1,6 @@
 -- | Contains stuff for managing shards
 
-module YAHDL.Client.ShardManager
+module Calamity.Client.ShardManager
   ( mkQueueRecvStream
   , shardBot
   , shardUserBot
@@ -14,10 +14,10 @@ import           Control.Monad
 import qualified Streamly                      as S
 import qualified Streamly.Prelude              as S
 
-import           YAHDL.Gateway
-import           YAHDL.Client.Types
-import           YAHDL.HTTP.MiscRoutes
-import           YAHDL.HTTP.Request
+import           Calamity.Gateway
+import           Calamity.Client.Types
+import           Calamity.HTTP.MiscRoutes
+import           Calamity.HTTP.Request
 
 mkQueueRecvStream :: IO (S.Serial a, TQueue a)
 mkQueueRecvStream = do
@@ -43,7 +43,7 @@ shardBot = do
   when hasShards $
     fail "don't use shardBot on an already running bot."
 
-  token <- asks YAHDL.Client.Types.token
+  token <- asks Calamity.Client.Types.token
   eventQueue <- asks eventQueue
   logEnv <- askLog
 
@@ -71,7 +71,7 @@ shardUserBot = do
   when hasShards $
     fail "don't use shardUserBot on an already running bot."
 
-  token <- asks YAHDL.Client.Types.token
+  token <- asks Calamity.Client.Types.token
   eventQueue <- asks eventQueue
   logEnv <- askLog
 

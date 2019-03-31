@@ -3,7 +3,7 @@
 {-# LANGUAGE TypeApplications #-}
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module YAHDL.Client.Types
+module Calamity.Client.Types
   ( Client(..)
   , BotM(..)
   , EventHandlers(..)
@@ -33,11 +33,11 @@ import           GHC.Exts                       ( fromList )
 import qualified StmContainers.Set             as TS
 import qualified Streamly                      as S
 
-import           YAHDL.Gateway.Shard
-import           YAHDL.HTTP.Ratelimit
-import           YAHDL.Types.General
-import           YAHDL.Types.Snowflake
-import           YAHDL.Types.DispatchEvents
+import           Calamity.Gateway.Shard
+import           Calamity.HTTP.Ratelimit
+import           Calamity.Types.General
+import           Calamity.Types.Snowflake
+import           Calamity.Types.DispatchEvents
 
 
 data Cache = Cache

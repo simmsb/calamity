@@ -1,6 +1,6 @@
 -- | General data types
 
-module YAHDL.Types.General
+module Calamity.Types.General
   ( Token(..)
   , VoiceState(..)
   , User(..)
@@ -35,11 +35,11 @@ import           Data.Generics.Product.Fields
 import           Data.Scientific
 import           Data.Typeable
 
-import           YAHDL.Types.ISO8601
-import           YAHDL.Types.UnixTimestamp
-import           YAHDL.Types.Snowflake
-import           YAHDL.Types.SnowflakeMap       ( SnowflakeMap(..) )
-import qualified YAHDL.Types.SnowflakeMap      as SH
+import           Calamity.Types.ISO8601
+import           Calamity.Types.UnixTimestamp
+import           Calamity.Types.Snowflake
+import           Calamity.Types.SnowflakeMap       ( SnowflakeMap(..) )
+import qualified Calamity.Types.SnowflakeMap      as SH
 
 data Token
   = BotToken Text

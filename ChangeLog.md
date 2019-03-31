@@ -1,3 +1,3 @@
-# Changelog for yet-another-haskell-discord-library
+# Changelog for Calamity
 
 ## Unreleased changes

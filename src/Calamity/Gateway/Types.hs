@@ -2,7 +2,7 @@
 
 {-# OPTIONS_GHC -Wno-orphans #-}
 
-module YAHDL.Gateway.Types where
+module Calamity.Gateway.Types where
   -- ( Shard(..)
   -- , ShardState(..)
   -- , ShardM(..)
@@ -21,9 +21,9 @@ import qualified Data.Aeson.Types              as AT
 import           Data.Generics.Labels           ( )
 import           Network.WebSockets.Connection  ( Connection )
 
-import           YAHDL.Types.Snowflake
-import           YAHDL.Types.General
-import           YAHDL.Types.DispatchEvents
+import           Calamity.Types.Snowflake
+import           Calamity.Types.General
+import           Calamity.Types.DispatchEvents
 
 data ShardMsg
   = Discord ReceivedDiscordMessage
