@@ -493,7 +493,7 @@ data Message = Message
   , mentionEveryone :: Bool
   , mentions        :: SnowflakeMap User
   , mentionRoles    :: [Snowflake Role]
-  , attachments     :: [Attachment] -- TODO: snowflakemap these
+  , attachments     :: [SnowflakeMap Attachment]
   , embeds          :: [Embed]
   , reactions       :: [Reaction]
   , nonce           :: Maybe (Snowflake Message)

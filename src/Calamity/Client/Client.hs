@@ -74,24 +74,42 @@ handleEvent :: DispatchData -> BotM ()
 handleEvent data' = do
   trace "handling an event"
   cache'   <- asks cache
-  newCache <- liftIO . atomically $ updateCache cache' data'
-  runEventHandlers newCache data'
+  (oldCache, newCache) <- liftIO . atomically $ do
+    oldCache <- readTVar cache'
+    let newCache = updateCache oldCache data'
+    writeTVar cache' newCache
+    pure (oldCache, newCache)
+
+  runEventHandlers oldCache newCache data'
   trace "finished handling an event"
 
-runEventHandlers :: Cache -> DispatchData -> BotM ()
-runEventHandlers cache data' = do
+runEventHandlers :: Cache -> Cache -> DispatchData -> BotM ()
+runEventHandlers oldCache newCache data' = do
   eventHandlers <- asks eventHandlers
   client'       <- ask
   logEnv'       <- askLog
-  liftIO $ forConcurrently_ (handleActions eventHandlers data')
-                            (runBotM client' logEnv' . runEventM cache)
+  liftIO $ forConcurrently_ (handleActions oldCache newCache eventHandlers data')
+                            (runBotM client' logEnv' . runEventM newCache)
 
-handleActions :: EventHandlers -> DispatchData -> [EventM ()]
-handleActions (EventHandlers eh) (Ready rd) =
-  map ($ rd) (unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler "ready")))
+unwrapEvent :: forall a. KnownSymbol a => EventHandlers -> [EHType a]
+unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler a))
+
+handleActions :: Cache -- ^ The old cache
+              -> Cache -- ^ The new cache
+              -> EventHandlers
+              -> DispatchData
+              -> [EventM ()]
+handleActions _ _ eh (Ready rd) =
+  map ($ rd) (unwrapEvent @"ready" eh)
+handleActions _ _ eh (ChannelCreate chan) =
+  map ($ chan) (unwrapEvent @"channelcreate" eh)
+handleActions os _ eh (ChannelUpdate chan) =
+  map (\f -> f oldChan chan) (unwrapEvent @"channelupdate" eh)
+  where oldChan = os ^?! #guilds . at (chan ^?! #guildID . _Just) . _Just . #channels . at (chan ^. #id) . _Just
+
 -- TODO: the rest of these
-handleActions (EventHandlers _) _ = []
+handleActions _ _ (EventHandlers _) _ = []
 
 -- TODO: actually update the cache
-updateCache :: TVar Cache -> DispatchData -> STM Cache
-updateCache cache data' = readTVar cache -- TODO
+updateCache :: Cache -> DispatchData -> Cache
+updateCache cache data' = cache -- TODO

@@ -39,7 +39,7 @@ dependencies:
 - concurrent-state >= 0.6
 - exceptions >= 0.10
 - fmt >= 0.6
-- stm-containers >= 0.2
+- stm-containers >= 1.1
 - concurrent-extra >= 0.7
 - focus >= 1.0
 - data-default >= 0.7

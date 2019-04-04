@@ -55,7 +55,7 @@ shardBot = do
 
   info $ "Number of shards: "+| numShards' |+""
 
-  liftIO do
+  liftIO $ do
     shards <- forM [0 .. numShards' - 1] \id ->
       newShard host id numShards' token logEnv eventQueue
 

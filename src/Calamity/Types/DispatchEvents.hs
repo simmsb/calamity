@@ -7,8 +7,8 @@ import           Calamity.Types.General
 
 data DispatchData
   = Ready ReadyData
-  | ChannelCreate ChannelCreateData
-  | ChannelUpdate ChannelUpdateData
+  | ChannelCreate Channel
+  | ChannelUpdate Channel
   | ChannelDelete ChannelDeleteData
   | ChannelPinsUpdate ChannelPinsUpdateData
   | GuildCreate GuildCreateData
@@ -51,12 +51,6 @@ instance FromJSON ReadyData where
   parseJSON = genericParseJSON jsonOptions
 
 -- TODO: literally all of these
-
-newtype ChannelCreateData = ChannelCreateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
-
-newtype ChannelUpdateData = ChannelUpdateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
 
 newtype ChannelDeleteData = ChannelDeleteData Value
   deriving (Show, Generic, ToJSON, FromJSON)

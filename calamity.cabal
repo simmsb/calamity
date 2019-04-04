@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2534b4f4e431e1d2e279d444e62ab5bf20b81a03420788e83b8929392f954263
+-- hash: 3ca0ec4d1aa3926a5744db53abfbacdbe40aebf086fe51e56a853e3fe4578e8f
 
 name:           calamity
 version:        0.1.0.0
@@ -80,7 +80,7 @@ library
     , simple-log >=0.9
     , singletons >=2.5
     , stm >=2.4
-    , stm-containers >=0.2
+    , stm-containers >=1.1
     , streamly >=0.6
     , text >=0.2
     , time >=1.8
@@ -128,7 +128,7 @@ executable test-calamity-exe
     , simple-log >=0.9
     , singletons >=2.5
     , stm >=2.4
-    , stm-containers >=0.2
+    , stm-containers >=1.1
     , streamly >=0.6
     , text >=0.2
     , time >=1.8
@@ -177,7 +177,7 @@ test-suite calamity-test
     , simple-log >=0.9
     , singletons >=2.5
     , stm >=2.4
-    , stm-containers >=0.2
+    , stm-containers >=1.1
     , streamly >=0.6
     , text >=0.2
     , time >=1.8
