@@ -115,17 +115,6 @@ retryRequest max_retries action failAction = retryInner 0
       RGood r -> pure $ Right r
     where doFail v = failAction $> v
 
--- | Return `a` instantly after unlocking `l`
-unlockAndPure :: MonadIO m => Lock -> a -> m a
-unlockAndPure l a = liftIO . atomically $ L.release l $> a
-
--- | Return `a` instantly, after scheduling `l` to be unlocked after `d` milliseconds
-scheduleUnlockAndPure :: MonadIO m => Lock -> Int -> a -> m a
-scheduleUnlockAndPure l d r = do
-  liftIO . void . forkIO $ do
-    threadDelay $ 1000 * d
-    atomically $ L.release l
-  pure r
 
 -- Run a single request
 -- NOTE: this function will only unlock the ratelimit lock if the request
@@ -139,11 +128,16 @@ doSingleRequest
 doSingleRequest gl l r = do
   r' <- doDiscordRequest r
   case r' of
-    Good v              -> unlockAndPure l $ RGood v
+    Good v -> do
+      liftIO . atomically $ L.release l
+      pure $ RGood v
 
     ExhaustedBucket v d -> do
       info "Exhausted bucket"
-      scheduleUnlockAndPure l d $ RGood v
+      void . liftIO . forkIO $ do
+        threadDelay $ 1000 * d
+        atomically $ L.release l
+      pure $ RGood v
 
     Ratelimited d False -> do
       info "429 ratelimited on route"

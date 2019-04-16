@@ -43,7 +43,6 @@ dependencies:
 - concurrent-extra >= 0.7
 - focus >= 1.0
 - data-default >= 0.7
-- singletons >= 2.5
 - hashable >= 1.2
 - retry >= 0.7
 - time >= 1.8  # aeson dep
@@ -61,11 +60,11 @@ executables:
   test-calamity-exe:
     main: Main.hs
     source-dirs: app
-    ghc-options:
-      - -threaded
-      - -rtsopts
-      - -with-rtsopts=-T
-      - -O3
+    # ghc-options:
+      # - -threaded
+      # - -rtsopts
+      # - -with-rtsopts=-T
+      # - -O3
     dependencies:
       - calamity
 

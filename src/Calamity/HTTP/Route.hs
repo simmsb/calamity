@@ -1,9 +1,7 @@
 -- | The route type
 -- Why I did this I don't know
 
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE EmptyCase #-}
-{-# LANGUAGE RankNTypes #-}
+-- {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Calamity.HTTP.Route
@@ -19,8 +17,6 @@ module Calamity.HTTP.Route
 where
 
 import           Data.Maybe                     ( fromJust )
-import           Data.Singletons.Prelude
-import           Data.Singletons.TH
 import           Data.List                      ( lookup )
 import qualified Data.Text                     as T
 
@@ -37,10 +33,8 @@ data ID a = ID
 
 instance Hashable RouteFragment
 
-$(singletons [d|
-  data RouteRequirement = NotNeeded | Required | Satisfied
-    deriving (Generic, Show, Eq)
-  |])
+data RouteRequirement = NotNeeded | Required | Satisfied
+  deriving (Generic, Show, Eq)
 
 data RouteBuilder (idState :: [(Type, RouteRequirement)]) = UnsafeMkRouteBuilder
   { route   :: [RouteFragment]
@@ -58,6 +52,10 @@ giveID
   -> RouteBuilder ('(k, 'Satisfied) ': ids)
 giveID (Snowflake id) (UnsafeMkRouteBuilder route ids) =
   UnsafeMkRouteBuilder route ((typeRep (Proxy @k), id) : ids)
+
+type family (&&) (a :: Bool) (b :: Bool) :: Bool where
+  'True && 'True = 'True
+  _     && _     = 'False
 
 type family MyLookup (x :: k) (l :: [(k, v)]) :: Maybe v where
   MyLookup k ('(k, v) ': xs) = 'Just v

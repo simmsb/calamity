@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3ca0ec4d1aa3926a5744db53abfbacdbe40aebf086fe51e56a853e3fe4578e8f
+-- hash: 21b7378a92ce1e7438195962e340c7f281b3a4ac3787a9a1dbf26c46be4132b3
 
 name:           calamity
 version:        0.1.0.0
@@ -78,7 +78,6 @@ library
     , retry >=0.7
     , scientific >=0.3
     , simple-log >=0.9
-    , singletons >=2.5
     , stm >=2.4
     , stm-containers >=1.1
     , streamly >=0.6
@@ -100,7 +99,6 @@ executable test-calamity-exe
   hs-source-dirs:
       app
   default-extensions: AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
-  ghc-options: -threaded -rtsopts -with-rtsopts=-T -O3
   build-depends:
       aeson >=1.4
     , async >=2.2
@@ -126,7 +124,6 @@ executable test-calamity-exe
     , retry >=0.7
     , scientific >=0.3
     , simple-log >=0.9
-    , singletons >=2.5
     , stm >=2.4
     , stm-containers >=1.1
     , streamly >=0.6
@@ -175,7 +172,6 @@ test-suite calamity-test
     , retry >=0.7
     , scientific >=0.3
     , simple-log >=0.9
-    , singletons >=2.5
     , stm >=2.4
     , stm-containers >=1.1
     , streamly >=0.6

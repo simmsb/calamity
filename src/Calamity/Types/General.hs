@@ -908,7 +908,7 @@ instance FromJSON ActivityTimestamps where
 
 
 data ActivityParty = ActivityParty
-  { id   :: Maybe (Snowflake ActivityParty)
+  { id   :: Maybe Text
   , size :: Maybe (Int, Int)
   } deriving (Eq, Show, Generic)
 

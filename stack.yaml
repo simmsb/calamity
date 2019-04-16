@@ -39,7 +39,6 @@ packages:
 # (e.g., acme-missiles-0.3)
 extra-deps:
   - typerep-map-0.3.0@sha256:db693ef3ebbbd44722c5547a78ebbd29efc746923d8cb18744c2049acbe35480
-  - monad-log-0.1.1.0@sha256:35297bec3e2c8483b8e291ff62e5cb5d2aa01e24a7563812648f213e1b1eace2
   - text-show-3.7.5@sha256:9acf5d44bf2d577eca2caf4ebf8b2dd9f9e102c4345e304141a4d89ae2fd0ced
   - stm-containers-1.1.0.2@sha256:8976df591e61f378ef29dc0443dbe2d5d34818c898093af3ca138ea1d013b5eb
   - stm-hamt-1.2.0.2@sha256:18126db7bf2d9c967a6020c677b3005dd957a4c39d69aeaea3c29c90de8f6124
