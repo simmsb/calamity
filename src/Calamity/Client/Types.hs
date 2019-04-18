@@ -41,9 +41,10 @@ import           Calamity.Types.DispatchEvents
 
 
 data Cache = Cache
-  { user    :: Maybe User
-  , guilds  :: LH.HashMap (Snowflake Guild) Guild
-  , dms     :: LH.HashMap (Snowflake DMChannel) DMChannel
+  { user     :: Maybe User
+  , guilds   :: LH.HashMap (Snowflake Guild) Guild
+  , dms      :: LH.HashMap (Snowflake DMChannel) DMChannel
+  , channels :: LH.HashMap (Snowflake Channel) Channel
   } deriving (Generic)
 
 data Client = Client
@@ -142,7 +143,7 @@ type family EHType d where
   EHType "channelcreate"            = Channel   -> EventM ()
   EHType "channelupdate"            = Channel   -> Channel -> EventM ()
   EHType "channeldelete"            = Channel   -> EventM ()
-  EHType "channelpinsupdate"        = Channel   -> UTCTime -> EventM ()
+  EHType "channelpinsupdate"        = Channel   -> Maybe UTCTime -> EventM ()
   EHType "guildcreate"              = Guild     -> EventM ()
   EHType "guildupdate"              = Guild     -> Guild   -> EventM ()
   EHType "guilddelete"              = Guild     -> Bool    -> EventM ()

@@ -5,7 +5,6 @@ module Calamity.Types.UnixTimestamp
   )
 where
 
-import           Control.Arrow                  ( (>>>) )
 import           Data.Aeson
 import           Data.Aeson.Encoding            ( word64 )
 import           Data.Time

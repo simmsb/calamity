@@ -8,6 +8,7 @@ module Prelude
   , module System.Log.Simple
   , module Fmt
   , module Data.Aeson.Lens
+  , module Control.Arrow
   , LogMessage
   , debug
   , info
@@ -39,9 +40,18 @@ import           Control.Lens            hiding ( Strict
                                                 , (<.>)
                                                 , (.=)
                                                 )
-import           System.Log.Simple       hiding ( Message, Debug, Info, Warning, Error, Fatal, Trace, trace )
-import qualified System.Log.Simple as SLS
+import           System.Log.Simple       hiding ( Message
+                                                , Debug
+                                                , Info
+                                                , Warning
+                                                , Error
+                                                , Fatal
+                                                , Trace
+                                                , trace
+                                                )
+import qualified System.Log.Simple             as SLS
 import           Fmt
+import           Control.Arrow                  ( (>>>) )
 
 
 type LogMessage = SLS.Message
@@ -57,13 +67,15 @@ trace = sendLog SLS.Trace
 
 
 jsonOptions :: Options
-jsonOptions = defaultOptions { sumEncoding        = UntaggedValue
-                             , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
-                             , omitNothingFields  = True
-                             }
+jsonOptions = defaultOptions
+  { sumEncoding        = UntaggedValue
+  , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
+  , omitNothingFields  = True
+  }
 
 jsonOptionsKeepNothing :: Options
-jsonOptionsKeepNothing = defaultOptions { sumEncoding        = UntaggedValue
-                                        , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
-                                        , omitNothingFields  = False
-                                        }
+jsonOptionsKeepNothing = defaultOptions
+  { sumEncoding        = UntaggedValue
+  , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
+  , omitNothingFields  = False
+  }

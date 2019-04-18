@@ -30,16 +30,14 @@ where
 
 import           Control.Monad
 import           Data.Aeson
-import           Data.Aeson.Types
 import           Data.Generics.Product.Fields
 import           Data.Scientific
-import           Data.Typeable
+import           Data.Time
 
-import           Calamity.Types.ISO8601
 import           Calamity.Types.UnixTimestamp
 import           Calamity.Types.Snowflake
-import           Calamity.Types.SnowflakeMap       ( SnowflakeMap(..) )
-import qualified Calamity.Types.SnowflakeMap      as SH
+import qualified Calamity.Types.SnowflakeMap   as SM
+import           Calamity.Types.SnowflakeMap    ( SnowflakeMap(..) )
 
 data Token
   = BotToken Text
@@ -61,7 +59,15 @@ fuseTup2 (a, b) = do
   pure (a', b')
 
 
-data family Partial a
+newtype Partial t = Partial
+  { id :: Snowflake t
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON (Partial t) where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON (Partial t) where
+  parseJSON = genericParseJSON jsonOptions
 
 
 data VoiceState = VoiceState
@@ -96,20 +102,10 @@ data User = User
   , premiumType   :: Maybe Word64
   } deriving (Show, Eq, Generic)
 
-data instance Partial User = PartialUser
-  { id :: Snowflake User
-  } deriving (Show, Eq, Generic)
-
 instance ToJSON User where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON User where
-  parseJSON = genericParseJSON jsonOptions
-
-instance ToJSON (Partial User) where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON (Partial User) where
   parseJSON = genericParseJSON jsonOptions
 
 data Channel = Channel
@@ -130,7 +126,7 @@ data Channel = Channel
   , ownerID              :: Maybe (Snowflake User)
   , applicationID        :: Maybe (Snowflake User)
   , parentID             :: Maybe (Snowflake Category)
-  , lastPinTimestamp     :: Maybe ISO8601Timestamp
+  , lastPinTimestamp     :: Maybe UTCTime
   } deriving (Show, Eq, Generic)
 
 instance ToJSON Channel where
@@ -308,7 +304,7 @@ data TextChannel = TextChannel
   , position             :: Int
   , permissionOverwrites :: [Overwrite]
   , name                 :: Text
-  , topic                :: Maybe Text
+  , topic                :: Text
   , nsfw                 :: Bool
   , lastMessageID        :: Maybe (Snowflake Message)
   , rateLimitPerUser     :: Maybe Int
@@ -323,7 +319,7 @@ instance FromChannel TextChannel where
     position             <- ensureField "position"             $ c ^. field @"position"
     permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
     name                 <- ensureField "name"                 $ c ^. field @"name"
-    let topic            =  c ^. field @"topic"
+    let topic            =  fromMaybe ""                       $ c ^. field @"topic"
     let nsfw             =  fromMaybe False                    $ c ^. field @"nsfw"
     pure $ TextChannel id guildID position
       permissionOverwrites name topic nsfw
@@ -342,7 +338,7 @@ instance FromChannel TextChannel where
     & field @"position"             ?~ position
     & field @"permissionOverwrites" ?~ permissionOverwrites
     & field @"name"                 ?~ name
-    & field @"topic"                .~ topic
+    & field @"topic"                ?~ topic
     & field @"nsfw"                 ?~ nsfw
     & field @"lastMessageID"        .~ lastMessageID
     & field @"rateLimitPerUser"     .~ rateLimitPerUser
@@ -403,52 +399,76 @@ data Guild = Guild
   , widgetEnabled               :: Bool
   , widgetChannelID             :: Maybe (Snowflake GuildChannel)
   , systemChannelID             :: Maybe (Snowflake GuildChannel)
-  , joinedAt                    :: Maybe ISO8601Timestamp
+  -- NOTE: Below are only sent on GuildCreate
+  , joinedAt                    :: Maybe UTCTime
   , large                       :: Bool
   , unavailable                 :: Bool
   , memberCount                 :: Int
   , voiceStates                 :: [VoiceState]
   , members                     :: SnowflakeMap Member
   , channels                    :: SnowflakeMap Channel
+  , textChannels                :: SnowflakeMap TextChannel
+  , voiceChannels               :: SnowflakeMap VoiceChannel
+  , categories                  :: SnowflakeMap Category
   , presences                   :: [Presence]
   } deriving (Eq, Show, Generic)
 
-instance ToJSON Guild where
-  toEncoding = genericToEncoding jsonOptions
+buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a
+buildChannels guildID chans = SM.mapMaybe (\chan -> rightToMaybe $ fromChannelWithGuildID guildID (Proxy @a) chan) chans
+
+buildCategories :: Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap Category
+buildCategories guildID chans = SM.mapMaybe buildCat chans
+      where buildCat chan@(Channel {type_ = GuildCategoryType}) = do
+              let guildChannels -- :: SnowflakeMap GuildChannel
+                    = buildChannels guildID chans
+              rightToMaybe $ fromChannelWithGuildID guildID (Proxy @Category) chan guildChannels
+            buildCat _ = Nothing
 
 instance FromJSON Guild where
-  parseJSON = withObject "Guild" $ \v -> Guild
-    <$> v .: "id"
-    <*> v .: "name"
-    <*> v .: "icon"
-    <*> v .:? "splash"
-    <*> v .:? "owner"
-    <*> v .: "owner_id"
-    <*> v .:? "permissions"    .!= 0
-    <*> v .: "region"
-    <*> v .:? "afk_channel_id"
-    <*> v .: "afk_timeout"
-    <*> v .:? "embed_enabled"  .!= False
-    <*> v .:? "embed_channel_id"
-    <*> v .: "verification_level"
-    <*> v .: "default_message_notifications"
-    <*> v .: "explicit_content_filter"
-    <*> v .: "roles"
-    <*> v .: "emojis"
-    <*> v .: "features"
-    <*> v .: "mfa_level"
-    <*> v .:? "application_id"
-    <*> v .:? "widget_enabled" .!= False
-    <*> v .:? "widget_channel_id"
-    <*> v .:? "system_channel_id"
-    <*> v .:? "joined_at"
-    <*> v .: "large"
-    <*> v .: "unavailable"
-    <*> v .: "member_count"
-    <*> v .: "voice_states"
-    <*> v .: "members"
-    <*> v .: "channels"
-    <*> v .: "presences"
+  parseJSON = withObject "Guild" $ \v -> do
+    id <- v.: "id"
+
+    members' <- do
+      members' <- v .: "members"
+      SM.fromList <$> mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) members'
+
+    channels <- v .: "channels"
+
+    Guild
+      <$> pure id
+      <*> v .: "name"
+      <*> v .: "icon"
+      <*> v .:? "splash"
+      <*> v .:? "owner"
+      <*> v .: "owner_id"
+      <*> v .:? "permissions"    .!= 0
+      <*> v .: "region"
+      <*> v .:? "afk_channel_id"
+      <*> v .: "afk_timeout"
+      <*> v .:? "embed_enabled"  .!= False
+      <*> v .:? "embed_channel_id"
+      <*> v .: "verification_level"
+      <*> v .: "default_message_notifications"
+      <*> v .: "explicit_content_filter"
+      <*> v .: "roles"
+      <*> v .: "emojis"
+      <*> v .: "features"
+      <*> v .: "mfa_level"
+      <*> v .:? "application_id"
+      <*> v .:? "widget_enabled" .!= False
+      <*> v .:? "widget_channel_id"
+      <*> v .:? "system_channel_id"
+      <*> v .:? "joined_at"
+      <*> v .: "large"
+      <*> v .: "unavailable"
+      <*> v .: "member_count"
+      <*> v .: "voice_states"
+      <*> pure members'
+      <*> pure channels
+      <*> (pure $ buildChannels id channels)
+      <*> (pure $ buildChannels id channels)
+      <*> (pure $ buildCategories id channels)
+      <*> v .: "presences"
 
 
 data UnavailableGuild = UnavailableGuild
@@ -465,9 +485,10 @@ instance FromJSON UnavailableGuild where
 
 data Member = Member
   { user     :: User
+  , guildID  :: Snowflake Guild
   , nick     :: Maybe Text
   , roles    :: [Snowflake Role]
-  , joinedAt :: ISO8601Timestamp
+  , joinedAt :: UTCTime
   , deaf     :: Bool
   , mute     :: Bool
   } deriving (Eq, Show, Generic)
@@ -487,8 +508,8 @@ data Message = Message
   , guildID         :: Maybe (Snowflake Guild)
   , author          :: User
   , content         :: Text
-  , timestamp       :: ISO8601Timestamp
-  , editedTimestamp :: Maybe ISO8601Timestamp
+  , timestamp       :: UTCTime
+  , editedTimestamp :: Maybe UTCTime
   , tts             :: Bool
   , mentionEveryone :: Bool
   , mentions        :: SnowflakeMap User
@@ -553,7 +574,7 @@ data Embed = Embed
   , type_       :: Maybe Text
   , description :: Maybe Text
   , url         :: Maybe Text
-  , timestamp   :: Maybe ISO8601Timestamp
+  , timestamp   :: Maybe UTCTime
   , color       :: Maybe Word64
   , footer      :: Maybe EmbedFooter
   , image       :: Maybe EmbedImage

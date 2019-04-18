@@ -57,7 +57,7 @@ startClient client = do
     clientLoop
 
 emptyCache :: Cache
-emptyCache = Cache Nothing LH.empty LH.empty
+emptyCache = Cache Nothing LH.empty LH.empty LH.empty
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
@@ -88,8 +88,12 @@ runEventHandlers oldCache newCache data' = do
   eventHandlers <- asks eventHandlers
   client'       <- ask
   logEnv'       <- askLog
-  liftIO $ forConcurrently_ (handleActions oldCache newCache eventHandlers data')
-                            (runBotM client' logEnv' . runEventM newCache)
+  let actionHandlers = handleActions oldCache newCache eventHandlers data'
+  case actionHandlers of
+    Just actions ->
+      liftIO $ forConcurrently_ actions (runBotM client' logEnv' . runEventM newCache)
+    Nothing ->
+      error $ "Failed handling actions for event: " +|| data' ||+""
 
 unwrapEvent :: forall a. KnownSymbol a => EventHandlers -> [EHType a]
 unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler a))
@@ -98,17 +102,57 @@ handleActions :: Cache -- ^ The old cache
               -> Cache -- ^ The new cache
               -> EventHandlers
               -> DispatchData
-              -> [EventM ()]
+              -> Maybe [EventM ()]
 handleActions _ _ eh (Ready rd) =
-  map ($ rd) (unwrapEvent @"ready" eh)
+  pure $ map ($ rd) (unwrapEvent @"ready" eh)
+
 handleActions _ _ eh (ChannelCreate chan) =
-  map ($ chan) (unwrapEvent @"channelcreate" eh)
-handleActions os _ eh (ChannelUpdate chan) =
-  map (\f -> f oldChan chan) (unwrapEvent @"channelupdate" eh)
-  where oldChan = os ^?! #guilds . at (chan ^?! #guildID . _Just) . _Just . #channels . at (chan ^. #id) . _Just
+  pure $ map ($ chan) (unwrapEvent @"channelcreate" eh)
+
+handleActions os _ eh (ChannelUpdate chan) = do
+  oldChan <- os ^? #channels . at (chan ^. #id) . _Just
+  pure $ map (\f -> f oldChan chan) (unwrapEvent @"channelupdate" eh)
+
+-- NOTE: Channel will be deleted in the new cache
+handleActions os _ eh (ChannelDelete chan) = do
+  oldChan <- os ^? #channels . at (chan ^. #id) . _Just
+  pure $ map (\f -> f oldChan) (unwrapEvent @"channeldelete" eh)
+
+handleActions os _ eh (ChannelPinsUpdate ChannelPinsUpdateData {channelID, lastPinTimestamp}) = do
+  chan <- os ^? #channels . at channelID . _Just
+  pure $ map (\f -> f chan lastPinTimestamp) (unwrapEvent @"channelpinsupdate" eh)
+
+handleActions _ _ eh (GuildCreate chan) =
+  pure $ map ($ chan) (unwrapEvent @"guildcreate" eh)
+
+handleActions os _ eh (GuildUpdate guild) = do
+  oldGuild <- os ^? #guilds . at (guild ^. #id) . _Just
+  pure $ map (\f -> f oldGuild guild) (unwrapEvent @"guildupdate" eh)
+
+-- NOTE: Guild will be deleted in the new cache if unavailable was false
+handleActions os _ eh (GuildDelete UnavailableGuild {id, unavailable}) = do
+  oldGuild <- os ^? #guilds . at id . _Just
+  pure $ map (\f -> f oldGuild unavailable) (unwrapEvent @"guilddelete" eh)
+
+handleActions os _ eh (GuildBanAdd GuildBanData {guildID, user}) = do
+  guild <- os ^? #guilds . at guildID . _Just
+  pure $ map (\f -> f guild user) (unwrapEvent @"guildbanadd" eh)
+
+handleActions os _ eh (GuildBanRemove GuildBanData {guildID, user}) = do
+  guild <- os ^? #guilds . at guildID . _Just
+  pure $ map (\f -> f guild user) (unwrapEvent @"guildbanremove" eh)
+
+-- NOTE: we fire this event using the guild data with old emojis
+handleActions os _ eh (GuildEmojisUpdate GuildEmojisUpdateData {guildID, emojis}) = do
+  guild <- os ^? #guilds . at guildID . _Just
+  pure $ map (\f -> f guild emojis) (unwrapEvent @"guildemojisupdate" eh)
+
+handleActions _ ns eh (GuildIntegrationsUpdate GuildIntegrationsUpdateData {guildID}) = do
+  guild <- ns ^? #guilds . at guildID . _Just
+  pure $ map ($ guild) (unwrapEvent @"guildintegrationsupdate" eh)
 
 -- TODO: the rest of these
-handleActions _ _ (EventHandlers _) _ = []
+handleActions _ _ (EventHandlers _) _ = pure []
 
 -- TODO: actually update the cache
 updateCache :: Cache -> DispatchData -> Cache

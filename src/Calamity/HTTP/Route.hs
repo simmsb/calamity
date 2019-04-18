@@ -57,27 +57,27 @@ type family (&&) (a :: Bool) (b :: Bool) :: Bool where
   'True && 'True = 'True
   _     && _     = 'False
 
-type family MyLookup (x :: k) (l :: [(k, v)]) :: Maybe v where
-  MyLookup k ('(k, v) ': xs) = 'Just v
-  MyLookup k ('(_, v) ': xs) = MyLookup k xs
-  MyLookup _ '[]             = 'Nothing
+type family Lookup (x :: k) (l :: [(k, v)]) :: Maybe v where
+  Lookup k ('(k, v) ': xs) = 'Just v
+  Lookup k ('(_, v) ': xs) = Lookup k xs
+  Lookup _ '[]             = 'Nothing
 
-type family MyElem (x :: k) (l :: [k]) :: Bool where
-  MyElem _ '[]      = 'False
-  MyElem k (k : _)  = 'True
-  MyElem k (_ : xs) = MyElem k xs
+type family IsElem (x :: k) (l :: [k]) :: Bool where
+  IsElem _ '[]      = 'False
+  IsElem k (k : _)  = 'True
+  IsElem k (_ : xs) = IsElem k xs
 
-type family EnsureFulfilled (ids :: [(k, RouteRequirement)]) :: Bool where
+type family EnsureFulfilled (ids :: [(k, RouteRequirement)]) :: Constraint where
   EnsureFulfilled ids = EnsureFulfilledInner ids '[] 'True
 
-type family EnsureFulfilledInner (ids :: [(k, RouteRequirement)]) (seen :: [k]) (ok :: Bool) :: Bool where
-  EnsureFulfilledInner '[]                      _    ok = ok
-  EnsureFulfilledInner ('(k, 'NotNeeded) ': xs) seen ok = EnsureFulfilledInner xs (k ': seen) ok
-  EnsureFulfilledInner ('(k, 'Satisfied) ': xs) seen ok = EnsureFulfilledInner xs (k ': seen) ok
-  EnsureFulfilledInner ('(k, 'Required)  ': xs) seen ok = EnsureFulfilledInner xs (k ': seen) (MyElem k seen && ok)
+type family EnsureFulfilledInner (ids :: [(k, RouteRequirement)]) (seen :: [k]) (ok :: Bool) :: Constraint where
+  EnsureFulfilledInner '[]                      _    'True = ()
+  EnsureFulfilledInner ('(k, 'NotNeeded) ': xs) seen ok    = EnsureFulfilledInner xs (k ': seen) ok
+  EnsureFulfilledInner ('(k, 'Satisfied) ': xs) seen ok    = EnsureFulfilledInner xs (k ': seen) ok
+  EnsureFulfilledInner ('(k, 'Required)  ': xs) seen ok    = EnsureFulfilledInner xs (k ': seen) (IsElem k seen && ok)
 
 type family AddRequired k (ids :: [(Type, RouteRequirement)]) :: [(Type, RouteRequirement)] where
-  AddRequired k ids = '(k, AddRequiredInner (MyLookup k ids)) ': ids
+  AddRequired k ids = '(k, AddRequiredInner (Lookup k ids)) ': ids
 
 type family AddRequiredInner (k :: Maybe RouteRequirement) :: RouteRequirement where
   AddRequiredInner ('Just 'Required)  = 'Required
@@ -119,7 +119,7 @@ baseURL = "https://discordapp.com/api/v7"
 
 buildRoute
   :: forall (ids :: [(Type, RouteRequirement)])
-   . EnsureFulfilled ids ~ 'True
+   . EnsureFulfilled ids
   => RouteBuilder ids
   -> Route
 buildRoute (UnsafeMkRouteBuilder route ids) = Route
