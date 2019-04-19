@@ -100,12 +100,25 @@ instance FromJSON GuildMemberAddData where
     <$> v .: "member"
     <*> v .: "guild_id"
 
+data GuildMemberRemoveData = GuildMemberRemoveData
+  { guildID :: Snowflake Guild
+  , user :: User
+  } deriving (Show, Generic)
 
-newtype GuildMemberRemoveData = GuildMemberRemoveData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+instance FromJSON GuildMemberRemoveData where
+  parseJSON = genericParseJSON jsonOptions
 
-newtype GuildMemberUpdateData = GuildMemberUpdateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+
+data GuildMemberUpdateData = GuildMemberUpdateData
+  { guildID :: Snowflake Guild
+  , roles :: [Snowflake Role]
+  , user :: User
+  , nick :: Maybe Text
+  } deriving (Show, Generic)
+
+instance FromJSON GuildMemberUpdateData where
+  parseJSON = genericParseJSON jsonOptions
+
 
 newtype GuildMembersChunkData = GuildMembersChunkData Value
   deriving (Show, Generic, ToJSON, FromJSON)

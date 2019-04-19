@@ -8,20 +8,22 @@ module Calamity.Client.Client
   )
 where
 
-import qualified System.Log.Simple             as SLS
-import           Control.Concurrent.Async
+import           Control.Concurrent.Async       ( forConcurrently_ )
 import           Control.Concurrent.STM.TVar
 import qualified Data.HashMap.Lazy             as LH
 import           Data.Maybe
 import qualified Data.TypeRepMap               as TM
 import qualified StmContainers.Set             as TS
 import qualified Streamly.Prelude              as S
+import qualified System.Log.Simple             as SLS
 
 import           Calamity.Client.ShardManager
 import           Calamity.Client.Types
 import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.DispatchEvents
 import           Calamity.Types.General
+import           Calamity.Types.Snowflake
+
 
 -- TODO: merge event handlers with default
 -- and give writerT for adding events
@@ -106,28 +108,31 @@ handleActions :: Cache -- ^ The old cache
 handleActions _ _ eh (Ready rd) =
   pure $ map ($ rd) (unwrapEvent @"ready" eh)
 
-handleActions _ _ eh (ChannelCreate chan) =
-  pure $ map ($ chan) (unwrapEvent @"channelcreate" eh)
+handleActions _ ns eh (ChannelCreate chan) = do
+  newChan' <- ns ^? #channels . at (getID chan) . _Just
+  pure $ map ($ newChan') (unwrapEvent @"channelcreate" eh)
 
-handleActions os _ eh (ChannelUpdate chan) = do
-  oldChan <- os ^? #channels . at (chan ^. #id) . _Just
-  pure $ map (\f -> f oldChan chan) (unwrapEvent @"channelupdate" eh)
+handleActions os ns eh (ChannelUpdate chan) = do
+  oldChan <- os ^? #channels . at (getID chan) . _Just
+  newChan' <- ns ^? #channels . at (getID chan) . _Just
+  pure $ map (\f -> f oldChan newChan') (unwrapEvent @"channelupdate" eh)
 
 -- NOTE: Channel will be deleted in the new cache
 handleActions os _ eh (ChannelDelete chan) = do
-  oldChan <- os ^? #channels . at (chan ^. #id) . _Just
+  oldChan <- os ^? #channels . at (getID chan) . _Just
   pure $ map (\f -> f oldChan) (unwrapEvent @"channeldelete" eh)
 
 handleActions os _ eh (ChannelPinsUpdate ChannelPinsUpdateData {channelID, lastPinTimestamp}) = do
   chan <- os ^? #channels . at channelID . _Just
   pure $ map (\f -> f chan lastPinTimestamp) (unwrapEvent @"channelpinsupdate" eh)
 
-handleActions _ _ eh (GuildCreate chan) =
-  pure $ map ($ chan) (unwrapEvent @"guildcreate" eh)
+handleActions _ _ eh (GuildCreate guild) =
+  pure $ map ($ guild) (unwrapEvent @"guildcreate" eh)
 
-handleActions os _ eh (GuildUpdate guild) = do
-  oldGuild <- os ^? #guilds . at (guild ^. #id) . _Just
-  pure $ map (\f -> f oldGuild guild) (unwrapEvent @"guildupdate" eh)
+handleActions os ns eh (GuildUpdate guild) = do
+  oldGuild <- os ^? #guilds . at (getID guild) . _Just
+  newGuild <- ns ^? #guilds . at (getID guild) . _Just
+  pure $ map (\f -> f oldGuild newGuild) (unwrapEvent @"guildupdate" eh)
 
 -- NOTE: Guild will be deleted in the new cache if unavailable was false
 handleActions os _ eh (GuildDelete UnavailableGuild {id, unavailable}) = do
@@ -151,8 +156,21 @@ handleActions _ ns eh (GuildIntegrationsUpdate GuildIntegrationsUpdateData {guil
   guild <- ns ^? #guilds . at guildID . _Just
   pure $ map ($ guild) (unwrapEvent @"guildintegrationsupdate" eh)
 
--- TODO: the rest of these
-handleActions _ _ (EventHandlers _) _ = pure []
+handleActions _ ns eh (GuildMemberAdd GuildMemberAddData {member, guildID}) = do
+  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (getID member) . _Just
+  pure $ map ($ newMember) (unwrapEvent @"guildmemberadd" eh)
+
+handleActions os _ eh (GuildMemberRemove GuildMemberRemoveData {user, guildID}) = do
+  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
+  pure $ map ($ oldMember) (unwrapEvent @"guildmemberremove" eh)
+
+handleActions os ns eh (GuildMemberUpdate GuildMemberUpdateData {user, guildID}) = do
+  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
+  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
+  pure $ map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
+ 
+-- -- TODO: the rest of these
+handleActions _ _ _ _ = pure []
 
 -- TODO: actually update the cache
 updateCache :: Cache -> DispatchData -> Cache

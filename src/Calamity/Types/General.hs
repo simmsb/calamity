@@ -407,22 +407,21 @@ data Guild = Guild
   , voiceStates                 :: [VoiceState]
   , members                     :: SnowflakeMap Member
   , channels                    :: SnowflakeMap Channel
-  , textChannels                :: SnowflakeMap TextChannel
-  , voiceChannels               :: SnowflakeMap VoiceChannel
-  , categories                  :: SnowflakeMap Category
   , presences                   :: [Presence]
   } deriving (Eq, Show, Generic)
 
-buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a
-buildChannels guildID chans = SM.mapMaybe (\chan -> rightToMaybe $ fromChannelWithGuildID guildID (Proxy @a) chan) chans
 
-buildCategories :: Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap Category
-buildCategories guildID chans = SM.mapMaybe buildCat chans
-      where buildCat chan@(Channel {type_ = GuildCategoryType}) = do
-              let guildChannels -- :: SnowflakeMap GuildChannel
-                    = buildChannels guildID chans
-              rightToMaybe $ fromChannelWithGuildID guildID (Proxy @Category) chan guildChannels
-            buildCat _ = Nothing
+-- TODO: eventually use these for lenses
+-- buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a
+-- buildChannels guildID = SM.mapMaybe (rightToMaybe . fromChannelWithGuildID guildID (Proxy @a))
+
+-- buildCategories :: Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap Category
+-- buildCategories guildID chans = SM.mapMaybe buildCat chans
+--       where buildCat chan@(Channel {type_ = GuildCategoryType}) = do
+--               let guildChannels -- :: SnowflakeMap GuildChannel
+--                     = buildChannels guildID chans
+--               rightToMaybe $ fromChannelWithGuildID guildID (Proxy @Category) chan guildChannels
+--             buildCat _ = Nothing
 
 instance FromJSON Guild where
   parseJSON = withObject "Guild" $ \v -> do
@@ -431,8 +430,6 @@ instance FromJSON Guild where
     members' <- do
       members' <- v .: "members"
       SM.fromList <$> mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) members'
-
-    channels <- v .: "channels"
 
     Guild
       <$> pure id
@@ -464,10 +461,7 @@ instance FromJSON Guild where
       <*> v .: "member_count"
       <*> v .: "voice_states"
       <*> pure members'
-      <*> pure channels
-      <*> (pure $ buildChannels id channels)
-      <*> (pure $ buildChannels id channels)
-      <*> (pure $ buildCategories id channels)
+      <*> v .: "channels"
       <*> v .: "presences"
 
 

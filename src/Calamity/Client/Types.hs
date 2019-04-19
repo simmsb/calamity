@@ -30,6 +30,7 @@ import           Data.TypeRepMap                ( TypeRepMap
                                                 , WrapTypeable(..)
                                                 )
 import           GHC.Exts                       ( fromList )
+import qualified GHC.TypeLits                  as TL
 import qualified StmContainers.Set             as TS
 import qualified Streamly                      as S
 
@@ -167,6 +168,7 @@ type family EHType d where
   EHType "messagereactionremoveall" = Message   -> EventM ()
   EHType "typingstart"              = Member    -> EventM ()
   EHType "userupdate"               = User      -> EventM ()
+  EHType _ = TL.TypeError ('TL.Text "Unknown event name")
   -- EHType "voicestateupdate"         = VoiceStateUpdateData -> EventM ()
   -- EHType "voiceserverupdate"        = VoiceServerUpdateData -> EventM ()
   -- EHType "webhooksupdate"           = WebhooksUpdateData -> EventM ()
