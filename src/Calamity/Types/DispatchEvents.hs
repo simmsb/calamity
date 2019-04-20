@@ -5,8 +5,8 @@ module Calamity.Types.DispatchEvents where
 import           Data.Aeson
 import           Data.Time
 
-import           Calamity.Types.Snowflake
 import           Calamity.Types.General
+import           Calamity.Types.Snowflake
 
 data DispatchData
   = Ready ReadyData
@@ -21,15 +21,15 @@ data DispatchData
   | GuildBanRemove GuildBanData
   | GuildEmojisUpdate GuildEmojisUpdateData
   | GuildIntegrationsUpdate GuildIntegrationsUpdateData
-  | GuildMemberAdd GuildMemberAddData
+  | GuildMemberAdd Member
   | GuildMemberRemove GuildMemberRemoveData
   | GuildMemberUpdate GuildMemberUpdateData
   | GuildMembersChunk GuildMembersChunkData
-  | GuildRoleCreate GuildRoleCreateData
-  | GuildRoleUpdate GuildRoleUpdateData
+  | GuildRoleCreate GuildRoleData
+  | GuildRoleUpdate GuildRoleData
   | GuildRoleDelete GuildRoleDeleteData
   | MessageCreate Message
-  | MessageUpdate MessageUpdateData
+  | MessageUpdate UpdatedMessage
   | MessageDelete MessageDeleteData
   | MessageDeleteBulk MessageDeleteBulkData
   | MessageReactionAdd MessageReactionAddData
@@ -56,7 +56,7 @@ instance FromJSON ReadyData where
 -- TODO: literally all of these
 
 data ChannelPinsUpdateData = ChannelPinsUpdateData
-  { channelID :: Snowflake Channel
+  { channelID        :: Snowflake Channel
   , lastPinTimestamp :: Maybe UTCTime
   } deriving (Show, Generic)
 
@@ -66,7 +66,7 @@ instance FromJSON ChannelPinsUpdateData where
 
 data GuildBanData = GuildBanData
   { guildID :: Snowflake Guild
-  , user :: User
+  , user    :: User
   } deriving (Show, Generic)
 
 instance FromJSON GuildBanData where
@@ -75,7 +75,7 @@ instance FromJSON GuildBanData where
 
 data GuildEmojisUpdateData = GuildEmojisUpdateData
   { guildID :: Snowflake Guild
-  , emojis :: [Emoji]
+  , emojis  :: [Emoji]
   } deriving (Show, Generic)
 
 instance FromJSON GuildEmojisUpdateData where
@@ -90,19 +90,9 @@ instance FromJSON GuildIntegrationsUpdateData where
   parseJSON = genericParseJSON jsonOptions
 
 
-data GuildMemberAddData = GuildMemberAddData
-  { member :: Member
-  , guildID :: Snowflake Guild
-  } deriving (Show, Generic)
-
-instance FromJSON GuildMemberAddData where
-  parseJSON = withObject "GuildMemberAddData" $ \v -> GuildMemberAddData
-    <$> v .: "member"
-    <*> v .: "guild_id"
-
 data GuildMemberRemoveData = GuildMemberRemoveData
   { guildID :: Snowflake Guild
-  , user :: User
+  , user    :: User
   } deriving (Show, Generic)
 
 instance FromJSON GuildMemberRemoveData where
@@ -111,32 +101,58 @@ instance FromJSON GuildMemberRemoveData where
 
 data GuildMemberUpdateData = GuildMemberUpdateData
   { guildID :: Snowflake Guild
-  , roles :: [Snowflake Role]
-  , user :: User
-  , nick :: Maybe Text
+  , roles   :: [Snowflake Role]
+  , user    :: User
+  , nick    :: Maybe Text
   } deriving (Show, Generic)
 
 instance FromJSON GuildMemberUpdateData where
   parseJSON = genericParseJSON jsonOptions
 
 
-newtype GuildMembersChunkData = GuildMembersChunkData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+data GuildMembersChunkData = GuildMembersChunkData
+  { guildID :: Snowflake Guild
+  , members :: [Member]
+  } deriving (Show, Generic)
 
-newtype GuildRoleCreateData = GuildRoleCreateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+instance FromJSON GuildMembersChunkData where
+  parseJSON = withObject "GuildMembersChunkData" $ \v -> do
+    guildID <- v .: "guild_id"
 
-newtype GuildRoleUpdateData = GuildRoleUpdateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+    members' <- do
+      members' <- v .: "members"
+      mapM (\m -> parseJSON $ Object (m <> "guild_id" .= guildID)) members'
 
-newtype GuildRoleDeleteData = GuildRoleDeleteData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+    pure $ GuildMembersChunkData guildID members'
 
-newtype MessageUpdateData = MessageUpdateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
 
-newtype MessageDeleteData = MessageDeleteData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+data GuildRoleData = GuildRoleData
+  { guildID :: Snowflake Guild
+  , role    :: Role
+  } deriving (Show, Generic)
+
+instance FromJSON GuildRoleData where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data GuildRoleDeleteData = GuildRoleDeleteData
+  { guildID :: Snowflake Guild
+  , roleID  :: Snowflake Role
+  } deriving (Show, Generic)
+
+instance FromJSON GuildRoleDeleteData where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data MessageDeleteData = MessageDeleteData
+  { id        :: Snowflake Message
+  , channelID :: Snowflake Channel
+  , guildID   :: Snowflake Guild
+  } deriving (Show, Generic)
+
+instance FromJSON MessageDeleteData where
+  parseJSON = genericParseJSON jsonOptions
+
 
 newtype MessageDeleteBulkData = MessageDeleteBulkData Value
   deriving (Show, Generic, ToJSON, FromJSON)

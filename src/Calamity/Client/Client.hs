@@ -13,6 +13,7 @@ import           Control.Concurrent.STM.TVar
 import qualified Data.HashMap.Lazy             as LH
 import           Data.Maybe
 import qualified Data.TypeRepMap               as TM
+import           Data.Default
 import qualified StmContainers.Set             as TS
 import qualified Streamly.Prelude              as S
 import qualified System.Log.Simple             as SLS
@@ -23,6 +24,7 @@ import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.DispatchEvents
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
+import           Calamity.Types.MessageStore
 
 
 -- TODO: merge event handlers with default
@@ -59,7 +61,7 @@ startClient client = do
     clientLoop
 
 emptyCache :: Cache
-emptyCache = Cache Nothing LH.empty LH.empty LH.empty
+emptyCache = Cache Nothing LH.empty LH.empty LH.empty def
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
@@ -83,7 +85,7 @@ handleEvent data' = do
     pure (oldCache, newCache)
 
   runEventHandlers oldCache newCache data'
-  trace "finished handling an event"
+  trace $ "finished handling an event, new cache is: " <> show newCache
 
 runEventHandlers :: Cache -> Cache -> DispatchData -> BotM ()
 runEventHandlers oldCache newCache data' = do
@@ -113,7 +115,7 @@ handleActions _ ns eh (ChannelCreate chan) = do
   pure $ map ($ newChan') (unwrapEvent @"channelcreate" eh)
 
 handleActions os ns eh (ChannelUpdate chan) = do
-  oldChan <- os ^? #channels . at (getID chan) . _Just
+  oldChan  <- os ^? #channels . at (getID chan) . _Just
   newChan' <- ns ^? #channels . at (getID chan) . _Just
   pure $ map (\f -> f oldChan newChan') (unwrapEvent @"channelupdate" eh)
 
@@ -156,8 +158,8 @@ handleActions _ ns eh (GuildIntegrationsUpdate GuildIntegrationsUpdateData {guil
   guild <- ns ^? #guilds . at guildID . _Just
   pure $ map ($ guild) (unwrapEvent @"guildintegrationsupdate" eh)
 
-handleActions _ ns eh (GuildMemberAdd GuildMemberAddData {member, guildID}) = do
-  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (getID member) . _Just
+handleActions _ ns eh (GuildMemberAdd member) = do
+  newMember <- ns ^? #guilds . at (member ^. #guildID) . _Just . #members . at (getID member) . _Just
   pure $ map ($ newMember) (unwrapEvent @"guildmemberadd" eh)
 
 handleActions os _ eh (GuildMemberRemove GuildMemberRemoveData {user, guildID}) = do
@@ -168,10 +170,55 @@ handleActions os ns eh (GuildMemberUpdate GuildMemberUpdateData {user, guildID})
   oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
   newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
   pure $ map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
- 
+
+handleActions _ ns eh (GuildMembersChunk GuildMembersChunkData {members, guildID}) = do
+  guild <- ns ^? #guilds . at guildID . _Just
+  let members' = guild ^.. #members . foldMap at (map getID members) . _Just
+  pure $ map (\f -> f guild members') (unwrapEvent @"guildmemberschunk" eh)
+
+handleActions _ ns eh (GuildRoleCreate GuildRoleData {guildID, role}) = do
+  guild  <- ns ^? #guilds . at guildID . _Just
+  role'  <- guild ^? #roles . at (getID role) . _Just
+  pure $ map (\f -> f guild role') (unwrapEvent @"guildrolecreate" eh)
+
+handleActions os ns eh (GuildRoleUpdate GuildRoleData {guildID, role}) = do
+  oldRole  <- os ^? #guilds . at guildID . _Just . #roles . at (getID role) . _Just
+  newGuild <- ns ^? #guilds . at guildID . _Just
+  newRole  <- newGuild ^? #roles . at (getID role) . _Just
+  pure $ map (\f -> f newGuild oldRole newRole) (unwrapEvent @"guildroleupdate" eh)
+
+handleActions os ns eh (GuildRoleDelete GuildRoleDeleteData {guildID, roleID}) = do
+  newGuild  <- ns ^? #guilds . at guildID . _Just
+  role'     <- os ^? #guilds . at guildID . _Just . #roles . at roleID . _Just
+  pure $ map (\f -> f newGuild role') (unwrapEvent @"guildroledelete" eh)
+
+handleActions _ _ eh (MessageCreate msg) =
+  pure $ map ($ msg) (unwrapEvent @"messagecreate" eh)
+
+handleActions os ns eh (MessageUpdate msg) = do
+  oldMsg <- getMessage (coerceSnowflake $ msg ^. #id) $ os ^. #messages
+  newMsg <- getMessage (coerceSnowflake $ msg ^. #id) $ ns ^. #messages
+  pure $ map (\f -> f oldMsg newMsg) (unwrapEvent @"messageupdate" eh)
+
+handleActions os _ eh (MessageDelete MessageDeleteData {id}) = do
+  oldMsg <- getMessage id $ os ^. #messages
+  pure $ map ($ oldMsg) (unwrapEvent @"messagedelete" eh)
+
 -- -- TODO: the rest of these
 handleActions _ _ _ _ = pure []
 
 -- TODO: actually update the cache
 updateCache :: Cache -> DispatchData -> Cache
+updateCache cache (MessageCreate msg) =
+  cache & #messages %~ addMessage msg
+
+updateCache cache (MessageUpdate newMsg) = fromMaybe cache $ do
+  let id = coerceSnowflake $ newMsg ^. #id
+  oldMsg <- getMessage id (cache ^. #messages)
+  let newMsg' = mergeMessage oldMsg newMsg
+  pure $ cache & #messages %~ (addMessage newMsg' . dropMessage id)
+
+updateCache cache (MessageDelete MessageDeleteData {id}) =
+  cache & #messages %~ dropMessage id
+
 updateCache cache data' = cache -- TODO

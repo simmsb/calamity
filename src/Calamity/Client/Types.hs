@@ -39,6 +39,7 @@ import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 import           Calamity.Types.DispatchEvents
+import           Calamity.Types.MessageStore
 
 
 data Cache = Cache
@@ -46,7 +47,8 @@ data Cache = Cache
   , guilds   :: LH.HashMap (Snowflake Guild) Guild
   , dms      :: LH.HashMap (Snowflake DMChannel) DMChannel
   , channels :: LH.HashMap (Snowflake Channel) Channel
-  } deriving (Generic)
+  , messages :: MessageStore
+  } deriving (Generic, Show)
 
 data Client = Client
   { shards        :: TVar [(Shard, Async ())] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
@@ -140,34 +142,35 @@ newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 newtype EventHandler d = EH { unwrapEventHandler :: [EHType d] }
 
 type family EHType d where
-  EHType "ready"                    = ReadyData -> EventM ()
-  EHType "channelcreate"            = Channel   -> EventM ()
-  EHType "channelupdate"            = Channel   -> Channel -> EventM ()
-  EHType "channeldelete"            = Channel   -> EventM ()
-  EHType "channelpinsupdate"        = Channel   -> Maybe UTCTime -> EventM ()
-  EHType "guildcreate"              = Guild     -> EventM ()
-  EHType "guildupdate"              = Guild     -> Guild   -> EventM ()
-  EHType "guilddelete"              = Guild     -> Bool    -> EventM ()
-  EHType "guildbanadd"              = Guild     -> User    -> EventM ()
-  EHType "guildbanremove"           = Guild     -> User    -> EventM ()
-  EHType "guildemojisupdate"        = Guild     -> [Emoji] -> EventM ()
-  EHType "guildintegrationsupdate"  = Guild     -> EventM ()
-  EHType "guildmemberadd"           = Member    -> EventM ()
-  EHType "guildmemberremove"        = Member    -> EventM ()
-  -- TODO: Member update includes presence update events
-  EHType "guildmemberupdate"        = Member    -> Member  -> EventM ()
-  EHType "guildrolecreate"          = Role      -> EventM ()
-  EHType "guildroleupdate"          = Role      -> Role    -> EventM ()
-  EHType "guildroledelete"          = Role      -> EventM ()
-  EHType "messagecreate"            = Message   -> EventM ()
-  EHType "messageupdate"            = Message   -> Message -> EventM ()
-  EHType "messagedelete"            = Message   -> EventM ()
-  EHType "messagedeletebulk"        = [Message] -> EventM ()
-  EHType "messagereactionadd"       = Reaction  -> EventM ()
-  EHType "messagereactionremove"    = Reaction  -> EventM ()
-  EHType "messagereactionremoveall" = Message   -> EventM ()
-  EHType "typingstart"              = Member    -> EventM ()
-  EHType "userupdate"               = User      -> EventM ()
+  EHType "ready"                    = ReadyData                -> EventM ()
+  EHType "channelcreate"            = Channel                  -> EventM ()
+  EHType "channelupdate"            = Channel -> Channel       -> EventM ()
+  EHType "channeldelete"            = Channel                  -> EventM ()
+  EHType "channelpinsupdate"        = Channel -> Maybe UTCTime -> EventM ()
+  EHType "guildcreate"              = Guild                    -> EventM ()
+  EHType "guildupdate"              = Guild -> Guild           -> EventM ()
+  EHType "guilddelete"              = Guild -> Bool            -> EventM ()
+  EHType "guildbanadd"              = Guild -> User            -> EventM ()
+  EHType "guildbanremove"           = Guild -> User            -> EventM ()
+  EHType "guildemojisupdate"        = Guild -> [Emoji]         -> EventM ()
+  EHType "guildintegrationsupdate"  = Guild                    -> EventM ()
+  EHType "guildmemberadd"           = Member                   -> EventM ()
+  EHType "guildmemberremove"        = Member                   -> EventM ()
+                                                -- TODO: Member update includes presence update events
+  EHType "guildmemberupdate"        = Member -> Member         -> EventM ()
+  EHType "guildmemberschunk"        = Guild -> [Member]        -> EventM ()
+  EHType "guildrolecreate"          = Guild -> Role            -> EventM ()
+  EHType "guildroleupdate"          = Guild -> Role -> Role    -> EventM ()
+  EHType "guildroledelete"          = Guild -> Role            -> EventM ()
+  EHType "messagecreate"            = Message                  -> EventM ()
+  EHType "messageupdate"            = Message -> Message       -> EventM ()
+  EHType "messagedelete"            = Message                  -> EventM ()
+  EHType "messagedeletebulk"        = [Message]                -> EventM ()
+  EHType "messagereactionadd"       = Reaction                 -> EventM ()
+  EHType "messagereactionremove"    = Reaction                 -> EventM ()
+  EHType "messagereactionremoveall" = Message                  -> EventM ()
+  EHType "typingstart"              = Member                   -> EventM ()
+  EHType "userupdate"               = User                     -> EventM ()
   EHType _ = TL.TypeError ('TL.Text "Unknown event name")
   -- EHType "voicestateupdate"         = VoiceStateUpdateData -> EventM ()
   -- EHType "voiceserverupdate"        = VoiceServerUpdateData -> EventM ()

@@ -54,6 +54,7 @@ dependencies:
 - async >= 2.2
 - simple-log >= 0.9
 - scientific >= 0.3
+- pqueue >= 1.4
 - ekg >= 0.4
 
 executables:

@@ -17,6 +17,7 @@ module Calamity.Types.General
   , UnavailableGuild(..)
   , Member(..)
   , Message(..)
+  , UpdatedMessage(..)
   , Emoji(..)
   , Role(..)
   , Reaction(..)
@@ -25,6 +26,7 @@ module Calamity.Types.General
   , Attachment(..)
   , formatToken
   , rawToken
+  , mergeMessage
   )
 where
 
@@ -135,7 +137,11 @@ instance ToJSON Channel where
 instance FromJSON Channel where
   parseJSON = genericParseJSON jsonOptions
 
-defChannel :: Snowflake a -> ChannelType -> Channel
+type family TContains (a :: k) (l :: [k]) :: Constraint where
+  TContains k (k : _) = ()
+  TContains k (_ : r) = TContains k r
+
+defChannel :: TContains a '[Channel, GroupDM, SingleDM, VoiceChannel, TextChannel, Category, GuildChannel] => Snowflake a -> ChannelType -> Channel
 defChannel s t = Channel
                   (coerceSnowflake s)
                   t
@@ -391,8 +397,8 @@ data Guild = Guild
   , verificationLevel           :: Int
   , defaultMessageNotifications :: Int
   , explicitContentFilter       :: Int
-  , roles                       :: [Role]
-  , emojis                      :: [Emoji]
+  , roles                       :: SnowflakeMap Role
+  , emojis                      :: SnowflakeMap Emoji
   , features                    :: [Text]
   , mfaLevel                    :: Int
   , applicationID               :: Maybe (Snowflake User)
@@ -431,6 +437,10 @@ instance FromJSON Guild where
       members' <- v .: "members"
       SM.fromList <$> mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) members'
 
+    channels' <- do
+      channels' <- v .: "channels"
+      SM.fromList <$> mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) channels'
+
     Guild
       <$> pure id
       <*> v .: "name"
@@ -461,7 +471,7 @@ instance FromJSON Guild where
       <*> v .: "member_count"
       <*> v .: "voice_states"
       <*> pure members'
-      <*> v .: "channels"
+      <*> pure channels'
       <*> v .: "presences"
 
 
@@ -496,10 +506,11 @@ instance FromJSON Member where
 instance HasID Member where
   getID = coerceSnowflake . getID . (^. field @"user")
 
+-- NOTE: make sure we fill in the guildID field when retrieving from REST
 data Message = Message
   { id              :: Snowflake Message
   , channelID       :: Snowflake Channel
-  , guildID         :: Maybe (Snowflake Guild)
+  , guildID         :: Snowflake Guild
   , author          :: User
   , content         :: Text
   , timestamp       :: UTCTime
@@ -508,7 +519,7 @@ data Message = Message
   , mentionEveryone :: Bool
   , mentions        :: SnowflakeMap User
   , mentionRoles    :: [Snowflake Role]
-  , attachments     :: [SnowflakeMap Attachment]
+  , attachments     :: [Attachment]
   , embeds          :: [Embed]
   , reactions       :: [Reaction]
   , nonce           :: Maybe (Snowflake Message)
@@ -524,7 +535,7 @@ instance FromJSON Message where
   parseJSON = withObject "Message" $ \v -> Message
     <$> v .: "id"
     <*> v .: "channel_id"
-    <*> v .:? "guild_id"
+    <*> v .: "guild_id"
     <*> v .: "author"
     <*> v .: "content"
     <*> v .: "timestamp"
@@ -540,6 +551,43 @@ instance FromJSON Message where
     <*> v .: "pinned"
     <*> v .:? "webhook_id"
     <*> v .: "type"
+
+data UpdatedMessage = UpdatedMessage
+  { id              :: Snowflake UpdatedMessage
+  , channelID       :: Snowflake Channel
+  , content         :: Maybe Text
+  , editedTimestamp :: Maybe UTCTime
+  , tts             :: Maybe Bool
+  , mentionEveryone :: Maybe Bool
+  , mentions        :: Maybe (SnowflakeMap User)
+  , mentionRoles    :: Maybe [Snowflake Role]
+  , attachments     :: Maybe [Attachment]
+  , embeds          :: Maybe [Embed]
+  , reactions       :: Maybe [Reaction]
+  , pinned          :: Maybe Bool
+  } deriving (Eq, Show, Generic)
+
+instance FromJSON UpdatedMessage where
+  parseJSON = genericParseJSON jsonOptions
+
+
+mergeMessage :: Message -> UpdatedMessage -> Message
+mergeMessage o n = o
+  & updateF @"content"
+  & field @"editedTimestamp" .~ (o ^. field @"editedTimestamp")
+  & updateF @"tts"
+  & updateF @"mentionEveryone"
+  & updateF @"mentions"
+  & updateF @"mentionRoles"
+  & updateF @"attachments"
+  & updateF @"embeds"
+  & updateF @"reactions"
+  & updateF @"pinned"
+
+  where mergeF :: forall (f :: Symbol) a. (HasField f Message Message a a, HasField f UpdatedMessage UpdatedMessage (Maybe a) (Maybe a)) => a
+        mergeF = fromMaybe (o ^. field @f) (n ^. field @f)
+        updateF :: forall (f :: Symbol) a b. (HasField f Message Message a b, HasField f Message Message b b, HasField f UpdatedMessage UpdatedMessage (Maybe b) (Maybe b)) => Message -> Message
+        updateF = field @f .~ mergeF @f
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
 data MessageType

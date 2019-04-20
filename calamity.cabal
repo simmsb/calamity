@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 002b9499e53f3f8f663198913430971e9782ac4913adfe039840ff2a0945033d
+-- hash: ba52c47eec048b4128e553bcc7ee3a47218b233740cd79dbf57f2a2162f0366f
 
 name:           calamity
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
       Calamity.HTTP.Types
       Calamity.Types.DispatchEvents
       Calamity.Types.General
+      Calamity.Types.MessageStore
       Calamity.Types.Snowflake
       Calamity.Types.SnowflakeMap
       Calamity.Types.UnixTimestamp
@@ -73,6 +74,7 @@ library
     , lens-aeson >=1.0
     , monad-control >=1.0
     , mtl >=2.2
+    , pqueue >=1.4
     , protolude >=0.2
     , retry >=0.7
     , scientific >=0.3
@@ -119,6 +121,7 @@ executable test-calamity-exe
     , lens-aeson >=1.0
     , monad-control >=1.0
     , mtl >=2.2
+    , pqueue >=1.4
     , protolude >=0.2
     , retry >=0.7
     , scientific >=0.3
@@ -167,6 +170,7 @@ test-suite calamity-test
     , lens-aeson >=1.0
     , monad-control >=1.0
     , mtl >=2.2
+    , pqueue >=1.4
     , protolude >=0.2
     , retry >=0.7
     , scientific >=0.3
