@@ -204,8 +204,35 @@ handleActions os _ eh (MessageDelete MessageDeleteData {id}) = do
   oldMsg <- getMessage id $ os ^. #messages
   pure $ map ($ oldMsg) (unwrapEvent @"messagedelete" eh)
 
+handleActions os _ eh (MessageDeleteBulk MessageDeleteBulkData {ids}) = join
+  <$> forM ids (\id -> do
+                  oldMsg <- getMessage id $ os ^. #messages
+                  pure $ map ($ oldMsg) (unwrapEvent @"messagedelete" eh))
+
+handleActions _ ns eh (MessageReactionAdd reaction) = do
+  message <- getMessage (coerceSnowflake $ reaction ^. #messageID) $ ns ^. #messages
+  pure $ map (\f -> f message reaction) (unwrapEvent @"messagereactionadd" eh)
+
+handleActions _ ns eh (MessageReactionRemove reaction) = do
+  message <- getMessage (coerceSnowflake $ reaction ^. #messageID) $ ns ^. #messages
+  pure $ map (\f -> f message reaction) (unwrapEvent @"messagereactionremove" eh)
+
+handleActions os _ eh (MessageReactionRemoveAll MessageReactionRemoveAllData {messageID}) = do
+  oldMsg <- getMessage (coerceSnowflake $ messageID) $ os ^. #messages
+  pure $ map ($ oldMsg) (unwrapEvent @"messagereactionremoveall" eh)
+
+handleActions os ns eh (PresenceUpdate Presence {user, guildID}) = do
+  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
+  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
+  let userUpdates = if (oldMember ^. #user /= newMember ^. #user)
+        then map (\f -> f (oldMember ^. #user) (newMember ^. #user)) (unwrapEvent @"userupdate" eh)
+        else mempty
+  pure $ userUpdates <> map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
+
 -- -- TODO: the rest of these
 handleActions _ _ _ _ = pure []
+
+
 
 -- TODO: actually update the cache
 updateCache :: Cache -> DispatchData -> Cache
@@ -220,5 +247,8 @@ updateCache cache (MessageUpdate newMsg) = fromMaybe cache $ do
 
 updateCache cache (MessageDelete MessageDeleteData {id}) =
   cache & #messages %~ dropMessage id
+
+updateCache cache (MessageDeleteBulk MessageDeleteBulkData {ids}) =
+  cache & #messages %~ flip (foldl $ flip dropMessage) ids
 
 updateCache cache data' = cache -- TODO

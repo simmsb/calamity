@@ -32,10 +32,10 @@ data DispatchData
   | MessageUpdate UpdatedMessage
   | MessageDelete MessageDeleteData
   | MessageDeleteBulk MessageDeleteBulkData
-  | MessageReactionAdd MessageReactionAddData
-  | MessageReactionRemove MessageReactionRemoveData
+  | MessageReactionAdd Reaction
+  | MessageReactionRemove Reaction
   | MessageReactionRemoveAll MessageReactionRemoveAllData
-  | PresenceUpdate PresenceUpdateData
+  | PresenceUpdate Presence
   | TypingStart TypingStartData
   | UserUpdate UserUpdateData
   | VoiceStateUpdate VoiceStateUpdateData
@@ -154,20 +154,25 @@ instance FromJSON MessageDeleteData where
   parseJSON = genericParseJSON jsonOptions
 
 
-newtype MessageDeleteBulkData = MessageDeleteBulkData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+data MessageDeleteBulkData = MessageDeleteBulkData
+  { guildID   :: Snowflake Guild
+  , channelID :: Snowflake Channel
+  , ids       :: [Snowflake Message]
+  } deriving (Show, Generic)
 
-newtype MessageReactionAddData = MessageReactionAddData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+instance FromJSON MessageDeleteBulkData where
+  parseJSON = genericParseJSON jsonOptions
 
-newtype MessageReactionRemoveData = MessageReactionRemoveData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
 
-newtype MessageReactionRemoveAllData = MessageReactionRemoveAllData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+data MessageReactionRemoveAllData = MessageReactionRemoveAllData
+  { channelID :: Snowflake Channel
+  , messageID :: Snowflake Message
+  , guildID   :: Maybe (Snowflake Guild)
+  } deriving (Show, Generic)
 
-newtype PresenceUpdateData = PresenceUpdateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+instance FromJSON MessageReactionRemoveAllData where
+  parseJSON = genericParseJSON jsonOptions
+
 
 newtype TypingStartData = TypingStartData Value
   deriving (Show, Generic, ToJSON, FromJSON)

@@ -24,6 +24,7 @@ module Calamity.Types.General
   , Presence(..)
   , Embed(..)
   , Attachment(..)
+  , Partial(..)
   , formatToken
   , rawToken
   , mergeMessage
@@ -61,15 +62,7 @@ fuseTup2 (a, b) = do
   pure (a', b')
 
 
-newtype Partial t = Partial
-  { id :: Snowflake t
-  } deriving (Show, Eq, Generic)
-
-instance ToJSON (Partial t) where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON (Partial t) where
-  parseJSON = genericParseJSON jsonOptions
+data family Partial t
 
 
 data VoiceState = VoiceState
@@ -109,6 +102,17 @@ instance ToJSON User where
 
 instance FromJSON User where
   parseJSON = genericParseJSON jsonOptions
+
+data instance Partial User = PartialUser
+  { id :: Snowflake (Partial User)
+  } deriving (Show, Eq, Generic)
+
+instance ToJSON (Partial User) where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON (Partial User) where
+  parseJSON = genericParseJSON jsonOptions
+
 
 data Channel = Channel
   { id                   :: Snowflake Channel
@@ -164,7 +168,7 @@ defChannel s t = Channel
 
 
 class FromChannel a where
-  type FromRet a :: *
+  type FromRet a :: Type
   type FromRet a = Either Text a
 
   -- | Convert from a channel into a more specific channel type
@@ -441,6 +445,10 @@ instance FromJSON Guild where
       channels' <- v .: "channels"
       SM.fromList <$> mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) channels'
 
+    presences' <- do
+      presences' <- v .: "presences"
+      mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) presences'
+
     Guild
       <$> pure id
       <*> v .: "name"
@@ -472,7 +480,7 @@ instance FromJSON Guild where
       <*> v .: "voice_states"
       <*> pure members'
       <*> pure channels'
-      <*> v .: "presences"
+      <*> pure presences'
 
 
 data UnavailableGuild = UnavailableGuild
@@ -822,6 +830,18 @@ instance FromJSON Emoji where
     <*> v .:? "managed"       .!= False
     <*> v .:? "animated"      .!= False
 
+data instance Partial Emoji = PartialEmoji
+  { id   :: Snowflake Emoji
+  , name :: Text
+  } deriving (Eq, Show, Generic)
+
+instance ToJSON (Partial Emoji) where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON (Partial Emoji) where
+  parseJSON = genericParseJSON jsonOptions
+
+
 data Role = Role
   { id          :: Snowflake Role
   , name        :: Text
@@ -859,14 +879,39 @@ data Reaction = Reaction
   , channelID :: Snowflake Channel
   , messageID :: Snowflake Message
   , guildID   :: Maybe (Snowflake Guild)
-  , emoji     :: Emoji
+  , emoji     :: Either (Partial Emoji) Text
   } deriving (Eq, Show, Generic)
 
 instance ToJSON Reaction where
-  toEncoding = genericToEncoding jsonOptions
+  toEncoding Reaction {userID, channelID, messageID, guildID, emoji} =
+    pairs ("user_id" .= userID
+           <> "channel_id" .= channelID
+           <> "message_id" .= messageID
+           <> "guild_id" .= guildID
+           <> case emoji of
+                 Left emoji -> "emoji" .= emoji
+                 Right emoji -> "emoji" .= (("name" .= emoji) :: Object))
 
 instance FromJSON Reaction where
-  parseJSON = genericParseJSON jsonOptions
+  parseJSON = withObject "Reaction" $ \v -> do
+    emoji <- v .: "emoji"
+
+    emojiID :: Maybe (Snowflake Emoji) <- emoji .:? "id"
+    emojiName :: Text <- emoji .: "name"
+
+    let emoji =
+          case emojiID of
+            Just id ->
+              Left $ PartialEmoji id emojiName
+            Nothing ->
+              Right emojiName
+
+    Reaction
+      <$> v .: "user_id"
+      <*> v .: "channel_id"
+      <*> v .: "message_id"
+      <*> v .:? "guild_id"
+      <*> pure emoji
 
 
 data StatusType
@@ -888,25 +933,20 @@ instance FromJSON StatusType where
 
 
 data Presence = Presence
-  { user       :: Partial User
-  , roles      :: [Snowflake Role]
-  , game       :: Maybe Activity
-  , guildID    :: Maybe (Snowflake Guild)
-  , status     :: Maybe StatusType
-  , activities :: [Activity]
+  { user         :: Partial User
+  , roles        :: Maybe [Snowflake Role]
+  , game         :: Maybe Activity
+  , guildID      :: Snowflake Guild
+  , status       :: Maybe StatusType
+  , activities   :: Maybe [Activity]
+  , clientStatus :: Maybe ClientStatus
   } deriving (Eq, Show, Generic)
 
 instance ToJSON Presence where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON Presence where
-  parseJSON = withObject "Presence" $ \v -> Presence
-    <$> v .: "user"
-    <*> v .:? "roles"      .!= []
-    <*> v .:? "game"
-    <*> v .:? "guild_id"
-    <*> v .:? "status"
-    <*> v .:? "activities" .!= []
+  parseJSON = genericParseJSON jsonOptions
 
 
 data ActivityType
@@ -1006,4 +1046,18 @@ instance ToJSON ActivitySecrets where
   toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON ActivitySecrets where
+  parseJSON = genericParseJSON jsonOptions
+
+
+data ClientStatus = ClientStatus
+  { desktop :: Maybe Text
+  , mobile :: Maybe Text
+  , web :: Maybe Text
+  } deriving (Eq, Show, Generic)
+
+
+instance ToJSON ClientStatus where
+  toEncoding = genericToEncoding jsonOptions
+
+instance FromJSON ClientStatus where
   parseJSON = genericParseJSON jsonOptions
