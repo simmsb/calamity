@@ -18,6 +18,7 @@ module Prelude
   , trace
   , jsonOptions
   , jsonOptionsKeepNothing
+  , whenJust
   )
 where
 
@@ -79,3 +80,6 @@ jsonOptionsKeepNothing = defaultOptions
   , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
   , omitNothingFields  = False
   }
+
+whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
+whenJust = flip $ maybe (pure ())

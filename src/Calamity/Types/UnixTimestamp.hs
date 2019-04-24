@@ -2,6 +2,8 @@
 
 module Calamity.Types.UnixTimestamp
   ( UnixTimestamp(..)
+  , unixToMilliseconds
+  , millisecondsToUnix
   )
 where
 
@@ -14,18 +16,30 @@ import           Data.Time.Clock.POSIX
 newtype UnixTimestamp = UnixTimestamp { unUnixTimestamp :: UTCTime }
   deriving (Show, Eq, Generic)
 
+unixToMilliseconds :: UnixTimestamp -> Word64
+unixToMilliseconds = unUnixTimestamp
+                 >>> utcTimeToPOSIXSeconds
+                 >>> toRational
+                 >>> (* 1000)
+                 >>> round
+
+millisecondsToUnix :: Word64 -> UnixTimestamp
+millisecondsToUnix = toRational
+                     >>> fromRational
+                     >>> (/ 1000)
+                     >>> posixSecondsToUTCTime
+                     >>> UnixTimestamp
+
 instance ToJSON UnixTimestamp where
   toEncoding = unUnixTimestamp
                >>> utcTimeToPOSIXSeconds
                >>> toRational
-               >>> (* 1000)
                >>> round
                >>> word64
 
 instance FromJSON UnixTimestamp where
   parseJSON = withScientific "UnixTimestamp" $
     toRational
-    >>> (/ 1000)
     >>> fromRational
     >>> posixSecondsToUTCTime
     >>> UnixTimestamp

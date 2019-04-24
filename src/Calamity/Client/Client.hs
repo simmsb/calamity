@@ -10,10 +10,10 @@ where
 
 import           Control.Concurrent.Async       ( forConcurrently_ )
 import           Control.Concurrent.STM.TVar
+import           Data.Default
 import qualified Data.HashMap.Lazy             as LH
 import           Data.Maybe
 import qualified Data.TypeRepMap               as TM
-import           Data.Default
 import qualified StmContainers.Set             as TS
 import qualified Streamly.Prelude              as S
 import qualified System.Log.Simple             as SLS
@@ -23,8 +23,8 @@ import           Calamity.Client.Types
 import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.DispatchEvents
 import           Calamity.Types.General
-import           Calamity.Types.Snowflake
 import           Calamity.Types.MessageStore
+import           Calamity.Types.Snowflake
 
 
 -- TODO: merge event handlers with default
@@ -80,7 +80,7 @@ handleEvent data' = do
   cache'   <- asks cache
   (oldCache, newCache) <- liftIO . atomically $ do
     oldCache <- readTVar cache'
-    let newCache = updateCache oldCache data'
+    let newCache = execState (updateCache data') oldCache
     writeTVar cache' newCache
     pure (oldCache, newCache)
 
@@ -218,37 +218,60 @@ handleActions _ ns eh (MessageReactionRemove reaction) = do
   pure $ map (\f -> f message reaction) (unwrapEvent @"messagereactionremove" eh)
 
 handleActions os _ eh (MessageReactionRemoveAll MessageReactionRemoveAllData {messageID}) = do
-  oldMsg <- getMessage (coerceSnowflake $ messageID) $ os ^. #messages
+  oldMsg <- getMessage (coerceSnowflake messageID) $ os ^. #messages
   pure $ map ($ oldMsg) (unwrapEvent @"messagereactionremoveall" eh)
 
 handleActions os ns eh (PresenceUpdate Presence {user, guildID}) = do
   oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
   newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
-  let userUpdates = if (oldMember ^. #user /= newMember ^. #user)
+  let userUpdates = if oldMember ^. #user /= newMember ^. #user
         then map (\f -> f (oldMember ^. #user) (newMember ^. #user)) (unwrapEvent @"userupdate" eh)
         else mempty
   pure $ userUpdates <> map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
 
--- -- TODO: the rest of these
-handleActions _ _ _ _ = pure []
+handleActions _ ns eh (TypingStart TypingStartData {channelID, guildID, userID, timestamp}) = do
+  guild <- ns ^? #guilds . at guildID . _Just
+  channel <- ns ^? #channels . at channelID . _Just
+  member <- guild ^? #members . at (coerceSnowflake userID) . _Just
+  pure $ map (\f -> f channel member timestamp) (unwrapEvent @"typingstart" eh)
+
+handleActions os ns eh (UserUpdate _) = do
+  oldUser <- os ^? #user . _Just
+  newUser <- ns ^? #user . _Just
+  pure $ map (\f -> f oldUser newUser) (unwrapEvent @"userupdate" eh)
+
+handleActions _ _ _ _ = Nothing -- pure []
 
 
 
 -- TODO: actually update the cache
-updateCache :: Cache -> DispatchData -> Cache
-updateCache cache (MessageCreate msg) =
-  cache & #messages %~ addMessage msg
+updateCache :: DispatchData -> State Cache ()
+updateCache (Ready ReadyData {user}) =
+  #user ?= user
 
-updateCache cache (MessageUpdate newMsg) = fromMaybe cache $ do
+updateCache (ChannelCreate chan) = do
+  #channels . at (chan ^. #id) ?= chan
+  whenJust (chan ^. #guildID) $ \guildID ->
+    #guilds . at guildID . _Just . #channels . at (chan ^. #id) ?= chan
+
+-- TODO: Mergechannel stuff
+-- TODO: we really should break up Types.General into
+--       separate modules for each discord object
+
+updateCache (MessageCreate msg) =
+  #messages %= addMessage msg
+
+updateCache (MessageUpdate newMsg) = do
   let id = coerceSnowflake $ newMsg ^. #id
-  oldMsg <- getMessage id (cache ^. #messages)
-  let newMsg' = mergeMessage oldMsg newMsg
-  pure $ cache & #messages %~ (addMessage newMsg' . dropMessage id)
+  oldMsg <- getMessage id <$> use #messages
+  whenJust oldMsg $ \oldMsg' ->
+    let newMsg' = mergeMessage oldMsg' newMsg
+    in #messages %= addMessage newMsg' . dropMessage id
 
-updateCache cache (MessageDelete MessageDeleteData {id}) =
-  cache & #messages %~ dropMessage id
+updateCache (MessageDelete MessageDeleteData {id}) =
+  #messages %= dropMessage id
 
-updateCache cache (MessageDeleteBulk MessageDeleteBulkData {ids}) =
-  cache & #messages %~ flip (foldl $ flip dropMessage) ids
+updateCache (MessageDeleteBulk MessageDeleteBulkData {ids}) =
+  #messages %= flip (foldl $ flip dropMessage) ids
 
-updateCache cache data' = cache -- TODO
+updateCache data' = pure () -- TODO

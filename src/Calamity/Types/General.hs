@@ -1004,10 +1004,16 @@ data ActivityTimestamps = ActivityTimestamps
   } deriving (Eq, Show, Generic)
 
 instance ToJSON ActivityTimestamps where
-  toEncoding = genericToEncoding jsonOptions
+  toEncoding ActivityTimestamps {start, end} =
+    pairs ("start" .= (unixToMilliseconds <$> start)
+           <> "end" .= (unixToMilliseconds <$> end))
 
 instance FromJSON ActivityTimestamps where
-  parseJSON = genericParseJSON jsonOptions
+  parseJSON = withObject "ActivityTimestamps" $ \v -> do
+    start <- millisecondsToUnix <<$>> v .:? "start"
+    end   <- millisecondsToUnix <<$>> v .:? "end"
+
+    pure $ ActivityTimestamps start end
 
 
 data ActivityParty = ActivityParty

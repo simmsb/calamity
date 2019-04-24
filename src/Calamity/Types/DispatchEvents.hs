@@ -6,6 +6,7 @@ import           Data.Aeson
 import           Data.Time
 
 import           Calamity.Types.General
+import           Calamity.Types.UnixTimestamp
 import           Calamity.Types.Snowflake
 
 data DispatchData
@@ -37,7 +38,7 @@ data DispatchData
   | MessageReactionRemoveAll MessageReactionRemoveAllData
   | PresenceUpdate Presence
   | TypingStart TypingStartData
-  | UserUpdate UserUpdateData
+  | UserUpdate User
   | VoiceStateUpdate VoiceStateUpdateData
   | VoiceServerUpdate VoiceServerUpdateData
   | WebhooksUpdate WebhooksUpdateData
@@ -82,7 +83,7 @@ instance FromJSON GuildEmojisUpdateData where
   parseJSON = genericParseJSON jsonOptions
 
 
-data GuildIntegrationsUpdateData = GuildIntegrationsUpdateData
+newtype GuildIntegrationsUpdateData = GuildIntegrationsUpdateData
   { guildID :: Snowflake Guild
   } deriving (Show, Generic)
 
@@ -174,11 +175,16 @@ instance FromJSON MessageReactionRemoveAllData where
   parseJSON = genericParseJSON jsonOptions
 
 
-newtype TypingStartData = TypingStartData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+data TypingStartData = TypingStartData
+  { channelID :: Snowflake Channel
+  , guildID   :: Snowflake Guild
+  , userID    :: Snowflake User
+  , timestamp :: UnixTimestamp
+  } deriving (Show, Generic)
 
-newtype UserUpdateData = UserUpdateData Value
-  deriving (Show, Generic, ToJSON, FromJSON)
+instance FromJSON TypingStartData where
+  parseJSON = genericParseJSON jsonOptions
+
 
 newtype VoiceStateUpdateData = VoiceStateUpdateData Value
   deriving (Show, Generic, ToJSON, FromJSON)
