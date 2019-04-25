@@ -1,6 +1,6 @@
 -- | module containing all dispatch events
 
-module Calamity.Types.DispatchEvents where
+module Calamity.Gateway.DispatchEvents where
 
 import           Data.Aeson
 import           Data.Time

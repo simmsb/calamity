@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ba52c47eec048b4128e553bcc7ee3a47218b233740cd79dbf57f2a2162f0366f
+-- hash: f4ce46e9e7dc89ecaad61b19e705dcd70e1b24adc9098c1fe66ac778203b9963
 
 name:           calamity
 version:        0.1.0.0
@@ -33,6 +33,7 @@ library
       Calamity.Client.ShardManager
       Calamity.Client.Types
       Calamity.Gateway
+      Calamity.Gateway.DispatchEvents
       Calamity.Gateway.Shard
       Calamity.Gateway.Types
       Calamity.HTTP.Channel
@@ -41,11 +42,11 @@ library
       Calamity.HTTP.Request
       Calamity.HTTP.Route
       Calamity.HTTP.Types
-      Calamity.Types.DispatchEvents
       Calamity.Types.General
       Calamity.Types.MessageStore
       Calamity.Types.Snowflake
       Calamity.Types.SnowflakeMap
+      Calamity.Types.Token
       Calamity.Types.UnixTimestamp
       Prelude
   other-modules:

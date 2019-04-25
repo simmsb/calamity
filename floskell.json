@@ -1,0 +1,256 @@
+{
+  "style": "gibiansky",
+  "extensions": [
+    "Arrows",
+    "BangPatterns",
+    "BinaryLiterals",
+    "CApiFFI",
+    "CPP",
+    "ConstrainedClassMethods",
+    "ConstraintKinds",
+    "DataKinds",
+    "DatatypeContexts",
+    "DefaultSignatures",
+    "DeriveAnyClass",
+    "DeriveDataTypeable",
+    "DeriveFoldable",
+    "DeriveFunctor",
+    "DeriveGeneric",
+    "DeriveTraversable",
+    "DerivingStrategies",
+    "DerivingVia",
+    "DisambiguateRecordFields",
+    "DoAndIfThenElse",
+    "DoRec",
+    "EmptyCase",
+    "EmptyDataDecls",
+    "ExistentialQuantification",
+    "ExplicitForAll",
+    "ExplicitNamespaces",
+    "ExtendedDefaultRules",
+    "ExtensibleRecords",
+    "FlexibleContexts",
+    "FlexibleInstances",
+    "ForeignFunctionInterface",
+    "FunctionalDependencies",
+    "GADTs",
+    "GHCForeignImportPrim",
+    "GeneralizedNewtypeDeriving",
+    "Generics",
+    "HereDocuments",
+    "ImplicitParams",
+    "ImplicitPrelude",
+    "ImpredicativeTypes",
+    "IncoherentInstances",
+    "InstanceSigs",
+    "InterruptibleFFI",
+    "JavaScriptFFI",
+    "KindSignatures",
+    "LambdaCase",
+    "LiberalTypeSynonyms",
+    "MagicHash",
+    "MonoLocalBinds",
+    "MonoPatBinds",
+    "MonomorphismRestriction",
+    "MultiParamTypeClasses",
+    "MultiWayIf",
+    "NPlusKPatterns",
+    "NamedFieldPuns",
+    "NamedWildCards",
+    "NewQualifiedOperators",
+    "NondecreasingIndentation",
+    "OverlappingInstances",
+    "OverloadedLabels",
+    "OverloadedStrings",
+    "PackageImports",
+    "ParallelArrays",
+    "ParallelListComp",
+    "PartialTypeSignatures",
+    "PatternGuards",
+    "PatternSignatures",
+    "PatternSynonyms",
+    "PolyKinds",
+    "PolymorphicComponents",
+    "PostfixOperators",
+    "QuasiQuotes",
+    "Rank2Types",
+    "RankNTypes",
+    "RebindableSyntax",
+    "RecordPuns",
+    "RecordWildCards",
+    "RecursiveDo",
+    "RegularPatterns",
+    "RelaxedPolyRec",
+    "RestrictedTypeSynonyms",
+    "RoleAnnotations",
+    "Safe",
+    "SafeImports",
+    "ScopedTypeVariables",
+    "StandaloneDeriving",
+    "Strict",
+    "StrictData",
+    "TemplateHaskell",
+    "TransformListComp",
+    "Trustworthy",
+    "TupleSections",
+    "TypeApplications",
+    "TypeFamilies",
+    "TypeFamilyDependencies",
+    "TypeInType",
+    "TypeOperators",
+    "TypeSynonymInstances",
+    "UnboxedSums",
+    "UnboxedTuples",
+    "UndecidableInstances",
+    "UnicodeSyntax",
+    "UnliftedFFITypes",
+    "ViewPatterns",
+    "XmlSyntax"
+  ],
+  "fixities": [],
+  "formatting": {
+    "op": {
+      "&": {
+        "force-linebreak": true,
+        "spaces": "both",
+        "linebreaks": "before"
+      },
+      "@": {
+        "force-linebreak": false,
+        "spaces": "none",
+        "linebreaks": "none"
+      },
+      ",": {
+        "force-linebreak": false,
+        "spaces": "after",
+        "linebreaks": "before"
+      },
+      ":": {
+        "force-linebreak": false,
+        "spaces": "none",
+        "linebreaks": "before"
+      },
+      "=": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "after"
+      },
+      "default": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "before"
+      },
+      ". in expression": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "before"
+      },
+      ". in type": {
+        "force-linebreak": false,
+        "spaces": "after",
+        "linebreaks": "after"
+      },
+      "record": {
+        "force-linebreak": true,
+        "spaces": "after",
+        "linebreaks": "none"
+      },
+      "record in declaration": {
+        "force-linebreak": true,
+        "spaces": "after",
+        "linebreaks": "after"
+      }
+    },
+    "group": {
+      "(# in pattern": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "none"
+      },
+      "default": {
+        "force-linebreak": false,
+        "spaces": "none",
+        "linebreaks": "none"
+      },
+      "* in other": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "none"
+      },
+      "{": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "none"
+      },
+      "{ in declaration": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "after"
+      },
+      "(# in expression": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "none"
+      }
+    },
+    "layout": {
+      "infix-app": "flex",
+      "if": "vertical",
+      "import-spec-list": "flex",
+      "con-decls": "vertical",
+      "declaration": "flex",
+      "app": "flex",
+      "let": "vertical",
+      "record": "vertical",
+      "type": "try-oneline",
+      "export-spec-list": "vertical",
+      "list-comp": "try-oneline"
+    },
+    "penalty": {
+      "overfull": 10,
+      "indent": 1,
+      "overfull-once": 200,
+      "max-line-length": 120,
+      "linebreak": 100
+    },
+    "indent": {
+      "deriving": 2,
+      "if": "align",
+      "let-binds": "align",
+      "import-spec-list": "align",
+      "onside": 2,
+      "where": 2,
+      "typesig": "align",
+      "do": "indent-by 2",
+      "app": "indent-by 2",
+      "case": "indent-by 2",
+      "let-in": "align",
+      "where-binds": "indent-by 2",
+      "let": "align",
+      "export-spec-list": "indent-by 4",
+      "multi-if": "indent-by 2",
+      "class": "indent-by 2"
+    },
+    "align": {
+      "let-binds": true,
+      "where": true,
+      "limits": [40, 45],
+      "case": true,
+      "import-module": true,
+      "import-spec": true,
+      "class": false,
+      "record-fields": true
+    },
+    "options": {
+      "sort-pragmas": true,
+      "flexible-oneline": false,
+      "decl-no-blank-lines": [],
+      "split-language-pragmas": true,
+      "align-sum-type-decl": true,
+      "sort-import-lists": true,
+      "preserve-vertical-space": true,
+      "sort-imports": true
+    }
+  },
+  "language": "Haskell2010"
+}

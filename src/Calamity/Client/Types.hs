@@ -1,55 +1,55 @@
 -- | Types for the client
-
 {-# LANGUAGE TypeApplications #-}
+
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 module Calamity.Client.Types
-  ( Client(..)
-  , BotM(..)
-  , EventHandlers(..)
-  , EventHandler(..)
-  , EHType
-  , runBotM
-  , EventM
-  , runEventM
-  , syncEventM
-  , Cache(..)
-  )
-where
+    ( Client(..)
+    , BotM(..)
+    , EventHandlers(..)
+    , EventHandler(..)
+    , EHType
+    , runBotM
+    , EventM
+    , runEventM
+    , syncEventM
+    , Cache(..) ) where
 
--- import           Control.Monad.Trans.Control
--- import           Control.Monad.Base
-import           Control.Concurrent.STM.TQueue
-import           Control.Concurrent.STM.TVar
-import           Control.Monad.Catch
-import           Control.Monad.Trans.Reader     ( runReaderT )
-import           Data.Default
-import qualified Data.HashMap.Lazy             as LH
-import           Data.Time
-import           Data.TypeRepMap                ( TypeRepMap
-                                                , WrapTypeable(..)
-                                                )
-import           GHC.Exts                       ( fromList )
-import qualified GHC.TypeLits                  as TL
-import qualified StmContainers.Set             as TS
-import qualified Streamly                      as S
-
+import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
 import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.General
+import           Calamity.Types.MessageStore
 import           Calamity.Types.Snowflake
 import           Calamity.Types.UnixTimestamp
-import           Calamity.Types.DispatchEvents
-import           Calamity.Types.MessageStore
 
+import           Control.Concurrent.STM.TQueue
+import           Control.Concurrent.STM.TVar
+import           Control.Monad.Catch
+import           Control.Monad.Trans.Reader      ( runReaderT )
+
+import           Data.Default
+import qualified Data.HashMap.Lazy               as LH
+import qualified Data.HashSet                    as LS
+import           Data.Time
+import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) )
+
+import           GHC.Exts                        ( fromList )
+import qualified GHC.TypeLits                    as TL
+
+import qualified StmContainers.Set               as TS
+
+import qualified Streamly                        as S
 
 data Cache = Cache
-  { user     :: Maybe User
-  , guilds   :: LH.HashMap (Snowflake Guild) Guild
-  , dms      :: LH.HashMap (Snowflake DMChannel) DMChannel
-  , channels :: LH.HashMap (Snowflake Channel) Channel
-  , messages :: MessageStore
-  } deriving (Generic, Show)
+  { user              :: Maybe User
+  , guilds            :: LH.HashMap (Snowflake Guild) Guild
+  , dms               :: LH.HashMap (Snowflake DMChannel) DMChannel
+  , channels          :: LH.HashMap (Snowflake Channel) Channel
+  , unavailableGuilds :: LS.HashSet (Snowflake Guild)
+  , messages          :: MessageStore
+  }
+  deriving ( Generic, Show )
 
 data Client = Client
   { shards        :: TVar [(Shard, Async ())] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
@@ -61,17 +61,18 @@ data Client = Client
   , cache         :: TVar Cache
   , activeTasks   :: TS.Set (Async ()) -- ^ events currently being handled
   , eventHandlers :: EventHandlers
-  } deriving (Generic)
+  }
+  deriving ( Generic )
 
 newtype BotM a = BotM
   { unBotM :: LogT (ReaderT Client IO) a
-  } deriving (Applicative, Monad, MonadIO, MonadThrow,
-              MonadCatch, MonadMask, MonadLog,
-              Functor, MonadReader Client)
+  }
+  deriving (Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, Functor, MonadReader Client)
 
 -- | Let's us have `MonadReader Client`
-instance {-# OVERLAPPABLE #-} MonadReader a m => MonadReader a (LogT m) where
-  ask = lift ask
+instance {-# OVERLAPPABLE #-}MonadReader a m => MonadReader a (LogT m) where
+  ask       = lift ask
+
   local f m = do
     b <- ask
     lift $ local f $ runReaderT (runLogT m) b
@@ -122,9 +123,9 @@ runBotM cstate logEnv = (`runReaderT` cstate) . withLog logEnv . unBotM
 -- At the time of the invokation
 newtype EventM a = EventM
   { unEventM :: StateT Cache BotM a
-  } deriving (Applicative, Monad, MonadIO, MonadThrow,
-              MonadCatch, MonadMask, MonadLog,
-              Functor, MonadState Cache, MonadReader Client)
+  }
+  deriving (Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, Functor, MonadState Cache
+          , MonadReader Client)
 
 -- deriving instance MonadReader Client m => StateT s (LogT (ReaderT Client m))
 
@@ -135,12 +136,14 @@ runEventM cache = (`evalStateT` cache) . unEventM
 syncEventM :: EventM ()
 syncEventM = do
   client <- ask
-  cache  <- liftIO . readTVarIO . cache $ client
+  cache <- liftIO . readTVarIO . cache $ client
   put cache
 
 newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
-newtype EventHandler d = EH { unwrapEventHandler :: [EHType d] }
+newtype EventHandler d = EH
+  { unwrapEventHandler :: [EHType d]
+  }
 
 type family EHType d where
   EHType "ready"                    = ReadyData                          -> EventM ()

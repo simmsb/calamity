@@ -1,39 +1,34 @@
 -- |
-
 {-# LANGUAGE RecursiveDo #-}
 
 module Calamity.Gateway.Shard
-  ( Shard(..)
-  , newShard
-  )
-where
+    ( Shard(..)
+    , newShard ) where
+
+import           Calamity.Gateway.DispatchEvents
+import           Calamity.Gateway.Types
+import           Calamity.Types.General
 
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Lens                   ( (.=) )
+import           Control.Lens                          ( (.=) )
 import           Control.Monad.State.Concurrent.Strict
 import           Control.Monad.Trans.Maybe
-import qualified Data.Aeson                    as A
-import           Data.Text                      ( stripPrefix )
-import           Data.Text.Strict.Lens
+
+import qualified Data.Aeson                            as A
 import           Data.Maybe
-import qualified System.Log.Simple             as SLS
-import           Network.WebSockets             ( Connection
-                                                , receiveData
-                                                , sendCloseCode
-                                                , sendTextData
-                                                , ConnectionException(..)
-                                                )
+import           Data.Text                             ( stripPrefix )
+import           Data.Text.Strict.Lens
+
+import           Network.WebSockets                    ( Connection, ConnectionException(..), receiveData, sendCloseCode
+                                                       , sendTextData )
+
+import qualified System.Log.Simple                     as SLS
+
 import           Wuss
 
-import           Calamity.Gateway.Types
-import           Calamity.Types.DispatchEvents
-import           Calamity.Types.General
-
-
 newShardState :: Shard -> ShardState
-newShardState shard =
-  ShardState shard Nothing Nothing False Nothing Nothing Nothing
+newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
 newShard :: Text -> Int -> Int -> Token -> Log -> TQueue DispatchData -> IO (Shard, Async ())
@@ -42,7 +37,7 @@ newShard gateway id count token logEnv evtQueue = mdo
   stateVar <- newTVarIO (newShardState shard)
   let shard = Shard id count gateway evtQueue cmdQueue' stateVar (rawToken token) thread'
 
-  let action = scope ("[ShardID: "+|id|+"]") shardLoop
+  let action = scope ("[ShardID: " +| id |+ "]") shardLoop
 
   thread' <- async . runShardM shard logEnv $ action
 
@@ -50,13 +45,14 @@ newShard gateway id count token logEnv evtQueue = mdo
 
 runShardM :: Shard -> Log -> ShardM a -> IO a
 runShardM shard logEnv = evalStateC' . withLog logEnv . unShardM
-  where evalStateC' s = evalStateC s (shard ^. #shardState)
+  where
+    evalStateC' s = evalStateC s (shard ^. #shardState)
 
 sendToWs :: SentDiscordMessage -> ShardM ()
 sendToWs data' = do
   wsConn <- fromJust <$> use #wsConn
   let encodedData = A.encode data'
-  debug $ "sending "+||data'||+" encoded to "+|| encodedData ||+" to gateway"
+  debug $ "sending " +|| data' ||+ " encoded to " +|| encodedData ||+ " to gateway"
   liftIO . sendTextData wsConn $ encodedData
   trace "done sending data"
 
@@ -66,7 +62,7 @@ untilResult m = m >>= \case
   Nothing -> untilResult m
 
 fromEither :: Either a a -> a
-fromEither (Left a)  = a
+fromEither (Left a) = a
 fromEither (Right a) = a
 
 fromEitherVoid :: Either a Void -> a
@@ -79,10 +75,10 @@ checkWSClose m = (Right <$> m) `catch` \case
   e@(CloseRequest code _) -> do
     print e
     if code `elem` [1000, 4004, 4010, 4011]
-    then pure . Left $ Restart
-    else throwIO e
+      then pure . Left $ Restart
+      else throwIO e
 
-  e -> throwIO e
+  e                       -> throwIO e
 
 -- | The loop a shard will run on
 shardLoop :: ShardM ()
@@ -242,10 +238,11 @@ shardLoop = do
 startHeartBeatLoop :: Int -> ShardM ()
 startHeartBeatLoop interval = do
   haltHeartBeat -- cancel any currently running hb thread
-  shard  <- use #shardS
+  shard <- use #shardS
   logEnv <- askLog
   -- TODO: we need to send a close to the ws depending on how we exited from the hb loop
-  void . liftIO . async $ finally (runShardM shard logEnv $ heartBeatLoop interval) (runShardM shard logEnv haltHeartBeat)
+  void . liftIO . async $ finally (runShardM shard logEnv $ heartBeatLoop interval)
+    (runShardM shard logEnv haltHeartBeat)
 
 haltHeartBeat :: ShardM ()
 haltHeartBeat = do
@@ -258,7 +255,7 @@ haltHeartBeat = do
 sendHeartBeat :: ShardM ()
 sendHeartBeat = do
   seqNum <- use #seqNum
-  debug $ "Sending heartbeat (seq: "+||seqNum||+")"
+  debug $ "Sending heartbeat (seq: " +|| seqNum ||+ ")"
   sendToWs $ HeartBeat seqNum
   #hbResponse .= False
 
