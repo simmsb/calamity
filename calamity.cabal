@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c8329242ec00964876de5abdf70f5a3844644b86154b89d94d514024a99d6cc4
+-- hash: 958037288e3479bf5114286058a73ccbb4461ca190dea0ca6a56811088135d85
 
 name:           calamity
 version:        0.1.0.0
@@ -104,6 +104,7 @@ executable test-calamity-exe
   hs-source-dirs:
       app
   default-extensions: AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
+  ghc-options: -threaded -rtsopts -with-rtsopts=-T -O3
   build-depends:
       aeson >=1.4
     , async >=2.2

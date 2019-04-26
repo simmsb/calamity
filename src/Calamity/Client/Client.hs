@@ -59,7 +59,7 @@ newClient token eventHandlers = do
 startClient :: Client -> IO ()
 startClient client = do
   logEnv <- newLog
-    (logCfg [("", SLS.Info), ("bot", SLS.Trace)])
+    (logCfg [("", SLS.Info), ("bot", SLS.Info)])
     [handler text coloredConsole]
   runBotM client logEnv . component "bot" $ do
     shardBot

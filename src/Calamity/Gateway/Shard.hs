@@ -75,8 +75,8 @@ checkWSClose m = (Right <$> m) `catch` \case
   e@(CloseRequest code _) -> do
     print e
     if code `elem` [1000, 4004, 4010, 4011]
-      then pure . Left $ Restart
-      else throwIO e
+      then pure . Left $ ShutDown
+      else pure . Left $ Restart
 
   e                       -> throwIO e
 

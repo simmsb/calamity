@@ -32,7 +32,7 @@ data ShardMsg
   deriving ( Show, Generic )
 
 data ReceivedDiscordMessage
-  = Dispatch Int DispatchData
+  = Dispatch Int !DispatchData
   | HeartBeatReq
   | Reconnect
   | InvalidSession Bool

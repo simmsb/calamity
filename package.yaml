@@ -61,11 +61,11 @@ executables:
   test-calamity-exe:
     main: Main.hs
     source-dirs: app
-    # ghc-options:
-      # - -threaded
-      # - -rtsopts
-      # - -with-rtsopts=-T
-      # - -O3
+    ghc-options:
+      - -threaded
+      - -rtsopts
+      - -with-rtsopts=-T
+      - -O3
     dependencies:
       - calamity
 
