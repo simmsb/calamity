@@ -16,7 +16,7 @@ data DispatchData
   | ChannelDelete Channel
   | ChannelPinsUpdate ChannelPinsUpdateData
   | GuildCreate Guild
-  | GuildUpdate Guild
+  | GuildUpdate UpdatedGuild
   | GuildDelete UnavailableGuild
   | GuildBanAdd GuildBanData
   | GuildBanRemove GuildBanData

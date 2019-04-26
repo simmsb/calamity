@@ -13,6 +13,7 @@ module Calamity.Types.General
     , GroupDM(..)
     , Category(..)
     , Guild(..)
+    , UpdatedGuild(..)
     , UnavailableGuild(..)
     , Member(..)
     , Message(..)
@@ -23,7 +24,6 @@ module Calamity.Types.General
     , Presence(..)
     , Embed(..)
     , Attachment(..)
-    , Partial(..)
     , formatToken
     , rawToken ) where
 
@@ -31,6 +31,7 @@ import           Calamity.Types.Snowflake
 import qualified Calamity.Types.SnowflakeMap  as SM
 import           Calamity.Types.SnowflakeMap  ( SnowflakeMap(..) )
 import           Calamity.Types.UnixTimestamp
+import           Calamity.Types.Partial
 
 import           Control.Monad
 
@@ -58,8 +59,6 @@ fuseTup2 (a, b) = do
   a' <- a
   b' <- b
   pure (a', b')
-
-data family Partial t
 
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
@@ -252,6 +251,58 @@ data Guild = Guild
   , presences                   :: [Presence]
   } deriving (Eq, Show, Generic)
 
+data UpdatedGuild = UpdatedGuild
+  { id                          :: Snowflake Guild
+  , name                        :: Text
+  , icon                        :: Maybe Text
+  , splash                      :: Maybe Text
+  , owner                       :: Maybe Bool
+  , ownerID                     :: Snowflake User
+  , permissions                 :: Maybe Word64
+  , region                      :: Text
+  , afkChannelID                :: Maybe (Snowflake GuildChannel)
+  , afkTimeout                  :: Int
+  , embedEnabled                :: Maybe Bool
+  , embedChannelID              :: Maybe (Snowflake GuildChannel)
+  , verificationLevel           :: Int
+  , defaultMessageNotifications :: Int
+  , explicitContentFilter       :: Int
+  , roles                       :: SnowflakeMap Role
+  , emojis                      :: SnowflakeMap Emoji
+  , features                    :: [Text]
+  , mfaLevel                    :: Int
+  , applicationID               :: Maybe (Snowflake User)
+  , widgetEnabled               :: Maybe Bool
+  , widgetChannelID             :: Maybe (Snowflake GuildChannel)
+  , systemChannelID             :: Maybe (Snowflake GuildChannel)
+  }
+  deriving ( Eq, Show, Generic )
+
+instance FromJSON UpdatedGuild where
+  parseJSON = withObject "UpdatedGuild" $ \v -> UpdatedGuild
+    <$> v .: "id"
+    <*> v .: "name"
+    <*> v .: "icon"
+    <*> v .:? "splash"
+    <*> v .:? "owner"
+    <*> v .: "owner_id"
+    <*> v .:? "permissions"
+    <*> v .: "region"
+    <*> v .:? "afk_channel_id"
+    <*> v .: "afk_timeout"
+    <*> v .:? "embed_enabled"
+    <*> v .:? "embed_channel_id"
+    <*> v .: "verification_level"
+    <*> v .: "default_message_notifications"
+    <*> v .: "explicit_content_filter"
+    <*> v .: "roles"
+    <*> v .: "emojis"
+    <*> v .: "features"
+    <*> v .: "mfa_level"
+    <*> v .:? "application_id"
+    <*> v .:? "widget_enabled"
+    <*> v .:? "widget_channel_id"
+    <*> v .:? "system_channel_id"
 
 -- TODO: eventually use these for lenses
 -- buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a

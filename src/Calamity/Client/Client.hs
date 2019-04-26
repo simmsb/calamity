@@ -12,6 +12,7 @@ import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.General
 import           Calamity.Types.MessageStore
 import           Calamity.Types.Snowflake
+import qualified Calamity.Types.SnowflakeMap     as SM
 import           Calamity.Types.Updateable
 
 import           Control.Concurrent.Async        ( forConcurrently_ )
@@ -19,7 +20,6 @@ import           Control.Concurrent.STM.TVar
 import           Control.Lens                    ( (.=) )
 
 import           Data.Default
-import qualified Data.HashMap.Lazy               as LH
 import qualified Data.HashSet                    as LS
 import           Data.HashSet.Lens
 import           Data.Maybe
@@ -66,7 +66,7 @@ startClient client = do
     clientLoop
 
 emptyCache :: Cache
-emptyCache = Cache Nothing LH.empty LH.empty LH.empty LS.empty def
+emptyCache = Cache Nothing SM.empty SM.empty SM.empty LS.empty def
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
@@ -132,11 +132,13 @@ handleActions os _ eh (ChannelPinsUpdate ChannelPinsUpdateData { channelID, last
   chan <- os ^? #channels . at channelID . _Just
   pure $ map (\f -> f chan lastPinTimestamp) (unwrapEvent @"channelpinsupdate" eh)
 
-handleActions _ _ eh (GuildCreate guild) = pure $ map ($ guild) (unwrapEvent @"guildcreate" eh)
+handleActions _ ns eh (GuildCreate guild) = do
+  let isNew = ns ^. #unavailableGuilds . contains (guild ^. #id)
+  pure $ map (\f -> f guild isNew) (unwrapEvent @"guildcreate" eh)
 
 handleActions os ns eh (GuildUpdate guild) = do
-  oldGuild <- os ^? #guilds . at (getID guild) . _Just
-  newGuild <- ns ^? #guilds . at (getID guild) . _Just
+  oldGuild <- os ^? #guilds . at (coerceSnowflake $ guild ^. #id) . _Just
+  newGuild <- ns ^? #guilds . at (coerceSnowflake $ guild ^. #id) . _Just
   pure $ map (\f -> f oldGuild newGuild) (unwrapEvent @"guildupdate" eh)
 
 -- NOTE: Guild will be deleted in the new cache if unavailable was false
@@ -257,12 +259,33 @@ updateCache (ChannelCreate chan) = do
   #channels . at (chan ^. #id) ?= chan
   whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels . at (chan ^. #id) ?= chan
 
+updateCache (ChannelUpdate chan) = do
+  #channels . at (chan ^. #id) . _Just %= update chan
+  whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels . at (chan ^. #id) . _Just
+    %= update chan
+
+updateCache (ChannelDelete chan) = do
+  #channels %= sans (chan ^. #id)
+  whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels %= sans (chan ^. #id)
+
+updateCache (GuildCreate guild) = do
+  #guilds . at (guild ^. #id) ?= guild
+  -- also insert all channels from this guild
+  #channels %= SM.union (guild ^. #channels)
+
+updateCache (GuildUpdate guild) =
+  #guilds . at (guild ^. #id) . _Just %= update guild
+
+updateCache (GuildDelete guild) = do
+  #guilds %= sans (guild ^. #id)
+  #channels %= SM.filter (\c -> c ^. #guildID /= Just (guild ^. #id))
+
 updateCache (MessageCreate msg) = #messages %= addMessage msg
 
 updateCache (MessageUpdate newMsg) = do
   let id = coerceSnowflake $ newMsg ^. #id
   oldMsg <- getMessage id <$> use #messages
-  whenJust oldMsg $ \oldMsg' -> let newMsg' = update oldMsg' newMsg
+  whenJust oldMsg $ \oldMsg' -> let newMsg' = update newMsg oldMsg'
                                 in #messages %= addMessage newMsg' . dropMessage id
 
 updateCache (MessageDelete MessageDeleteData { id }) = #messages %= dropMessage id

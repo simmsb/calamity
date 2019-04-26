@@ -1,28 +1,28 @@
 -- | Module for custom instance of Data.HashMap.Lazy that decodes from any list of objects that have an id field
-
 module Calamity.Types.SnowflakeMap where
-
-import           Control.Lens.At
-import           Control.Lens.Wrapped
-import           Data.Aeson                     ( FromJSON(..)
-                                                , ToJSON(..)
-                                                , withArray
-                                                )
-import           Data.Data
-import           Data.HashMap.Lazy              ( HashMap )
-import qualified Data.HashMap.Lazy             as LH
-import           GHC.Exts                       ( IsList )
-import           Prelude                 hiding ( over )
-import           Unsafe.Coerce
 
 import           Calamity.Types.Snowflake
 
+import           Control.Lens.At
+import           Control.Lens.Wrapped
+
+import           Data.Aeson               ( FromJSON(..), ToJSON(..), withArray )
+import           Data.Data
+import           Data.HashMap.Lazy        ( HashMap )
+import qualified Data.HashMap.Lazy        as LH
+
+import           GHC.Exts                 ( IsList )
+
+import           Prelude                  hiding ( over )
+
+import           Unsafe.Coerce
+
 -- TODO: From/ToJSON instance
 -- TODO: has ID constraints, etc
-
 newtype SnowflakeMap a = SnowflakeMap
   { unSnowflakeMap :: HashMap (Snowflake a) a
-  } deriving (Generic, IsList, Eq, Data, Ord, Show, Semigroup, Monoid)
+  }
+  deriving ( Generic, IsList, Eq, Data, Ord, Show, Semigroup, Monoid )
 
 -- instance At (SnowflakeMap a) where
 --   at k f m = at (unSnowflakeMap k) f m
@@ -37,13 +37,16 @@ instance Traversable SnowflakeMap where
   traverse f = fmap (SnowflakeMap . coerceSnowflakeMap) . traverse f . unSnowflakeMap
 
 deriving instance NFData a => NFData (SnowflakeMap a)
+
 deriving instance Hashable a => Hashable (SnowflakeMap a)
 
 instance Wrapped (SnowflakeMap a) where
   type Unwrapped (SnowflakeMap a) = HashMap (Snowflake a) a
+
   _Wrapped' = iso unSnowflakeMap SnowflakeMap
 
 type instance (Index (SnowflakeMap a)) = Snowflake a
+
 type instance (IxValue (SnowflakeMap a)) = a
 
 instance SnowflakeMap a ~ t => Rewrapped (SnowflakeMap b) a

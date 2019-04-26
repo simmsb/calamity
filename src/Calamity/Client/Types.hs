@@ -21,6 +21,7 @@ import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.General
 import           Calamity.Types.MessageStore
 import           Calamity.Types.Snowflake
+import qualified Calamity.Types.SnowflakeMap     as SM
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Concurrent.STM.TQueue
@@ -29,7 +30,6 @@ import           Control.Monad.Catch
 import           Control.Monad.Trans.Reader      ( runReaderT )
 
 import           Data.Default
-import qualified Data.HashMap.Lazy               as LH
 import qualified Data.HashSet                    as LS
 import           Data.Time
 import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) )
@@ -43,9 +43,9 @@ import qualified Streamly                        as S
 
 data Cache = Cache
   { user              :: Maybe User
-  , guilds            :: LH.HashMap (Snowflake Guild) Guild
-  , dms               :: LH.HashMap (Snowflake DMChannel) DMChannel
-  , channels          :: LH.HashMap (Snowflake Channel) Channel
+  , guilds            :: SM.SnowflakeMap Guild
+  , dms               :: SM.SnowflakeMap DMChannel
+  , channels          :: SM.SnowflakeMap Channel
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
   , messages          :: MessageStore
   }
@@ -151,7 +151,7 @@ type family EHType d where
   EHType "channelupdate"            = Channel -> Channel                 -> EventM ()
   EHType "channeldelete"            = Channel                            -> EventM ()
   EHType "channelpinsupdate"        = Channel -> Maybe UTCTime           -> EventM ()
-  EHType "guildcreate"              = Guild                              -> EventM ()
+  EHType "guildcreate"              = Guild -> Bool                      -> EventM ()
   EHType "guildupdate"              = Guild -> Guild                     -> EventM ()
   EHType "guilddelete"              = Guild -> Bool                      -> EventM ()
   EHType "guildbanadd"              = Guild -> User                      -> EventM ()
