@@ -12,6 +12,7 @@ import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.General
 import           Calamity.Types.MessageStore
 import           Calamity.Types.Snowflake
+import           Calamity.Types.Updateable
 
 import           Control.Concurrent.Async        ( forConcurrently_ )
 import           Control.Concurrent.STM.TVar
@@ -261,7 +262,7 @@ updateCache (MessageCreate msg) = #messages %= addMessage msg
 updateCache (MessageUpdate newMsg) = do
   let id = coerceSnowflake $ newMsg ^. #id
   oldMsg <- getMessage id <$> use #messages
-  whenJust oldMsg $ \oldMsg' -> let newMsg' = mergeMessage oldMsg' newMsg
+  whenJust oldMsg $ \oldMsg' -> let newMsg' = update oldMsg' newMsg
                                 in #messages %= addMessage newMsg' . dropMessage id
 
 updateCache (MessageDelete MessageDeleteData { id }) = #messages %= dropMessage id

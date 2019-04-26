@@ -1,58 +1,56 @@
 -- | General data types
-
 module Calamity.Types.General
-  ( Token(..)
-  , VoiceState(..)
-  , User(..)
-  , FromChannel(..)
-  , Channel(..)
-  , TextChannel(..)
-  , VoiceChannel(..)
-  , GuildChannel(..)
-  , DMChannel(..)
-  , SingleDM(..)
-  , GroupDM(..)
-  , Category(..)
-  , Guild(..)
-  , UnavailableGuild(..)
-  , Member(..)
-  , Message(..)
-  , UpdatedMessage(..)
-  , Emoji(..)
-  , Role(..)
-  , Reaction(..)
-  , Presence(..)
-  , Embed(..)
-  , Attachment(..)
-  , Partial(..)
-  , formatToken
-  , rawToken
-  , mergeMessage
-  )
-where
+    ( Token(..)
+    , VoiceState(..)
+    , User(..)
+    , Channel(..)
+    , TextChannel(..)
+    , VoiceChannel(..)
+    , GuildChannel(..)
+    , DMChannel(..)
+    , ChannelType(..)
+    , SingleDM(..)
+    , GroupDM(..)
+    , Category(..)
+    , Guild(..)
+    , UnavailableGuild(..)
+    , Member(..)
+    , Message(..)
+    , UpdatedMessage(..)
+    , Emoji(..)
+    , Role(..)
+    , Reaction(..)
+    , Presence(..)
+    , Embed(..)
+    , Attachment(..)
+    , Partial(..)
+    , formatToken
+    , rawToken ) where
+
+import           Calamity.Types.Snowflake
+import qualified Calamity.Types.SnowflakeMap  as SM
+import           Calamity.Types.SnowflakeMap  ( SnowflakeMap(..) )
+import           Calamity.Types.UnixTimestamp
 
 import           Control.Monad
+
 import           Data.Aeson
 import           Data.Generics.Product.Fields
 import           Data.Scientific
 import           Data.Time
 
-import           Calamity.Types.UnixTimestamp
-import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap   as SM
-import           Calamity.Types.SnowflakeMap    ( SnowflakeMap(..) )
-
+-- Unfortunately all our data models have to go in here since we share a lot of types
 data Token
   = BotToken Text
   | UserToken Text
-  deriving (Generic, Show)
+  deriving ( Generic, Show )
 
 formatToken :: Token -> Text
-formatToken (BotToken  t) = "Bot " <> t
+formatToken (BotToken t) = "Bot " <> t
 formatToken (UserToken t) = t
 
 rawToken :: Token -> Text
-rawToken (BotToken  t) = t
+rawToken (BotToken t) = t
 rawToken (UserToken t) = t
 
 fuseTup2 :: Monad f => (f a, f b) -> f (a, b)
@@ -61,9 +59,7 @@ fuseTup2 (a, b) = do
   b' <- b
   pure (a', b')
 
-
 data family Partial t
-
 
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
@@ -76,7 +72,8 @@ data VoiceState = VoiceState
   , selfDeaf  :: Bool
   , selfMute  :: Bool
   , suppress  :: Bool
-  } deriving (Show, Eq, Generic)
+  }
+  deriving ( Show, Eq, Generic )
 
 instance ToJSON VoiceState where
   toEncoding = genericToEncoding jsonOptions
@@ -141,70 +138,11 @@ instance ToJSON Channel where
 instance FromJSON Channel where
   parseJSON = genericParseJSON jsonOptions
 
-type family TContains (a :: k) (l :: [k]) :: Constraint where
-  TContains k (k : _) = ()
-  TContains k (_ : r) = TContains k r
-
-defChannel :: TContains a '[Channel, GroupDM, SingleDM, VoiceChannel, TextChannel, Category, GuildChannel] => Snowflake a -> ChannelType -> Channel
-defChannel s t = Channel
-                  (coerceSnowflake s)
-                  t
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-                  Nothing
-
-
-class FromChannel a where
-  type FromRet a :: Type
-  type FromRet a = Either Text a
-
-  -- | Convert from a channel into a more specific channel type
-  fromChannel :: Proxy a -> Channel -> FromRet a
-
-  -- | Provide a guild ID to a channel when converting to a more specific type
-  fromChannelWithGuildID :: Snowflake Guild -> Proxy a -> Channel -> FromRet a
-  fromChannelWithGuildID guildID p channel = channel
-    & field @"guildID" ?~ guildID
-    & fromChannel p
-
-  -- | Convert from a specific channel type back to the generic channel type
-  toChannel :: a -> Channel
-
-ensureChannelType :: ChannelType -> ChannelType -> Either Text ()
-ensureChannelType a b | a == b = Right ()
-ensureChannelType a b = Left $ "Channel type "+||a||+" does not match expected "+||b||+""
-
-ensureField :: Text -> Maybe a -> Either Text a
-ensureField name = maybeToRight ("Missing field: " <> name)
-
 data SingleDM = SingleDM
   { id            :: Snowflake SingleDM
   , lastMessageID :: Maybe (Snowflake Message)
   , recipients    :: SnowflakeMap User
   } deriving (Show, Eq, Generic)
-
-instance FromChannel SingleDM where
-  fromChannel _ c = do
-    ensureChannelType (c ^. field @"type_") DMType
-    recipients <- ensureField "recipients" $ c ^. field @"recipients"
-    pure $ SingleDM (coerceSnowflake $ c ^. field @"id") (c ^. field @"lastMessageID") recipients
-
-  toChannel SingleDM {id, lastMessageID, recipients} = defChannel id DMType
-    & field @"lastMessageID" .~ lastMessageID
-    & field @"recipients"    ?~ recipients
 
 data GroupDM = GroupDM
   { id            :: Snowflake GroupDM
@@ -215,51 +153,18 @@ data GroupDM = GroupDM
   , name          :: Text
   } deriving (Show, Eq, Generic)
 
-instance FromChannel GroupDM where
-  fromChannel _ c = do
-    ensureChannelType (c ^. field @"type_") GroupDMType
-    owner      <- ensureField "ownerID"    $ c ^. field @"ownerID"
-    recipients <- ensureField "recipients" $ c ^. field @"recipients"
-    name       <- ensureField "name"       $ c ^. field @"name"
-    pure $ GroupDM (coerceSnowflake $ c ^. field @"id") owner (c ^. field @"lastMessageID") (c ^. field @"icon") recipients name
-
-  toChannel GroupDM {id, ownerID, lastMessageID, icon, recipients, name} = defChannel id GroupDMType
-    & field @"ownerID"       ?~ ownerID
-    & field @"lastMessageID" .~ lastMessageID
-    & field @"icon"          .~ icon
-    & field @"recipients"    ?~ recipients
-    & field @"name"          ?~ name
-
 data DMChannel
   = Single SingleDM
   | Group GroupDM
   deriving (Show, Eq, Generic)
-
-instance FromChannel DMChannel where
-  fromChannel _ c@Channel {type_} = case type_ of
-    DMType      -> Single <$> fromChannel (Proxy @SingleDM) c
-    GroupDMType -> Group  <$> fromChannel (Proxy @GroupDM) c
-    _           -> Left "Channel was not one of DMType or GroupDMType"
-
-  toChannel (Single dm) = toChannel dm
-  toChannel (Group  dm) = toChannel dm
 
 data GuildChannel
   = GuildTextChannel TextChannel
   | GuildVoiceChannel VoiceChannel
   deriving (Show, Eq, Generic)
 
-instance FromChannel GuildChannel where
-  fromChannel _ c@Channel {type_} = case type_ of
-    GuildTextType     -> GuildTextChannel  <$> fromChannel (Proxy @TextChannel)  c
-    GuildVoiceType    -> GuildVoiceChannel <$> fromChannel (Proxy @VoiceChannel) c
-    _                 -> Left "Channel was not one of GuildTextType, GuildVoiceType, or GuildCategoryType"
-
-  toChannel (GuildTextChannel  c) = toChannel c
-  toChannel (GuildVoiceChannel c) = toChannel c
-
 instance {-# OVERLAPS #-} HasID GuildChannel where
-  getID = coerceSnowflake . getID . toChannel
+  getID = coerceSnowflake . getID
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hsfield#L182)
 data ChannelType
@@ -289,25 +194,6 @@ data Category = Category
   , channels             :: SnowflakeMap GuildChannel
   } deriving (Show, Eq, Generic)
 
-instance FromChannel Category where
-  type FromRet Category = SnowflakeMap GuildChannel -> Either Text Category
-
-  fromChannel _ c channels = do
-    ensureChannelType (c ^. field @"type_") GuildCategoryType
-    permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
-    name                 <- ensureField "name"                 $ c ^. field @"name"
-    let nsfw             = fromMaybe False                     $ c ^. field @"nsfw"
-    position             <- ensureField "position"             $ c ^. field @"position"
-    guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
-    pure $ Category (coerceSnowflake $ c ^. field @"id") permissionOverwrites name nsfw position guildID channels
-
-  toChannel Category {id, permissionOverwrites, name, nsfw, position, guildID} = defChannel id GuildCategoryType
-    & field @"permissionOverwrites" ?~ permissionOverwrites
-    & field @"name"                 ?~ name
-    & field @"nsfw"                 ?~ nsfw
-    & field @"position"             ?~ position
-    & field @"guildID"              ?~ guildID
-
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
@@ -321,39 +207,6 @@ data TextChannel = TextChannel
   , parentID             :: Maybe (Snowflake Category)
   } deriving (Show, Eq, Generic)
 
-instance FromChannel TextChannel where
-  fromChannel _ c = do
-    ensureChannelType (c ^. field @"type_") GuildTextType
-    let id               =  coerceSnowflake $ c ^. field @"id"
-    guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
-    position             <- ensureField "position"             $ c ^. field @"position"
-    permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
-    name                 <- ensureField "name"                 $ c ^. field @"name"
-    let topic            =  fromMaybe ""                       $ c ^. field @"topic"
-    let nsfw             =  fromMaybe False                    $ c ^. field @"nsfw"
-    pure $ TextChannel id guildID position
-      permissionOverwrites name topic nsfw
-      (c ^. field @"lastMessageID")
-      (c ^. field @"rateLimitPerUser")
-      (c ^. field @"parentID")
-
-  toChannel TextChannel {id, guildID, position
-                        , permissionOverwrites
-                        , name, topic, nsfw
-                        , lastMessageID
-                        , rateLimitPerUser
-                        , parentID
-                        } = defChannel id GuildTextType
-    & field @"guildID"              ?~ guildID
-    & field @"position"             ?~ position
-    & field @"permissionOverwrites" ?~ permissionOverwrites
-    & field @"name"                 ?~ name
-    & field @"topic"                ?~ topic
-    & field @"nsfw"                 ?~ nsfw
-    & field @"lastMessageID"        .~ lastMessageID
-    & field @"rateLimitPerUser"     .~ rateLimitPerUser
-    & field @"parentID"             .~ parentID
-
 data VoiceChannel = VoiceChannel
   { id                   :: Snowflake VoiceChannel
   , guildID              :: Snowflake Guild
@@ -363,27 +216,6 @@ data VoiceChannel = VoiceChannel
   , bitrate              :: Int
   , userLimit            :: Int
   } deriving (Show, Eq, Generic)
-
-instance FromChannel VoiceChannel where
-  fromChannel _ c = do
-    ensureChannelType (c ^. field @"type_") GuildVoiceType
-    guildID              <- ensureField "guildID"              $ c ^. field @"guildID"
-    position             <- ensureField "position"             $ c ^. field @"position"
-    permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
-    name                 <- ensureField "name"                 $ c ^. field @"name"
-    bitrate              <- ensureField "bitrate"              $ c ^. field @"bitrate"
-    userLimit            <- ensureField "userLimit"            $ c ^. field @"userLimit"
-    pure $ VoiceChannel (coerceSnowflake $ c ^. field @"id") guildID position permissionOverwrites name bitrate userLimit
-
-  toChannel VoiceChannel {id, guildID, position, permissionOverwrites, name, bitrate, userLimit} = defChannel id GuildVoiceType
-    & field @"guildID"               ?~ guildID
-    & field @"position"              ?~ position
-    & field @"permissionOverwrites"  ?~ permissionOverwrites
-    & field @"name"                  ?~ name
-    & field @"bitrate"               ?~ bitrate
-    & field @"userLimit"             ?~ userLimit
-
--- TODO: move all these into internal/ external modules.
 
 data Guild = Guild
   { id                          :: Snowflake Guild
@@ -578,24 +410,6 @@ data UpdatedMessage = UpdatedMessage
 instance FromJSON UpdatedMessage where
   parseJSON = genericParseJSON jsonOptions
 
-
-mergeMessage :: Message -> UpdatedMessage -> Message
-mergeMessage o n = o
-  & updateF @"content"
-  & field @"editedTimestamp" .~ (o ^. field @"editedTimestamp")
-  & updateF @"tts"
-  & updateF @"mentionEveryone"
-  & updateF @"mentions"
-  & updateF @"mentionRoles"
-  & updateF @"attachments"
-  & updateF @"embeds"
-  & updateF @"reactions"
-  & updateF @"pinned"
-
-  where mergeF :: forall (f :: Symbol) a. (HasField f Message Message a a, HasField f UpdatedMessage UpdatedMessage (Maybe a) (Maybe a)) => a
-        mergeF = fromMaybe (o ^. field @f) (n ^. field @f)
-        updateF :: forall (f :: Symbol) a b. (HasField f Message Message a b, HasField f Message Message b b, HasField f UpdatedMessage UpdatedMessage (Maybe b) (Maybe b)) => Message -> Message
-        updateF = field @f .~ mergeF @f
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
 data MessageType
