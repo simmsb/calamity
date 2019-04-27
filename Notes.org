@@ -1,6 +1,7 @@
 #+TITLE: Notes
 
-* TODO Things to test
+* DONE Things to test
+CLOSED: [2019-04-27 Sat 16:25]
 - Test using text-short and intern for certain strings
 * CANCELLED Shards need some way of making requests (get gateway, etc)
 CLOSED: [2019-02-24 Sun 18:29]
@@ -20,5 +21,9 @@ CLOSED: [2019-03-05 Tue 02:44]
 * DONE Partial data
 CLOSED: [2019-03-29 Fri 13:38]
 
-* Presence info
+* DONE Presence info
+CLOSED: [2019-04-27 Sat 16:25]
 - linky :: https://discordapp.com/developers/docs/topics/gateway#presence-update
+* TODO Allow options for presences to be discarded
+- Pretty much nobody cares about presences on a bot but presences take up *a
+  lot* of data

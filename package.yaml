@@ -55,6 +55,8 @@ dependencies:
 - simple-log >= 0.9
 - scientific >= 0.3
 - pqueue >= 1.4
+- text-short >= 0.1
+- vector >= 0.12
 - ekg >= 0.4
 
 executables:
@@ -62,6 +64,7 @@ executables:
     main: Main.hs
     source-dirs: app
     ghc-options:
+      - -funbox-strict-fields
       - -threaded
       - -rtsopts
       - -with-rtsopts=-T
@@ -71,6 +74,7 @@ executables:
 
 library:
   ghc-options:
+    - -funbox-strict-fields
     - -Wall
   source-dirs: src
 

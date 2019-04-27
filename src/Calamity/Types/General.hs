@@ -27,11 +27,11 @@ module Calamity.Types.General
     , formatToken
     , rawToken ) where
 
+import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
 import qualified Calamity.Types.SnowflakeMap  as SM
 import           Calamity.Types.SnowflakeMap  ( SnowflakeMap(..) )
 import           Calamity.Types.UnixTimestamp
-import           Calamity.Types.Partial
 
 import           Control.Monad
 
@@ -39,6 +39,7 @@ import           Data.Aeson
 import           Data.Generics.Product.Fields
 import           Data.Scientific
 import           Data.Time
+import           Data.Vector                  ( Vector )
 
 -- Unfortunately all our data models have to go in here since we share a lot of types
 data Token
@@ -61,16 +62,16 @@ fuseTup2 (a, b) = do
   pure (a', b')
 
 data VoiceState = VoiceState
-  { guildID   :: Maybe (Snowflake Guild)
-  , channelID :: Maybe (Snowflake VoiceChannel)
-  , userID    :: Snowflake User
-  , member    :: Maybe Member
-  , sessionID :: Text
-  , deaf      :: Bool
-  , mute      :: Bool
-  , selfDeaf  :: Bool
-  , selfMute  :: Bool
-  , suppress  :: Bool
+  { guildID   :: !(Maybe (Snowflake Guild))
+  , channelID :: !(Maybe (Snowflake VoiceChannel))
+  , userID    :: !(Snowflake User)
+  , member    :: !(Maybe Member)
+  , sessionID :: !Text
+  , deaf      :: !Bool
+  , mute      :: !Bool
+  , selfDeaf  :: !Bool
+  , selfMute  :: !Bool
+  , suppress  :: !Bool
   }
   deriving ( Show, Eq, Generic )
 
@@ -81,16 +82,16 @@ instance FromJSON VoiceState where
   parseJSON = genericParseJSON jsonOptions
 
 data User = User
-  { id            :: Snowflake User
-  , username      :: Text
-  , discriminator :: Text
-  , bot           :: Maybe Bool
-  , avatar        :: Maybe Text
-  , mfaEnabled    :: Maybe Bool
-  , verified      :: Maybe Bool
-  , email         :: Maybe Text
-  , flags         :: Maybe Word64
-  , premiumType   :: Maybe Word64
+  { id            :: !(Snowflake User)
+  , username      :: !ShortText
+  , discriminator :: !ShortText
+  , bot           :: !(Maybe Bool)
+  , avatar        :: !(Maybe ShortText)
+  , mfaEnabled    :: !(Maybe Bool)
+  , verified      :: !(Maybe Bool)
+  , email         :: !(Maybe ShortText)
+  , flags         :: !(Maybe Word64)
+  , premiumType   :: !(Maybe Word64)
   } deriving (Show, Eq, Generic)
 
 instance ToJSON User where
@@ -111,24 +112,24 @@ instance FromJSON (Partial User) where
 
 
 data Channel = Channel
-  { id                   :: Snowflake Channel
-  , type_                :: ChannelType
-  , guildID              :: Maybe (Snowflake Guild)
-  , position             :: Maybe Int
-  , permissionOverwrites :: Maybe [Overwrite]
-  , name                 :: Maybe Text
-  , topic                :: Maybe Text
-  , nsfw                 :: Maybe Bool
-  , lastMessageID        :: Maybe (Snowflake Message)
-  , bitrate              :: Maybe Int
-  , userLimit            :: Maybe Int
-  , rateLimitPerUser     :: Maybe Int
+  { id                   :: !(Snowflake Channel)
+  , type_                :: !ChannelType
+  , guildID              :: !(Maybe (Snowflake Guild))
+  , position             :: !(Maybe Int)
+  , permissionOverwrites :: Maybe (Vector Overwrite)
+  , name                 :: !(Maybe ShortText)
+  , topic                :: !(Maybe ShortText)
+  , nsfw                 :: !(Maybe Bool)
+  , lastMessageID        :: !(Maybe (Snowflake Message))
+  , bitrate              :: !(Maybe Int)
+  , userLimit            :: !(Maybe Int)
+  , rateLimitPerUser     :: !(Maybe Int)
   , recipients           :: Maybe (SnowflakeMap User)
-  , icon                 :: Maybe Text
+  , icon                 :: !(Maybe ShortText)
   , ownerID              :: Maybe (Snowflake User)
   , applicationID        :: Maybe (Snowflake User)
   , parentID             :: Maybe (Snowflake Category)
-  , lastPinTimestamp     :: Maybe UTCTime
+  , lastPinTimestamp     :: !(Maybe UTCTime)
   } deriving (Show, Eq, Generic)
 
 instance ToJSON Channel where
@@ -147,9 +148,9 @@ data GroupDM = GroupDM
   { id            :: Snowflake GroupDM
   , ownerID       :: Snowflake User
   , lastMessageID :: Maybe (Snowflake Message)
-  , icon          :: Maybe Text
+  , icon          :: Maybe ShortText
   , recipients    :: SnowflakeMap User
-  , name          :: Text
+  , name          :: ShortText
   } deriving (Show, Eq, Generic)
 
 data DMChannel
@@ -185,8 +186,8 @@ instance FromJSON ChannelType where
 
 data Category = Category
   { id                   :: Snowflake Category
-  , permissionOverwrites :: [Overwrite]
-  , name                 :: Text
+  , permissionOverwrites :: Vector Overwrite
+  , name                 :: ShortText
   , nsfw                 :: Bool
   , position             :: Int
   , guildID              :: Snowflake Guild
@@ -197,9 +198,9 @@ data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
   , position             :: Int
-  , permissionOverwrites :: [Overwrite]
-  , name                 :: Text
-  , topic                :: Text
+  , permissionOverwrites :: Vector Overwrite
+  , name                 :: ShortText
+  , topic                :: ShortText
   , nsfw                 :: Bool
   , lastMessageID        :: Maybe (Snowflake Message)
   , rateLimitPerUser     :: Maybe Int
@@ -210,56 +211,56 @@ data VoiceChannel = VoiceChannel
   { id                   :: Snowflake VoiceChannel
   , guildID              :: Snowflake Guild
   , position             :: Int
-  , permissionOverwrites :: [Overwrite]
-  , name                 :: Text
+  , permissionOverwrites :: Vector Overwrite
+  , name                 :: ShortText
   , bitrate              :: Int
   , userLimit            :: Int
   } deriving (Show, Eq, Generic)
 
 data Guild = Guild
-  { id                          :: Snowflake Guild
-  , name                        :: Text
-  , icon                        :: Maybe Text
-  , splash                      :: Maybe Text
-  , owner                       :: Maybe Bool
-  , ownerID                     :: Snowflake User
-  , permissions                 :: Word64
-  , region                      :: Text
-  , afkChannelID                :: Maybe (Snowflake GuildChannel)
-  , afkTimeout                  :: Int
-  , embedEnabled                :: Bool
-  , embedChannelID              :: Maybe (Snowflake GuildChannel)
-  , verificationLevel           :: Int
-  , defaultMessageNotifications :: Int
-  , explicitContentFilter       :: Int
-  , roles                       :: SnowflakeMap Role
-  , emojis                      :: SnowflakeMap Emoji
-  , features                    :: [Text]
-  , mfaLevel                    :: Int
-  , applicationID               :: Maybe (Snowflake User)
-  , widgetEnabled               :: Bool
-  , widgetChannelID             :: Maybe (Snowflake GuildChannel)
-  , systemChannelID             :: Maybe (Snowflake GuildChannel)
+  { id                          :: !(Snowflake Guild)
+  , name                        :: !ShortText
+  , icon                        :: !(Maybe ShortText)
+  , splash                      :: !(Maybe ShortText)
+  , owner                       :: !(Maybe Bool)
+  , ownerID                     :: !(Snowflake User)
+  , permissions                 :: !Word64
+  , region                      :: !ShortText
+  , afkChannelID                :: !(Maybe (Snowflake GuildChannel))
+  , afkTimeout                  :: !Int
+  , embedEnabled                :: !Bool
+  , embedChannelID              :: !(Maybe (Snowflake GuildChannel))
+  , verificationLevel           :: !Int
+  , defaultMessageNotifications :: !Int
+  , explicitContentFilter       :: !Int
+  , roles                       :: !(SnowflakeMap Role)
+  , emojis                      :: !(SnowflakeMap Emoji)
+  , features                    :: !(Vector ShortText)
+  , mfaLevel                    :: !Int
+  , applicationID               :: !(Maybe (Snowflake User))
+  , widgetEnabled               :: !Bool
+  , widgetChannelID             :: !(Maybe (Snowflake GuildChannel))
+  , systemChannelID             :: !(Maybe (Snowflake GuildChannel))
   -- NOTE: Below are only sent on GuildCreate
-  , joinedAt                    :: Maybe UTCTime
-  , large                       :: Bool
-  , unavailable                 :: Bool
-  , memberCount                 :: Int
-  , voiceStates                 :: [VoiceState]
-  , members                     :: SnowflakeMap Member
-  , channels                    :: SnowflakeMap Channel
-  , presences                   :: [Presence]
+  , joinedAt                    :: !(Maybe UTCTime)
+  , large                       :: !Bool
+  , unavailable                 :: !Bool
+  , memberCount                 :: !Int
+  , voiceStates                 :: !(Vector VoiceState)
+  , members                     :: !(SnowflakeMap Member)
+  , channels                    :: !(SnowflakeMap Channel)
+  , presences                   :: !(Vector Presence)
   } deriving (Eq, Show, Generic)
 
 data UpdatedGuild = UpdatedGuild
   { id                          :: Snowflake Guild
-  , name                        :: Text
-  , icon                        :: Maybe Text
-  , splash                      :: Maybe Text
+  , name                        :: ShortText
+  , icon                        :: Maybe ShortText
+  , splash                      :: Maybe ShortText
   , owner                       :: Maybe Bool
   , ownerID                     :: Snowflake User
   , permissions                 :: Maybe Word64
-  , region                      :: Text
+  , region                      :: ShortText
   , afkChannelID                :: Maybe (Snowflake GuildChannel)
   , afkTimeout                  :: Int
   , embedEnabled                :: Maybe Bool
@@ -269,7 +270,7 @@ data UpdatedGuild = UpdatedGuild
   , explicitContentFilter       :: Int
   , roles                       :: SnowflakeMap Role
   , emojis                      :: SnowflakeMap Emoji
-  , features                    :: [Text]
+  , features                    :: Vector ShortText
   , mfaLevel                    :: Int
   , applicationID               :: Maybe (Snowflake User)
   , widgetEnabled               :: Maybe Bool
@@ -367,8 +368,8 @@ instance FromJSON Guild where
 
 
 data UnavailableGuild = UnavailableGuild
-  { id          :: Snowflake Guild
-  , unavailable :: Bool
+  { id          :: !(Snowflake Guild)
+  , unavailable :: !Bool
   } deriving (Eq, Show, Generic)
 
 instance ToJSON UnavailableGuild where
@@ -379,13 +380,13 @@ instance FromJSON UnavailableGuild where
 
 
 data Member = Member
-  { user     :: User
-  , guildID  :: Snowflake Guild
-  , nick     :: Maybe Text
-  , roles    :: [Snowflake Role]
-  , joinedAt :: UTCTime
-  , deaf     :: Bool
-  , mute     :: Bool
+  { user     :: !User
+  , guildID  :: !(Snowflake Guild)
+  , nick     :: !(Maybe ShortText)
+  , roles    :: !(Vector (Snowflake Role))
+  , joinedAt :: !UTCTime
+  , deaf     :: !Bool
+  , mute     :: !Bool
   } deriving (Eq, Show, Generic)
 
 instance ToJSON Member where
@@ -399,24 +400,24 @@ instance HasID Member where
 
 -- NOTE: make sure we fill in the guildID field when retrieving from REST
 data Message = Message
-  { id              :: Snowflake Message
-  , channelID       :: Snowflake Channel
-  , guildID         :: Snowflake Guild
-  , author          :: User
-  , content         :: Text
-  , timestamp       :: UTCTime
-  , editedTimestamp :: Maybe UTCTime
-  , tts             :: Bool
-  , mentionEveryone :: Bool
-  , mentions        :: SnowflakeMap User
-  , mentionRoles    :: [Snowflake Role]
-  , attachments     :: [Attachment]
-  , embeds          :: [Embed]
-  , reactions       :: [Reaction]
-  , nonce           :: Maybe (Snowflake Message)
-  , pinned          :: Bool
-  , webhookID       :: Maybe (Snowflake ())
-  , type_           :: MessageType
+  { id              :: !(Snowflake Message)
+  , channelID       :: !(Snowflake Channel)
+  , guildID         :: !(Snowflake Guild)
+  , author          :: !User
+  , content         :: !ShortText
+  , timestamp       :: !UTCTime
+  , editedTimestamp :: !(Maybe UTCTime)
+  , tts             :: !Bool
+  , mentionEveryone :: !Bool
+  , mentions        :: !(SnowflakeMap User)
+  , mentionRoles    :: !(Vector (Snowflake Role))
+  , attachments     :: !(Vector Attachment)
+  , embeds          :: !(Vector Embed)
+  , reactions       :: !(Vector Reaction)
+  , nonce           :: !(Maybe (Snowflake Message))
+  , pinned          :: !Bool
+  , webhookID       :: !(Maybe (Snowflake ()))
+  , type_           :: !MessageType
   } deriving (Eq, Show, Generic)
 
 instance ToJSON Message where
@@ -437,7 +438,7 @@ instance FromJSON Message where
     <*> v .: "mention_roles"
     <*> v .: "attachments"
     <*> v .: "embeds"
-    <*> v .:? "reactions" .!= []
+    <*> v .:? "reactions" .!= mempty
     <*> v .:? "nonce"
     <*> v .: "pinned"
     <*> v .:? "webhook_id"
@@ -446,15 +447,15 @@ instance FromJSON Message where
 data UpdatedMessage = UpdatedMessage
   { id              :: Snowflake UpdatedMessage
   , channelID       :: Snowflake Channel
-  , content         :: Maybe Text
+  , content         :: Maybe ShortText
   , editedTimestamp :: Maybe UTCTime
   , tts             :: Maybe Bool
   , mentionEveryone :: Maybe Bool
   , mentions        :: Maybe (SnowflakeMap User)
-  , mentionRoles    :: Maybe [Snowflake Role]
-  , attachments     :: Maybe [Attachment]
-  , embeds          :: Maybe [Embed]
-  , reactions       :: Maybe [Reaction]
+  , mentionRoles    :: Maybe (Vector (Snowflake Role))
+  , attachments     :: Maybe (Vector Attachment)
+  , embeds          :: Maybe (Vector Embed)
+  , reactions       :: Maybe (Vector Reaction)
   , pinned          :: Maybe Bool
   } deriving (Eq, Show, Generic)
 
@@ -485,12 +486,12 @@ instance FromJSON MessageType where
 
 
 data Embed = Embed
-  { title       :: Maybe Text
-  , type_       :: Maybe Text
-  , description :: Maybe Text
-  , url         :: Maybe Text
-  , timestamp   :: Maybe UTCTime
-  , color       :: Maybe Word64
+  { title       :: !(Maybe ShortText)
+  , type_       :: !(Maybe ShortText)
+  , description :: !(Maybe ShortText)
+  , url         :: !(Maybe ShortText)
+  , timestamp   :: !(Maybe UTCTime)
+  , color       :: !(Maybe Word64)
   , footer      :: Maybe EmbedFooter
   , image       :: Maybe EmbedImage
   , thumbnail   :: Maybe EmbedThumbnail
@@ -520,9 +521,9 @@ instance FromJSON Embed where
     <*> v .:? "fields" .!= []
 
 data EmbedFooter = EmbedFooter
-  { text         :: Text
-  , iconUrl      :: Maybe Text
-  , proxyIconUrl :: Maybe Text
+  { text         :: !ShortText
+  , iconUrl      :: !(Maybe ShortText)
+  , proxyIconUrl :: !(Maybe ShortText)
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedFooter where
@@ -532,9 +533,9 @@ instance FromJSON EmbedFooter where
   parseJSON = genericParseJSON jsonOptions
 
 data EmbedImage = EmbedImage
-  { url        :: Maybe Text
-  , proxyUrl   :: Maybe Text
-  , dimensions :: Maybe (Word64, Word64) -- doesn't make sense to have only one of the width or height
+  { url        :: !(Maybe ShortText)
+  , proxyUrl   :: !(Maybe ShortText)
+  , dimensions :: !(Maybe (Word64, Word64)) -- doesn't make sense to have only one of the width or height
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedImage where
@@ -556,9 +557,9 @@ instance FromJSON EmbedImage where
       <*> pure (fuseTup2 (width, height))
 
 data EmbedThumbnail = EmbedThumbnail
-  { url        :: Maybe Text
-  , proxyUrl   :: Maybe Text
-  , dimensions :: Maybe (Word64, Word64) -- doesn't make sense to have only one of the width or height
+  { url        :: !(Maybe ShortText)
+  , proxyUrl   :: !(Maybe ShortText)
+  , dimensions :: !(Maybe (Word64, Word64)) -- doesn't make sense to have only one of the width or height
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedThumbnail where
@@ -580,8 +581,8 @@ instance FromJSON EmbedThumbnail where
       <*> pure (fuseTup2 (width, height))
 
 data EmbedVideo = EmbedVideo
-  { url        :: Maybe Text
-  , dimensions :: Maybe (Word64, Word64) -- doesn't make sense to have only one of the width or height
+  { url        :: !(Maybe ShortText)
+  , dimensions :: !(Maybe (Word64, Word64)) -- doesn't make sense to have only one of the width or height
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedVideo where
@@ -601,8 +602,8 @@ instance FromJSON EmbedVideo where
       <*> pure (fuseTup2 (width, height))
 
 data EmbedProvider = EmbedProvider
-  { name :: Maybe Text
-  , url  :: Maybe Text
+  { name :: !(Maybe ShortText)
+  , url  :: !(Maybe ShortText)
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedProvider where
@@ -612,10 +613,10 @@ instance FromJSON EmbedProvider where
   parseJSON = genericParseJSON jsonOptions
 
 data EmbedAuthor = EmbedAuthor
-  { name         :: Maybe Text
-  , url          :: Maybe Text
-  , iconUrl      :: Maybe Text
-  , proxyIconURL :: Maybe Text
+  { name         :: !(Maybe ShortText)
+  , url          :: !(Maybe ShortText)
+  , iconUrl      :: !(Maybe ShortText)
+  , proxyIconURL :: !(Maybe ShortText)
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedAuthor where
@@ -625,9 +626,9 @@ instance FromJSON EmbedAuthor where
   parseJSON = genericParseJSON jsonOptions
 
 data EmbedField = EmbedField
-  { name   :: Text
-  , value  :: Text
-  , inline :: Bool
+  { name   :: !ShortText
+  , value  :: !ShortText
+  , inline :: !Bool
   } deriving (Eq, Show, Generic)
 
 instance ToJSON EmbedField where
@@ -640,12 +641,12 @@ instance FromJSON EmbedField where
     <*> v .:? "inline" .!= False
 
 data Attachment = Attachment
-  { id         :: Snowflake Attachment
-  , filename   :: Text
-  , size       :: Word64
-  , url        :: Text
-  , proxyUrl   :: Text
-  , dimensions :: Maybe (Word64, Word64)
+  { id         :: !(Snowflake Attachment)
+  , filename   :: !ShortText
+  , size       :: !Word64
+  , url        :: !ShortText
+  , proxyUrl   :: !ShortText
+  , dimensions :: !(Maybe (Word64, Word64))
   } deriving (Eq, Show, Generic)
 
 instance ToJSON Attachment where
@@ -673,13 +674,13 @@ instance FromJSON Attachment where
       <*> pure (fuseTup2 (width, height))
 
 data Emoji = Emoji
-  { id            :: Snowflake Emoji
-  , name          :: Text
-  , roles         :: [Snowflake Role]
-  , user          :: Maybe User
-  , requireColons :: Bool
-  , managed       :: Bool
-  , animated      :: Bool
+  { id            :: !(Snowflake Emoji)
+  , name          :: !ShortText
+  , roles         :: !(Vector (Snowflake Role))
+  , user          :: !(Maybe User)
+  , requireColons :: !Bool
+  , managed       :: !Bool
+  , animated      :: !Bool
   } deriving (Eq, Show, Generic)
 
 instance ToJSON Emoji where
@@ -697,8 +698,9 @@ instance FromJSON Emoji where
 
 data instance Partial Emoji = PartialEmoji
   { id   :: Snowflake Emoji
-  , name :: Text
-  } deriving (Eq, Show, Generic)
+  , name :: ShortText
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON (Partial Emoji) where
   toEncoding = genericToEncoding jsonOptions
@@ -706,17 +708,17 @@ instance ToJSON (Partial Emoji) where
 instance FromJSON (Partial Emoji) where
   parseJSON = genericParseJSON jsonOptions
 
-
 data Role = Role
-  { id          :: Snowflake Role
-  , name        :: Text
-  , color       :: Word64
-  , hoist       :: Bool
-  , position    :: Int
-  , permissions :: Word64
-  , managed     :: Bool
-  , mentionable :: Bool
-  } deriving (Eq, Show, Generic)
+  { id          :: !(Snowflake Role)
+  , name        :: !ShortText
+  , color       :: !Word64
+  , hoist       :: !Bool
+  , position    :: !Int
+  , permissions :: !Word64
+  , managed     :: !Bool
+  , mentionable :: !Bool
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON Role where
   toEncoding = genericToEncoding jsonOptions
@@ -724,13 +726,13 @@ instance ToJSON Role where
 instance FromJSON Role where
   parseJSON = genericParseJSON jsonOptions
 
-
 data Overwrite = Overwrite
-  { id    :: Snowflake Overwrite
-  , type_ :: Text
-  , allow :: Word64
-  , deny  :: Word64
-  } deriving (Eq, Show, Generic)
+  { id    :: !(Snowflake Overwrite)
+  , type_ :: !ShortText
+  , allow :: !Word64
+  , deny  :: !Word64
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON Overwrite where
   toEncoding = genericToEncoding jsonOptions
@@ -738,31 +740,28 @@ instance ToJSON Overwrite where
 instance FromJSON Overwrite where
   parseJSON = genericParseJSON jsonOptions
 
-
 data Reaction = Reaction
-  { userID    :: Snowflake User
-  , channelID :: Snowflake Channel
-  , messageID :: Snowflake Message
-  , guildID   :: Maybe (Snowflake Guild)
-  , emoji     :: Either (Partial Emoji) Text
-  } deriving (Eq, Show, Generic)
+  { userID    :: !(Snowflake User)
+  , channelID :: !(Snowflake Channel)
+  , messageID :: !(Snowflake Message)
+  , guildID   :: !(Maybe (Snowflake Guild))
+  , emoji     :: !(Either (Partial Emoji) ShortText)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON Reaction where
-  toEncoding Reaction {userID, channelID, messageID, guildID, emoji} =
-    pairs ("user_id" .= userID
-           <> "channel_id" .= channelID
-           <> "message_id" .= messageID
-           <> "guild_id" .= guildID
-           <> case emoji of
-                 Left emoji -> "emoji" .= emoji
-                 Right emoji -> "emoji" .= (("name" .= emoji) :: Object))
+  toEncoding Reaction { userID, channelID, messageID, guildID, emoji } = pairs
+    ("user_id" .= userID <> "channel_id" .= channelID <> "message_id" .= messageID <> "guild_id" .= guildID
+     <> case emoji of
+       Left emoji  -> "emoji" .= emoji
+       Right emoji -> "emoji" .= (("name" .= emoji) :: Object))
 
 instance FromJSON Reaction where
   parseJSON = withObject "Reaction" $ \v -> do
     emoji <- v .: "emoji"
 
     emojiID :: Maybe (Snowflake Emoji) <- emoji .:? "id"
-    emojiName :: Text <- emoji .: "name"
+    emojiName :: ShortText <- emoji .: "name"
 
     let emoji =
           case emojiID of
@@ -798,14 +797,15 @@ instance FromJSON StatusType where
 
 
 data Presence = Presence
-  { user         :: Partial User
-  , roles        :: Maybe [Snowflake Role]
+  { user         :: !(Partial User)
+  , roles        :: Maybe (Vector (Snowflake Role))
   , game         :: Maybe Activity
-  , guildID      :: Snowflake Guild
-  , status       :: Maybe StatusType
-  , activities   :: Maybe [Activity]
+  , guildID      :: !(Snowflake Guild)
+  , status       :: !(Maybe StatusType)
+  , activities   :: Maybe (Vector Activity)
   , clientStatus :: Maybe ClientStatus
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON Presence where
   toEncoding = genericToEncoding jsonOptions
@@ -813,37 +813,35 @@ instance ToJSON Presence where
 instance FromJSON Presence where
   parseJSON = genericParseJSON jsonOptions
 
-
 data ActivityType
   = Game
   | Streaming
   | Listening
-  deriving (Eq, Generic, Show, Enum)
+  deriving ( Eq, Generic, Show, Enum )
 
 instance ToJSON ActivityType where
   toJSON t = Number $ fromIntegral (fromEnum t)
 
 instance FromJSON ActivityType where
-  parseJSON = withScientific "ActivityType"  $ \n ->
-    case toBoundedInteger n of
-      Just v  -> return $ toEnum v
-      Nothing -> fail $ "Invalid ActivityType: " ++ show n
-
+  parseJSON = withScientific "ActivityType" $ \n -> case toBoundedInteger n of
+    Just v  -> return $ toEnum v
+    Nothing -> fail $ "Invalid ActivityType: " ++ show n
 
 data Activity = Activity
-  { name          :: Text
-  , type_         :: ActivityType
-  , url           :: Maybe Text
-  , timestamps    :: Maybe ActivityTimestamps
-  , applicationID :: Maybe (Snowflake ())
-  , details       :: Maybe Text
-  , state         :: Maybe Text
+  { name          :: !ShortText
+  , type_         :: !ActivityType
+  , url           :: !(Maybe ShortText)
+  , timestamps    :: !(Maybe ActivityTimestamps)
+  , applicationID :: !(Maybe (Snowflake ()))
+  , details       :: !(Maybe ShortText)
+  , state         :: !(Maybe ShortText)
   , party         :: Maybe ActivityParty
   , assets        :: Maybe ActivityAssets
   , secrets       :: Maybe ActivitySecrets
-  , instance_     :: Bool
-  , flags         :: Word64
-  } deriving (Eq, Show, Generic)
+  , instance_     :: !Bool
+  , flags         :: !Word64
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON Activity where
   toEncoding = genericToEncoding jsonOptions
@@ -882,9 +880,10 @@ instance FromJSON ActivityTimestamps where
 
 
 data ActivityParty = ActivityParty
-  { id   :: Maybe Text
+  { id   :: Maybe ShortText
   , size :: Maybe (Int, Int)
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON ActivityParty where
   toEncoding = genericToEncoding jsonOptions
@@ -892,13 +891,13 @@ instance ToJSON ActivityParty where
 instance FromJSON ActivityParty where
   parseJSON = genericParseJSON jsonOptions
 
-
 data ActivityAssets = ActivityAssets
-  { largeImage :: Maybe Text
-  , largeText  :: Maybe Text
-  , smallImage :: Maybe Text
-  , smallText  :: Maybe Text
-  } deriving (Eq, Show, Generic)
+  { largeImage :: !(Maybe ShortText)
+  , largeText  :: !(Maybe ShortText)
+  , smallImage :: !(Maybe ShortText)
+  , smallText  :: !(Maybe ShortText)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON ActivityAssets where
   toEncoding = genericToEncoding jsonOptions
@@ -906,12 +905,12 @@ instance ToJSON ActivityAssets where
 instance FromJSON ActivityAssets where
   parseJSON = genericParseJSON jsonOptions
 
-
 data ActivitySecrets = ActivitySecrets
-  { join     :: Maybe Text
-  , spectate :: Maybe Text
-  , match    :: Maybe Text
-  } deriving (Eq, Show, Generic)
+  { join     :: !(Maybe ShortText)
+  , spectate :: !(Maybe ShortText)
+  , match    :: !(Maybe ShortText)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON ActivitySecrets where
   toEncoding = genericToEncoding jsonOptions
@@ -919,13 +918,12 @@ instance ToJSON ActivitySecrets where
 instance FromJSON ActivitySecrets where
   parseJSON = genericParseJSON jsonOptions
 
-
 data ClientStatus = ClientStatus
-  { desktop :: Maybe Text
-  , mobile :: Maybe Text
-  , web :: Maybe Text
-  } deriving (Eq, Show, Generic)
-
+  { desktop :: !(Maybe ShortText)
+  , mobile  :: !(Maybe ShortText)
+  , web     :: !(Maybe ShortText)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON ClientStatus where
   toEncoding = genericToEncoding jsonOptions

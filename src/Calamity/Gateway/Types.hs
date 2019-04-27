@@ -177,7 +177,7 @@ instance ToJSON IdentifyData where
 data StatusUpdateData = StatusUpdateData
   { since  :: Maybe Integer
   , game   :: Maybe Value -- TODO: activity object
-  , status :: Text
+  , status :: ShortText
   , afk    :: Bool
   }
   deriving ( Show, Generic )

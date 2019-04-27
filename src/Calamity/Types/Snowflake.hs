@@ -4,12 +4,12 @@ module Calamity.Types.Snowflake
     , HasID(..)
     , coerceSnowflake ) where
 
+import           Control.Monad
+
 import           Data.Aeson
 import           Data.Data
 import           Data.Generics.Product.Fields
-import           Data.Text                    ( unpack )
-
-import           Text.Read                    ( read )
+import           Data.Text.Read
 
 -- Thanks sbrg
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L78
@@ -24,7 +24,11 @@ instance ToJSON (Snowflake t) where
   toJSON (Snowflake s) = String . show $ s
 
 instance FromJSON (Snowflake t) where
-  parseJSON = withText "Snowflake" $ pure . Snowflake . read . unpack
+  parseJSON = withText "Snowflake" $ \t -> do
+    n <- case decimal t of
+      Right (n, _) -> pure n
+      Left e       -> fail e
+    pure $ Snowflake n
 
 coerceSnowflake :: Snowflake a -> Snowflake b
 coerceSnowflake (Snowflake t) = Snowflake t

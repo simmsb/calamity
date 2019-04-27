@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 958037288e3479bf5114286058a73ccbb4461ca190dea0ca6a56811088135d85
+-- hash: f947408d55734a4e0ec448abe8b3dee08e3c5a7ede6ac0ec73486182798181b9
 
 name:           calamity
 version:        0.1.0.0
@@ -57,7 +57,7 @@ library
   hs-source-dirs:
       src
   default-extensions: AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
-  ghc-options: -Wall
+  ghc-options: -funbox-strict-fields -Wall
   build-depends:
       aeson >=1.4
     , async >=2.2
@@ -87,11 +87,13 @@ library
     , stm-containers >=1.1
     , streamly >=0.6
     , text >=0.2
+    , text-short >=0.1
     , time >=1.8
     , transformers >=0.5
     , transformers-base >=0.4
     , typerep-map >=0.3
     , unordered-containers >=0.2
+    , vector >=0.12
     , websockets >=0.12
     , wreq >=0.5
     , wuss >=1.1
@@ -104,7 +106,7 @@ executable test-calamity-exe
   hs-source-dirs:
       app
   default-extensions: AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
-  ghc-options: -threaded -rtsopts -with-rtsopts=-T -O3
+  ghc-options: -funbox-strict-fields -threaded -rtsopts -with-rtsopts=-T -O3
   build-depends:
       aeson >=1.4
     , async >=2.2
@@ -135,11 +137,13 @@ executable test-calamity-exe
     , stm-containers >=1.1
     , streamly >=0.6
     , text >=0.2
+    , text-short >=0.1
     , time >=1.8
     , transformers >=0.5
     , transformers-base >=0.4
     , typerep-map >=0.3
     , unordered-containers >=0.2
+    , vector >=0.12
     , websockets >=0.12
     , wreq >=0.5
     , wuss >=1.1
@@ -184,11 +188,13 @@ test-suite calamity-test
     , stm-containers >=1.1
     , streamly >=0.6
     , text >=0.2
+    , text-short >=0.1
     , time >=1.8
     , transformers >=0.5
     , transformers-base >=0.4
     , typerep-map >=0.3
     , unordered-containers >=0.2
+    , vector >=0.12
     , websockets >=0.12
     , wreq >=0.5
     , wuss >=1.1

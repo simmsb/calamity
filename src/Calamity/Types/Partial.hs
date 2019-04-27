@@ -1,5 +1,5 @@
 -- | Partial data family
 module Calamity.Types.Partial
-    ( Partial(..) ) where
+    ( Partial ) where
 
 data family Partial t

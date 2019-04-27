@@ -131,11 +131,11 @@ shardLoop = do
 
     case innerLoopVal of
       ShardExcShutDown -> do
-        trace "Shutting down shard"
+        info "Shutting down shard"
         throwE ShardExcShutDown
 
       ShardExcRestart ->
-        trace "Restaring shard"
+        info "Restaring shard"
         -- we restart normally when we loop
 
   -- | The inner loop, handles receiving a message from discord or a command message
