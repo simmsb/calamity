@@ -37,7 +37,7 @@ newShard gateway id count token logEnv evtQueue = mdo
   stateVar <- newTVarIO (newShardState shard)
   let shard = Shard id count gateway evtQueue cmdQueue' stateVar (rawToken token) thread'
 
-  let action = scope ("[ShardID: " +| id |+ "]") shardLoop
+  let action = component "calamity_shard" . scope ("[ShardID: " +| id |+ "]") $ shardLoop
 
   thread' <- async . runShardM shard logEnv $ action
 
@@ -101,6 +101,11 @@ shardLoop = do
       Right msg' -> do
         let decoded = A.eitherDecode msg'
         d <- case decoded of
+#ifndef PARSE_PRESENCES
+          -- if we're discarding presences, bin them earlier, here
+          Right (Dispatch _ (PresenceUpdate _)) ->
+            mzero
+#endif
           Right a -> pure a
           Left e -> do
             SLS.writeLog logEnv SLS.Error $ "Failed to decode: "+|e|+""
@@ -186,7 +191,7 @@ shardLoop = do
   handleMsg :: ShardMsg -> ExceptT ShardException ShardM ()
   handleMsg (Discord msg) = case msg of
     Dispatch seqNum data' -> do
-      debug $ "Handling event: ("+||data'||+")"
+      trace $ "Handling event: ("+||data'||+")"
       #seqNum ?= seqNum
 
       case data' of
@@ -211,16 +216,16 @@ shardLoop = do
     InvalidSession resumable -> do
       if resumable
       then do
-        debug "Received non-resumable invalid session, sleeping for 15 seconds then retrying"
+        info "Received non-resumable invalid session, sleeping for 15 seconds then retrying"
         #sessionID .= Nothing
         #seqNum .= Nothing
         liftIO $ threadDelay 1500000
       else
-        debug "Received resumable invalid session"
+        info "Received resumable invalid session"
       throwE ShardExcRestart
 
     Hello interval -> do
-      debug $ "Received hello, beginning to heartbeat at an interval of "+|interval|+"ms"
+      info $ "Received hello, beginning to heartbeat at an interval of "+|interval|+"ms"
       lift $ startHeartBeatLoop interval
 
     HeartBeatAck -> do

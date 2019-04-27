@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f947408d55734a4e0ec448abe8b3dee08e3c5a7ede6ac0ec73486182798181b9
+-- hash: c4ffbf38c7253b756625e925e3958832bdae53cd5c4cc151a57251a8695bfd4c
 
 name:           calamity
 version:        0.1.0.0
@@ -24,6 +24,11 @@ extra-source-files:
 source-repository head
   type: git
   location: https://github.com/nitros12/calamity
+
+flag parse-presences
+  description: If the library should parse presences or not
+  manual: False
+  default: True
 
 library
   exposed-modules:
@@ -56,7 +61,7 @@ library
       Paths_calamity
   hs-source-dirs:
       src
-  default-extensions: AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
+  default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
   ghc-options: -funbox-strict-fields -Wall
   build-depends:
       aeson >=1.4
@@ -97,6 +102,9 @@ library
     , websockets >=0.12
     , wreq >=0.5
     , wuss >=1.1
+  if flag(parse-presences)
+    cpp-options: -DPARSE_PRESENCES
+  else
   default-language: Haskell2010
 
 executable test-calamity-exe
@@ -105,7 +113,7 @@ executable test-calamity-exe
       Paths_calamity
   hs-source-dirs:
       app
-  default-extensions: AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
+  default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
   ghc-options: -funbox-strict-fields -threaded -rtsopts -with-rtsopts=-T -O3
   build-depends:
       aeson >=1.4
@@ -156,7 +164,7 @@ test-suite calamity-test
       Paths_calamity
   hs-source-dirs:
       test
-  default-extensions: AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
+  default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications
   ghc-options: -threaded -rtsopts -with-rtsopts=-N
   build-depends:
       aeson >=1.4

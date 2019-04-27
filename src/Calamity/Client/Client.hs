@@ -59,7 +59,7 @@ newClient token eventHandlers = do
 startClient :: Client -> IO ()
 startClient client = do
   logEnv <- newLog
-    (logCfg [("", SLS.Info), ("calamity", SLS.Trace)])
+    (logCfg [("", SLS.Info), ("calamity", SLS.Info), ("calamity_shard", SLS.Debug)])
     [handler text coloredConsole]
   runBotM client logEnv . component "calamity" $ do
     shardBot
@@ -226,6 +226,7 @@ handleActions os _ eh (MessageReactionRemoveAll MessageReactionRemoveAllData { m
   oldMsg <- getMessage (coerceSnowflake messageID) $ os ^. #messages
   pure $ map ($ oldMsg) (unwrapEvent @"messagereactionremoveall" eh)
 
+#ifdef PARSE_PRESENCES
 handleActions os ns eh (PresenceUpdate Presence { user, guildID }) = do
   oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
   newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
@@ -233,6 +234,9 @@ handleActions os ns eh (PresenceUpdate Presence { user, guildID }) = do
                     then map (\f -> f (oldMember ^. #user) (newMember ^. #user)) (unwrapEvent @"userupdate" eh)
                     else mempty
   pure $ userUpdates <> map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
+#else
+handleActions _ _ _ (PresenceUpdate _) = pure []
+#endif
 
 handleActions _ ns eh (TypingStart TypingStartData { channelID, guildID, userID, timestamp }) = do
   guild <- ns ^? #guilds . at guildID . _Just

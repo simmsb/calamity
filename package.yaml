@@ -72,13 +72,28 @@ executables:
     dependencies:
       - calamity
 
+flags:
+  parse-presences:
+    description: If the library should parse presences or not
+    manual: false
+    default: true
+
 library:
   ghc-options:
     - -funbox-strict-fields
     - -Wall
+  when:
+    - condition: flag(parse-presences)
+      then:
+        cpp-options:
+          - -DPARSE_PRESENCES
+      else:
+        cpp-options: []
+
   source-dirs: src
 
 default-extensions:
+  - CPP
   - AllowAmbiguousTypes
   - BlockArguments
   - NoMonomorphismRestriction
