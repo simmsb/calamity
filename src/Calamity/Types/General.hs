@@ -40,6 +40,7 @@ import           Data.Generics.Product.Fields
 import           Data.Scientific
 import           Data.Time
 import           Data.Vector                  ( Vector )
+import qualified Data.Vector.Unboxed          as UV
 
 -- Unfortunately all our data models have to go in here since we share a lot of types
 data Token
@@ -389,7 +390,7 @@ data Member = Member
   { user     :: !User
   , guildID  :: !(Snowflake Guild)
   , nick     :: !(Maybe ShortText)
-  , roles    :: !(Vector (Snowflake Role))
+  , roles    :: !(UV.Vector (Snowflake Role))
   , joinedAt :: !UTCTime
   , deaf     :: !Bool
   , mute     :: !Bool
@@ -416,7 +417,7 @@ data Message = Message
   , tts             :: !Bool
   , mentionEveryone :: !Bool
   , mentions        :: !(SnowflakeMap User)
-  , mentionRoles    :: !(Vector (Snowflake Role))
+  , mentionRoles    :: !(UV.Vector (Snowflake Role))
   , attachments     :: !(Vector Attachment)
   , embeds          :: !(Vector Embed)
   , reactions       :: !(Vector Reaction)
@@ -458,7 +459,7 @@ data UpdatedMessage = UpdatedMessage
   , tts             :: Maybe Bool
   , mentionEveryone :: Maybe Bool
   , mentions        :: Maybe (SnowflakeMap User)
-  , mentionRoles    :: Maybe (Vector (Snowflake Role))
+  , mentionRoles    :: Maybe (UV.Vector (Snowflake Role))
   , attachments     :: Maybe (Vector Attachment)
   , embeds          :: Maybe (Vector Embed)
   , reactions       :: Maybe (Vector Reaction)
@@ -682,7 +683,7 @@ instance FromJSON Attachment where
 data Emoji = Emoji
   { id            :: !(Snowflake Emoji)
   , name          :: !ShortText
-  , roles         :: !(Vector (Snowflake Role))
+  , roles         :: !(UV.Vector (Snowflake Role))
   , user          :: !(Maybe User)
   , requireColons :: !Bool
   , managed       :: !Bool
@@ -804,7 +805,7 @@ instance FromJSON StatusType where
 
 data Presence = Presence
   { user         :: !(Partial User)
-  , roles        :: Maybe (Vector (Snowflake Role))
+  , roles        :: Maybe (UV.Vector (Snowflake Role))
   , game         :: Maybe Activity
   , guildID      :: !(Snowflake Guild)
   , status       :: !(Maybe StatusType)
