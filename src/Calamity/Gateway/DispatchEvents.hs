@@ -165,12 +165,12 @@ data TypingStartData = TypingStartData
 
 newtype VoiceStateUpdateData = VoiceStateUpdateData Value
   deriving ( Show, Generic )
-  deriving anyclass ( ToJSON, FromJSON )
+  deriving newtype ( ToJSON, FromJSON )
 
 newtype VoiceServerUpdateData = VoiceServerUpdateData Value
   deriving ( Show, Generic )
-  deriving anyclass ( ToJSON, FromJSON )
+  deriving newtype ( ToJSON, FromJSON )
 
 newtype WebhooksUpdateData = WebhooksUpdateData Value
   deriving ( Show, Generic )
-  deriving anyclass ( ToJSON, FromJSON )
+  deriving newtype ( ToJSON, FromJSON )
