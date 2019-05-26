@@ -24,6 +24,12 @@ CLOSED: [2019-03-29 Fri 13:38]
 * DONE Presence info
 CLOSED: [2019-04-27 Sat 16:25]
 - linky :: https://discordapp.com/developers/docs/topics/gateway#presence-update
-* TODO Allow options for presences to be discarded
+* DONE Allow options for presences to be discarded
+CLOSED: [2019-05-26 Sun 05:33]
 - Pretty much nobody cares about presences on a bot but presences take up *a
-  lot* of data
+  lot* of data (Turns out they don't lol)
+* TODO Share user data
+instead of having a copy for each user object discord gives us.
+This is probably a much better optimisation that discarding presences.
+* TODO Migrate from Transformers and MTL to Free monads
+should be fun

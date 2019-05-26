@@ -162,8 +162,6 @@ data DispatchType
   deriving ( Show, Eq, Enum, Generic )
   deriving anyclass ( ToJSON, FromJSON )
 
--- instance ToJSON DispatchType
--- instance FromJSON DispatchType
 data IdentifyData = IdentifyData
   { token          :: Text
   , properties     :: IdentifyProps
