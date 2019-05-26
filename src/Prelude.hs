@@ -10,6 +10,7 @@ module Prelude
     , module Control.Arrow
     , module Data.Text.Short
     , LogMessage
+    , CalamityJSON(..)
     , debug
     , info
     , warning
@@ -49,6 +50,18 @@ error = sendLog SLS.Error
 fatal = sendLog SLS.Fatal
 
 trace = sendLog SLS.Trace
+
+newtype CalamityJSON a = CalamityJSON
+  { unCalamityJSON :: a
+  }
+
+instance (Typeable a, Generic a, GToJSON Zero (Rep a), GToEncoding Zero (Rep a)) => ToJSON (CalamityJSON a) where
+  toJSON = genericToJSON jsonOptions . unCalamityJSON
+
+  toEncoding = genericToEncoding jsonOptions . unCalamityJSON
+
+instance (Typeable a, Generic a, GFromJSON Zero (Rep a)) => FromJSON (CalamityJSON a) where
+  parseJSON = fmap CalamityJSON . genericParseJSON jsonOptions
 
 jsonOptions :: Options
 jsonOptions = defaultOptions { sumEncoding        = UntaggedValue

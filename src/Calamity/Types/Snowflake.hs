@@ -19,7 +19,8 @@ import qualified Data.Vector.Unboxed          as U
 newtype Snowflake t = Snowflake
   { fromSnowflake :: Word64
   }
-  deriving ( Generic, Show, Eq, Ord, Data, NFData, ToJSONKey )
+  deriving ( Generic, Show, Eq, Ord, Data )
+  deriving newtype ( NFData, ToJSONKey )
 
 instance Hashable (Snowflake t)
 

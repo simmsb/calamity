@@ -67,11 +67,12 @@ data Client = Client
 newtype BotM a = BotM
   { unBotM :: LogT (ReaderT Client IO) a
   }
-  deriving (Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, Functor, MonadReader Client)
+  deriving ( Functor )
+  deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadReader Client )
 
 -- | Let's us have `MonadReader Client`
 instance {-# OVERLAPPABLE #-}MonadReader a m => MonadReader a (LogT m) where
-  ask       = lift ask
+  ask = lift ask
 
   local f m = do
     b <- ask
@@ -124,8 +125,9 @@ runBotM cstate logEnv = (`runReaderT` cstate) . withLog logEnv . unBotM
 newtype EventM a = EventM
   { unEventM :: StateT Cache BotM a
   }
-  deriving (Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, Functor, MonadState Cache
-          , MonadReader Client)
+  deriving ( Functor )
+  deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadState Cache
+                   , MonadReader Client )
 
 -- deriving instance MonadReader Client m => StateT s (LogT (ReaderT Client m))
 

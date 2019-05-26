@@ -75,12 +75,7 @@ data VoiceState = VoiceState
   , suppress  :: !Bool
   }
   deriving ( Show, Eq, Generic )
-
-instance ToJSON VoiceState where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON VoiceState where
-  parseJSON = genericParseJSON jsonOptions
+  deriving ( ToJSON, FromJSON ) via CalamityJSON VoiceState
 
 data User = User
   { id            :: !(Snowflake User)
@@ -93,24 +88,15 @@ data User = User
   , email         :: !(Maybe ShortText)
   , flags         :: !(Maybe Word64)
   , premiumType   :: !(Maybe Word64)
-  } deriving (Show, Eq, Generic)
-
-instance ToJSON User where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON User where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Show, Eq, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON User
 
 data instance Partial User = PartialUser
   { id :: Snowflake (Partial User)
-  } deriving (Show, Eq, Generic)
-
-instance ToJSON (Partial User) where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON (Partial User) where
-  parseJSON = genericParseJSON jsonOptions
-
+  }
+  deriving ( Show, Eq, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial User)
 
 data Channel = Channel
   { id                   :: !(Snowflake Channel)
@@ -131,19 +117,16 @@ data Channel = Channel
   , applicationID        :: Maybe (Snowflake User)
   , parentID             :: Maybe (Snowflake Category)
   , lastPinTimestamp     :: !(Maybe UTCTime)
-  } deriving (Show, Eq, Generic)
-
-instance ToJSON Channel where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON Channel where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Show, Eq, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON Channel
 
 data SingleDM = SingleDM
   { id            :: Snowflake SingleDM
   , lastMessageID :: Maybe (Snowflake Message)
   , recipients    :: SnowflakeMap User
-  } deriving (Show, Eq, Generic)
+  }
+  deriving ( Show, Eq, Generic )
 
 data GroupDM = GroupDM
   { id            :: Snowflake GroupDM
@@ -152,19 +135,20 @@ data GroupDM = GroupDM
   , icon          :: Maybe ShortText
   , recipients    :: SnowflakeMap User
   , name          :: ShortText
-  } deriving (Show, Eq, Generic)
+  }
+  deriving ( Show, Eq, Generic )
 
 data DMChannel
   = Single SingleDM
   | Group GroupDM
-  deriving (Show, Eq, Generic)
+  deriving ( Show, Eq, Generic )
 
 data GuildChannel
   = GuildTextChannel TextChannel
   | GuildVoiceChannel VoiceChannel
-  deriving (Show, Eq, Generic)
+  deriving ( Show, Eq, Generic )
 
-instance {-# OVERLAPS #-} HasID GuildChannel where
+instance {-# OVERLAPS #-}HasID GuildChannel where
   getID = coerceSnowflake . getID
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hsfield#L182)
@@ -193,7 +177,8 @@ data Category = Category
   , position             :: Int
   , guildID              :: Snowflake Guild
   , channels             :: SnowflakeMap GuildChannel
-  } deriving (Show, Eq, Generic)
+  }
+  deriving ( Show, Eq, Generic )
 
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
@@ -206,7 +191,8 @@ data TextChannel = TextChannel
   , lastMessageID        :: Maybe (Snowflake Message)
   , rateLimitPerUser     :: Maybe Int
   , parentID             :: Maybe (Snowflake Category)
-  } deriving (Show, Eq, Generic)
+  }
+  deriving ( Show, Eq, Generic )
 
 data VoiceChannel = VoiceChannel
   { id                   :: Snowflake VoiceChannel
@@ -216,7 +202,8 @@ data VoiceChannel = VoiceChannel
   , name                 :: ShortText
   , bitrate              :: Int
   , userLimit            :: Int
-  } deriving (Show, Eq, Generic)
+  }
+  deriving ( Show, Eq, Generic )
 
 data Guild = Guild
   { id                          :: !(Snowflake Guild)
@@ -242,7 +229,7 @@ data Guild = Guild
   , widgetEnabled               :: !Bool
   , widgetChannelID             :: !(Maybe (Snowflake GuildChannel))
   , systemChannelID             :: !(Maybe (Snowflake GuildChannel))
-  -- NOTE: Below are only sent on GuildCreate
+    -- NOTE: Below are only sent on GuildCreate
   , joinedAt                    :: !(Maybe UTCTime)
   , large                       :: !Bool
   , unavailable                 :: !Bool
@@ -253,7 +240,8 @@ data Guild = Guild
 #ifdef PARSE_PRESENCES
   , presences                   :: !(Vector Presence)
 #endif
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
 
 data UpdatedGuild = UpdatedGuild
   { id                          :: Snowflake Guild
@@ -378,12 +366,7 @@ data UnavailableGuild = UnavailableGuild
   { id          :: !(Snowflake Guild)
   , unavailable :: !Bool
   } deriving (Eq, Show, Generic)
-
-instance ToJSON UnavailableGuild where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON UnavailableGuild where
-  parseJSON = genericParseJSON jsonOptions
+  deriving (ToJSON, FromJSON) via CalamityJSON UnavailableGuild
 
 
 data Member = Member
@@ -395,12 +378,7 @@ data Member = Member
   , deaf     :: !Bool
   , mute     :: !Bool
   } deriving (Eq, Show, Generic)
-
-instance ToJSON Member where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON Member where
-  parseJSON = genericParseJSON jsonOptions
+  deriving (ToJSON, FromJSON) via CalamityJSON Member
 
 instance HasID Member where
   getID = coerceSnowflake . getID . (^. field @"user")
@@ -426,9 +404,7 @@ data Message = Message
   , webhookID       :: !(Maybe (Snowflake ()))
   , type_           :: !MessageType
   } deriving (Eq, Show, Generic)
-
-instance ToJSON Message where
-  toEncoding = genericToEncoding jsonOptions
+  deriving ToJSON via CalamityJSON Message
 
 instance FromJSON Message where
   parseJSON = withObject "Message" $ \v -> Message
@@ -464,10 +440,9 @@ data UpdatedMessage = UpdatedMessage
   , embeds          :: Maybe (Vector Embed)
   , reactions       :: Maybe (Vector Reaction)
   , pinned          :: Maybe Bool
-  } deriving (Eq, Show, Generic)
-
-instance FromJSON UpdatedMessage where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Eq, Show, Generic )
+  deriving FromJSON via CalamityJSON UpdatedMessage
 
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
@@ -506,10 +481,10 @@ data Embed = Embed
   , provider    :: Maybe EmbedProvider
   , author      :: Maybe EmbedAuthor
   , fields      :: [EmbedField]
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ToJSON via CalamityJSON Embed
 
-instance ToJSON Embed  where
-  toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON Embed where
   parseJSON = withObject "Embed" $ \v -> Embed
@@ -531,19 +506,16 @@ data EmbedFooter = EmbedFooter
   { text         :: !ShortText
   , iconUrl      :: !(Maybe ShortText)
   , proxyIconUrl :: !(Maybe ShortText)
-  } deriving (Eq, Show, Generic)
-
-instance ToJSON EmbedFooter where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON EmbedFooter where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON EmbedFooter
 
 data EmbedImage = EmbedImage
   { url        :: !(Maybe ShortText)
   , proxyUrl   :: !(Maybe ShortText)
   , dimensions :: !(Maybe (Word64, Word64)) -- doesn't make sense to have only one of the width or height
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON EmbedImage where
   toEncoding EmbedImage{url, proxyUrl, dimensions = Just (width, height)} =
@@ -567,7 +539,8 @@ data EmbedThumbnail = EmbedThumbnail
   { url        :: !(Maybe ShortText)
   , proxyUrl   :: !(Maybe ShortText)
   , dimensions :: !(Maybe (Word64, Word64)) -- doesn't make sense to have only one of the width or height
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON EmbedThumbnail where
   toEncoding EmbedThumbnail{url, proxyUrl, dimensions = Just (width, height)} =
@@ -611,35 +584,27 @@ instance FromJSON EmbedVideo where
 data EmbedProvider = EmbedProvider
   { name :: !(Maybe ShortText)
   , url  :: !(Maybe ShortText)
-  } deriving (Eq, Show, Generic)
-
-instance ToJSON EmbedProvider where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON EmbedProvider where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON EmbedProvider
 
 data EmbedAuthor = EmbedAuthor
   { name         :: !(Maybe ShortText)
   , url          :: !(Maybe ShortText)
   , iconUrl      :: !(Maybe ShortText)
   , proxyIconURL :: !(Maybe ShortText)
-  } deriving (Eq, Show, Generic)
-
-instance ToJSON EmbedAuthor where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON EmbedAuthor where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON EmbedAuthor
 
 data EmbedField = EmbedField
   { name   :: !ShortText
   , value  :: !ShortText
   , inline :: !Bool
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ToJSON via CalamityJSON EmbedField
 
-instance ToJSON EmbedField where
-  toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON EmbedField where
   parseJSON = withObject "EmbedField" $ \v -> EmbedField
@@ -688,10 +653,10 @@ data Emoji = Emoji
   , requireColons :: !Bool
   , managed       :: !Bool
   , animated      :: !Bool
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ToJSON via CalamityJSON Emoji
 
-instance ToJSON Emoji where
-  toEncoding = genericToEncoding jsonOptions
 
 instance FromJSON Emoji where
   parseJSON = withObject "Emoji" $ \v -> Emoji
@@ -708,12 +673,8 @@ data instance Partial Emoji = PartialEmoji
   , name :: ShortText
   }
   deriving ( Eq, Show, Generic )
+  deriving (ToJSON, FromJSON) via CalamityJSON (Partial Emoji)
 
-instance ToJSON (Partial Emoji) where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON (Partial Emoji) where
-  parseJSON = genericParseJSON jsonOptions
 
 data Role = Role
   { id          :: !(Snowflake Role)
@@ -726,12 +687,8 @@ data Role = Role
   , mentionable :: !Bool
   }
   deriving ( Eq, Show, Generic )
+  deriving (ToJSON, FromJSON) via CalamityJSON Role
 
-instance ToJSON Role where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON Role where
-  parseJSON = genericParseJSON jsonOptions
 
 data Overwrite = Overwrite
   { id    :: !(Snowflake Overwrite)
@@ -740,12 +697,8 @@ data Overwrite = Overwrite
   , deny  :: !Word64
   }
   deriving ( Eq, Show, Generic )
+  deriving (ToJSON, FromJSON) via CalamityJSON Overwrite
 
-instance ToJSON Overwrite where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON Overwrite where
-  parseJSON = genericParseJSON jsonOptions
 
 data Reaction = Reaction
   { userID    :: !(Snowflake User)
@@ -784,15 +737,13 @@ instance FromJSON Reaction where
       <*> v .:? "guild_id"
       <*> pure emoji
 
-
 data StatusType
   = Idle
   | DND
   | Online
   | Offline
-  deriving (Eq, Show, Enum, Generic)
-
-instance ToJSON StatusType
+  deriving ( Eq, Show, Enum, Generic )
+  deriving anyclass ( ToJSON )
 
 instance FromJSON StatusType where
   parseJSON = withText "StatusType" $ \case
@@ -801,7 +752,6 @@ instance FromJSON StatusType where
     "online"  -> pure Online
     "offline" -> pure Offline
     _         -> fail "Unknown status type"
-
 
 data Presence = Presence
   { user         :: !(Partial User)
@@ -813,12 +763,7 @@ data Presence = Presence
   , clientStatus :: Maybe ClientStatus
   }
   deriving ( Eq, Show, Generic )
-
-instance ToJSON Presence where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON Presence where
-  parseJSON = genericParseJSON jsonOptions
+  deriving ( ToJSON, FromJSON ) via CalamityJSON Presence
 
 data ActivityType
   = Game
@@ -849,9 +794,7 @@ data Activity = Activity
   , flags         :: !Word64
   }
   deriving ( Eq, Show, Generic )
-
-instance ToJSON Activity where
-  toEncoding = genericToEncoding jsonOptions
+  deriving ToJSON via CalamityJSON Activity
 
 instance FromJSON Activity where
   parseJSON = withObject "Activity" $ \v -> Activity
@@ -885,18 +828,12 @@ instance FromJSON ActivityTimestamps where
 
     pure $ ActivityTimestamps start end
 
-
 data ActivityParty = ActivityParty
   { id   :: Maybe ShortText
   , size :: Maybe (Int, Int)
   }
   deriving ( Eq, Show, Generic )
-
-instance ToJSON ActivityParty where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON ActivityParty where
-  parseJSON = genericParseJSON jsonOptions
+  deriving ( ToJSON, FromJSON ) via CalamityJSON ActivityParty
 
 data ActivityAssets = ActivityAssets
   { largeImage :: !(Maybe ShortText)
@@ -905,12 +842,7 @@ data ActivityAssets = ActivityAssets
   , smallText  :: !(Maybe ShortText)
   }
   deriving ( Eq, Show, Generic )
-
-instance ToJSON ActivityAssets where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON ActivityAssets where
-  parseJSON = genericParseJSON jsonOptions
+  deriving ( ToJSON, FromJSON ) via CalamityJSON ActivityAssets
 
 data ActivitySecrets = ActivitySecrets
   { join     :: !(Maybe ShortText)
@@ -918,12 +850,7 @@ data ActivitySecrets = ActivitySecrets
   , match    :: !(Maybe ShortText)
   }
   deriving ( Eq, Show, Generic )
-
-instance ToJSON ActivitySecrets where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON ActivitySecrets where
-  parseJSON = genericParseJSON jsonOptions
+  deriving ( ToJSON, FromJSON ) via CalamityJSON ActivitySecrets
 
 data ClientStatus = ClientStatus
   { desktop :: !(Maybe ShortText)
@@ -931,9 +858,4 @@ data ClientStatus = ClientStatus
   , web     :: !(Maybe ShortText)
   }
   deriving ( Eq, Show, Generic )
-
-instance ToJSON ClientStatus where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON ClientStatus where
-  parseJSON = genericParseJSON jsonOptions
+  deriving ( ToJSON, FromJSON ) via CalamityJSON ClientStatus

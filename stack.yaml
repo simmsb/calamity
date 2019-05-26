@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-13.13
+resolver: lts-13.20
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -38,15 +38,15 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
-  - typerep-map-0.3.0@sha256:db693ef3ebbbd44722c5547a78ebbd29efc746923d8cb18744c2049acbe35480
-  - text-show-3.7.5@sha256:9acf5d44bf2d577eca2caf4ebf8b2dd9f9e102c4345e304141a4d89ae2fd0ced
-  - stm-containers-1.1.0.2@sha256:8976df591e61f378ef29dc0443dbe2d5d34818c898093af3ca138ea1d013b5eb
-  - stm-hamt-1.2.0.2@sha256:18126db7bf2d9c967a6020c677b3005dd957a4c39d69aeaea3c29c90de8f6124
-  - primitive-extras-0.7.1@sha256:23905c57089418b1a2d324cfee3e81bbd5a344a0fa56a827867b2dce275fdb5e
-  - type-level-0.3.0@sha256:582b33e72c8e9f40df856eb2fb5c695a40dbd98571daaaff453c51dd31e87017
-  - streamly-0.6.0@sha256:ad1b67cff7f04050ef6e00fb56ae42cc67cd3932a92670156da9827fad37a8ca
-  - ekg-0.4.0.15@sha256:f52d7c00654d72d2ab988255f30adba95a52484ac310bab9c136c64732e69f4b
-  - ekg-json-0.1.0.6@sha256:4ff2e9cac213a5868ae8b4a7c72a16a9a76fac14d944ae819b3d838a9725569b
+  - typerep-map-0.3.2
+  - text-show-3.8.2
+  - stm-containers-1.1.0.4
+  - stm-hamt-1.2.0.2
+  - primitive-extras-0.7.1
+  - type-level-0.3.0
+  - streamly-0.6.1
+  - ekg-0.4.0.15
+  - ekg-json-0.1.0.6
   - github: nitros12/concurrent-state
     commit: 9be5124aec9ccf2925638afd1bb04f36121600a1
 

@@ -160,11 +160,10 @@ data DispatchType
   | VOICE_SERVER_UPDATE
   | WEBHOOKS_UPDATE
   deriving ( Show, Eq, Enum, Generic )
+  deriving anyclass ( ToJSON, FromJSON )
 
-instance ToJSON DispatchType
-
-instance FromJSON DispatchType
-
+-- instance ToJSON DispatchType
+-- instance FromJSON DispatchType
 data IdentifyData = IdentifyData
   { token          :: Text
   , properties     :: IdentifyProps
@@ -174,9 +173,7 @@ data IdentifyData = IdentifyData
   , presence       :: Maybe StatusUpdateData
   }
   deriving ( Show, Generic )
-
-instance ToJSON IdentifyData where
-  toEncoding = genericToEncoding jsonOptions
+  deriving ToJSON via CalamityJSON IdentifyData
 
 data StatusUpdateData = StatusUpdateData
   { since  :: Maybe Integer
@@ -185,9 +182,7 @@ data StatusUpdateData = StatusUpdateData
   , afk    :: Bool
   }
   deriving ( Show, Generic )
-
-instance ToJSON StatusUpdateData where
-  toEncoding = genericToEncoding jsonOptionsKeepNothing
+  deriving ToJSON via CalamityJSON StatusUpdateData
 
 data ResumeData = ResumeData
   { token     :: Text
@@ -195,12 +190,7 @@ data ResumeData = ResumeData
   , seq       :: Int
   }
   deriving ( Show, Generic )
-
-instance ToJSON ResumeData where
-  toEncoding = genericToEncoding jsonOptions
-
-instance FromJSON ResumeData where
-  parseJSON = genericParseJSON jsonOptions
+  deriving ( ToJSON, FromJSON ) via CalamityJSON ResumeData
 
 data RequestGuildMembersData = RequestGuildMembersData
   { guildID :: Snowflake Guild
@@ -223,7 +213,7 @@ data IdentifyProps = IdentifyProps
   deriving ( Show, Generic )
 
 instance ToJSON IdentifyProps where
-  toEncoding IdentifyProps { .. } = pairs ("$os" .= os <> "$browser" .= browser <> "$device" .= device)
+  toEncoding IdentifyProps { os, browser, device } = pairs ("$os" .= os <> "$browser" .= browser <> "$device" .= device)
 
 data ControlMessage
   = Restart
@@ -235,8 +225,7 @@ data ShardException
   = ShardExcRestart
   | ShardExcShutDown
   deriving ( Show )
-
-instance Exception ShardException
+  deriving anyclass Exception
 
 data Shard = Shard
   { shardID     :: Int
@@ -264,6 +253,7 @@ data ShardState = ShardState
 newtype ShardM a = ShardM
   { unShardM :: LogT (StateC ShardState IO) a
   }
-  deriving ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, Functor, MonadState ShardState )
+  deriving ( Functor )
+  deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadState ShardState )
 
-deriving instance MonadState s m => MonadState s (LogT m)
+deriving newtype instance MonadState s m => MonadState s (LogT m)

@@ -22,7 +22,9 @@ import           Unsafe.Coerce
 newtype SnowflakeMap a = SnowflakeMap
   { unSnowflakeMap :: HashMap (Snowflake a) a
   }
-  deriving ( Generic, IsList, Eq, Data, Ord, Show, Semigroup, Monoid )
+  deriving ( Generic, Eq, Data, Ord, Show )
+  deriving newtype ( IsList, Semigroup, Monoid )
+  deriving anyclass ( NFData, Hashable )
 
 -- instance At (SnowflakeMap a) where
 --   at k f m = at (unSnowflakeMap k) f m
@@ -36,9 +38,9 @@ instance Foldable SnowflakeMap where
 instance Traversable SnowflakeMap where
   traverse f = fmap (SnowflakeMap . coerceSnowflakeMap) . traverse f . unSnowflakeMap
 
-deriving instance NFData a => NFData (SnowflakeMap a)
+-- deriving instance NFData a => NFData (SnowflakeMap a)
 
-deriving instance Hashable a => Hashable (SnowflakeMap a)
+-- deriving instance Hashable a => Hashable (SnowflakeMap a)
 
 instance Wrapped (SnowflakeMap a) where
   type Unwrapped (SnowflakeMap a) = HashMap (Snowflake a) a

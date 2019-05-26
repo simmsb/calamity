@@ -44,17 +44,15 @@ data DiscordResponseType
   -- | Our error, we should fail
   | ClientError Int Value
 
-data GatewayResponse = GatewayResponse
+newtype GatewayResponse = GatewayResponse
   { url :: Text
-  } deriving (Generic, Show)
-
-instance FromJSON GatewayResponse where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Generic, Show )
+  deriving ( FromJSON ) via CalamityJSON GatewayResponse
 
 data BotGatewayResponse = BotGatewayResponse
   { url    :: Text
   , shards :: Int
-  } deriving (Generic, Show)
-
-instance FromJSON BotGatewayResponse where
-  parseJSON = genericParseJSON jsonOptions
+  }
+  deriving ( Generic, Show )
+  deriving ( FromJSON ) via CalamityJSON BotGatewayResponse

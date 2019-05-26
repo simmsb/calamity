@@ -116,9 +116,11 @@ default-extensions:
   - FlexibleInstances
   - FunctionalDependencies
   - GADTs
+  - DerivingVia
   - DerivingStrategies
   - GeneralizedNewtypeDeriving
   - StandaloneDeriving
+  - DeriveAnyClass
   - InstanceSigs
   - KindSignatures
   - LambdaCase
