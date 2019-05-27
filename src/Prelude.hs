@@ -9,6 +9,7 @@ module Prelude
     , module Data.Aeson.Lens
     , module Control.Arrow
     , module Data.Text.Short
+    , module Data.Semigroup
     , LogMessage
     , CalamityJSON(..)
     , debug
@@ -19,19 +20,21 @@ module Prelude
     , trace
     , jsonOptions
     , jsonOptionsKeepNothing
-    , whenJust ) where
+    , whenJust
+    , lastMaybe ) where
 
 import           Control.Arrow     ( (>>>) )
 import           Control.Lens      hiding ( (.=), (<.>), Level, Strict, from, op, to, uncons, unsnoc )
 
 import           Data.Aeson        hiding ( Error )
 import           Data.Aeson.Lens
+import           Data.Semigroup    ( Last(..) )
 import qualified Data.Text.Short   as ST
 import           Data.Text.Short   ( ShortText )
 
 import           Fmt
 
-import           Protolude         hiding ( HasField, getField, trace )
+import           Protolude         hiding ( HasField, Last, getField, getLast, trace )
 
 import           System.Log.Simple hiding ( Debug, Error, Fatal, Info, Message, Trace, Warning, trace )
 import qualified System.Log.Simple as SLS
@@ -83,3 +86,6 @@ instance ToJSON ShortText where
   toJSON = toJSON . ST.toText
 
   toEncoding = toEncoding . ST.toText
+
+lastMaybe :: Maybe a -> Maybe a -> Maybe a
+lastMaybe l r = getLast <$> fmap Last l <> fmap Last r

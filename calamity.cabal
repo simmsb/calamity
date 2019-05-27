@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 26e0c8ab4529a8eb663e2a057a47d928fdddcd3162741c46391619a8b659726d
+-- hash: 4938acac130f263b21bd85e4b7f9b6d9abeca919c880a1adebb177613f689e68
 
 name:           calamity
 version:        0.1.0.0
@@ -51,6 +51,7 @@ library
       Calamity.Types.General
       Calamity.Types.MessageStore
       Calamity.Types.Partial
+      Calamity.Types.RefCountedSnowflakeMap
       Calamity.Types.Snowflake
       Calamity.Types.SnowflakeMap
       Calamity.Types.Token

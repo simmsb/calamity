@@ -20,32 +20,34 @@ import           Calamity.Gateway.Shard
 import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.General
 import           Calamity.Types.MessageStore
+import qualified Calamity.Types.RefCountedSnowflakeMap as RSM
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap     as SM
+import qualified Calamity.Types.SnowflakeMap           as SM
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Catch
-import           Control.Monad.Trans.Reader      ( runReaderT )
+import           Control.Monad.Trans.Reader            ( runReaderT )
 
 import           Data.Default
-import qualified Data.HashSet                    as LS
+import qualified Data.HashSet                          as LS
 import           Data.Time
-import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) )
+import           Data.TypeRepMap                       ( TypeRepMap, WrapTypeable(..) )
 
-import           GHC.Exts                        ( fromList )
-import qualified GHC.TypeLits                    as TL
+import           GHC.Exts                              ( fromList )
+import qualified GHC.TypeLits                          as TL
 
-import qualified StmContainers.Set               as TS
+import qualified StmContainers.Set                     as TS
 
-import qualified Streamly                        as S
+import qualified Streamly                              as S
 
 data Cache = Cache
   { user              :: Maybe User
   , guilds            :: SM.SnowflakeMap Guild
   , dms               :: SM.SnowflakeMap DMChannel
   , channels          :: SM.SnowflakeMap Channel
+  , users             :: RSM.RefCountedSnowflakeMap User
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
   , messages          :: MessageStore
   }

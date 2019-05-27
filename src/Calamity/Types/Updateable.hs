@@ -4,6 +4,7 @@ module Calamity.Types.Updateable
 
 import           Calamity.Types.General
 
+-- import           Data.Semigroup ( Last(..) )
 import           Data.Generics.Product.Fields
 
 class Updateable a where
@@ -11,16 +12,17 @@ class Updateable a where
 
   update :: Updated a -> a -> a
 
-setF :: forall (f :: Symbol) a b o n. (HasField f o o a b, HasField f o o b b, HasField f n n b b) => n -> o -> o
-setF n = field @f .~ (n ^. field @f)
+-- | sets original field to new field
+setF :: forall (f :: Symbol) o n b. (HasField' f o b, HasField' f o b, HasField' f n b) => n -> o -> o
+setF n = field' @f .~ (n ^. field' @f)
 
-mergeF :: forall (f :: Symbol) a b o n.
-       (HasField f o o a b, HasField f o o b b, HasField f n n (Maybe b) (Maybe b))
-       => o
-       -> n
-       -> o
-       -> o
-mergeF o n = field @f .~ fromMaybe (o ^. field @f) (n ^. field @f)
+-- | sets original field to unwrapped new field if new field is not Nothing
+mergeF :: forall (f :: Symbol) o n b. (HasField' f o b, HasField' f o b, HasField' f n (Maybe b)) => o -> n -> o -> o
+mergeF o n = field' @f .~ fromMaybe (o ^. field' @f) (n ^. field' @f)
+
+-- | sets original field to new field if new field is not Nothing
+mergeF' :: forall (f :: Symbol) o n b. (HasField' f o (Maybe b), HasField' f n (Maybe b)) => o -> n -> o -> o
+mergeF' o n = field' @f .~ lastMaybe (o ^. field' @f) (n ^. field' @f)
 
 instance Updateable Message where
   type Updated Message = UpdatedMessage
@@ -68,3 +70,17 @@ instance Updateable Guild where
     & mergeF @"widgetEnabled" o n
     & setF @"widgetChannelID" n
     & setF @"systemChannelID" n
+
+instance Updateable User where
+  type Updated User = User
+
+  update n o = o
+    & setF @"username" n
+    & setF @"discriminator" n
+    & mergeF' @"bot" o n
+    & mergeF' @"avatar" o n
+    & mergeF' @"mfaEnabled" o n
+    & mergeF' @"verified" o n
+    & mergeF' @"email" o n
+    & mergeF' @"flags" o n
+    & mergeF' @"premiumType" o n

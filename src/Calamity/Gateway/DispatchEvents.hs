@@ -7,6 +7,7 @@ import           Calamity.Types.UnixTimestamp
 
 import           Data.Aeson
 import           Data.Time
+import qualified Data.Vector.Unboxed          as UV
 
 data DispatchData
   = Ready ReadyData
@@ -93,9 +94,9 @@ data GuildMemberRemoveData = GuildMemberRemoveData
 
 data GuildMemberUpdateData = GuildMemberUpdateData
   { guildID :: Snowflake Guild
-  , roles   :: [Snowflake Role]
+  , roles   :: UV.Vector (Snowflake Role)
   , user    :: User
-  , nick    :: Maybe Text
+  , nick    :: Maybe ShortText
   }
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON GuildMemberUpdateData

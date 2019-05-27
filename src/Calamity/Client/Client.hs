@@ -11,25 +11,26 @@ import           Calamity.Gateway.DispatchEvents
 import           Calamity.HTTP.Ratelimit
 import           Calamity.Types.General
 import           Calamity.Types.MessageStore
+import qualified Calamity.Types.RefCountedSnowflakeMap as RSM
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap     as SM
+import qualified Calamity.Types.SnowflakeMap           as SM
 import           Calamity.Types.Updateable
 
-import           Control.Concurrent.Async        ( forConcurrently_ )
+import           Control.Concurrent.Async              ( forConcurrently_ )
 import           Control.Concurrent.STM.TVar
-import           Control.Lens                    ( (.=) )
+import           Control.Lens                          ( (.=) )
 
 import           Data.Default
-import qualified Data.HashSet                    as LS
+import qualified Data.HashSet                          as LS
 import           Data.HashSet.Lens
 import           Data.Maybe
-import qualified Data.TypeRepMap                 as TM
+import qualified Data.TypeRepMap                       as TM
 
-import qualified StmContainers.Set               as TS
+import qualified StmContainers.Set                     as TS
 
-import qualified Streamly.Prelude                as S
+import qualified Streamly.Prelude                      as S
 
-import qualified System.Log.Simple               as SLS
+import qualified System.Log.Simple                     as SLS
 
 
 -- TODO: merge event handlers with default
@@ -66,7 +67,7 @@ startClient client = do
     clientLoop
 
 emptyCache :: Cache
-emptyCache = Cache Nothing SM.empty SM.empty SM.empty LS.empty def
+emptyCache = Cache Nothing SM.empty SM.empty SM.empty RSM.empty LS.empty def
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
@@ -276,13 +277,34 @@ updateCache (GuildCreate guild) = do
   #guilds . at (guild ^. #id) ?= guild
   -- also insert all channels from this guild
   #channels %= SM.union (guild ^. #channels)
+  #users %= (RSM.union $ RSM.fromList (guild ^.. #members . traverse . #user))
 
 updateCache (GuildUpdate guild) =
   #guilds . at (guild ^. #id) . _Just %= update guild
 
 updateCache (GuildDelete guild) = do
-  #guilds %= sans (guild ^. #id)
-  #channels %= SM.filter (\c -> c ^. #guildID /= Just (guild ^. #id))
+  guild' <- use $ #guilds . at (guild ^. #id)
+  whenJust guild' $ \guild'' -> do
+    #guilds %= sans (guild ^. #id)
+    #channels %= (`SM.difference` (guild'' ^. #channels))
+    #users %= (`RSM.difference` RSM.fromList (guild'' ^.. #members . traverse . #user))
+
+updateCache (GuildEmojisUpdate GuildEmojisUpdateData { guildID, emojis }) =
+  #guilds . at guildID . _Just . #emojis .= SM.fromList emojis
+
+updateCache (GuildMemberAdd member) = do
+  #users %= RSM.insert (member ^. #user)
+  #guilds . at (member ^. #guildID) . _Just . #members . at (getID member) ?= member
+
+updateCache (GuildMemberRemove GuildMemberRemoveData { guildID, user }) = do
+  #users %= RSM.delete (coerceSnowflake $ getID user)
+  #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) .= Nothing
+
+updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nick }) = do
+  #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just . #roles .= roles
+  #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just . #nick
+    %= (`lastMaybe` nick)
+  #users %= RSM.adjust (const user) (coerceSnowflake $ getID user)
 
 updateCache (MessageCreate msg) = #messages %= addMessage msg
 

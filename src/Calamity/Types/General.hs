@@ -92,11 +92,14 @@ data User = User
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON User
 
-data instance Partial User = PartialUser
+newtype instance Partial User = PartialUser
   { id :: Snowflake (Partial User)
   }
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial User)
+
+instance HasID (Partial User) where
+  getID (PartialUser id) = id
 
 data Channel = Channel
   { id                   :: !(Snowflake Channel)
@@ -111,7 +114,7 @@ data Channel = Channel
   , bitrate              :: !(Maybe Int)
   , userLimit            :: !(Maybe Int)
   , rateLimitPerUser     :: !(Maybe Int)
-  , recipients           :: Maybe (SnowflakeMap User)
+  , recipients           :: Maybe (SnowflakeMap (Partial User))
   , icon                 :: !(Maybe ShortText)
   , ownerID              :: Maybe (Snowflake User)
   , applicationID        :: Maybe (Snowflake User)
@@ -124,7 +127,7 @@ data Channel = Channel
 data SingleDM = SingleDM
   { id            :: Snowflake SingleDM
   , lastMessageID :: Maybe (Snowflake Message)
-  , recipients    :: SnowflakeMap User
+  , recipients    :: SnowflakeMap (Partial User)
   }
   deriving ( Show, Eq, Generic )
 
@@ -133,7 +136,7 @@ data GroupDM = GroupDM
   , ownerID       :: Snowflake User
   , lastMessageID :: Maybe (Snowflake Message)
   , icon          :: Maybe ShortText
-  , recipients    :: SnowflakeMap User
+  , recipients    :: SnowflakeMap (Partial User)
   , name          :: ShortText
   }
   deriving ( Show, Eq, Generic )
@@ -269,32 +272,33 @@ data UpdatedGuild = UpdatedGuild
   , systemChannelID             :: Maybe (Snowflake GuildChannel)
   }
   deriving ( Eq, Show, Generic )
+  deriving ( FromJSON ) via CalamityJSON UpdatedGuild
 
-instance FromJSON UpdatedGuild where
-  parseJSON = withObject "UpdatedGuild" $ \v -> UpdatedGuild
-    <$> v .: "id"
-    <*> v .: "name"
-    <*> v .: "icon"
-    <*> v .:? "splash"
-    <*> v .:? "owner"
-    <*> v .: "owner_id"
-    <*> v .:? "permissions"
-    <*> v .: "region"
-    <*> v .:? "afk_channel_id"
-    <*> v .: "afk_timeout"
-    <*> v .:? "embed_enabled"
-    <*> v .:? "embed_channel_id"
-    <*> v .: "verification_level"
-    <*> v .: "default_message_notifications"
-    <*> v .: "explicit_content_filter"
-    <*> v .: "roles"
-    <*> v .: "emojis"
-    <*> v .: "features"
-    <*> v .: "mfa_level"
-    <*> v .:? "application_id"
-    <*> v .:? "widget_enabled"
-    <*> v .:? "widget_channel_id"
-    <*> v .:? "system_channel_id"
+-- instance FromJSON UpdatedGuild where
+--   parseJSON = withObject "UpdatedGuild" $ \v -> UpdatedGuild
+--     <$> v .: "id"
+--     <*> v .: "name"
+--     <*> v .: "icon"
+--     <*> v .:? "splash"
+--     <*> v .:? "owner"
+--     <*> v .: "owner_id"
+--     <*> v .:? "permissions"
+--     <*> v .: "region"
+--     <*> v .:? "afk_channel_id"
+--     <*> v .: "afk_timeout"
+--     <*> v .:? "embed_enabled"
+--     <*> v .:? "embed_channel_id"
+--     <*> v .: "verification_level"
+--     <*> v .: "default_message_notifications"
+--     <*> v .: "explicit_content_filter"
+--     <*> v .: "roles"
+--     <*> v .: "emojis"
+--     <*> v .: "features"
+--     <*> v .: "mfa_level"
+--     <*> v .:? "application_id"
+--     <*> v .:? "widget_enabled"
+--     <*> v .:? "widget_channel_id"
+--     <*> v .:? "system_channel_id"
 
 -- TODO: eventually use these for lenses
 -- buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a
@@ -388,13 +392,13 @@ data Message = Message
   { id              :: !(Snowflake Message)
   , channelID       :: !(Snowflake Channel)
   , guildID         :: !(Snowflake Guild)
-  , author          :: !User
+  , author          :: !(Partial User)
   , content         :: !ShortText
   , timestamp       :: !UTCTime
   , editedTimestamp :: !(Maybe UTCTime)
   , tts             :: !Bool
   , mentionEveryone :: !Bool
-  , mentions        :: !(SnowflakeMap User)
+  , mentions        :: !(SnowflakeMap (Partial User))
   , mentionRoles    :: !(UV.Vector (Snowflake Role))
   , attachments     :: !(Vector Attachment)
   , embeds          :: !(Vector Embed)
@@ -434,7 +438,7 @@ data UpdatedMessage = UpdatedMessage
   , editedTimestamp :: Maybe UTCTime
   , tts             :: Maybe Bool
   , mentionEveryone :: Maybe Bool
-  , mentions        :: Maybe (SnowflakeMap User)
+  , mentions        :: Maybe (SnowflakeMap (Partial User))
   , mentionRoles    :: Maybe (UV.Vector (Snowflake Role))
   , attachments     :: Maybe (Vector Attachment)
   , embeds          :: Maybe (Vector Embed)
@@ -649,7 +653,7 @@ data Emoji = Emoji
   { id            :: !(Snowflake Emoji)
   , name          :: !ShortText
   , roles         :: !(UV.Vector (Snowflake Role))
-  , user          :: !(Maybe User)
+  , user          :: !(Maybe (Partial User))
   , requireColons :: !Bool
   , managed       :: !Bool
   , animated      :: !Bool
