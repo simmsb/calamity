@@ -25,6 +25,7 @@ import qualified Data.HashSet                          as LS
 import           Data.HashSet.Lens
 import           Data.Maybe
 import qualified Data.TypeRepMap                       as TM
+import qualified Data.Vector                           as V
 
 import qualified StmContainers.Set                     as TS
 
@@ -202,29 +203,30 @@ handleActions _ _ eh (MessageCreate msg) =
   pure $ map ($ msg) (unwrapEvent @"messagecreate" eh)
 
 handleActions os ns eh (MessageUpdate msg) = do
-  oldMsg <- getMessage (coerceSnowflake $ msg ^. #id) $ os ^. #messages
-  newMsg <- getMessage (coerceSnowflake $ msg ^. #id) $ ns ^. #messages
+  let msgID = coerceSnowflake $ msg ^. #id
+  oldMsg <- os ^. #messages . at msgID
+  newMsg <- ns ^. #messages . at msgID
   pure $ map (\f -> f oldMsg newMsg) (unwrapEvent @"messageupdate" eh)
 
 handleActions os _ eh (MessageDelete MessageDeleteData { id }) = do
-  oldMsg <- getMessage id $ os ^. #messages
+  oldMsg <- os ^. #messages . at id
   pure $ map ($ oldMsg) (unwrapEvent @"messagedelete" eh)
 
 handleActions os _ eh (MessageDeleteBulk MessageDeleteBulkData { ids }) = join
-  <$> forM ids (\id -> do
-                  oldMsg <- getMessage id $ os ^. #messages
-                  pure $ map ($ oldMsg) (unwrapEvent @"messagedelete" eh))
+  <$> for ids (\id -> do
+                 oldMsg <- os ^. #messages . at id
+                 pure $ map ($ oldMsg) (unwrapEvent @"messagedelete" eh))
 
 handleActions _ ns eh (MessageReactionAdd reaction) = do
-  message <- getMessage (coerceSnowflake $ reaction ^. #messageID) $ ns ^. #messages
+  message <- ns ^. #messages . at (coerceSnowflake $ reaction ^. #messageID)
   pure $ map (\f -> f message reaction) (unwrapEvent @"messagereactionadd" eh)
 
 handleActions _ ns eh (MessageReactionRemove reaction) = do
-  message <- getMessage (coerceSnowflake $ reaction ^. #messageID) $ ns ^. #messages
+  message <- ns ^. #messages . at (coerceSnowflake $ reaction ^. #messageID)
   pure $ map (\f -> f message reaction) (unwrapEvent @"messagereactionremove" eh)
 
 handleActions os _ eh (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) = do
-  oldMsg <- getMessage (coerceSnowflake messageID) $ os ^. #messages
+  oldMsg <- os ^. #messages . at (coerceSnowflake messageID)
   pure $ map ($ oldMsg) (unwrapEvent @"messagereactionremoveall" eh)
 
 #ifdef PARSE_PRESENCES
@@ -261,8 +263,8 @@ updateCache (Ready ReadyData { user, guilds }) = do
   #unavailableGuilds .= setOf (folded . #id) guilds
 
 updateCache (ChannelCreate chan) = do
-  #channels . at (chan ^. #id) ?= chan
-  whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels . at (chan ^. #id) ?= chan
+  #channels %= SM.insert chan
+  whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels %= SM.insert chan
 
 updateCache (ChannelUpdate chan) = do
   #channels . at (chan ^. #id) . _Just %= update chan
@@ -274,10 +276,10 @@ updateCache (ChannelDelete chan) = do
   whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels %= sans (chan ^. #id)
 
 updateCache (GuildCreate guild) = do
-  #guilds . at (guild ^. #id) ?= guild
+  #guilds %= SM.insert guild
   -- also insert all channels from this guild
   #channels %= SM.union (guild ^. #channels)
-  #users %= (RSM.union $ RSM.fromList (guild ^.. #members . traverse . #user))
+  #users %= RSM.union (RSM.fromList (guild ^.. #members . traverse . #user))
 
 updateCache (GuildUpdate guild) =
   #guilds . at (guild ^. #id) . _Just %= update guild
@@ -298,7 +300,7 @@ updateCache (GuildMemberAdd member) = do
 
 updateCache (GuildMemberRemove GuildMemberRemoveData { guildID, user }) = do
   #users %= RSM.delete (coerceSnowflake $ getID user)
-  #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) .= Nothing
+  #guilds . at guildID . _Just . #members %= sans (coerceSnowflake $ user ^. #id)
 
 updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nick }) = do
   #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just . #roles .= roles
@@ -306,16 +308,42 @@ updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nic
     %= (`lastMaybe` nick)
   #users %= RSM.adjust (const user) (coerceSnowflake $ getID user)
 
+updateCache (GuildMembersChunk GuildMembersChunkData { members }) =
+  traverse_ (updateCache . GuildMemberAdd) members
+
+updateCache (GuildRoleCreate GuildRoleData { guildID, role }) = do
+  #guilds . at guildID . _Just . #roles %= SM.insert role
+
+updateCache (GuildRoleUpdate GuildRoleData { guildID, role }) = do
+  #guilds . at guildID . _Just . #roles %= SM.insert role
+
+updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) = do
+  #guilds . at guildID . _Just . #roles %= sans roleID
+
 updateCache (MessageCreate msg) = #messages %= addMessage msg
 
 updateCache (MessageUpdate newMsg) = do
   let id = coerceSnowflake $ newMsg ^. #id
-  oldMsg <- getMessage id <$> use #messages
-  whenJust oldMsg $ \oldMsg' -> let newMsg' = update newMsg oldMsg'
-                                in #messages %= addMessage newMsg' . dropMessage id
+  #messages . at id . _Just %= update newMsg
 
-updateCache (MessageDelete MessageDeleteData { id }) = #messages %= dropMessage id
+updateCache (MessageDelete MessageDeleteData { id }) = #messages %= sans id
 
 updateCache (MessageDeleteBulk MessageDeleteBulkData { ids }) = #messages %= flip (foldl $ flip dropMessage) ids
+
+updateCache (MessageReactionAdd reaction) =
+  #messages . at (reaction ^. #messageID) . _Just . #reactions %= V.cons reaction
+
+updateCache (MessageReactionRemove reaction) =
+  #messages . at (reaction ^. #messageID) . _Just . #reactions %= V.filter (\r -> r ^. #userID /= reaction ^. #userID)
+
+updateCache (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) =
+  #messages . at messageID . _Just . #reactions .= V.empty
+
+#ifdef PARSE_PRESENCES
+updateCache (PresenceUpdate presence) =
+  #guilds . at (presence ^. #guildID) . _Just . #presences . at (coerceSnowflake . getID $ presence ^. #user) ?= presence
+#endif
+
+updateCache (UserUpdate user) = #user ?= user
 
 updateCache data' = pure () -- TODO

@@ -254,7 +254,7 @@ fromList = RefCountedSnowflakeMap . LH.fromList . Prelude.map (\v -> (getID v, (
 
 instance (FromJSON a, HasID a) => FromJSON (RefCountedSnowflakeMap a) where
   parseJSON = withArray "RefCountedSnowflakeMap" $ \l -> do
-    parsed <- mapM parseJSON l
+    parsed <- traverse parseJSON l
     pure . Calamity.Types.RefCountedSnowflakeMap.fromList . Prelude.toList $ parsed
 
 instance ToJSON a => ToJSON (RefCountedSnowflakeMap a) where

@@ -113,7 +113,7 @@ instance FromJSON GuildMembersChunkData where
 
     members' <- do
       members' <- v .: "members"
-      mapM (\m -> parseJSON $ Object (m <> "guild_id" .= guildID)) members'
+      traverse (\m -> parseJSON $ Object (m <> "guild_id" .= guildID)) members'
 
     pure $ GuildMembersChunkData guildID members'
 

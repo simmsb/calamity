@@ -37,6 +37,8 @@ import           Control.Monad
 
 import           Data.Aeson
 import           Data.Generics.Product.Fields
+import           Data.HashMap.Lazy            ( HashMap )
+import qualified Data.HashMap.Lazy            as LH
 import           Data.Scientific
 import           Data.Time
 import           Data.Vector                  ( Vector )
@@ -169,8 +171,8 @@ instance ToJSON ChannelType where
 instance FromJSON ChannelType where
   parseJSON = withScientific "ChannelType"  $ \n ->
     case toBoundedInteger n of
-      Just v  -> return $ toEnum v
-      Nothing -> fail $ "Invalid ChannelType: " ++ show n
+      Just v  -> pure $ toEnum v
+      Nothing -> fail $ "Invalid ChannelType: " <> show n
 
 data Category = Category
   { id                   :: Snowflake Category
@@ -241,7 +243,7 @@ data Guild = Guild
   , members                     :: !(SnowflakeMap Member)
   , channels                    :: !(SnowflakeMap Channel)
 #ifdef PARSE_PRESENCES
-  , presences                   :: !(Vector Presence)
+  , presences                   :: !(HashMap (Snowflake Member) Presence)
 #endif
   }
   deriving ( Eq, Show, Generic )
@@ -274,32 +276,6 @@ data UpdatedGuild = UpdatedGuild
   deriving ( Eq, Show, Generic )
   deriving ( FromJSON ) via CalamityJSON UpdatedGuild
 
--- instance FromJSON UpdatedGuild where
---   parseJSON = withObject "UpdatedGuild" $ \v -> UpdatedGuild
---     <$> v .: "id"
---     <*> v .: "name"
---     <*> v .: "icon"
---     <*> v .:? "splash"
---     <*> v .:? "owner"
---     <*> v .: "owner_id"
---     <*> v .:? "permissions"
---     <*> v .: "region"
---     <*> v .:? "afk_channel_id"
---     <*> v .: "afk_timeout"
---     <*> v .:? "embed_enabled"
---     <*> v .:? "embed_channel_id"
---     <*> v .: "verification_level"
---     <*> v .: "default_message_notifications"
---     <*> v .: "explicit_content_filter"
---     <*> v .: "roles"
---     <*> v .: "emojis"
---     <*> v .: "features"
---     <*> v .: "mfa_level"
---     <*> v .:? "application_id"
---     <*> v .:? "widget_enabled"
---     <*> v .:? "widget_channel_id"
---     <*> v .:? "system_channel_id"
-
 -- TODO: eventually use these for lenses
 -- buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a
 -- buildChannels guildID = SM.mapMaybe (rightToMaybe . fromChannelWithGuildID guildID (Proxy @a))
@@ -318,21 +294,22 @@ instance FromJSON Guild where
 
     members' <- do
       members' <- v .: "members"
-      SM.fromList <$> mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) members'
+      SM.fromList <$> traverse (\m -> parseJSON $ Object (m <> "guild_id" .= id)) members'
 
     channels' <- do
       channels' <- v .: "channels"
-      SM.fromList <$> mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) channels'
+      SM.fromList <$> traverse (\m -> parseJSON $ Object (m <> "guild_id" .= id)) channels'
 
 #ifdef PARSE_PRESENCES
     presences' <- do
       presences' <- v .: "presences"
-      mapM (\m -> parseJSON $ Object (m <> "guild_id" .= id)) presences'
+      LH.fromList <$> traverse (\m -> do
+                                  p <- parseJSON $ Object (m <> "guild_id" .= id)
+                                  pure (coerceSnowflake . getID $ p ^. field @"user", p)) presences'
 #endif
 
-    Guild
-      <$> pure id
-      <*> v .: "name"
+    Guild id
+      <$> v .: "name"
       <*> v .: "icon"
       <*> v .:? "splash"
       <*> v .:? "owner"
@@ -467,8 +444,8 @@ instance ToJSON MessageType where
 instance FromJSON MessageType where
     parseJSON = withScientific "MessageType"  $ \n ->
         case toBoundedInteger n of
-            Just v  -> return $ toEnum v
-            Nothing -> fail $ "Invalid MessageType: " ++ show n
+            Just v  -> pure $ toEnum v
+            Nothing -> fail $ "Invalid MessageType: " <> show n
 
 
 data Embed = Embed
@@ -780,8 +757,8 @@ instance ToJSON ActivityType where
 
 instance FromJSON ActivityType where
   parseJSON = withScientific "ActivityType" $ \n -> case toBoundedInteger n of
-    Just v  -> return $ toEnum v
-    Nothing -> fail $ "Invalid ActivityType: " ++ show n
+    Just v  -> pure $ toEnum v
+    Nothing -> fail $ "Invalid ActivityType: " <> show n
 
 data Activity = Activity
   { name          :: !ShortText

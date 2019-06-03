@@ -20,9 +20,7 @@ newtype Snowflake t = Snowflake
   { fromSnowflake :: Word64
   }
   deriving ( Generic, Show, Eq, Ord, Data )
-  deriving newtype ( NFData, ToJSONKey )
-
-instance Hashable (Snowflake t)
+  deriving newtype ( NFData, ToJSONKey, Hashable )
 
 instance ToJSON (Snowflake t) where
   toJSON (Snowflake s) = String . show $ s

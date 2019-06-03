@@ -88,21 +88,21 @@ type family AddRequiredInner (k :: Maybe RouteRequirement) :: RouteRequirement w
 class Typeable a => RouteFragmentable a ids where
   type ConsRes a ids
 
-  (!:!) :: RouteBuilder ids -> a -> ConsRes a ids
+  (//) :: RouteBuilder ids -> a -> ConsRes a ids
 
 instance RouteFragmentable S ids where
   type ConsRes S ids = RouteBuilder ids
 
-  (UnsafeMkRouteBuilder r ids) !:! (S t) =
+  (UnsafeMkRouteBuilder r ids) // (S t) =
     UnsafeMkRouteBuilder (S' t : r) ids
 
 instance Typeable a => RouteFragmentable (ID (a :: Type)) (ids :: [(Type, RouteRequirement)]) where
   type ConsRes (ID a) ids = RouteBuilder (AddRequired a ids)
 
-  (UnsafeMkRouteBuilder r ids) !:! ID =
+  (UnsafeMkRouteBuilder r ids) // ID =
     UnsafeMkRouteBuilder (ID' (typeRep (Proxy @a)) : r) ids
 
-infixl 5 !:!
+infixl 5 //
 
 data Route = Route
   { path      :: Text

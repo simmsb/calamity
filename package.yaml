@@ -143,6 +143,7 @@ default-extensions:
   - DuplicateRecordFields
   - TypeOperators
   - TypeApplications
+  - RoleAnnotations
 
 tests:
   calamity-test:

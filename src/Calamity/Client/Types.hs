@@ -78,7 +78,7 @@ instance {-# OVERLAPPABLE #-}MonadReader a m => MonadReader a (LogT m) where
 
   local f m = do
     b <- ask
-    lift $ local f $ runReaderT (runLogT m) b
+    lift . local f $ runReaderT (runLogT m) b
 
 -- deriving instance MonadReader
 -- deriving instance MonadReader Client m => MonadReader Client (LogT (ReaderT Client m))

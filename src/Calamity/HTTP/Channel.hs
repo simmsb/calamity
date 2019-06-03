@@ -17,7 +17,7 @@ data ChannelRequest a where
 
 instance Request (ChannelRequest a) a where
   toRoute (CreateMessage id _) =
-    mkRouteBuilder !:! S "channels" !:! ID @Channel !:! S "messages"
+    mkRouteBuilder // S "channels" // ID @Channel // S "messages"
     & giveID id
     & buildRoute
 
