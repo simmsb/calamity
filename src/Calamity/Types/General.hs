@@ -368,7 +368,7 @@ instance HasID Member where
 data Message = Message
   { id              :: !(Snowflake Message)
   , channelID       :: !(Snowflake Channel)
-  , guildID         :: !(Snowflake Guild)
+  , guildID         :: !(Maybe (Snowflake Guild))
   , author          :: !(Partial User)
   , content         :: !ShortText
   , timestamp       :: !UTCTime
@@ -391,7 +391,7 @@ instance FromJSON Message where
   parseJSON = withObject "Message" $ \v -> Message
     <$> v .: "id"
     <*> v .: "channel_id"
-    <*> v .: "guild_id"
+    <*> v .:? "guild_id"
     <*> v .: "author"
     <*> v .: "content"
     <*> v .: "timestamp"

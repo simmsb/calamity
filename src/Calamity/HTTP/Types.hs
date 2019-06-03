@@ -21,7 +21,7 @@ data RestError
   = HTTPError { status :: Int
               , response :: Maybe Value
               }
-  | DecodeError
+  | DecodeError Text
   deriving (Show, Generic)
 
 data RateLimitState = RateLimitState

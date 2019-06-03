@@ -12,8 +12,10 @@ module Calamity.Client.Types
     , runBotM
     , EventM
     , runEventM
+    , runEventMCurrent
     , syncEventM
-    , Cache(..) ) where
+    , Cache(..)
+    , HandlersM(..) ) where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
@@ -29,10 +31,12 @@ import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Catch
 import           Control.Monad.Trans.Reader            ( runReaderT )
+import           Control.Monad.Writer.Lazy
 
 import           Data.Default
 import qualified Data.HashSet                          as LS
 import           Data.Time
+import qualified Data.TypeRepMap                       as TM
 import           Data.TypeRepMap                       ( TypeRepMap, WrapTypeable(..) )
 
 import           GHC.Exts                              ( fromList )
@@ -136,6 +140,12 @@ newtype EventM a = EventM
 runEventM :: Cache -> EventM a -> BotM a
 runEventM cache = (`evalStateT` cache) . unEventM
 
+runEventMCurrent :: EventM a -> BotM a
+runEventMCurrent e = do
+  client <- ask
+  cache <- liftIO . readTVarIO . cache $ client
+  runEventM cache e
+
 -- | Sync the internal cache of an EventM
 syncEventM :: EventM ()
 syncEventM = do
@@ -143,11 +153,18 @@ syncEventM = do
   cache <- liftIO . readTVarIO . cache $ client
   put cache
 
+newtype HandlersM a = HandlersM
+  { unHandlersM :: Writer EventHandlers a
+  }
+  deriving ( Functor )
+  deriving newtype ( Monad, Applicative, MonadWriter EventHandlers )
+
 newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
 newtype EventHandler d = EH
   { unwrapEventHandler :: [EHType d]
   }
+  deriving newtype ( Semigroup, Monoid )
 
 type family EHType d where
   EHType "ready"                    = ReadyData                          -> EventM ()
@@ -216,3 +233,9 @@ instance Default EventHandlers where
                                  -- , WrapTypeable $ EH @"voiceserverupdate" []
                                  -- , WrapTypeable $ EH @"webhooksupdate" []
                                  ]
+
+instance Semigroup EventHandlers where
+  (EventHandlers a) <> (EventHandlers b) = EventHandlers $ TM.unionWith (<>) a b
+
+instance Monoid EventHandlers where
+  mempty = def

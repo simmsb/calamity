@@ -1,7 +1,13 @@
 -- | The client
 module Calamity.Client.Client
-    ( module Calamity.Client.Types
+    ( Client(..)
+    , BotM
+    , EventM
+    , HandlersM
     , newClient
+    , react
+    , withHandlers
+    , runWithHandlers
     , clientLoop
     , startClient ) where
 
@@ -19,6 +25,7 @@ import           Calamity.Types.Updateable
 import           Control.Concurrent.Async              ( forConcurrently_ )
 import           Control.Concurrent.STM.TVar
 import           Control.Lens                          ( (.=) )
+import           Control.Monad.Writer.Lazy
 
 import           Data.Default
 import qualified Data.HashSet                          as LS
@@ -36,8 +43,8 @@ import qualified System.Log.Simple                     as SLS
 
 -- TODO: merge event handlers with default
 -- and give writerT for adding events
-newClient :: Token -> EventHandlers -> IO Client
-newClient token eventHandlers = do
+newClient :: Token -> IO Client
+newClient token = do
   shards'                     <- newTVarIO []
   numShards'                  <- newEmptyMVar
   rlState'                    <- newRateLimitState
@@ -53,7 +60,7 @@ newClient token eventHandlers = do
                 eventQueue'
                 cache'
                 activeTasks'
-                eventHandlers
+                def
 
 -- TODO: user & bot logins
 -- TODO: more login types
@@ -66,6 +73,17 @@ startClient client = do
   runBotM client logEnv . component "calamity" $ do
     shardBot
     clientLoop
+
+react :: forall (s :: Symbol). KnownSymbol s => EHType s -> HandlersM ()
+react f = tell . EventHandlers . TM.one $ EH @s [f]
+
+withHandlers :: HandlersM () -> Client -> Client
+withHandlers (HandlersM h) (c@Client { eventHandlers }) = c { eventHandlers = eventHandlers <> execWriter h }
+
+runWithHandlers :: Token -> HandlersM () -> IO ()
+runWithHandlers token h = do
+  client <- withHandlers h <$> newClient token
+  startClient client
 
 emptyCache :: Cache
 emptyCache = Cache Nothing SM.empty SM.empty SM.empty RSM.empty LS.empty def
