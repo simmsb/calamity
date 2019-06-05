@@ -32,8 +32,14 @@ import           Calamity.HTTP.Route
 newRateLimitState :: IO RateLimitState
 newRateLimitState = RateLimitState <$> SC.newIO <*> E.newSet
 
+lookupOrInsertDefaultM :: Monad m => m a -> Focus a m a
+lookupOrInsertDefaultM aM = casesM
+  (do a <- aM
+      pure (a, Set a))
+  (\a -> pure (a, Leave))
+
 getRateLimit :: RateLimitState -> Route -> STM Lock
-getRateLimit s h = SC.focus (lookupWithDefaultM L.new) h (rateLimits s)
+getRateLimit s h = SC.focus (lookupOrInsertDefaultM L.new) h (rateLimits s)
 
 -- TODO: Add logging here
 doDiscordRequest
@@ -46,7 +52,7 @@ doDiscordRequest r = do
   if
     | statusIsSuccessful status -> do
       val <- liftIO $ (^. responseBody) <$> asValue r'
-      info $ "Got good response from discord: " +|| val ||+ ""
+      debug $ "Got good response from discord: " +|| r' ||+ ""
       pure $ if isExhausted r'
         then ExhaustedBucket val $ parseRateLimitHeader r'
         else Good val
@@ -67,10 +73,10 @@ parseDiscordTime :: ByteString -> Maybe UTCTime
 parseDiscordTime s = httpDateToUTC <$> parseHTTPDate s
 
 computeDiscordTimeDiff :: Integer -> UTCTime -> Int
-computeDiscordTimeDiff end now = round $ diffUTCTime end' now
+computeDiscordTimeDiff end now = (* 1000) . round $ diffUTCTime end' now
   where end' = end & fromInteger & posixSecondsToUTCTime
 
--- | Parse a ratelimit header returning the number of seconds until it resets
+-- | Parse a ratelimit header returning the number of milliseconds until it resets
 parseRateLimitHeader :: Response a -> Int
 parseRateLimitHeader r = computeDiscordTimeDiff end now
  where
@@ -78,11 +84,11 @@ parseRateLimitHeader r = computeDiscordTimeDiff end now
   now = r ^?! responseHeader "Date" & parseDiscordTime & fromJust
 
 isExhausted :: Response a -> Bool
-isExhausted r = r ^?! responseHeader "X-Ratelimit-Remaining" == "0"
+isExhausted r = r ^? responseHeader "X-RateLimit-Remaining" == Just "0"
 
 parseRetryAfter :: Response Value -> Int
 parseRetryAfter r =
-  r ^?! responseBody . key "retry_after" . _Integral `div` 1000
+  r ^?! responseBody . key "retry_after" . _Integral
 
 isGlobal :: Response Value -> Bool
 isGlobal r = r ^? responseBody . key "global" . _Bool == Just True
@@ -133,14 +139,14 @@ doSingleRequest gl l r = do
       pure $ RGood v
 
     ExhaustedBucket v d -> do
-      info "Exhausted bucket"
+      info $ "Exhausted bucket, unlocking after " +| d |+ "ms"
       void . liftIO . forkIO $ do
         threadDelay $ 1000 * d
         atomically $ L.release l
       pure $ RGood v
 
     Ratelimited d False -> do
-      info "429 ratelimited on route"
+      info $ "429 ratelimited on route, sleeping for " +| d |+ " ms"
       liftIO . threadDelay $ 1000 * d
       pure $ Retry (HTTPError 429 Nothing)
 

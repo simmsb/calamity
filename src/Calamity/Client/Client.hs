@@ -68,7 +68,7 @@ newClient token = do
 startClient :: Client -> IO ()
 startClient client = do
   logEnv <- newLog
-    (logCfg [("", SLS.Info), ("calamity", SLS.Trace), ("calamity_shard", SLS.Debug)])
+    (logCfg [("", SLS.Info), ("calamity", SLS.Trace), ("calamity_shard", SLS.Trace), ("calamity_cache_log", SLS.Info)])
     [handler text coloredConsole]
   runBotM client logEnv . component "calamity" $ do
     shardBot
@@ -110,7 +110,8 @@ handleEvent data' = do
     pure (oldCache, newCache)
 
   runEventHandlers oldCache newCache data'
-  trace $ "finished handling an event, new cache is: " <> show newCache
+  component "calamity_cache_log" $ do
+    trace $ "finished handling an event, new cache is: " <> show newCache
 
 runEventHandlers :: Cache -> Cache -> DispatchData -> BotM ()
 runEventHandlers oldCache newCache data' = do
