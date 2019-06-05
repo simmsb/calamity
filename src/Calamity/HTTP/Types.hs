@@ -1,58 +1,41 @@
--- | Types for the http lib
-
+-- | Types for http requests
 module Calamity.HTTP.Types
-  ( RestError(..)
-  , RateLimitState(..)
-  , DiscordResponseType(..)
-  , GatewayResponse
-  , BotGatewayResponse
-  )
-where
+    ( ChannelUpdate(..)
+    , ChannelMessagesQuery(..) ) where
+
+import           Calamity.Types.General
+import           Calamity.Types.Snowflake
 
 import           Data.Aeson
-import qualified StmContainers.Map             as SC
-import           Control.Concurrent.STM.Lock    ( Lock )
-import           Control.Concurrent.Event       ( Event )
+import           Data.Default
 
-import           Calamity.HTTP.Route
-
-
-data RestError
-  = HTTPError { status :: Int
-              , response :: Maybe Value
-              }
-  | DecodeError Text
-  deriving (Show, Generic)
-
-data RateLimitState = RateLimitState
-  { rateLimits :: SC.Map Route Lock
-  , globalLock :: Event
-  } deriving (Generic)
-
-data DiscordResponseType
-  -- | A good response
-  = Good Value
-  -- | We got a response but also exhausted the bucket
-  | ExhaustedBucket Value
-    Int -- ^ Retry after (milliseconds)
-  -- | We hit a 429, no response and ratelimited
-  | Ratelimited
-    Int -- ^ Retry after (milliseconds)
-    Bool -- ^ Global ratelimit
-  -- | Discord's error, we should retry (HTTP 5XX)
-  | ServerError Int
-  -- | Our error, we should fail
-  | ClientError Int Value
-
-newtype GatewayResponse = GatewayResponse
-  { url :: Text
+data ChannelUpdate = ChannelUpdate
+  { name                 :: Maybe ShortText
+  , position             :: Maybe Int
+  , topic                :: Maybe ShortText
+  , nsfw                 :: Maybe Bool
+  , rateLimitPerUser     :: Maybe Int
+  , bitrate              :: Maybe Int
+  , userLimit            :: Maybe Int
+  , permissionOverwrites :: Maybe [Overwrite]
+  , parentID             :: Maybe (Snowflake Channel)
   }
   deriving ( Generic, Show )
-  deriving ( FromJSON ) via CalamityJSON GatewayResponse
+  deriving anyclass ( Default )
+  deriving ( ToJSON ) via CalamityJSON ChannelUpdate
 
-data BotGatewayResponse = BotGatewayResponse
-  { url    :: Text
-  , shards :: Int
-  }
+data ChannelMessagesQuery
+  = ChannelMessagesAround
+      { around :: Snowflake Message
+      }
+  | ChannelMessagesBefore
+      { before :: Snowflake Message
+      }
+  | ChannelMessagesAfter
+      { after :: Snowflake Message
+      }
+  | ChannelMessagesLimit
+      { limit :: Int
+      }
   deriving ( Generic, Show )
-  deriving ( FromJSON ) via CalamityJSON BotGatewayResponse
+  deriving ( ToJSON ) via CalamityJSON ChannelMessagesQuery

@@ -1,9 +1,9 @@
 -- | Miscellaneous routes
 module Calamity.HTTP.MiscRoutes where
 
-import           Calamity.HTTP.Request
-import           Calamity.HTTP.Route
-import           Calamity.HTTP.Types
+import           Calamity.HTTP.Internal.Request
+import           Calamity.HTTP.Internal.Route
+import           Calamity.HTTP.Internal.Types
 
 import           Network.Wreq
 
@@ -18,5 +18,5 @@ instance Request (MiscRequest a) a where
   toRoute GetGatewayBot = mkRouteBuilder // S "gateway" // S "bot"
     & buildRoute
 
-  toAction q@GetGateway opts = getWith opts (url q)
-  toAction q@GetGatewayBot opts = getWith opts (url q)
+  toAction GetGateway = getWith
+  toAction GetGatewayBot = getWith

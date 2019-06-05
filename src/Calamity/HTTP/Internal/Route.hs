@@ -4,7 +4,7 @@
 -- {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
-module Calamity.HTTP.Route
+module Calamity.HTTP.Internal.Route
   ( mkRouteBuilder
   , giveID
   , buildRoute

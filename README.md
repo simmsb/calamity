@@ -9,8 +9,7 @@ A discord library for haskell
 
 import Calamity.Client
 import Calamity.Types.General
-import Calamity.HTTP.Request
-import Calamity.HTTP.Channel
+import Calamity.HTTP
 
 import Control.Lens
 

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c57cebdd82c80bd84670f7f5f60dd06c7f4b73e656f9e16a645f318c0aac79eb
+-- hash: ff33c0f10422f8565cf61fbb037e3bd6c879d1a98b31c3a140a825c9d1d792cf
 
 name:           calamity
 version:        0.1.0.0
@@ -41,11 +41,13 @@ library
       Calamity.Gateway.DispatchEvents
       Calamity.Gateway.Shard
       Calamity.Gateway.Types
+      Calamity.HTTP
       Calamity.HTTP.Channel
+      Calamity.HTTP.Internal.Ratelimit
+      Calamity.HTTP.Internal.Request
+      Calamity.HTTP.Internal.Route
+      Calamity.HTTP.Internal.Types
       Calamity.HTTP.MiscRoutes
-      Calamity.HTTP.Ratelimit
-      Calamity.HTTP.Request
-      Calamity.HTTP.Route
       Calamity.HTTP.Types
       Calamity.Types.FromChannel
       Calamity.Types.General
@@ -71,7 +73,7 @@ library
     , bytestring >=0.10
     , concurrent-extra >=0.7
     , concurrent-state >=0.6
-    , data-default >=0.7
+    , data-default-extra >=0.1.0
     , ekg >=0.4
     , exceptions >=0.10
     , fmt >=0.6
@@ -124,7 +126,7 @@ executable test-calamity-exe
     , calamity
     , concurrent-extra >=0.7
     , concurrent-state >=0.6
-    , data-default >=0.7
+    , data-default-extra >=0.1.0
     , ekg >=0.4
     , exceptions >=0.10
     , fmt >=0.6
@@ -175,7 +177,7 @@ test-suite calamity-test
     , calamity
     , concurrent-extra >=0.7
     , concurrent-state >=0.6
-    , data-default >=0.7
+    , data-default-extra >=0.1.0
     , ekg >=0.4
     , exceptions >=0.10
     , fmt >=0.6

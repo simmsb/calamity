@@ -24,6 +24,7 @@ module Calamity.Types.General
     , Presence(..)
     , Embed(..)
     , Attachment(..)
+    , Overwrite(..)
     , formatToken
     , rawToken ) where
 

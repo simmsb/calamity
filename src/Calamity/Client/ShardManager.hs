@@ -1,23 +1,21 @@
 -- | Contains stuff for managing shards
-
 module Calamity.Client.ShardManager
-  ( mkQueueRecvStream
-  , shardBot
-  , shardUserBot
-  )
-where
+    ( mkQueueRecvStream
+    , shardBot
+    , shardUserBot ) where
 
-import qualified Protolude.Error
+import           Calamity.Client.Types
+import           Calamity.Gateway
+import           Calamity.HTTP
+
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad
+
+import qualified Protolude.Error
+
 import qualified Streamly                      as S
 import qualified Streamly.Prelude              as S
-
-import           Calamity.Gateway
-import           Calamity.Client.Types
-import           Calamity.HTTP.MiscRoutes
-import           Calamity.HTTP.Request
 
 mkQueueRecvStream :: IO (S.Serial a, TQueue a)
 mkQueueRecvStream = do
@@ -27,11 +25,10 @@ mkQueueRecvStream = do
 
   pure (evtStream, queue)
 
-
 -- TODO: delete this
 aa :: Show a => Either a b -> b
 aa (Right x) = x
-aa (Left  x) = Protolude.Error.error $ show x
+aa (Left x) = Protolude.Error.error $ show x
 
 -- | Connects the bot to the gateway over n shards
 shardBot :: BotM ()
@@ -40,8 +37,7 @@ shardBot = do
   shardsVar <- asks shards
 
   hasShards <- liftIO $ (not . null) <$> readTVarIO shardsVar
-  when hasShards $
-    fail "don't use shardBot on an already running bot."
+  when hasShards $ fail "don't use shardBot on an already running bot."
 
   token <- asks Calamity.Client.Types.token
   eventQueue <- asks eventQueue
@@ -53,11 +49,10 @@ shardBot = do
   let host = gateway ^. #url
   liftIO $ putMVar numShardsVar numShards'
 
-  info $ "Number of shards: "+| numShards' |+""
+  info $ "Number of shards: " +| numShards' |+ ""
 
   liftIO $ do
-    shards <- forM [0 .. numShards' - 1] $ \id ->
-      newShard host id numShards' token logEnv eventQueue
+    shards <- forM [0 .. numShards' - 1] $ \id -> newShard host id numShards' token logEnv eventQueue
 
     atomically $ writeTVar shardsVar shards
 
@@ -68,8 +63,7 @@ shardUserBot = do
   shardsVar <- asks shards
 
   hasShards <- liftIO $ (not . null) <$> readTVarIO shardsVar
-  when hasShards $
-    fail "don't use shardUserBot on an already running bot."
+  when hasShards $ fail "don't use shardUserBot on an already running bot."
 
   token <- asks Calamity.Client.Types.token
   eventQueue <- asks eventQueue
@@ -80,6 +74,6 @@ shardUserBot = do
   let host = gateway ^. #url
   liftIO $ putMVar numShardsVar 1
 
-  liftIO do
+  liftIO $ do
     shard <- newShard host 0 1 token logEnv eventQueue
     atomically $ writeTVar shardsVar [shard]

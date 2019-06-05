@@ -47,6 +47,13 @@ extra-deps:
   - streamly-0.6.1
   - ekg-0.4.0.15
   - ekg-json-0.1.0.6
+  - data-default-extra-0.1.0
+  - data-default-instances-bytestring-0.0.1
+  - data-default-instances-case-insensitive-0.0.1
+  - data-default-instances-new-base-0.0.2
+  - data-default-instances-text-0.0.1
+  - data-default-instances-unordered-containers-0.0.1
+  - data-default-instances-vector-0.0.1
   - github: nitros12/concurrent-state
     commit: 9be5124aec9ccf2925638afd1bb04f36121600a1
 

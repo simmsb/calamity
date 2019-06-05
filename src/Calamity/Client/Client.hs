@@ -14,7 +14,7 @@ module Calamity.Client.Client
 import           Calamity.Client.ShardManager
 import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
-import           Calamity.HTTP.Ratelimit
+import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.Types.General
 import           Calamity.Types.MessageStore
 import qualified Calamity.Types.RefCountedSnowflakeMap as RSM
