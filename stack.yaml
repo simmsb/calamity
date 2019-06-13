@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-13.20
+resolver: lts-13.25
 
 # User packages to be built.
 # Various formats can be used as shown in the example below.
@@ -56,6 +56,14 @@ extra-deps:
   - data-default-instances-vector-0.0.1
   - github: nitros12/concurrent-state
     commit: 9be5124aec9ccf2925638afd1bb04f36121600a1
+    size: 9294
+    cabal-file:
+      size: 1940
+      sha256: a76433584af745847b3879a9d9ca116854029ac40f0aefdb957dba33e1178fcc
+    sha256: 894fc6b1c00e7bca0089552019e41c63156cc0a965997eba023f40a1d2331b75
+    pantry-tree:
+      size: 1131
+      sha256: e674c5ff888761cdc4bb7abb42990ec4b22fa77f91e8c01e4a1a1ddc869878e5
 
 
 # Override default flag values for local packages and extra-deps
