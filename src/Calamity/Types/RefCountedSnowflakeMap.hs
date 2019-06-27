@@ -78,7 +78,7 @@ empty = RefCountedSnowflakeMap LH.empty
 
 {-# INLINABLE empty #-}
 singleton :: HasID a => a -> RefCountedSnowflakeMap a
-singleton v = RefCountedSnowflakeMap $ LH.singleton (getID v) (v, 1)
+singleton v = RefCountedSnowflakeMap $ LH.singleton (coerceSnowflake $ getID v) (v, 1)
 
 {-# INLINABLE singleton #-}
 null :: RefCountedSnowflakeMap a -> Bool
@@ -106,11 +106,11 @@ lookupDefault d k = fst . LH.lookupDefault (d, 1) k . unRefCountedSnowflakeMap
 
 {-# INLINABLE (!) #-}
 insert :: HasID a => a -> RefCountedSnowflakeMap a -> RefCountedSnowflakeMap a
-insert v = over $ LH.insertWith (\(_, l) (n, r) -> (n, l + r)) (getID v) (v, 1)
+insert v = over $ LH.insertWith (\(_, l) (n, r) -> (n, l + r)) (coerceSnowflake $ getID v) (v, 1)
 
 {-# INLINABLE insert #-}
 insertWith :: HasID a => (a -> a -> a) -> a -> RefCountedSnowflakeMap a -> RefCountedSnowflakeMap a
-insertWith f v = over $ LH.insertWith (\(o, l) (n, r) -> (f o n, l + r)) (getID v) (v, 1)
+insertWith f v = over $ LH.insertWith (\(o, l) (n, r) -> (f o n, l + r)) (coerceSnowflake $ getID v) (v, 1)
 
 {-# INLINABLE insertWith #-}
 delete :: Snowflake a -> RefCountedSnowflakeMap a -> RefCountedSnowflakeMap a
@@ -245,7 +245,7 @@ toList = Prelude.map (\(k, (v, _)) -> (k, v)) . LH.toList . unRefCountedSnowflak
 
 {-# INLINABLE toList #-}
 fromList :: HasID a => [a] -> RefCountedSnowflakeMap a
-fromList = RefCountedSnowflakeMap . LH.fromList . Prelude.map (\v -> (getID v, (v, 1)))
+fromList = RefCountedSnowflakeMap . LH.fromList . Prelude.map (\v -> (coerceSnowflake $ getID v, (v, 1)))
 {-# INLINABLE fromList #-}
 
 -- fromListWith :: HasID a => (a -> a -> a) -> [a] -> RefCountedSnowflakeMap a

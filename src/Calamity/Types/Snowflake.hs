@@ -2,6 +2,10 @@
 module Calamity.Types.Snowflake
     ( Snowflake(..)
     , HasID(..)
+    , HasIDField(..)
+    , HasIDFieldAlt(..)
+    , HasIDFieldCoerce(..)
+    , HasSpecificID
     , coerceSnowflake ) where
 
 import           Control.Monad
@@ -36,10 +40,39 @@ coerceSnowflake :: Snowflake a -> Snowflake b
 coerceSnowflake (Snowflake t) = Snowflake t
 
 class HasID a where
-  getID :: a -> Snowflake a
+  type HasIDRes a
 
-instance {-# OVERLAPPABLE #-}HasField "id" a a (Snowflake a) (Snowflake a) => HasID a where
-  getID a = a ^. field @"id"
+  type HasIDRes a = a
+
+  getID :: a -> Snowflake (HasIDRes a)
+
+type HasSpecificID t r = (HasID t, HasIDRes t ~ r)
+
+newtype HasIDField a = HasIDField a
+
+instance HasField' "id" a (Snowflake a) => HasID (HasIDField a) where
+  type HasIDRes (HasIDField a) = a
+
+  getID (HasIDField a) = a ^. field' @"id"
+
+newtype HasIDFieldCoerce a b = HasIDFieldCoerce a
+
+instance HasField' "id" a (Snowflake a) => HasID (HasIDFieldCoerce a (b :: Type)) where
+  type HasIDRes (HasIDFieldCoerce a b) = b
+
+  getID (HasIDFieldCoerce a) = coerceSnowflake . getID $ a ^. field' @"id"
+
+newtype HasIDFieldAlt a b = HasIDFieldAlt a
+
+instance HasField' "id" a (Snowflake b) => HasID (HasIDFieldAlt a (b :: Type)) where
+  type HasIDRes (HasIDFieldAlt a b) = b
+
+  getID (HasIDFieldAlt a) = a ^. field' @"id"
+
+instance HasID (Snowflake (a :: Type)) where
+  type HasIDRes (Snowflake a) = a
+
+  getID = identity
 
 newtype instance U.MVector s (Snowflake t) = MV_Snowflake (U.MVector s Word64)
 

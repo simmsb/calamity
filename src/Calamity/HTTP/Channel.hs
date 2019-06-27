@@ -13,27 +13,22 @@ import           Data.Aeson
 import           Network.Wreq
 
 data ChannelRequest a where
-  CreateMessage :: Snowflake Channel -> Text -> ChannelRequest Message
-  GetChannel :: Snowflake Channel -> ChannelRequest Channel
-  ModifyChannel :: Snowflake Channel -> ChannelUpdate -> ChannelRequest Channel
-  DeleteChannel :: Snowflake Channel -> ChannelRequest Channel
-  GetChannelMessages :: Snowflake Channel -> Maybe ChannelMessagesQuery -> ChannelRequest Channel
+  CreateMessage :: HasSpecificID t Channel => t -> Text -> ChannelRequest Message
+  GetChannel :: HasSpecificID t Channel => t -> ChannelRequest Channel
+  ModifyChannel :: HasSpecificID t Channel => t -> ChannelUpdate -> ChannelRequest Channel
+  DeleteChannel :: HasSpecificID t Channel => t -> ChannelRequest Channel
+  GetChannelMessages :: HasSpecificID t Channel => t -> Maybe ChannelMessagesQuery -> ChannelRequest Channel
 
 baseRoute :: Snowflake Channel -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "channels" // ID @Channel
   & giveID id
 
 instance Request (ChannelRequest a) a where
-  toRoute (CreateMessage id _) = baseRoute id // S "messages"
-    & buildRoute
-  toRoute (GetChannel id) = baseRoute id
-    & buildRoute
-  toRoute (ModifyChannel id _) = baseRoute id
-    & buildRoute
-  toRoute (DeleteChannel id) = baseRoute id
-    & buildRoute
-  toRoute (GetChannelMessages id _) = baseRoute id // S "messages"
-    & buildRoute
+  toRoute (CreateMessage (getID -> id) _)      = baseRoute id // S "messages" & buildRoute
+  toRoute (GetChannel    (getID -> id))        = baseRoute id                 & buildRoute
+  toRoute (ModifyChannel (getID -> id) _)      = baseRoute id                 & buildRoute
+  toRoute (DeleteChannel (getID -> id))        = baseRoute id                 & buildRoute
+  toRoute (GetChannelMessages (getID -> id) _) = baseRoute id // S "messages" & buildRoute
 
   toAction (CreateMessage _ t) = postWith' (object ["content" .= t])
   toAction (GetChannel _) = getWith

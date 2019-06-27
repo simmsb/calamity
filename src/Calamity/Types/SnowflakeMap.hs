@@ -73,7 +73,7 @@ empty = SnowflakeMap LH.empty
 {-# INLINABLE empty #-}
 
 singleton :: HasID a => a -> SnowflakeMap a
-singleton v = SnowflakeMap $ LH.singleton (getID v) v
+singleton v = SnowflakeMap $ LH.singleton (coerceSnowflake $  getID v) v
 {-# INLINABLE singleton #-}
 
 null :: SnowflakeMap a -> Bool
@@ -101,11 +101,11 @@ lookupDefault d k = LH.lookupDefault d k . unSnowflakeMap
 {-# INLINABLE (!) #-}
 
 insert :: HasID a => a -> SnowflakeMap a -> SnowflakeMap a
-insert v = over $ LH.insert (getID v) v
+insert v = over $ LH.insert (coerceSnowflake $ getID v) v
 {-# INLINABLE insert #-}
 
 insertWith :: HasID a => (a -> a -> a) -> a -> SnowflakeMap a -> SnowflakeMap a
-insertWith f v = over $ LH.insertWith f (getID v) v
+insertWith f v = over $ LH.insertWith f (coerceSnowflake $ getID v) v
 {-# INLINABLE insertWith #-}
 
 delete :: Snowflake a -> SnowflakeMap a -> SnowflakeMap a
@@ -217,11 +217,11 @@ toList = LH.toList . unSnowflakeMap
 {-# INLINABLE toList #-}
 
 fromList :: HasID a => [a] -> SnowflakeMap a
-fromList = SnowflakeMap . LH.fromList . Prelude.map (\v -> (getID v, v))
+fromList = SnowflakeMap . LH.fromList . Prelude.map (\v -> (coerceSnowflake $ getID v, v))
 {-# INLINABLE fromList #-}
 
 fromListWith :: HasID a => (a -> a -> a) -> [a] -> SnowflakeMap a
-fromListWith f = SnowflakeMap . LH.fromListWith f . Prelude.map (\v -> (getID v, v))
+fromListWith f = SnowflakeMap . LH.fromListWith f . Prelude.map (\v -> (coerceSnowflake $ getID v, v))
 {-# INLINABLE fromListWith #-}
 
 instance (FromJSON a, HasID a) => FromJSON (SnowflakeMap a) where

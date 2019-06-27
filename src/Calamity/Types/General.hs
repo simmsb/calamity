@@ -94,6 +94,7 @@ data User = User
   }
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON User
+  deriving ( HasID ) via HasIDField User
 
 newtype instance Partial User = PartialUser
   { id :: Snowflake (Partial User)
@@ -102,7 +103,9 @@ newtype instance Partial User = PartialUser
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial User)
 
 instance HasID (Partial User) where
-  getID (PartialUser id) = id
+  type HasIDRes (Partial User) = User
+
+  getID (PartialUser id) = coerceSnowflake id
 
 data Channel = Channel
   { id                   :: !(Snowflake Channel)
@@ -126,6 +129,7 @@ data Channel = Channel
   }
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON Channel
+  deriving ( HasID ) via HasIDField Channel
 
 data SingleDM = SingleDM
   { id            :: Snowflake SingleDM
@@ -133,6 +137,7 @@ data SingleDM = SingleDM
   , recipients    :: SnowflakeMap (Partial User)
   }
   deriving ( Show, Eq, Generic )
+  deriving ( HasID ) via HasIDFieldCoerce SingleDM Channel
 
 data GroupDM = GroupDM
   { id            :: Snowflake GroupDM
@@ -143,19 +148,29 @@ data GroupDM = GroupDM
   , name          :: ShortText
   }
   deriving ( Show, Eq, Generic )
+  deriving ( HasID ) via HasIDFieldCoerce GroupDM Channel
 
 data DMChannel
   = Single SingleDM
   | Group GroupDM
   deriving ( Show, Eq, Generic )
 
+instance HasID DMChannel where
+  type HasIDRes DMChannel = Channel
+
+  getID (Single a) = coerceSnowflake $ a ^. field' @"id"
+  getID (Group a) = coerceSnowflake $ a ^. field' @"id"
+
 data GuildChannel
   = GuildTextChannel TextChannel
   | GuildVoiceChannel VoiceChannel
   deriving ( Show, Eq, Generic )
 
-instance {-# OVERLAPS #-}HasID GuildChannel where
-  getID = coerceSnowflake . getID
+instance HasID GuildChannel where
+  type HasIDRes GuildChannel = Channel
+
+  getID (GuildTextChannel a) = coerceSnowflake $ a ^. field' @"id"
+  getID (GuildVoiceChannel a) = coerceSnowflake $ a ^. field' @"id"
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hsfield#L182)
 data ChannelType
@@ -185,6 +200,7 @@ data Category = Category
   , channels             :: SnowflakeMap GuildChannel
   }
   deriving ( Show, Eq, Generic )
+  deriving ( HasID ) via HasIDFieldCoerce Category Channel
 
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
@@ -199,6 +215,7 @@ data TextChannel = TextChannel
   , parentID             :: Maybe (Snowflake Category)
   }
   deriving ( Show, Eq, Generic )
+  deriving ( HasID ) via HasIDFieldCoerce TextChannel Channel
 
 data VoiceChannel = VoiceChannel
   { id                   :: Snowflake VoiceChannel
@@ -210,6 +227,7 @@ data VoiceChannel = VoiceChannel
   , userLimit            :: Int
   }
   deriving ( Show, Eq, Generic )
+  deriving ( HasID ) via HasIDFieldCoerce VoiceChannel Channel
 
 data Guild = Guild
   { id                          :: !(Snowflake Guild)
@@ -248,6 +266,7 @@ data Guild = Guild
 #endif
   }
   deriving ( Eq, Show, Generic )
+  deriving ( HasID ) via HasIDField Guild
 
 data UpdatedGuild = UpdatedGuild
   { id                          :: Snowflake Guild
@@ -276,6 +295,7 @@ data UpdatedGuild = UpdatedGuild
   }
   deriving ( Eq, Show, Generic )
   deriving ( FromJSON ) via CalamityJSON UpdatedGuild
+  deriving ( HasID ) via HasIDFieldAlt UpdatedGuild Guild
 
 -- TODO: eventually use these for lenses
 -- buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a
@@ -347,9 +367,10 @@ instance FromJSON Guild where
 data UnavailableGuild = UnavailableGuild
   { id          :: !(Snowflake Guild)
   , unavailable :: !Bool
-  } deriving (Eq, Show, Generic)
-  deriving (ToJSON, FromJSON) via CalamityJSON UnavailableGuild
-
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON UnavailableGuild
+  deriving ( HasID ) via HasIDFieldAlt UnavailableGuild Guild
 
 data Member = Member
   { user     :: !User
@@ -359,8 +380,9 @@ data Member = Member
   , joinedAt :: !UTCTime
   , deaf     :: !Bool
   , mute     :: !Bool
-  } deriving (Eq, Show, Generic)
-  deriving (ToJSON, FromJSON) via CalamityJSON Member
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON Member
 
 instance HasID Member where
   getID = coerceSnowflake . getID . (^. field @"user")
@@ -385,8 +407,10 @@ data Message = Message
   , pinned          :: !Bool
   , webhookID       :: !(Maybe (Snowflake ()))
   , type_           :: !MessageType
-  } deriving (Eq, Show, Generic)
-  deriving ToJSON via CalamityJSON Message
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON ) via CalamityJSON Message
+  deriving ( HasID ) via HasIDField Message
 
 instance FromJSON Message where
   parseJSON = withObject "Message" $ \v -> Message
@@ -424,7 +448,8 @@ data UpdatedMessage = UpdatedMessage
   , pinned          :: Maybe Bool
   }
   deriving ( Eq, Show, Generic )
-  deriving FromJSON via CalamityJSON UpdatedMessage
+  deriving ( FromJSON ) via CalamityJSON UpdatedMessage
+  deriving ( HasID ) via HasIDFieldCoerce UpdatedMessage Message
 
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
@@ -637,7 +662,8 @@ data Emoji = Emoji
   , animated      :: !Bool
   }
   deriving ( Eq, Show, Generic )
-  deriving ToJSON via CalamityJSON Emoji
+  deriving ( ToJSON ) via CalamityJSON Emoji
+  deriving ( HasID ) via HasIDField Emoji
 
 
 instance FromJSON Emoji where
@@ -655,7 +681,8 @@ data instance Partial Emoji = PartialEmoji
   , name :: ShortText
   }
   deriving ( Eq, Show, Generic )
-  deriving (ToJSON, FromJSON) via CalamityJSON (Partial Emoji)
+  deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Emoji)
+  deriving ( HasID ) via HasIDFieldAlt (Partial Emoji) Emoji
 
 
 data Role = Role
@@ -669,7 +696,8 @@ data Role = Role
   , mentionable :: !Bool
   }
   deriving ( Eq, Show, Generic )
-  deriving (ToJSON, FromJSON) via CalamityJSON Role
+  deriving ( ToJSON, FromJSON ) via CalamityJSON Role
+  deriving ( HasID ) via HasIDField Role
 
 
 data Overwrite = Overwrite
@@ -679,7 +707,8 @@ data Overwrite = Overwrite
   , deny  :: !Word64
   }
   deriving ( Eq, Show, Generic )
-  deriving (ToJSON, FromJSON) via CalamityJSON Overwrite
+  deriving ( ToJSON, FromJSON ) via CalamityJSON Overwrite
+  deriving ( HasID ) via HasIDField Overwrite
 
 
 data Reaction = Reaction
@@ -776,7 +805,7 @@ data Activity = Activity
   , flags         :: !Word64
   }
   deriving ( Eq, Show, Generic )
-  deriving ToJSON via CalamityJSON Activity
+  deriving ( ToJSON ) via CalamityJSON Activity
 
 instance FromJSON Activity where
   parseJSON = withObject "Activity" $ \v -> Activity
@@ -796,7 +825,8 @@ instance FromJSON Activity where
 data ActivityTimestamps = ActivityTimestamps
   { start :: Maybe UnixTimestamp
   , end   :: Maybe UnixTimestamp
-  } deriving (Eq, Show, Generic)
+  }
+  deriving ( Eq, Show, Generic )
 
 instance ToJSON ActivityTimestamps where
   toEncoding ActivityTimestamps {start, end} =

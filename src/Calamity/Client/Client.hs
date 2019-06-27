@@ -68,7 +68,7 @@ newClient token = do
 startClient :: Client -> IO ()
 startClient client = do
   logEnv <- newLog
-    (logCfg [("", SLS.Info), ("calamity", SLS.Trace), ("calamity_shard", SLS.Trace), ("calamity_cache_log", SLS.Info)])
+    (logCfg [("", SLS.Info), ("calamity", SLS.Info), ("calamity_shard", SLS.Info), ("calamity_cache_log", SLS.Info)])
     [handler text coloredConsole]
   runBotM client logEnv . component "calamity" $ do
     shardBot
@@ -123,7 +123,7 @@ runEventHandlers oldCache newCache data' = do
     Just actions -> liftIO
       $ forConcurrently_ actions (runBotM client' logEnv' . runEventM newCache)
     Nothing
-      -> error $ "Failed handling actions for event: " +|| data' ||+ ""
+      -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
 
 unwrapEvent :: forall a. KnownSymbol a => EventHandlers -> [EHType a]
 unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler a))
