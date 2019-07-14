@@ -13,11 +13,12 @@ import           Data.Aeson
 import           Network.Wreq
 
 data ChannelRequest a where
-  CreateMessage :: HasSpecificID t Channel => t -> Text -> ChannelRequest Message
-  GetChannel :: HasSpecificID t Channel => t -> ChannelRequest Channel
-  ModifyChannel :: HasSpecificID t Channel => t -> ChannelUpdate -> ChannelRequest Channel
-  DeleteChannel :: HasSpecificID t Channel => t -> ChannelRequest Channel
-  GetChannelMessages :: HasSpecificID t Channel => t -> Maybe ChannelMessagesQuery -> ChannelRequest Channel
+  CreateMessage :: HasSpecificID c Channel => c -> Text -> ChannelRequest Message
+  GetChannel :: HasSpecificID c Channel => c -> ChannelRequest Channel
+  ModifyChannel :: HasSpecificID c Channel => c -> ChannelUpdate -> ChannelRequest Channel
+  DeleteChannel :: HasSpecificID c Channel => c -> ChannelRequest ()
+  GetChannelMessages :: HasSpecificID c Channel => c -> Maybe ChannelMessagesQuery -> ChannelRequest [Message]
+  GetMessage :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest Message
 
 baseRoute :: Snowflake Channel -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "channels" // ID @Channel
@@ -29,6 +30,9 @@ instance Request (ChannelRequest a) a where
   toRoute (ModifyChannel (getID -> id) _)      = baseRoute id                 & buildRoute
   toRoute (DeleteChannel (getID -> id))        = baseRoute id                 & buildRoute
   toRoute (GetChannelMessages (getID -> id) _) = baseRoute id // S "messages" & buildRoute
+  toRoute (GetMessage (getID -> cid) (getID -> mid)) = baseRoute cid // S "messages" // ID @Message
+    & giveID mid
+    & buildRoute
 
   toAction (CreateMessage _ t) = postWith' (object ["content" .= t])
   toAction (GetChannel _) = getWith
@@ -39,3 +43,4 @@ instance Request (ChannelRequest a) a where
   toAction (GetChannelMessages _ (Just (ChannelMessagesAfter  (show . fromSnowflake -> a)))) = getWithP (param "after"  .~ [a])
   toAction (GetChannelMessages _ (Just (ChannelMessagesLimit  (show -> a))))                 = getWithP (param "around" .~ [a])
   toAction (GetChannelMessages _ Nothing) = getWith
+  toAction (GetMessage _ _) = getWith

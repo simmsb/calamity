@@ -5,10 +5,10 @@
 
 packages:
 - completed:
-    hackage: typerep-map-0.3.2@sha256:4fc9ab71a0004c879a262997155cfc5faf539456d148bbfd691f9ec70e5442cd,4831
+    hackage: typerep-map-0.3.2@sha256:3a3c3dfcc6f6bbd34ade3cb266cc9bfd9ff919d415b2887575ee7c96d51d5e0c,4841
     pantry-tree:
       size: 1476
-      sha256: 1e845964cf5b7f467c20b4b2a7661c24905ae8e302106144d1526c801e856b76
+      sha256: ede62df08b8df86ee2199ef498f627e8b8e8a68e9face43832130fa467556338
   original:
     hackage: typerep-map-0.3.2
 - completed:
@@ -140,7 +140,7 @@ packages:
       sha256: e674c5ff888761cdc4bb7abb42990ec4b22fa77f91e8c01e4a1a1ddc869878e5
 snapshots:
 - completed:
-    size: 499461
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/25.yaml
-    sha256: aed98969628e20615e96b06083c933c7e3354ae56b08b75e607a26569225d6c0
-  original: lts-13.25
+    size: 500539
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/27.yaml
+    sha256: 690db832392afe55733b4c7023fd29b1b1c660ee42f1fb505b86b07394ca994e
+  original: lts-13.27
