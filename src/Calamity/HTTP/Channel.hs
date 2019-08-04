@@ -19,6 +19,7 @@ data ChannelRequest a where
   DeleteChannel :: HasSpecificID c Channel => c -> ChannelRequest ()
   GetChannelMessages :: HasSpecificID c Channel => c -> Maybe ChannelMessagesQuery -> ChannelRequest [Message]
   GetMessage :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest Message
+  CreateReaction :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> ChannelRequest ()
 
 baseRoute :: Snowflake Channel -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "channels" // ID @Channel
@@ -33,6 +34,10 @@ instance Request (ChannelRequest a) a where
   toRoute (GetMessage (getID -> cid) (getID -> mid)) = baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
+  toRoute (CreateReaction (getID -> cid) (getID -> mid) emoji) =
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // S "@me"
+    & giveID mid
+    & buildRoute
 
   toAction (CreateMessage _ t) = postWith' (object ["content" .= t])
   toAction (GetChannel _) = getWith
@@ -44,3 +49,4 @@ instance Request (ChannelRequest a) a where
   toAction (GetChannelMessages _ (Just (ChannelMessagesLimit  (show -> a))))                 = getWithP (param "around" .~ [a])
   toAction (GetChannelMessages _ Nothing) = getWith
   toAction (GetMessage _ _) = getWith
+  toAction (CreateReaction _ _ _) = putEmpty

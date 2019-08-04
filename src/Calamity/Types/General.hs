@@ -19,6 +19,7 @@ module Calamity.Types.General
     , Message(..)
     , UpdatedMessage(..)
     , Emoji(..)
+    , RawEmoji(..)
     , Role(..)
     , Reaction(..)
     , Presence(..)
@@ -684,6 +685,25 @@ data instance Partial Emoji = PartialEmoji
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Emoji)
   deriving ( HasID ) via HasIDFieldAlt (Partial Emoji) Emoji
 
+data RawEmoji
+  = UnicodeEmoji ShortText
+  | CustomEmoji (Partial Emoji)
+  deriving ( Eq, Show, Generic )
+
+instance ToJSON RawEmoji where
+  toEncoding (CustomEmoji e) = pairs $ "emoji" .= e
+  toEncoding (UnicodeEmoji s) = pairs $ "emoji" .= (("name" .= s) :: Object)
+
+instance FromJSON RawEmoji where
+  parseJSON = withObject "RawEmoji" $ \v -> do
+    id :: Maybe (Snowflake Emoji) <- v .:? "id"
+    name :: ShortText <- v .: "name"
+
+    pure $ case id of
+      Just id ->
+        CustomEmoji $ PartialEmoji id name
+      Nothing ->
+        UnicodeEmoji name
 
 data Role = Role
   { id          :: !(Snowflake Role)
@@ -716,37 +736,10 @@ data Reaction = Reaction
   , channelID :: !(Snowflake Channel)
   , messageID :: !(Snowflake Message)
   , guildID   :: !(Maybe (Snowflake Guild))
-  , emoji     :: !(Either (Partial Emoji) ShortText)
+  , emoji     :: !RawEmoji
   }
   deriving ( Eq, Show, Generic )
-
-instance ToJSON Reaction where
-  toEncoding Reaction { userID, channelID, messageID, guildID, emoji } = pairs
-    ("user_id" .= userID <> "channel_id" .= channelID <> "message_id" .= messageID <> "guild_id" .= guildID
-     <> case emoji of
-       Left emoji  -> "emoji" .= emoji
-       Right emoji -> "emoji" .= (("name" .= emoji) :: Object))
-
-instance FromJSON Reaction where
-  parseJSON = withObject "Reaction" $ \v -> do
-    emoji <- v .: "emoji"
-
-    emojiID :: Maybe (Snowflake Emoji) <- emoji .:? "id"
-    emojiName :: ShortText <- emoji .: "name"
-
-    let emoji =
-          case emojiID of
-            Just id ->
-              Left $ PartialEmoji id emojiName
-            Nothing ->
-              Right emojiName
-
-    Reaction
-      <$> v .: "user_id"
-      <*> v .: "channel_id"
-      <*> v .: "message_id"
-      <*> v .:? "guild_id"
-      <*> pure emoji
+  deriving ( ToJSON, FromJSON ) via CalamityJSON Reaction
 
 data StatusType
   = Idle

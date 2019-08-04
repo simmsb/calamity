@@ -3,6 +3,7 @@ module Calamity.HTTP.Internal.Request
     ( Request(..)
     , postWith'
     , putWith'
+    , putEmpty
     , getWithP ) where
 
 import           Calamity.Client.Types
@@ -66,6 +67,9 @@ postWith' p o s = postWith o s p
 
 putWith' :: Putable a => a -> Options -> String -> IO (Response LB.ByteString)
 putWith' p o s = putWith o s p
+
+putEmpty :: Options -> String -> IO (Response LB.ByteString)
+putEmpty o s = putWith o s ("" :: ByteString)
 
 getWithP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
 getWithP oF o s = getWith (oF o) s
