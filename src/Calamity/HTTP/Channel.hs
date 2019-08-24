@@ -12,6 +12,13 @@ import           Data.Aeson
 
 import           Network.Wreq
 
+data GetReactionsOptions = GetReactionsOptions
+  { before :: Maybe (Snowflake User)
+  , after  :: Maybe (Snowflake User)
+  , limit  :: Maybe Integer
+  }
+  deriving (Show)
+
 data ChannelRequest a where
   CreateMessage :: HasSpecificID c Channel => c -> Text -> ChannelRequest Message
   GetChannel :: HasSpecificID c Channel => c -> ChannelRequest Channel
@@ -20,6 +27,9 @@ data ChannelRequest a where
   GetChannelMessages :: HasSpecificID c Channel => c -> Maybe ChannelMessagesQuery -> ChannelRequest [Message]
   GetMessage :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest Message
   CreateReaction :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> ChannelRequest ()
+  DeleteOwnReaction :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> ChannelRequest ()
+  DeleteUserReaction :: (HasSpecificID c Channel, HasSpecificID m Message, HasSpecificID u User) => c -> m -> RawEmoji -> u -> ChannelRequest ()
+  GetReactions :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> GetReactionsOptions -> ChannelRequest [User]
 
 baseRoute :: Snowflake Channel -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "channels" // ID @Channel
@@ -38,6 +48,19 @@ instance Request (ChannelRequest a) a where
     baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // S "@me"
     & giveID mid
     & buildRoute
+  toRoute (DeleteOwnReaction (getID -> cid) (getID -> mid) emoji) =
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // S "@me"
+    & giveID mid
+    & buildRoute
+  toRoute (DeleteUserReaction (getID -> cid) (getID -> mid) emoji (getID -> uid)) =
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // ID @User
+    & giveID mid
+    & giveID uid
+    & buildRoute
+  toRoute (GetReactions (getID -> cid) (getID -> mid) emoji _) =
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji)
+    & giveID mid
+    & buildRoute
 
   toAction (CreateMessage _ t) = postWith' (object ["content" .= t])
   toAction (GetChannel _) = getWith
@@ -49,4 +72,10 @@ instance Request (ChannelRequest a) a where
   toAction (GetChannelMessages _ (Just (ChannelMessagesLimit  (show -> a))))                 = getWithP (param "around" .~ [a])
   toAction (GetChannelMessages _ Nothing) = getWith
   toAction (GetMessage _ _) = getWith
-  toAction (CreateReaction _ _ _) = putEmpty
+  toAction CreateReaction {} = putEmpty
+  toAction DeleteOwnReaction {} = deleteWith
+  toAction DeleteUserReaction {} = deleteWith
+  toAction (GetReactions _ _ _ GetReactionsOptions { before, after, limit }) = getWithP
+    (param "before" .~ maybeToList (show <$> before)
+     >>> param "after" .~ maybeToList (show <$> after)
+     >>> param "limit" .~ maybeToList (show <$> limit))

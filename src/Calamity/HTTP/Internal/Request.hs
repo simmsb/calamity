@@ -72,4 +72,4 @@ putEmpty :: Options -> String -> IO (Response LB.ByteString)
 putEmpty o s = putWith o s ("" :: ByteString)
 
 getWithP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
-getWithP oF o s = getWith (oF o) s
+getWithP oF o = getWith (oF o)

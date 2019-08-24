@@ -46,6 +46,7 @@ class HasID a where
 
   getID :: a -> Snowflake (HasIDRes a)
 
+-- ^ A type 't' that has some Snowflake in it of type 'r'
 type HasSpecificID t r = (HasID t, HasIDRes t ~ r)
 
 newtype HasIDField a = HasIDField a
