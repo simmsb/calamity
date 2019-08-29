@@ -117,6 +117,13 @@ packages:
   original:
     hackage: data-default-instances-vector-0.0.1
 - completed:
+    hackage: http-client-0.6.4@sha256:a74b417345857d4250bdb6d4ac7fd4a89fd2ad8efab3164c1a2b843398d5c13a,5320
+    pantry-tree:
+      size: 2457
+      sha256: fe331314b0a8d9e8ce445405831b6e802ab99d57cab1f4d265910cfcd68d3153
+  original:
+    hackage: http-client-0.6.4@sha256:a74b417345857d4250bdb6d4ac7fd4a89fd2ad8efab3164c1a2b843398d5c13a,5320
+- completed:
     size: 9294
     url: https://github.com/nitros12/concurrent-state/archive/9be5124aec9ccf2925638afd1bb04f36121600a1.tar.gz
     cabal-file:
@@ -138,6 +145,22 @@ packages:
     pantry-tree:
       size: 1131
       sha256: e674c5ff888761cdc4bb7abb42990ec4b22fa77f91e8c01e4a1a1ddc869878e5
+- completed:
+    size: 129361
+    url: https://github.com/nitros12/wreq/archive/f8f2d8d571f76b2df2cec73a08e29519fa681d7b.tar.gz
+    cabal-file:
+      size: 5317
+      sha256: b8bfaa1a38fdfcffa92d842d83392f91a9299e3f94b70eb7719eac1527a563b0
+    name: wreq
+    version: 0.5.3.2
+    sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
+    pantry-tree:
+      size: 2806
+      sha256: 2c44570ca365b23dbb42533405c47fc175c8b223235f79536f524926f3eff006
+  original:
+    size: 129361
+    url: https://github.com/nitros12/wreq/archive/f8f2d8d571f76b2df2cec73a08e29519fa681d7b.tar.gz
+    sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
 snapshots:
 - completed:
     size: 500539

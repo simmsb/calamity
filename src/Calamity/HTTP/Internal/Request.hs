@@ -3,6 +3,7 @@ module Calamity.HTTP.Internal.Request
     ( Request(..)
     , postWith'
     , putWith'
+    , patchWith'
     , putEmpty
     , getWithP ) where
 
@@ -67,6 +68,9 @@ postWith' p o s = postWith o s p
 
 putWith' :: Putable a => a -> Options -> String -> IO (Response LB.ByteString)
 putWith' p o s = putWith o s p
+
+patchWith' :: Postable a => a -> Options -> String -> IO (Response LB.ByteString)
+patchWith' p o s = patchWith o s p
 
 putEmpty :: Options -> String -> IO (Response LB.ByteString)
 putEmpty o s = putWith o s ("" :: ByteString)

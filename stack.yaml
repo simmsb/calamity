@@ -57,6 +57,7 @@ extra-deps:
   - data-default-instances-text-0.0.1
   - data-default-instances-unordered-containers-0.0.1
   - data-default-instances-vector-0.0.1
+  - http-client-0.6.4@sha256:a74b417345857d4250bdb6d4ac7fd4a89fd2ad8efab3164c1a2b843398d5c13a,5320
   - github: nitros12/concurrent-state
     commit: 9be5124aec9ccf2925638afd1bb04f36121600a1
     size: 9294
@@ -67,6 +68,10 @@ extra-deps:
     pantry-tree:
       size: 1131
       sha256: e674c5ff888761cdc4bb7abb42990ec4b22fa77f91e8c01e4a1a1ddc869878e5
+  - github: nitros12/wreq
+    commit: f8f2d8d571f76b2df2cec73a08e29519fa681d7b
+    size: 129361
+    sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
 
 
 # Override default flag values for local packages and extra-deps
