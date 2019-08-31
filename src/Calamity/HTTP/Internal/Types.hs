@@ -12,6 +12,7 @@ import           Control.Concurrent.Event     ( Event )
 import           Control.Concurrent.STM.Lock  ( Lock )
 
 import           Data.Aeson
+import qualified Data.ByteString.Lazy         as LB
 
 import qualified StmContainers.Map            as SC
 
@@ -31,16 +32,16 @@ data RateLimitState = RateLimitState
 
 data DiscordResponseType
   = -- | A good response
-    Good Value
+    Good LB.ByteString
     -- | We got a response but also exhausted the bucket
-  | ExhaustedBucket Value Int -- ^ Retry after (milliseconds)
+  | ExhaustedBucket LB.ByteString Int -- ^ Retry after (milliseconds)
     -- | We hit a 429, no response and ratelimited
   | Ratelimited Int -- ^ Retry after (milliseconds)
                 Bool -- ^ Global ratelimit
     -- | Discord's error, we should retry (HTTP 5XX)
   | ServerError Int
     -- | Our error, we should fail
-  | ClientError Int Value
+  | ClientError Int LB.ByteString
 
 newtype GatewayResponse = GatewayResponse
   { url :: Text

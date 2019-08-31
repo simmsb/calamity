@@ -31,7 +31,8 @@ data ChannelRequest a where
   DeleteUserReaction :: (HasSpecificID c Channel, HasSpecificID m Message, HasSpecificID u User) => c -> m -> RawEmoji -> u -> ChannelRequest ()
   GetReactions :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> GetReactionsOptions -> ChannelRequest [User]
   DeleteAllReactions :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest ()
-  EditMessage :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> Maybe Text -> Maybe Embed -> ChannelRequest ()
+  EditMessage :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> Maybe Text -> Maybe Embed -> ChannelRequest Message
+  DeleteMessage :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest ()
 
 baseRoute :: Snowflake Channel -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "channels" // ID @Channel
@@ -71,6 +72,10 @@ instance Request (ChannelRequest a) a where
     baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
+  toRoute (DeleteMessage (getID -> cid) (getID -> mid)) =
+    baseRoute cid // S "messages" // ID @Message
+    & giveID mid
+    & buildRoute
 
   toAction (CreateMessage _ t) = postWith' (object ["content" .= t])
   toAction (GetChannel _) = getWith
@@ -92,3 +97,4 @@ instance Request (ChannelRequest a) a where
   toAction (DeleteAllReactions _ _) = deleteWith
   toAction (EditMessage _ _ content embed) = patchWith'
     (object ["content" .= content, "embed" .= embed])
+  toAction (DeleteMessage _ _) = deleteWith

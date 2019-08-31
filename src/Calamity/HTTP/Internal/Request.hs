@@ -25,9 +25,22 @@ fromResult :: Monad m => Result a -> ExceptT RestError m a
 fromResult (Success a) = pure a
 fromResult (Error e) = throwE (DecodeError $ e ^. packed)
 
+fromJSONDecode :: Monad m => Either String a -> ExceptT RestError m a
+fromJSONDecode (Right a) = pure a
+fromJSONDecode (Left e) = throwE (DecodeError $ e ^. packed)
+
 extractRight :: Monad m => Either a b -> ExceptT a m b
 extractRight (Left a) = throwE a
 extractRight (Right a) = pure a
+
+class ReadResponse a where
+  readResp :: LB.ByteString -> Either String a
+
+instance ReadResponse () where
+  readResp = const (Right ())
+
+instance {-# OVERLAPS #-} FromJSON a => ReadResponse a where
+  readResp = eitherDecode
 
 class Request a r | a -> r where
   toRoute :: a -> Route
@@ -50,9 +63,7 @@ class Request a r | a -> r where
         resp <- scope ("[Request Route: " +| toRoute r ^. #path |+ "]") $ doRequest rlState' (toRoute r)
           (toAction r (requestOptions token') (Calamity.HTTP.Internal.Request.url r))
 
-        resp' <- extractRight resp
-
-        fromResult . fromJSON $ resp'
+        (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
 
 defaultRequestOptions :: Options
 defaultRequestOptions = defaults

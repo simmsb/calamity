@@ -51,11 +51,11 @@ doDiscordRequest r = do
   let status = r' ^. responseStatus
   if
     | statusIsSuccessful status -> do
-      val <- liftIO $ (^. responseBody) <$> asValue r'
+      let resp = r' ^. responseBody
       debug $ "Got good response from discord: " +|| r' ||+ ""
       pure $ if isExhausted r'
-        then ExhaustedBucket val $ parseRateLimitHeader r'
-        else Good val
+        then ExhaustedBucket resp $ parseRateLimitHeader r'
+        else Good resp
     | statusIsServerError status -> do
       info $ "Got server error from discord: " +| status ^. statusCode |+ ""
       pure $ ServerError (status ^. statusCode)
@@ -64,9 +64,9 @@ doDiscordRequest r = do
       rv <- liftIO $ asValue r'
       pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
     | statusIsClientError status -> do
-      val <- liftIO $ (^. responseBody) <$> asValue r'
-      error $ "You fucked up: " +|| val ||+ " response: " +|| r' ||+ ""
-      pure $ ClientError (status ^. statusCode) val
+      let err = r' ^. responseBody
+      error $ "You fucked up: " +|| err ||+ " response: " +|| r' ||+ ""
+      pure $ ClientError (status ^. statusCode) err
     | otherwise -> fail "Bogus response, discord fix your shit"
 
 parseDiscordTime :: ByteString -> Maybe UTCTime
@@ -130,7 +130,7 @@ doSingleRequest
   => Event -- ^ Global lock
   -> Lock -- ^ Local lock
   -> IO (Response LB.ByteString) -- ^ Request action
-  -> m (ShouldRetry RestError Value)
+  -> m (ShouldRetry RestError LB.ByteString)
 doSingleRequest gl l r = do
   r' <- doDiscordRequest r
   case r' of
@@ -162,14 +162,14 @@ doSingleRequest gl l r = do
       info "Server failed, retrying"
       pure $ Retry (HTTPError c Nothing)
 
-    ClientError c v -> pure $ RFail (HTTPError c (Just v))
+    ClientError c v -> pure $ RFail (HTTPError c $ decode v)
 
 doRequest
   :: (MonadIO m, MonadLog m)
   => RateLimitState
   -> Route
   -> IO (Response LB.ByteString)
-  -> m (Either RestError Value)
+  -> m (Either RestError LB.ByteString)
 doRequest rlState route action = do
   liftIO $ E.wait (globalLock rlState)
 
