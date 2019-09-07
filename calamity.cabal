@@ -1,10 +1,10 @@
 cabal-version: 1.12
 
--- This file has been generated from package.yaml by hpack version 0.31.1.
+-- This file has been generated from package.yaml by hpack version 0.31.2.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ff33c0f10422f8565cf61fbb037e3bd6c879d1a98b31c3a140a825c9d1d792cf
+-- hash: 11b517d0d5d49af51faf182011b6adab28fa98a322a486debbd2a459a8008c10
 
 name:           calamity
 version:        0.1.0.0
@@ -49,6 +49,7 @@ library
       Calamity.HTTP.Internal.Types
       Calamity.HTTP.MiscRoutes
       Calamity.HTTP.Types
+      Calamity.Types.AesonThings
       Calamity.Types.FromChannel
       Calamity.Types.General
       Calamity.Types.MessageStore
@@ -88,6 +89,7 @@ library
     , mtl >=2.2
     , pqueue >=1.4
     , protolude >=0.2
+    , reflection >=2.1
     , retry >=0.7
     , scientific >=0.3
     , simple-log >=0.9
@@ -141,6 +143,7 @@ executable test-calamity-exe
     , mtl >=2.2
     , pqueue >=1.4
     , protolude >=0.2
+    , reflection >=2.1
     , retry >=0.7
     , scientific >=0.3
     , simple-log >=0.9
@@ -192,6 +195,7 @@ test-suite calamity-test
     , mtl >=2.2
     , pqueue >=1.4
     , protolude >=0.2
+    , reflection >=2.1
     , retry >=0.7
     , scientific >=0.3
     , simple-log >=0.9
