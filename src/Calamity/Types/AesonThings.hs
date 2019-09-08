@@ -2,9 +2,13 @@
 
 module Calamity.Types.AesonThings
     ( WithSpecialCases
+    , WithSpecialCasesInner(..)
     , type IfNoneThen
+    , type InjectID
     , SpecialRule
-    , EmptyList
+    , DefaultToEmptyArray
+    , DefaultToZero
+    , DefaultToFalse
     , CalamityJSON(..)
     , jsonOptions
     , jsonOptionsKeepNothing ) where
@@ -18,7 +22,7 @@ import           Data.Reflection       ( Reifies(..) )
 import           Data.Text.Strict.Lens
 import           Data.Typeable         ( typeRep )
 
-import           GHC.Exts              ( fromList )
+import qualified GHC.TypeLits          as TL
 import           GHC.TypeLits          ( KnownSymbol, symbolVal )
 
 import           Protolude
@@ -36,18 +40,20 @@ data SpecialRuleAction
   = forall d. IfNoneThen d
   | forall mn idn. InjectID idn mn
 
-type IfNoneThen = 'IfNoneThen
+type IfNoneThen label d =
+  SpecialRule label ('IfNoneThen d)
 
-type InjectID = 'InjectID
+type InjectID label mn idn =
+  SpecialRule label ('InjectID mn idn)
 
 class PerformAction (action :: SpecialRuleAction) where
   runAction :: Proxy action -> Value -> Parser Value
 
-instance Reifies d Value => PerformAction (IfNoneThen d) where
+instance Reifies d Value => PerformAction ('IfNoneThen d) where
   runAction _ Null = pure $ reflect @d Proxy
   runAction _ x = pure x
 
-instance (KnownSymbol idn, KnownSymbol mn) => PerformAction (InjectID idn mn) where
+instance (KnownSymbol idn, KnownSymbol mn) => PerformAction ('InjectID idn mn) where
   runAction _ = withObject
     (("injecting id from " <> textSymbolVal @idn Proxy <> " into " <> textSymbolVal @mn Proxy) ^. unpacked) $ \o -> do
       id <- o .: "id"
@@ -58,6 +64,7 @@ instance (KnownSymbol idn, KnownSymbol mn) => PerformAction (InjectID idn mn) wh
 type family FoldSpecialCases (rules :: [Type]) :: SpecialCaseList where
   FoldSpecialCases '[]                              = 'SpecialCaseNil
   FoldSpecialCases (SpecialRule label action ': xs) = 'SpecialCaseElem label action (FoldSpecialCases xs)
+  FoldSpecialCases _ = TL.TypeError ('TL.Text "What did you do?")
 
 newtype WithSpecialCasesInner (rules :: SpecialCaseList) a = WithSpecialCasesInner a
 
@@ -84,10 +91,22 @@ instance (RunSpecialCase rules, Typeable a, Generic a, GFromJSON Zero (Rep a))
     o' <- runSpecialCases (Proxy @rules) o
     WithSpecialCasesInner <$> genericParseJSON jsonOptions (Object o')
 
-data EmptyList
 
-instance Reifies EmptyList Value where
-  reflect _ = Array (fromList [])
+data DefaultToEmptyArray
+
+instance Reifies DefaultToEmptyArray Value where
+  reflect _ = Array mempty
+
+data DefaultToZero
+
+instance Reifies DefaultToZero Value where
+  reflect _ = Number 0
+
+data DefaultToFalse
+
+instance Reifies DefaultToFalse Value where
+  reflect _ = Bool False
+
 
 newtype CalamityJSON a = CalamityJSON
   { unCalamityJSON :: a

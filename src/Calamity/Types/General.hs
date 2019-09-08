@@ -411,28 +411,8 @@ data Message = Message
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON ) via CalamityJSON Message
+  deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "reactions" DefaultToEmptyArray] Message
   deriving ( HasID ) via HasIDField Message
-
-instance FromJSON Message where
-  parseJSON = withObject "Message" $ \v -> Message
-    <$> v .: "id"
-    <*> v .: "channel_id"
-    <*> v .:? "guild_id"
-    <*> v .: "author"
-    <*> v .: "content"
-    <*> v .: "timestamp"
-    <*> v .:? "edited_timestamp"
-    <*> v .: "tts"
-    <*> v .: "mention_everyone"
-    <*> v .: "mentions"
-    <*> v .: "mention_roles"
-    <*> v .: "attachments"
-    <*> v .: "embeds"
-    <*> v .:? "reactions" .!= mempty
-    <*> v .:? "nonce"
-    <*> v .: "pinned"
-    <*> v .:? "webhook_id"
-    <*> v .: "type"
 
 data UpdatedMessage = UpdatedMessage
   { id              :: Snowflake UpdatedMessage
@@ -491,24 +471,9 @@ data Embed = Embed
   , fields      :: [EmbedField]
   }
   deriving ( Eq, Show, Generic )
-  deriving ToJSON via CalamityJSON Embed
+  deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "fields" DefaultToEmptyArray] Embed
+  deriving ( ToJSON ) via CalamityJSON Embed
 
-
-instance FromJSON Embed where
-  parseJSON = withObject "Embed" $ \v -> Embed
-    <$> v .:? "title"
-    <*> v .:? "type"
-    <*> v .:? "description"
-    <*> v .:? "url"
-    <*> v .:? "timestamp"
-    <*> v .:? "color"
-    <*> v .:? "footer"
-    <*> v .:? "image"
-    <*> v .:? "thumbnail"
-    <*> v .:? "video"
-    <*> v .:? "provider"
-    <*> v .:? "author"
-    <*> v .:? "fields" .!= []
 
 data EmbedFooter = EmbedFooter
   { text         :: !ShortText
@@ -611,14 +576,9 @@ data EmbedField = EmbedField
   , inline :: !Bool
   }
   deriving ( Eq, Show, Generic )
-  deriving ToJSON via CalamityJSON EmbedField
-
-
-instance FromJSON EmbedField where
-  parseJSON = withObject "EmbedField" $ \v -> EmbedField
-    <$> v .: "name"
-    <*> v .: "value"
-    <*> v .:? "inline" .!= False
+  deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "inline" DefaultToFalse]
+      EmbedField
+  deriving ( ToJSON ) via CalamityJSON EmbedField
 
 data Attachment = Attachment
   { id         :: !(Snowflake Attachment)
@@ -664,18 +624,13 @@ data Emoji = Emoji
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON ) via CalamityJSON Emoji
+  deriving ( FromJSON ) via WithSpecialCases
+      '[IfNoneThen "require_colons" DefaultToFalse,
+        IfNoneThen "managed" DefaultToFalse,
+        IfNoneThen "animated" DefaultToFalse]
+      Emoji
   deriving ( HasID ) via HasIDField Emoji
 
-
-instance FromJSON Emoji where
-  parseJSON = withObject "Emoji" $ \v -> Emoji
-    <$> v .: "id"
-    <*> v .: "name"
-    <*> v .: "roles"
-    <*> v .:? "user"
-    <*> v .:? "requireColons" .!= False
-    <*> v .:? "managed"       .!= False
-    <*> v .:? "animated"      .!= False
 
 data instance Partial Emoji = PartialEmoji
   { id   :: Snowflake Emoji
@@ -696,10 +651,10 @@ instance ToJSON RawEmoji where
 
 instance FromJSON RawEmoji where
   parseJSON = withObject "RawEmoji" $ \v -> do
-    id :: Maybe (Snowflake Emoji) <- v .:? "id"
+    m_id :: Maybe (Snowflake Emoji) <- v .:? "id"
     name :: ShortText <- v .: "name"
 
-    pure $ case id of
+    pure $ case m_id of
       Just id ->
         CustomEmoji $ PartialEmoji id name
       Nothing ->
@@ -798,22 +753,11 @@ data Activity = Activity
   , flags         :: !Word64
   }
   deriving ( Eq, Show, Generic )
+  deriving ( FromJSON ) via WithSpecialCases
+      '[IfNoneThen "instance" DefaultToFalse,
+        IfNoneThen "flags" DefaultToZero]
+      Activity
   deriving ( ToJSON ) via CalamityJSON Activity
-
-instance FromJSON Activity where
-  parseJSON = withObject "Activity" $ \v -> Activity
-    <$> v .: "name"
-    <*> v .: "type"
-    <*> v .:? "url"
-    <*> v .:? "timestamps"
-    <*> v .:? "applicationID"
-    <*> v .:? "details"
-    <*> v .:? "state"
-    <*> v .:? "party"
-    <*> v .:? "assets"
-    <*> v .:? "secrets"
-    <*> v .:? "instance_" .!= False
-    <*> v .:? "flags"     .!= 0
 
 data ActivityTimestamps = ActivityTimestamps
   { start :: Maybe UnixTimestamp
