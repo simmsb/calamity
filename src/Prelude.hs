@@ -10,16 +10,14 @@ module Prelude
     , module Control.Arrow
     , module Data.Text.Short
     , module Data.Semigroup
+    , module Calamity.Types.AesonThings
     , LogMessage
-    , CalamityJSON(..)
     , debug
     , info
     , warning
     , error
     , fatal
     , trace
-    , jsonOptions
-    , jsonOptionsKeepNothing
     , whenJust
     , lastMaybe ) where
 
@@ -39,6 +37,8 @@ import           Protolude         hiding ( HasField, Last, getField, getLast, t
 import           System.Log.Simple hiding ( Debug, Error, Fatal, Info, Message, Trace, Warning, trace )
 import qualified System.Log.Simple as SLS
 
+import           Calamity.Types.AesonThings
+
 type LogMessage = SLS.Message
 
 debug, info, warning, error, fatal, trace :: MonadLog m => Text -> m ()
@@ -53,28 +53,6 @@ error = sendLog SLS.Error
 fatal = sendLog SLS.Fatal
 
 trace = sendLog SLS.Trace
-
-newtype CalamityJSON a = CalamityJSON
-  { unCalamityJSON :: a
-  }
-
-instance (Typeable a, Generic a, GToJSON Zero (Rep a), GToEncoding Zero (Rep a)) => ToJSON (CalamityJSON a) where
-  toJSON = genericToJSON jsonOptions . unCalamityJSON
-
-  toEncoding = genericToEncoding jsonOptions . unCalamityJSON
-
-instance (Typeable a, Generic a, GFromJSON Zero (Rep a)) => FromJSON (CalamityJSON a) where
-  parseJSON = fmap CalamityJSON . genericParseJSON jsonOptions
-
-jsonOptions :: Options
-jsonOptions = defaultOptions { sumEncoding        = UntaggedValue
-                             , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
-                             , omitNothingFields  = True }
-
-jsonOptionsKeepNothing :: Options
-jsonOptionsKeepNothing = defaultOptions { sumEncoding        = UntaggedValue
-                                        , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
-                                        , omitNothingFields  = False }
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
