@@ -5,6 +5,7 @@ module Calamity.HTTP.Internal.Request
     , putWith'
     , patchWith'
     , putEmpty
+    , postEmpty
     , getWithP ) where
 
 import           Calamity.Client.Types
@@ -76,6 +77,9 @@ requestOptions t = defaultRequestOptions
 
 postWith' :: Postable a => a -> Options -> String -> IO (Response LB.ByteString)
 postWith' p o s = postWith o s p
+
+postEmpty :: Options -> String -> IO (Response LB.ByteString)
+postEmpty o s = postWith o s ("" :: ByteString)
 
 putWith' :: Putable a => a -> Options -> String -> IO (Response LB.ByteString)
 putWith' p o s = putWith o s p

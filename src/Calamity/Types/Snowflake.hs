@@ -56,6 +56,8 @@ instance HasField' "id" a (Snowflake a) => HasID (HasIDField a) where
 
   getID (HasIDField a) = a ^. field' @"id"
 
+-- ^ A data `a` which contains an ID of type `Snowflake a`
+--   which should be swapped with `Snowflake b` upon fetching
 newtype HasIDFieldCoerce a b = HasIDFieldCoerce a
 
 instance HasField' "id" a (Snowflake a) => HasID (HasIDFieldCoerce a (b :: Type)) where
@@ -63,6 +65,7 @@ instance HasField' "id" a (Snowflake a) => HasID (HasIDFieldCoerce a (b :: Type)
 
   getID (HasIDFieldCoerce a) = coerceSnowflake . getID $ a ^. field' @"id"
 
+-- ^ A data `a` which contains an ID of type `Snowflake b`
 newtype HasIDFieldAlt a b = HasIDFieldAlt a
 
 instance HasField' "id" a (Snowflake b) => HasID (HasIDFieldAlt a (b :: Type)) where

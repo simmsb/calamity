@@ -26,6 +26,7 @@ module Calamity.Types.General
     , Embed(..)
     , Attachment(..)
     , Overwrite(..)
+    , Invite(..)
     , formatToken
     , rawToken ) where
 
@@ -98,15 +99,11 @@ data User = User
   deriving ( HasID ) via HasIDField User
 
 newtype instance Partial User = PartialUser
-  { id :: Snowflake (Partial User)
+  { id :: Snowflake User
   }
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial User)
-
-instance HasID (Partial User) where
-  type HasIDRes (Partial User) = User
-
-  getID (PartialUser id) = coerceSnowflake id
+  deriving ( HasID ) via HasIDFieldAlt (Partial User) User
 
 data Channel = Channel
   { id                   :: !(Snowflake Channel)
@@ -131,6 +128,15 @@ data Channel = Channel
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON Channel
   deriving ( HasID ) via HasIDField Channel
+
+data instance Partial Channel = PartialChannel
+  { id    :: !(Snowflake Channel)
+  , name  :: !ShortText
+  , type_ :: !ChannelType
+  }
+  deriving ( Show, Eq, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Channel)
+  deriving ( HasID ) via HasIDFieldAlt (Partial Channel) Channel
 
 data SingleDM = SingleDM
   { id            :: Snowflake SingleDM
@@ -268,6 +274,14 @@ data Guild = Guild
   }
   deriving ( Eq, Show, Generic )
   deriving ( HasID ) via HasIDField Guild
+
+data instance Partial Guild = PartialGuild
+  { id   :: !(Snowflake Guild)
+  , name :: !ShortText
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Guild)
+  deriving ( HasID ) via HasIDFieldAlt (Partial Guild) Guild
 
 data UpdatedGuild = UpdatedGuild
   { id                          :: Snowflake Guild
@@ -808,3 +822,16 @@ data ClientStatus = ClientStatus
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON ClientStatus
+
+
+data Invite = Invite
+  { code                     :: !ShortText
+  , guild                    :: !(Maybe (Partial Guild))
+  , channel                  :: !(Maybe (Partial Channel))
+  , targetUser               :: !(Maybe (Partial User))
+  , targetUserType           :: !(Maybe Int)
+  , approximatePresenceCount :: !(Maybe Int)
+  , approximateMemberCount   :: !(Maybe Int)
+  }
+  deriving ( Eq, Show, Generic )
+  deriving ( ToJSON, FromJSON ) via CalamityJSON Invite
