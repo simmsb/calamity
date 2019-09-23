@@ -72,15 +72,15 @@ doDiscordRequest r = do
 parseDiscordTime :: ByteString -> Maybe UTCTime
 parseDiscordTime s = httpDateToUTC <$> parseHTTPDate s
 
-computeDiscordTimeDiff :: Integer -> UTCTime -> Int
-computeDiscordTimeDiff end now = (* 1000) . round $ diffUTCTime end' now
-  where end' = end & fromInteger & posixSecondsToUTCTime
+computeDiscordTimeDiff :: Double -> UTCTime -> Int
+computeDiscordTimeDiff end now = round . (* 1000.0) $ diffUTCTime end' now
+  where end' = end & toRational & fromRational & posixSecondsToUTCTime
 
 -- | Parse a ratelimit header returning the number of milliseconds until it resets
 parseRateLimitHeader :: Response a -> Int
 parseRateLimitHeader r = computeDiscordTimeDiff end now
  where
-  end = r ^?! responseHeader "X-Ratelimit-Reset" . _Integer
+  end = r ^?! responseHeader "X-Ratelimit-Reset" . _Double
   now = r ^?! responseHeader "Date" & parseDiscordTime & fromJust
 
 isExhausted :: Response a -> Bool

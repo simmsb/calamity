@@ -69,6 +69,7 @@ class Request a r | a -> r where
 defaultRequestOptions :: Options
 defaultRequestOptions = defaults
   & header "User-Agent" .~ ["Calamity (https://github.com/nitros12/yet-another-haskell-discord-library)"]
+  & header "X-RateLimit-Precision" .~ ["millisecond"]
   & checkResponse ?~ (\_ _ -> pure ())
 
 requestOptions :: Token -> Options
