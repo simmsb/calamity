@@ -312,18 +312,6 @@ data UpdatedGuild = UpdatedGuild
   deriving ( FromJSON ) via CalamityJSON UpdatedGuild
   deriving ( HasID ) via HasIDFieldAlt UpdatedGuild Guild
 
--- TODO: eventually use these for lenses
--- buildChannels :: forall a. (FromChannel a, FromRet a ~ Either Text a) => Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap a
--- buildChannels guildID = SM.mapMaybe (rightToMaybe . fromChannelWithGuildID guildID (Proxy @a))
-
--- buildCategories :: Snowflake Guild -> SnowflakeMap Channel -> SnowflakeMap Category
--- buildCategories guildID chans = SM.mapMaybe buildCat chans
---       where buildCat chan@(Channel {type_ = GuildCategoryType}) = do
---               let guildChannels -- :: SnowflakeMap GuildChannel
---                     = buildChannels guildID chans
---               rightToMaybe $ fromChannelWithGuildID guildID (Proxy @Category) chan guildChannels
---             buildCat _ = Nothing
-
 instance FromJSON Guild where
   parseJSON = withObject "Guild" $ \v -> do
     id <- v .: "id"

@@ -43,7 +43,7 @@ shardBot = do
   eventQueue <- asks eventQueue
   logEnv <- askLog
 
-  gateway <- aa <$> runEventMCurrent (invokeRequest GetGatewayBot)
+  gateway <- aa <$> invokeRequest GetGatewayBot
 
   let numShards' = gateway ^. #shards
   let host = gateway ^. #url
@@ -69,7 +69,7 @@ shardUserBot = do
   eventQueue <- asks eventQueue
   logEnv <- askLog
 
-  gateway <- aa <$> runEventMCurrent (invokeRequest GetGateway)
+  gateway <- aa <$> invokeRequest GetGateway
 
   let host = gateway ^. #url
   liftIO $ putMVar numShardsVar 1

@@ -51,15 +51,13 @@ class Request a r | a -> r where
 
   toAction :: a -> Options -> String -> IO (Response LB.ByteString)
 
-  -- TODO: instead of using BotM, instead use a generic HasRatelimits monad
-  -- so that we can make requests from shards too
-  invokeRequest :: FromJSON r => a -> EventM (Either RestError r)
+  invokeRequest :: forall m. (MonadLog m, HasClient m, FromJSON r) => a -> m (Either RestError r)
   invokeRequest r = runExceptT inner
     where
-      inner :: ExceptT RestError EventM r
+      inner :: ExceptT RestError m r
       inner = do
-        rlState' <- asks rlState
-        token' <- asks token
+        rlState' <- lift $ asksClient rlState
+        token' <- lift $ asksClient token
 
         resp <- scope ("[Request Route: " +| toRoute r ^. #path |+ "]") $ doRequest rlState' (toRoute r)
           (toAction r (requestOptions token') (Calamity.HTTP.Internal.Request.url r))

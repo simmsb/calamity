@@ -17,8 +17,6 @@ import           Prelude                  hiding ( over )
 
 import           Unsafe.Coerce
 
--- TODO: From/ToJSON instance
--- TODO: has ID constraints, etc
 newtype SnowflakeMap a = SnowflakeMap
   { unSnowflakeMap :: HashMap (Snowflake a) a
   }

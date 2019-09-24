@@ -15,7 +15,9 @@ module Calamity.Client.Types
     , runEventMCurrent
     , syncEventM
     , Cache(..)
-    , HandlersM(..) ) where
+    , HandlersM(..)
+    , HasClient(..)
+    ) where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
@@ -30,11 +32,14 @@ import           Calamity.Types.UnixTimestamp
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad.Catch
+import           Control.Monad.Fail
 import           Control.Monad.Trans.Reader            ( runReaderT )
 import           Control.Monad.Writer.Lazy
 
 import           Data.Default
 import qualified Data.HashSet                          as LS
+import           Data.String                           ( String )
+import           Data.Text.Strict.Lens
 import           Data.Time
 import qualified Data.TypeRepMap                       as TM
 import           Data.TypeRepMap                       ( TypeRepMap, WrapTypeable(..) )
@@ -84,44 +89,6 @@ instance {-# OVERLAPPABLE #-}MonadReader a m => MonadReader a (LogT m) where
     b <- ask
     lift . local f $ runReaderT (runLogT m) b
 
--- deriving instance MonadReader
--- deriving instance MonadReader Client m => MonadReader Client (LogT (ReaderT Client m))
-
--- instance (MonadMask m, MonadIO m, MonadReader r m) => MonadReader r (LogT (ReaderT r m)) where
---   ask       = lift ask
---   local f m = LogT $ local f (runLogT m)   -- lift $ local f m -- LogT $ \env -> local f (runLogTSafe m)
---   reader    = lift . reader
-
--- TODO: maybe come back and complete this impl sometime
--- so that we don't have to manually pull and insert data into the BotM monad for clientLoop
---
--- instance MonadTransControl (LogT Text) where
---   type StT (LogT Text) a =
-
--- instance MonadBase b m => MonadBase b (LogT Text m) where
---   liftBase = lift . liftBase
-
--- instance MonadBaseControl b m => MonadBaseControl b (LogT Text m) where
---   type StM (LogT Text m) a = ComposeSt (LogT Text) m a
---   liftBaseWith = defaultLiftBaseWith
---   restoreM = defaultRestoreM
---   {-# INLINABLE liftBaseWith #-}
---   {-# INLINABLE restoreM #-}
-
-
--- instance MonadBase IO BotM where
---   liftBase = liftIO
-
--- newtype StMBotM a = StMBotM { unStMBotM :: StM (LogT Text (ReaderT Client IO)) a }
-
--- instance MonadBaseControl IO BotM where
---   type StM BotM a = StMBotM a
-
---   liftBaseWith f = BotM $ liftBaseWith (\run -> f (liftM StMBotM . run . unBotM))
-
---   restoreM = BotM . restoreM . unStMBotM
---   {-# INLINABLE liftBaseWith #-}
---   {-# INLINABLE restoreM #-}
 
 runBotM :: Client -> Log -> BotM a -> IO a
 runBotM cstate logEnv = (`runReaderT` cstate) . withLog logEnv . unBotM
@@ -129,18 +96,24 @@ runBotM cstate logEnv = (`runReaderT` cstate) . withLog logEnv . unBotM
 -- | EventM is an event handler that contains a snapshot of the cache state
 -- At the time of the invokation
 newtype EventM a = EventM
-  { unEventM :: StateT Cache BotM a
+  { unEventM :: ExceptT String (StateT Cache BotM) a
   }
   deriving ( Functor )
   deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadState Cache
                    , MonadReader Client )
 
--- deriving instance MonadReader Client m => StateT s (LogT (ReaderT Client m))
+instance MonadFail EventM where
+  fail str = EventM $ throwE str
 
-runEventM :: Cache -> EventM a -> BotM a
-runEventM cache = (`evalStateT` cache) . unEventM
+runEventM :: Cache -> EventM a -> BotM ()
+runEventM cache e = do
+  r <- (`evalStateT` cache) . runExceptT . unEventM $ e
+  case r of
+    Left e ->
+      error $ e ^. packed
+    _ -> pure ()
 
-runEventMCurrent :: EventM a -> BotM a
+runEventMCurrent :: EventM a -> BotM ()
 runEventMCurrent e = do
   client <- ask
   cache <- liftIO . readTVarIO . cache $ client
@@ -152,6 +125,18 @@ syncEventM = do
   client <- ask
   cache <- liftIO . readTVarIO . cache $ client
   put cache
+
+class (Functor m) => HasClient m where
+  getClient :: m Client
+
+  asksClient :: (Client -> a) -> m a
+  asksClient = (<$> getClient)
+
+instance HasClient EventM where
+  getClient = ask
+
+instance HasClient BotM where
+  getClient = ask
 
 newtype HandlersM a = HandlersM
   { unHandlersM :: Writer EventHandlers a

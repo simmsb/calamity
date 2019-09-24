@@ -168,9 +168,8 @@ shardLoop = do
         sendToWs (Identify IdentifyData
                   { token = shard ^. #token
                   , properties = IdentifyProps
-                                 { os = "Linux" -- TODO: correct
-                                 , browser = "YetAnotherHaskellLib: "
-                                 , device = "YetAnotherHaskellLib"
+                                 { browser = "Calamity: https://github.com/nitros12/calamity"
+                                 , device = "Calamity: https://github.com/nitros12/calamity"
                                  }
                   , compress = False
                   , largeThreshold = 250

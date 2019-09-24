@@ -41,7 +41,6 @@ lookupOrInsertDefaultM aM = casesM
 getRateLimit :: RateLimitState -> Route -> STM Lock
 getRateLimit s h = SC.focus (lookupOrInsertDefaultM L.new) h (rateLimits s)
 
--- TODO: Add logging here
 doDiscordRequest
   :: (MonadIO m, MonadLog m)
   => IO (Response LB.ByteString)

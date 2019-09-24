@@ -1,44 +1,47 @@
 -- | The route type
 -- Why I did this I don't know
-
 -- {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Calamity.HTTP.Internal.Route
-  ( mkRouteBuilder
-  , giveID
-  , buildRoute
-  , RouteBuilder
-  , Route(path)
-  , S(..)
-  , ID(..)
-  , RouteFragmentable(..)
-  )
-where
+    ( mkRouteBuilder
+    , giveID
+    , buildRoute
+    , RouteBuilder
+    , RouteRequirement
+    , Route(path)
+    , S(..)
+    , ID(..)
+    , RouteFragmentable(..)
+    ) where
 
-import           Data.Maybe                     ( fromJust )
-import           Data.List                      ( lookup )
-import qualified Data.Text                     as T
-
-import           Calamity.Types.Snowflake
 import           Calamity.Types.General
+import           Calamity.Types.Snowflake
+
+import           Data.List                ( lookup )
+import           Data.Maybe               ( fromJust )
+import qualified Data.Text                as T
 
 data RouteFragment
   = S' Text
   | ID' TypeRep
-  deriving (Generic, Show, Eq)
+  deriving ( Generic, Show, Eq )
 
 newtype S = S Text
+
 data ID a = ID
 
 instance Hashable RouteFragment
 
-data RouteRequirement = NotNeeded | Required | Satisfied
-  deriving (Generic, Show, Eq)
+data RouteRequirement
+  = NotNeeded
+  | Required
+  | Satisfied
+  deriving ( Generic, Show, Eq )
 
 data RouteBuilder (idState :: [(Type, RouteRequirement)]) = UnsafeMkRouteBuilder
-  { route   :: [RouteFragment]
-  , ids     :: [(TypeRep, Word64)]
+  { route :: [RouteFragment]
+  , ids   :: [(TypeRep, Word64)]
   }
 
 mkRouteBuilder :: RouteBuilder '[]

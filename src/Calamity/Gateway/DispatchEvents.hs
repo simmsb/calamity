@@ -57,7 +57,6 @@ data ReadyData = ReadyData
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON ReadyData
 
--- TODO: literally all of these
 data ChannelPinsUpdateData = ChannelPinsUpdateData
   { channelID        :: Snowflake Channel
   , lastPinTimestamp :: Maybe UTCTime

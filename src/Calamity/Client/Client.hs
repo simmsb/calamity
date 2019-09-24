@@ -41,8 +41,6 @@ import qualified Streamly.Prelude                      as S
 import qualified System.Log.Simple                     as SLS
 
 
--- TODO: merge event handlers with default
--- and give writerT for adding events
 newClient :: Token -> IO Client
 newClient token = do
   shards'                     <- newTVarIO []
@@ -78,7 +76,7 @@ react :: forall (s :: Symbol). KnownSymbol s => EHType s -> HandlersM ()
 react f = tell . EventHandlers . TM.one $ EH @s [f]
 
 withHandlers :: HandlersM () -> Client -> Client
-withHandlers (HandlersM h) (c@Client { eventHandlers }) = c { eventHandlers = eventHandlers <> execWriter h }
+withHandlers (HandlersM h) c@Client { eventHandlers } = c { eventHandlers = eventHandlers <> execWriter h }
 
 runWithHandlers :: Token -> HandlersM () -> IO ()
 runWithHandlers token h = do
@@ -274,8 +272,6 @@ handleActions os ns eh (UserUpdate _) = do
 handleActions _ _ _ _ = Nothing -- pure []
 
 
-
--- TODO: actually update the cache
 updateCache :: DispatchData -> State Cache ()
 updateCache (Ready ReadyData { user, guilds }) = do
   #user ?= user

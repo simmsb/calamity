@@ -175,7 +175,7 @@ data IdentifyData = IdentifyData
 
 data StatusUpdateData = StatusUpdateData
   { since  :: Maybe Integer
-  , game   :: Maybe Value -- TODO: activity object
+  , game   :: Maybe Value
   , status :: ShortText
   , afk    :: Bool
   }
@@ -201,17 +201,14 @@ instance ToJSON RequestGuildMembersData where
   toEncoding RequestGuildMembersData { guildID, query, limit } = pairs
     ("guild_id" .= guildID <> "query" .= fromMaybe "" query <> "limit" .= fromMaybe 0 limit)
 
--- TODO: Substitute void in snowflakes to correct types
--- TODO: Work on filling out data types and aeson stuff
 data IdentifyProps = IdentifyProps
-  { os      :: Text
-  , browser :: Text
+  { browser :: Text
   , device  :: Text
   }
   deriving ( Show, Generic )
 
 instance ToJSON IdentifyProps where
-  toEncoding IdentifyProps { os, browser, device } = pairs ("$os" .= os <> "$browser" .= browser <> "$device" .= device)
+  toEncoding IdentifyProps { browser, device } = pairs ("$browser" .= browser <> "$device" .= device)
 
 data ControlMessage
   = Restart

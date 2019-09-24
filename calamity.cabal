@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 11b517d0d5d49af51faf182011b6adab28fa98a322a486debbd2a459a8008c10
+-- hash: ca11a84d427c7f4c38290eee8d70b5b6933540adaf16e8ebd4fa622d63300b2c
 
 name:           calamity
 version:        0.1.0.0
@@ -43,6 +43,7 @@ library
       Calamity.Gateway.Types
       Calamity.HTTP
       Calamity.HTTP.Channel
+      Calamity.HTTP.Emoji
       Calamity.HTTP.Internal.Ratelimit
       Calamity.HTTP.Internal.Request
       Calamity.HTTP.Internal.Route
