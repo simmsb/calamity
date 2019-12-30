@@ -87,6 +87,7 @@ shardLoop = do
   void outerloop
   trace "leaving shardLoop"
  where
+  controlStream :: Shard -> IO ShardMsg
   controlStream shard = Control <$> (liftIO . atomically . readTQueue $ (shard ^. #cmdQueue))
 
   discordStream logEnv ws = untilResult . runMaybeT $ do

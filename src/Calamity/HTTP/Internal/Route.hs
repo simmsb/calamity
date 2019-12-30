@@ -1,6 +1,5 @@
 -- | The route type
 -- Why I did this I don't know
--- {-# LANGUAGE RankNTypes #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 module Calamity.HTTP.Internal.Route

@@ -1,7 +1,5 @@
 -- | Module containing ratelimit stuff
 
-{-# LANGUAGE MultiWayIf #-}
-
 module Calamity.HTTP.Internal.Ratelimit
   ( RateLimitState(..)
   , newRateLimitState

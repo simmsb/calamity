@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: lts-13.27
+resolver: lts-14.19
 
 # docker:
 #   enable: true
@@ -47,7 +47,6 @@ extra-deps:
   - stm-hamt-1.2.0.2
   - primitive-extras-0.7.1
   - type-level-0.3.0
-  - streamly-0.6.1
   - ekg-0.4.0.15
   - ekg-json-0.1.0.6
   - data-default-extra-0.1.0
@@ -58,6 +57,9 @@ extra-deps:
   - data-default-instances-unordered-containers-0.0.1
   - data-default-instances-vector-0.0.1
   - http-client-0.6.4@sha256:a74b417345857d4250bdb6d4ac7fd4a89fd2ad8efab3164c1a2b843398d5c13a,5320
+  - generic-lens-1.2.0.1@sha256:faecffd513340cd570866aa8f3e0e139d3f9240ecd3eb766357cdf47f550004c,6550
+  - lens-aeson-1.1@sha256:5e1c19729fc4cdeb6137390972f3b551423bb6be33a7adbc2fb6accdc9f27903,2210
+  - streamly-0.7.0@sha256:2a510275b3a41f1e50d8f45f8dac879933139652509dd6cd98b69a5d24e9c55d,31563
   - github: nitros12/concurrent-state
     commit: 9be5124aec9ccf2925638afd1bb04f36121600a1
     size: 9294

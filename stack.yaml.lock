@@ -47,13 +47,6 @@ packages:
   original:
     hackage: type-level-0.3.0
 - completed:
-    hackage: streamly-0.6.1@sha256:5c8501ffc49cb55563fbdb3e971d66a75b628ee4a9db2d93f108ec1ea961347a,25103
-    pantry-tree:
-      size: 4217
-      sha256: ebaea57d8709839ec468d0a9affe5beada0e3014f2ac76a5a3776b53af314a1d
-  original:
-    hackage: streamly-0.6.1
-- completed:
     hackage: ekg-0.4.0.15@sha256:f35b2c6d80415314f84056afaba6e622bf8d90eb01d0504c87f04c64cb105e04,2030
     pantry-tree:
       size: 1495
@@ -124,6 +117,27 @@ packages:
   original:
     hackage: http-client-0.6.4@sha256:a74b417345857d4250bdb6d4ac7fd4a89fd2ad8efab3164c1a2b843398d5c13a,5320
 - completed:
+    hackage: generic-lens-1.2.0.1@sha256:faecffd513340cd570866aa8f3e0e139d3f9240ecd3eb766357cdf47f550004c,6550
+    pantry-tree:
+      size: 4315
+      sha256: ea2099153bc65265915f206f08d25eed0d21270412505ea6470665df74b7f5ec
+  original:
+    hackage: generic-lens-1.2.0.1@sha256:faecffd513340cd570866aa8f3e0e139d3f9240ecd3eb766357cdf47f550004c,6550
+- completed:
+    hackage: lens-aeson-1.1@sha256:5e1c19729fc4cdeb6137390972f3b551423bb6be33a7adbc2fb6accdc9f27903,2210
+    pantry-tree:
+      size: 809
+      sha256: fd35b6b587e95d48a4074988410c72c9f86d0b4a674a911eb6cbe2f0a3e50506
+  original:
+    hackage: lens-aeson-1.1@sha256:5e1c19729fc4cdeb6137390972f3b551423bb6be33a7adbc2fb6accdc9f27903,2210
+- completed:
+    hackage: streamly-0.7.0@sha256:2a510275b3a41f1e50d8f45f8dac879933139652509dd6cd98b69a5d24e9c55d,31563
+    pantry-tree:
+      size: 9000
+      sha256: bf550621b3b9b13f0f4af4970d207483e6617cde09af37c2a64c90a2dbc6925c
+  original:
+    hackage: streamly-0.7.0@sha256:2a510275b3a41f1e50d8f45f8dac879933139652509dd6cd98b69a5d24e9c55d,31563
+- completed:
     size: 9294
     url: https://github.com/nitros12/concurrent-state/archive/9be5124aec9ccf2925638afd1bb04f36121600a1.tar.gz
     cabal-file:
@@ -163,7 +177,7 @@ packages:
     sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
 snapshots:
 - completed:
-    size: 500539
-    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/13/27.yaml
-    sha256: 690db832392afe55733b4c7023fd29b1b1c660ee42f1fb505b86b07394ca994e
-  original: lts-13.27
+    size: 524155
+    url: https://raw.githubusercontent.com/commercialhaskell/stackage-snapshots/master/lts/14/19.yaml
+    sha256: 9f79f6494473c9b46911364b94c4b5ef19ca8d35ebf62e46697cf651f198ee19
+  original: lts-14.19
