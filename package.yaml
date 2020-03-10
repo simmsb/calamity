@@ -20,7 +20,7 @@ extra-source-files:
 description:        Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 
 dependencies:
-- base-noprelude >= 4.7 && < 5
+- base-noprelude >= 4.12 && < 5
 - websockets >= 0.12
 - wuss >= 1.1
 - wreq >= 0.5
@@ -40,6 +40,7 @@ dependencies:
 - exceptions >= 0.10
 - fmt >= 0.6
 - stm-containers >= 1.1
+- stm-chans >= 3.0
 - concurrent-extra >= 0.7
 - focus >= 1.0
 - data-default-extra >= 0.1.0
@@ -56,14 +57,18 @@ dependencies:
 - pqueue >= 1.4
 - text-short >= 0.1
 - vector >= 0.12
-- ekg >= 0.4
 - reflection >= 2.1
+- polysemy >= 0.3
+- polysemy-plugin >= 0.2
+- di-polysemy
+- df1
 
 executables:
   test-calamity-exe:
     main: Main.hs
     source-dirs: app
     ghc-options:
+      - -fplugin=Polysemy.Plugin
       - -funbox-strict-fields
       - -threaded
       - -rtsopts
@@ -80,6 +85,7 @@ flags:
 
 library:
   ghc-options:
+    - -fplugin=Polysemy.Plugin
     - -funbox-strict-fields
     - -Wall
   when:

@@ -72,8 +72,8 @@ startClient client = do
     shardBot
     clientLoop
 
-react :: forall (s :: Symbol). KnownSymbol s => EHType s -> HandlersM ()
-react f = tell . EventHandlers . TM.one $ EH @s [f]
+react :: forall (s :: Symbol). (KnownSymbol s, Member Handlers r) => EHType s -> Sem r ()
+react f = react . EventHandlers . TM.one $ EH @s [f]
 
 withHandlers :: HandlersM () -> Client -> Client
 withHandlers (HandlersM h) c@Client { eventHandlers } = c { eventHandlers = eventHandlers <> execWriter h }
@@ -123,7 +123,7 @@ runEventHandlers oldCache newCache data' = do
     Nothing
       -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
 
-unwrapEvent :: forall a. KnownSymbol a => EventHandlers -> [EHType a]
+unwrapEvent :: forall a r. KnownSymbol a => EventHandlers -> [EHType a r]
 unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler a))
 
 handleActions :: Cache -- ^ The old cache

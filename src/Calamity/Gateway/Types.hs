@@ -17,7 +17,6 @@ import           Calamity.Types.Snowflake
 -- )
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad.Catch
 import           Control.Monad.State.Concurrent.Strict
 
 import           Data.Aeson
@@ -25,6 +24,11 @@ import qualified Data.Aeson.Types                      as AT
 import           Data.Generics.Labels                  ()
 
 import           Network.WebSockets.Connection         ( Connection )
+
+import qualified Polysemy                              as P
+import qualified Polysemy.Async                        as P
+import qualified Polysemy.AtomicState                  as P
+
 
 data ShardMsg
   = Discord ReceivedDiscordMessage
@@ -245,10 +249,4 @@ data ShardState = ShardState
   }
   deriving ( Generic )
 
-newtype ShardM a = ShardM
-  { unShardM :: LogT (StateC ShardState IO) a
-  }
-  deriving ( Functor )
-  deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadState ShardState )
-
-deriving newtype instance MonadState s m => MonadState s (LogT m)
+type ShardC r = (LogC r, P.Members '[P.AtomicState ShardState, P.Embed IO, P.Async] r)

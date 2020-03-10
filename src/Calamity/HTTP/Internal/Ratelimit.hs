@@ -1,31 +1,34 @@
 -- | Module containing ratelimit stuff
-
 module Calamity.HTTP.Internal.Ratelimit
-  ( RateLimitState(..)
-  , newRateLimitState
-  , doRequest
-  )
-where
+    ( newRateLimitState
+    , doRequest ) where
 
-import           Control.Concurrent.Event       ( Event )
-import qualified Control.Concurrent.Event      as E
-import           Control.Concurrent.STM.Lock    ( Lock )
-import qualified Control.Concurrent.STM.Lock   as L
+import           Calamity.Client.Types ( BotC )
+import           Calamity.HTTP.Internal.Route
+import           Calamity.HTTP.Internal.Types
+
+import           Control.Concurrent.Event     ( Event )
+import qualified Control.Concurrent.Event     as E
+import           Control.Concurrent.STM.Lock  ( Lock )
+import qualified Control.Concurrent.STM.Lock  as L
 import           Control.Monad
+
 import           Data.Aeson
-import qualified Data.ByteString.Lazy          as LB
+import qualified Data.ByteString.Lazy         as LB
 import           Data.Maybe
 import           Data.Time
 import           Data.Time.Clock.POSIX
+
 import           Focus
+
 import           Network.HTTP.Date
-import           Network.HTTP.Types      hiding ( statusCode )
+import           Network.HTTP.Types           hiding ( statusCode )
 import           Network.Wreq
-import qualified StmContainers.Map             as SC
 
-import           Calamity.HTTP.Internal.Types
-import           Calamity.HTTP.Internal.Route
+import           Polysemy                     ( Sem )
+import           Polysemy.Embed ( embed )
 
+import qualified StmContainers.Map            as SC
 
 newRateLimitState :: IO RateLimitState
 newRateLimitState = RateLimitState <$> SC.newIO <*> E.newSet
@@ -40,11 +43,11 @@ getRateLimit :: RateLimitState -> Route -> STM Lock
 getRateLimit s h = SC.focus (lookupOrInsertDefaultM L.new) h (rateLimits s)
 
 doDiscordRequest
-  :: (MonadIO m, MonadLog m)
+  :: BotC r
   => IO (Response LB.ByteString)
-  -> m DiscordResponseType
+  -> Sem r DiscordResponseType
 doDiscordRequest r = do
-  r' <- liftIO r
+  r' <- embed r
   let status = r' ^. responseStatus
   if
     | statusIsSuccessful status -> do
@@ -58,7 +61,7 @@ doDiscordRequest r = do
       pure $ ServerError (status ^. statusCode)
     | status == status429 -> do
       info "Got 429 from discord, retrying."
-      rv <- liftIO $ asValue r'
+      rv <- embed $ asValue r'
       pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
     | statusIsClientError status -> do
       let err = r' ^. responseBody
@@ -98,11 +101,11 @@ data ShouldRetry a b
   | RGood b
 
 retryRequest
-  :: (MonadLog m)
+  :: BotC r
   => Int -- ^ number of retries
-  -> m (ShouldRetry a b) -- ^ action to perform
-  -> m ()  -- ^ action to run if max number of retries was reached
-  -> m (Either a b)
+  -> Sem r (ShouldRetry a b) -- ^ action to perform
+  -> Sem r ()  -- ^ action to run if max number of retries was reached
+  -> Sem r (Either a b)
 retryRequest max_retries action failAction = retryInner 0
  where
   retryInner num_retries = do
@@ -123,33 +126,33 @@ retryRequest max_retries action failAction = retryInner 0
 -- NOTE: this function will only unlock the ratelimit lock if the request
 -- gave a response, otherwise it will stay locked so that it can be retried again
 doSingleRequest
-  :: (MonadIO m, MonadLog m)
+  :: BotC r
   => Event -- ^ Global lock
   -> Lock -- ^ Local lock
   -> IO (Response LB.ByteString) -- ^ Request action
-  -> m (ShouldRetry RestError LB.ByteString)
+  -> Sem r (ShouldRetry RestError LB.ByteString)
 doSingleRequest gl l r = do
   r' <- doDiscordRequest r
   case r' of
     Good v -> do
-      liftIO . atomically $ L.release l
+      embed . atomically $ L.release l
       pure $ RGood v
 
     ExhaustedBucket v d -> do
       info $ "Exhausted bucket, unlocking after " +| d |+ "ms"
-      void . liftIO . forkIO $ do
+      void . embed . forkIO $ do
         threadDelay $ 1000 * d
         atomically $ L.release l
       pure $ RGood v
 
     Ratelimited d False -> do
       info $ "429 ratelimited on route, sleeping for " +| d |+ " ms"
-      liftIO . threadDelay $ 1000 * d
+      embed . threadDelay $ 1000 * d
       pure $ Retry (HTTPError 429 Nothing)
 
     Ratelimited d True -> do
       info "429 ratelimited globally"
-      liftIO $ do
+      embed $ do
         E.clear gl
         threadDelay $ 1000 * d
         E.set gl
@@ -162,19 +165,19 @@ doSingleRequest gl l r = do
     ClientError c v -> pure $ RFail (HTTPError c $ decode v)
 
 doRequest
-  :: (MonadIO m, MonadLog m)
+  :: BotC r
   => RateLimitState
   -> Route
   -> IO (Response LB.ByteString)
-  -> m (Either RestError LB.ByteString)
+  -> Sem r (Either RestError LB.ByteString)
 doRequest rlState route action = do
-  liftIO $ E.wait (globalLock rlState)
+  embed $ E.wait (globalLock rlState)
 
-  ratelimit <- liftIO . atomically $ do
+  ratelimit <- embed . atomically $ do
     lock <- getRateLimit rlState route
     L.acquire lock
     pure lock
 
   retryRequest 5
                (doSingleRequest (globalLock rlState) ratelimit action)
-               (liftIO . atomically $ L.release ratelimit)
+               (embed . atomically $ L.release ratelimit)

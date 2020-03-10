@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 335d2a2b14b77c7ea3a6e1830c21ec21efac45a47f67d6e9ae5984b70d437faf
+-- hash: 2b5e64f842875b3fa1d0dc428bed07142bf53d9120ccfc74702bb325e46e4038
 
 name:           calamity
 version:        0.1.0.0
@@ -51,6 +51,7 @@ library
       Calamity.HTTP.Internal.Types
       Calamity.HTTP.MiscRoutes
       Calamity.HTTP.Types
+      Calamity.LogEff
       Calamity.Types.AesonThings
       Calamity.Types.FromChannel
       Calamity.Types.General
@@ -68,16 +69,17 @@ library
   hs-source-dirs:
       src
   default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
-  ghc-options: -funbox-strict-fields -Wall
+  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall
   build-depends:
       aeson >=1.4
     , async >=2.2
-    , base-noprelude >=4.7 && <5
+    , base-noprelude >=4.12 && <5
     , bytestring >=0.10
     , concurrent-extra >=0.7
     , concurrent-state >=0.6
     , data-default-extra >=0.1.0
-    , ekg >=0.4
+    , df1
+    , di-polysemy
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
@@ -89,12 +91,15 @@ library
     , lens-aeson >=1.1
     , monad-control >=1.0
     , mtl >=2.2
+    , polysemy >=0.3
+    , polysemy-plugin >=0.2
     , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
     , simple-log >=0.9
     , stm >=2.5
+    , stm-chans >=3.0
     , stm-containers >=1.1
     , streamly >=0.7
     , text >=1.2
@@ -120,17 +125,18 @@ executable test-calamity-exe
   hs-source-dirs:
       app
   default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
-  ghc-options: -funbox-strict-fields -threaded -rtsopts -with-rtsopts=-T -O3
+  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -threaded -rtsopts -with-rtsopts=-T -O3
   build-depends:
       aeson >=1.4
     , async >=2.2
-    , base-noprelude >=4.7 && <5
+    , base-noprelude >=4.12 && <5
     , bytestring >=0.10
     , calamity
     , concurrent-extra >=0.7
     , concurrent-state >=0.6
     , data-default-extra >=0.1.0
-    , ekg >=0.4
+    , df1
+    , di-polysemy
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
@@ -142,12 +148,15 @@ executable test-calamity-exe
     , lens-aeson >=1.1
     , monad-control >=1.0
     , mtl >=2.2
+    , polysemy >=0.3
+    , polysemy-plugin >=0.2
     , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
     , simple-log >=0.9
     , stm >=2.5
+    , stm-chans >=3.0
     , stm-containers >=1.1
     , streamly >=0.7
     , text >=1.2
@@ -175,13 +184,14 @@ test-suite calamity-test
   build-depends:
       aeson >=1.4
     , async >=2.2
-    , base-noprelude >=4.7 && <5
+    , base-noprelude >=4.12 && <5
     , bytestring >=0.10
     , calamity
     , concurrent-extra >=0.7
     , concurrent-state >=0.6
     , data-default-extra >=0.1.0
-    , ekg >=0.4
+    , df1
+    , di-polysemy
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
@@ -193,12 +203,15 @@ test-suite calamity-test
     , lens-aeson >=1.1
     , monad-control >=1.0
     , mtl >=2.2
+    , polysemy >=0.3
+    , polysemy-plugin >=0.2
     , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
     , simple-log >=0.9
     , stm >=2.5
+    , stm-chans >=3.0
     , stm-containers >=1.1
     , streamly >=0.7
     , text >=1.2

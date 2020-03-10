@@ -22,6 +22,10 @@ import           Data.Text.Strict.Lens
 import           Network.Wreq
 import           Network.Wreq.Types               ( Postable, Putable )
 
+import qualified Polysemy.Error                        as P
+import qualified Polysemy.Reader                       as P
+import Polysemy (Sem)
+
 fromResult :: Monad m => Result a -> ExceptT RestError m a
 fromResult (Success a) = pure a
 fromResult (Error e) = throwE (DecodeError $ e ^. packed)
@@ -51,15 +55,15 @@ class Request a r | a -> r where
 
   toAction :: a -> Options -> String -> IO (Response LB.ByteString)
 
-  invokeRequest :: forall m. (MonadLog m, HasClient m, FromJSON r) => a -> m (Either RestError r)
-  invokeRequest r = runExceptT inner
+  invokeRequest :: forall reffs. (BotC reffs, FromJSON r) => a -> Sem reffs (Either RestError r)
+  invokeRequest a = runError inner
     where
-      inner :: ExceptT RestError m r
+      inner :: Sem (P.Error RestError ': reffs) r
       inner = do
-        rlState' <- lift $ asksClient rlState
-        token' <- lift $ asksClient token
+        rlState' <- P.asks rlState
+        token' <- P.asks token
 
-        resp <- scope ("[Request Route: " +| toRoute r ^. #path |+ "]") $ doRequest rlState' (toRoute r)
+        resp <- attr "route" (toRoute r ^. #path) $ doRequest rlState' (toRoute a)
           (toAction r (requestOptions token') (Calamity.HTTP.Internal.Request.url r))
 
         (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp

@@ -22,8 +22,17 @@ import           Data.Text.Strict.Lens
 
 import           Network.WebSockets                    ( Connection, ConnectionException(..), receiveData, sendCloseCode
                                                        , sendTextData )
+import Control.Concurrent.STM.TBMQueue
+
+import           Polysemy                              ( Sem )
+import qualified Polysemy.Embed                        as P
+import qualified Polysemy.Async                        as P
+import qualified Polysemy.AtomicState                  as P
 
 import qualified System.Log.Simple                     as SLS
+
+import qualified Polysemy as P
+import qualified Polysemy.Embed as P
 
 import           Wuss
 
@@ -31,29 +40,24 @@ newShardState :: Shard -> ShardState
 newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: Text -> Int -> Int -> Token -> Log -> TQueue DispatchData -> IO (Shard, Async ())
+newShard :: ShardC r => Text -> Int -> Int -> Token -> TQueue DispatchData -> Sem r (Shard, Async ())
 newShard gateway id count token logEnv evtQueue = mdo
   cmdQueue' <- newTQueueIO
   stateVar <- newTVarIO (newShardState shard)
   let shard = Shard id count gateway evtQueue cmdQueue' stateVar (rawToken token) thread'
 
-  let action = component "calamity_shard" . scope ("[ShardID: " +| id |+ "]") $ shardLoop
+  let action = attr "shard-id" id . push "calamity-shard" $ shardLoop
 
-  thread' <- async . runShardM shard logEnv $ action
+  thread' <- P.async . shard logEnv $ action
 
   pure (shard, thread')
 
-runShardM :: Shard -> Log -> ShardM a -> IO a
-runShardM shard logEnv = evalStateC' . withLog logEnv . unShardM
-  where
-    evalStateC' s = evalStateC s (shard ^. #shardState)
-
-sendToWs :: SentDiscordMessage -> ShardM ()
+sendToWs :: ShardC r => SentDiscordMessage -> Sem r ()
 sendToWs data' = do
-  wsConn <- fromJust <$> use #wsConn
+  wsConn <- fromJust <$> P.atomicGets wsConn
   let encodedData = A.encode data'
   debug $ "sending " +|| data' ||+ " encoded to " +|| encodedData ||+ " to gateway"
-  liftIO . sendTextData wsConn $ encodedData
+  P.embed . sendTextData wsConn $ encodedData
   trace "done sending data"
 
 untilResult :: Monad m => m (Maybe a) -> m a
@@ -81,39 +85,50 @@ checkWSClose m = (Right <$> m) `catch` \case
   e                       -> throwIO e
 
 -- | The loop a shard will run on
-shardLoop :: ShardM ()
+shardLoop :: ShardC r => Sem r ()
 shardLoop = do
   trace "entering shardLoop"
   void outerloop
   trace "leaving shardLoop"
  where
-  controlStream :: Shard -> IO ShardMsg
-  controlStream shard = Control <$> (liftIO . atomically . readTQueue $ (shard ^. #cmdQueue))
+  controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
+  controlStream shard outqueue = inner
+    where
+      q = shard ^. #cmdQueue
+      inner = do
+        v <- atomically $ readTQueue q
+        r <- atomically $ tryWriteTBMQueue (Control v)
+        case r of
+          Nothing -> pure ()
+          _       -> inner
 
-  discordStream logEnv ws = untilResult . runMaybeT $ do
-    msg <- liftIO . checkWSClose $ receiveData ws
+  discordStream :: P.Members '[LogEff, Embed IO] r => _ -> TBMQueue ShardMsg -> Sem r ()
+  discordStream ws outqueue = inner
+    where inner = do
+            msg <- P.embed . checkWSClose $ receiveData ws
 
-    SLS.writeLog logEnv SLS.Trace $ "Received from stream: "+||msg||+""
+            trace $ "Received from stream: "+||msg||+""
 
-    case msg of
-      Left c ->
-        pure . Control $ c
+            case msg of
+              Left c -> pure $ Control c
 
-      Right msg' -> do
-        let decoded = A.eitherDecode msg'
-        d <- case decoded of
+              Right msg' -> do
+                let decoded = A.eitherDecode msg'
+                d <- case decoded of
 #ifndef PARSE_PRESENCES
-          -- if we're discarding presences, bin them earlier, here
-          Right (Dispatch _ (PresenceUpdate _)) ->
-            mzero
+                  -- if we're discarding presences, bin them earlier, here
+                  Right (Dispatch _ (PresenceUpdate _)) ->
+                    pure ()
 #endif
-          Right a -> pure a
-          Left e -> do
-            SLS.writeLog logEnv SLS.Error $ "Failed to decode: "+|e|+""
-            mzero
-        pure . Discord $ d
+                  Right a -> pure a
+                  Left e -> do
+                    error $ "Failed to decode: "+|e|+""
+                r <- P.embed . atomically $ tryWriteTBMQueue a
+                case r of
+                  Nothing -> pure ()
+                  _       -> inner
 
-  mergedStream :: Log -> Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
+  mergedStream ::  Log -> Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
   mergedStream logEnv shard ws =
     liftIO (fromEither <$> race (controlStream shard) (discordStream logEnv ws))
 
