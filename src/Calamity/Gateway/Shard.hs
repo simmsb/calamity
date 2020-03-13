@@ -26,7 +26,10 @@ import Control.Concurrent.STM.TBMQueue
 
 import           Polysemy                              ( Sem )
 import qualified Polysemy.Embed                        as P
+import qualified Polysemy.Error                        as P
+import qualified Polysemy.Final                        as P
 import qualified Polysemy.Async                        as P
+import qualified Polysemy.Resource                     as P
 import qualified Polysemy.AtomicState                  as P
 
 import qualified System.Log.Simple                     as SLS
@@ -110,7 +113,8 @@ shardLoop = do
             trace $ "Received from stream: "+||msg||+""
 
             case msg of
-              Left c -> pure $ Control c
+              Left c ->
+                P.embed . atomically $ writeTBMQueue c
 
               Right msg' -> do
                 let decoded = A.eitherDecode msg'
@@ -136,24 +140,24 @@ shardLoop = do
   -- Currently if this goes to the error path we just exit the forever loop
   -- and the shard stops, maybe we might want to do some extra logic to reboot
   -- the shard, or maybe force a resharding
-  outerloop :: ShardM (Either ShardException ())
-  outerloop = runExceptT . forever $ do
-    shard <- use #shardS
+  outerloop :: ShardC r => Sem r (Either ShardException ())
+  outerloop = P.runError . forever $ do
+    shard <- fromJust <$> P.atomicGets shardS
     let host = shard ^. #gateway
     let host' =  fromMaybe host $ stripPrefix "wss://" host
     info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
 
-    logEnv <- askLog
-
-    innerLoopVal <- liftIO $ runSecureClient (host' ^. unpacked)
+    ins <- P.getInspectorS
+    -- innerloop' <- P.runS innerloop
+    innerLoopVal <- P.embed $ runSecureClient (host' ^. unpacked)
                     443
                     "/?v=7&encoding=json"
-                    (runShardM shard logEnv . innerloop)
+                    ((P.inspect ins <$>) . innerloop)
 
     case innerLoopVal of
       ShardExcShutDown -> do
         info "Shutting down shard"
-        throwE ShardExcShutDown
+        P.throw ShardExcShutDown
 
       ShardExcRestart ->
         info "Restaring shard"
@@ -161,15 +165,15 @@ shardLoop = do
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- and then decides what to do with it
-  innerloop :: Connection -> ShardM ShardException
+  innerloop :: ShardC r => Connection -> Sem r ShardException
   innerloop ws = do
     trace "Entering inner loop of shard"
 
-    shard <- use #shardS
-    #wsConn ?= ws
+    shard <- fromJust <$> P.atomicGets shardS
+    P.atomicPut $ Just ws
 
-    seqNum'    <- use #seqNum
-    sessionID' <- use #sessionID
+    seqNum'    <- P.atomicGets seqNum
+    sessionID' <- P.atomicGets sessionID
 
     case (seqNum', sessionID') of
       (Just n, Just s) -> do
@@ -194,16 +198,22 @@ shardLoop = do
                   , presence = Nothing
                   })
 
-    logEnv <- askLog
-    result <- runExceptT . forever $ (mergedStream logEnv shard ws >>= handleMsg)
+    result <- runResourceToIO $ P.bracket (P.embed newTBMQueueIO) (\q -> do
+        controlThread <- P.async $ controlStream shard q
+        discordThread <- P.async $ discordStream ws q
+        P.runError $ forever $ do
+          -- only we close the queue
+          Just msg <- P.embed . atomically $ readTBMQueue q
+          handleMsg msg)
+      (\q -> P.embed . atomically $ closeTBMQueue q)
 
     debug "Exiting inner loop of shard"
 
-    #wsConn .= Nothing
+    P.atomicPut wsConn Nothing
     pure . fromEitherVoid $ result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
-  handleMsg :: ShardMsg -> ExceptT ShardException ShardM ()
+  handleMsg :: (ShardC r, P.Member (P.Error ShardException) r) => ShardMsg -> Sem r ()
   handleMsg (Discord msg) = case msg of
     Dispatch seqNum data' -> do
       trace $ "Handling event: ("+||data'||+")"

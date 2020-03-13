@@ -249,4 +249,4 @@ data ShardState = ShardState
   }
   deriving ( Generic )
 
-type ShardC r = (LogC r, P.Members '[P.AtomicState ShardState, P.Embed IO, P.Async] r)
+type ShardC r = (LogC r, P.Members '[P.AtomicState ShardState, P.Embed IO, P.Final IO, P.Async] r)
