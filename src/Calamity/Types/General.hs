@@ -268,9 +268,7 @@ data Guild = Guild
   , voiceStates                 :: !(Vector VoiceState)
   , members                     :: !(SnowflakeMap Member)
   , channels                    :: !(SnowflakeMap Channel)
-#ifdef PARSE_PRESENCES
   , presences                   :: !(HashMap (Snowflake Member) Presence)
-#endif
   }
   deriving ( Eq, Show, Generic )
   deriving ( HasID ) via HasIDField Guild
@@ -324,13 +322,11 @@ instance FromJSON Guild where
       channels' <- v .: "channels"
       SM.fromList <$> traverse (\m -> parseJSON $ Object (m <> "guild_id" .= id)) channels'
 
-#ifdef PARSE_PRESENCES
     presences' <- do
       presences' <- v .: "presences"
       LH.fromList <$> traverse (\m -> do
                                   p <- parseJSON $ Object (m <> "guild_id" .= id)
                                   pure (coerceSnowflake . getID $ p ^. field @"user", p)) presences'
-#endif
 
     Guild id
       <$> v .: "name"
@@ -362,9 +358,7 @@ instance FromJSON Guild where
       <*> v .: "voice_states"
       <*> pure members'
       <*> pure channels'
-#ifdef PARSE_PRESENCES
       <*> pure presences'
-#endif
 
 
 data UnavailableGuild = UnavailableGuild

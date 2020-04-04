@@ -93,13 +93,13 @@ clientLoop = do
   evtStream <- asks eventStream
   client' <- ask
   logEnv' <- askLog
-  trace "entering clientLoop"
+  -- trace "entering clientLoop"
   liftIO $ S.mapM_ (runBotM client' logEnv' . handleEvent) evtStream
-  trace "exiting clientLoop"
+  -- trace "exiting clientLoop"
 
 handleEvent :: DispatchData -> BotM ()
 handleEvent data' = do
-  trace "handling an event"
+  -- trace "handling an event"
   cache' <- asks cache
   (oldCache, newCache) <- liftIO . atomically $ do
     oldCache <- readTVar cache'
@@ -109,7 +109,7 @@ handleEvent data' = do
 
   runEventHandlers oldCache newCache data'
   component "calamity_cache_log" $ do
-    trace $ "finished handling an event, new cache is: " <> show newCache
+    -- trace $ "finished handling an event, new cache is: " <> show newCache
 
 runEventHandlers :: Cache -> Cache -> DispatchData -> BotM ()
 runEventHandlers oldCache newCache data' = do
@@ -246,7 +246,6 @@ handleActions os _ eh (MessageReactionRemoveAll MessageReactionRemoveAllData { m
   oldMsg <- os ^. #messages . at (coerceSnowflake messageID)
   pure $ map ($ oldMsg) (unwrapEvent @"messagereactionremoveall" eh)
 
-#ifdef PARSE_PRESENCES
 handleActions os ns eh (PresenceUpdate Presence { user, guildID }) = do
   oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
   newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
@@ -254,9 +253,6 @@ handleActions os ns eh (PresenceUpdate Presence { user, guildID }) = do
                     then map (\f -> f (oldMember ^. #user) (newMember ^. #user)) (unwrapEvent @"userupdate" eh)
                     else mempty
   pure $ userUpdates <> map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
-#else
-handleActions _ _ _ (PresenceUpdate _) = pure []
-#endif
 
 handleActions _ ns eh (TypingStart TypingStartData { channelID, guildID, userID, timestamp }) = do
   guild <- ns ^? #guilds . at guildID . _Just
@@ -354,10 +350,8 @@ updateCache (MessageReactionRemove reaction) =
 updateCache (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) =
   #messages . at messageID . _Just . #reactions .= V.empty
 
-#ifdef PARSE_PRESENCES
 updateCache (PresenceUpdate presence) =
   #guilds . at (presence ^. #guildID) . _Just . #presences . at (coerceSnowflake . getID $ presence ^. #user) ?= presence
-#endif
 
 updateCache (UserUpdate user) = #user ?= user
 

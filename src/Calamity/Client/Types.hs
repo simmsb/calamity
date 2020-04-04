@@ -73,7 +73,7 @@ data Cache = Cache
   deriving ( Generic, Show )
 
 data Client = Client
-  { shards        :: TVar [(Shard, Async ())] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
+  { shards        :: TVar [(Shard, Async (Maybe ()))] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
   , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState

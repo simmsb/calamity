@@ -95,11 +95,7 @@ parseDispatchData MESSAGE_DELETE_BULK data' = MessageDeleteBulk <$> parseJSON da
 parseDispatchData MESSAGE_REACTION_ADD data' = MessageReactionAdd <$> parseJSON data'
 parseDispatchData MESSAGE_REACTION_REMOVE data' = MessageReactionRemove <$> parseJSON data'
 parseDispatchData MESSAGE_REACTION_REMOVE_ALL data' = MessageReactionRemoveAll <$> parseJSON data'
-#ifdef PARSE_PRESENCES
 parseDispatchData PRESENCE_UPDATE data' = PresenceUpdate <$> parseJSON data'
-#else
-parseDispatchData PRESENCE_UPDATE data' = pure $ PresenceUpdate data'
-#endif
 parseDispatchData TYPING_START data' = TypingStart <$> parseJSON data'
 parseDispatchData USER_UPDATE data' = UserUpdate <$> parseJSON data'
 parseDispatchData VOICE_STATE_UPDATE data' = VoiceStateUpdate <$> parseJSON data'
@@ -234,14 +230,13 @@ data Shard = Shard
   , cmdQueue    :: TQueue ControlMessage
   , shardState  :: TVar ShardState
   , token       :: Text
-  , shardThread :: Async ()
   }
   deriving ( Generic )
 
 data ShardState = ShardState
   { shardS     :: Shard
   , seqNum     :: Maybe Int
-  , hbThread   :: Maybe (Async ())
+  , hbThread   :: Maybe (Async (Maybe ()))
   , hbResponse :: Bool
   , wsHost     :: Maybe Text
   , sessionID  :: Maybe Text

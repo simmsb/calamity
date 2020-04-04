@@ -88,14 +88,6 @@ library:
     - -fplugin=Polysemy.Plugin
     - -funbox-strict-fields
     - -Wall
-  when:
-    - condition: flag(parse-presences)
-      then:
-        cpp-options:
-          - -DPARSE_PRESENCES
-      else:
-        cpp-options: []
-
   source-dirs: src
 
 default-extensions:

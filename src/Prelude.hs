@@ -13,7 +13,10 @@ module Prelude
     , module Calamity.LogEff
     , module DiPolysemy
     , whenJust
-    , lastMaybe ) where
+    , lastMaybe
+    , debug
+    , info
+    , error ) where
 
 import           Calamity.LogEff
 import           Calamity.Types.AesonThings
@@ -27,11 +30,14 @@ import           Data.Semigroup             ( Last(..) )
 import qualified Data.Text.Short            as ST
 import           Data.Text.Short            ( ShortText )
 
-import           DiPolysemy
+import           DiPolysemy                 hiding ( debug, info, error )
+import qualified DiPolysemy                 as Di
 
 import           Fmt
 
-import           Protolude                  hiding ( HasField, Last, getField, getLast, trace, log )
+import qualified Polysemy                   as P
+
+import           Protolude                  hiding ( HasField, Last, getField, getLast, log, trace )
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
@@ -46,3 +52,12 @@ instance ToJSON ShortText where
 
 lastMaybe :: Maybe a -> Maybe a -> Maybe a
 lastMaybe l r = getLast <$> fmap Last l <> fmap Last r
+
+debug :: P.Member LogEff r => Text -> P.Sem r ()
+debug = Di.debug
+
+info :: P.Member LogEff r => Text -> P.Sem r ()
+info = Di.info
+
+error :: P.Member LogEff r => Text -> P.Sem r ()
+error = Di.error

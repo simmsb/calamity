@@ -36,11 +36,7 @@ data DispatchData
   | MessageReactionAdd Reaction
   | MessageReactionRemove Reaction
   | MessageReactionRemoveAll MessageReactionRemoveAllData
-#ifdef PARSE_PRESENCES
   | PresenceUpdate Presence
-#else
-  | PresenceUpdate Value
-#endif
   | TypingStart TypingStartData
   | UserUpdate User
   | VoiceStateUpdate VoiceStateUpdateData
