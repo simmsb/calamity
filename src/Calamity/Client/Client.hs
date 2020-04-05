@@ -44,6 +44,8 @@ import qualified Polysemy.AtomicState                  as P
 
 import qualified DiPolysemy as Di
 
+import Data.Dynamic
+
 newClient :: Token -> IO Client
 newClient token = do
   shards'        <- newTVarIO []
@@ -61,7 +63,9 @@ newClient token = do
                 cache'
                 activeTasks'
 
-runBotIO :: P.Members '[P.Embed IO, P.Final IO] r => Token -> Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) () -> Sem r ()
+type SetupEff r = Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
+
+runBotIO :: (P.Members '[P.Embed IO, P.Final IO] r, Typeable r) => Token -> SetupEff r -> Sem r ()
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
@@ -70,9 +74,9 @@ runBotIO token setup = do
     shardBot
     clientLoop
 
-react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r) => EHType s -> Sem r ()
+react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r, EHType' s ~ Dynamic, Typeable (EHType s (Sem r))) => EHType s (Sem r) -> Sem r ()
 react f =
-  let handlers = EventHandlers . TM.one $ EH @s [f]
+  let handlers = EventHandlers . TM.one $ EH @s [toDyn f]
   in P.atomicModify (handlers <>)
 
 emptyCache :: Cache
@@ -89,7 +93,7 @@ clientLoop = do
 
 handleEvent :: BotC r => DispatchData -> Sem r ()
 handleEvent data' = do
-  -- trace "handling an event"
+  debug "handling an event"
   cache' <- P.asks cache
   (oldCache, newCache) <- P.embed . atomically $ do
     oldCache <- readTVar cache'
@@ -104,19 +108,19 @@ runEventHandlers oldCache newCache data' = do
   eventHandlers <- P.atomicGet
   let actionHandlers = handleActions oldCache newCache eventHandlers data'
   case actionHandlers of
-    Just actions -> void $ for actions (P.async . runEvent newCache)
+    Just actions -> void $ for actions $ \action -> (P.async $ action newCache)
     Nothing
       -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
 
-unwrapEvent :: forall s r. KnownSymbol s => EventHandlers -> [EHType s]
-unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler s))
+unwrapEvent :: forall s r. (KnownSymbol s, EHType' s ~ Dynamic, Typeable (EHType s (Sem r))) => EventHandlers -> [EHType s (Sem r)]
+unwrapEvent (EventHandlers eh) = map (fromJust . fromDynamic) . unwrapEventHandler @s . fromJust $ (TM.lookup eh :: Maybe (EventHandler s))
 
-handleActions :: EventC r
+handleActions :: BotC r
               => Cache -- ^ The old cache
               -> Cache -- ^ The new cache
               -> EventHandlers
               -> DispatchData
-              -> Maybe [Event ()]
+              -> Maybe [Cache -> Sem r ()]
 handleActions _ _ eh (Ready rd) = pure $ map ($ rd) (unwrapEvent @"ready" eh)
 
 handleActions _ ns eh (ChannelCreate chan) = do

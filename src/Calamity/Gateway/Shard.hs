@@ -193,7 +193,7 @@ shardLoop = do
   -- and then decides what to do with it
   innerloop :: ShardC r => Connection -> Sem r ShardException
   innerloop ws = do
-    -- trace "Entering inner loop of shard"
+    debug "Entering inner loop of shard"
 
     shard <- P.atomicGets (^. #shardS)
     P.atomicModify (#wsConn ?~ ws)
@@ -227,6 +227,7 @@ shardLoop = do
     result <- P.runResource $ P.bracket (P.embed $ newTBMQueueIO 1)
       (\q -> P.embed . atomically $ closeTBMQueue q)
       (\q -> do
+        debug "handling events now"
         _controlThread <- P.async . P.embed $ controlStream shard q
         _discordThread <- P.async $ discordStream ws q
         (fromEitherVoid <$>) . P.raise . P.runError . forever $ do

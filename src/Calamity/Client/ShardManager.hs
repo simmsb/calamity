@@ -43,7 +43,7 @@ shardBot = do
 
   info $ "Number of shards: " +| numShards' |+ ""
 
-  shards <- P.asyncToIO $ for [0 .. numShards' - 1] $ \id ->
+  shards <- for [0 .. numShards' - 1] $ \id ->
     newShard host id numShards' token eventQueue
 
   P.embed . atomically $ writeTVar shardsVar shards

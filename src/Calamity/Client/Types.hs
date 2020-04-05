@@ -8,15 +8,10 @@ module Calamity.Client.Types
     ( Client(..)
     , Cache(..)
     , BotC
-    , EventC
-    , Event
     , EHType
-    , EventState(..)
+    , EHType'
     , EventHandlers(..)
-    , EventHandler(..)
-    , runEvent
-    , getCache
-    , syncCache ) where
+    , EventHandler(..) ) where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
@@ -59,6 +54,8 @@ import qualified StmContainers.Set                     as TS
 
 import qualified Streamly                              as S
 
+import Data.Dynamic
+
 
 data Cache = Cache
   { user              :: Maybe User
@@ -82,62 +79,77 @@ data Client = Client
   }
   deriving ( Generic )
 
-type BotC r = (LogC r, P.Members '[P.Reader Client, P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r)
+type BotC r = (LogC r, P.Members '[P.Reader Client, P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r, Typeable r)
 
-data EventState m a where
-  GetCache :: EventState m Cache
-  SyncCache :: EventState m ()
-
-reinterpretEventStateToState :: P.Members '[P.Embed IO, P.Reader Client] r => Sem (EventState ': r) a -> Sem (P.State Cache ': r) a
-reinterpretEventStateToState =
-  P.reinterpret $ \case
-    GetCache -> P.get
-    SyncCache -> do
-      client <- P.ask
-      cache <- P.embed . readTVarIO . cache $ client
-      P.put cache
-
-type EventC r = (BotC r, P.Members '[P.Error Text, EventState] r)
-type Event a = Sem '[P.Error Text, EventState, LogEff, P.Reader Client, P.AtomicState EventHandlers, P.Async, P.Embed IO, P.Final IO] a
-
-type family EHType d where
-  EHType "ready"                    = ReadyData                          -> Event ()
-  EHType "channelcreate"            = Channel                            -> Event ()
-  EHType "channelupdate"            = Channel -> Channel                 -> Event ()
-  EHType "channeldelete"            = Channel                            -> Event ()
-  EHType "channelpinsupdate"        = Channel -> Maybe UTCTime           -> Event ()
-  EHType "guildcreate"              = Guild -> Bool                      -> Event ()
-  EHType "guildupdate"              = Guild -> Guild                     -> Event ()
-  EHType "guilddelete"              = Guild -> Bool                      -> Event ()
-  EHType "guildbanadd"              = Guild -> User                      -> Event ()
-  EHType "guildbanremove"           = Guild -> User                      -> Event ()
-  EHType "guildemojisupdate"        = Guild -> [Emoji]                   -> Event ()
-  EHType "guildintegrationsupdate"  = Guild                              -> Event ()
-  EHType "guildmemberadd"           = Member                             -> Event ()
-  EHType "guildmemberremove"        = Member                             -> Event ()
-  EHType "guildmemberupdate"        = Member -> Member                   -> Event ()
-  EHType "guildmemberschunk"        = Guild -> [Member]                  -> Event ()
-  EHType "guildrolecreate"          = Guild -> Role                      -> Event ()
-  EHType "guildroleupdate"          = Guild -> Role -> Role              -> Event ()
-  EHType "guildroledelete"          = Guild -> Role                      -> Event ()
-  EHType "messagecreate"            = Message                            -> Event ()
-  EHType "messageupdate"            = Message -> Message                 -> Event ()
-  EHType "messagedelete"            = Message                            -> Event ()
-  EHType "messagedeletebulk"        = [Message]                          -> Event ()
-  EHType "messagereactionadd"       = Message -> Reaction                -> Event ()
-  EHType "messagereactionremove"    = Message -> Reaction                -> Event ()
-  EHType "messagereactionremoveall" = Message                            -> Event ()
-  EHType "typingstart"              = Channel -> Member -> UnixTimestamp -> Event ()
-  EHType "userupdate"               = User -> User                       -> Event ()
-  EHType _ = TL.TypeError ('TL.Text "Unknown event name")
+type family EHType d m where
+  EHType "ready"                    m = ReadyData                          -> Cache -> m ()
+  EHType "channelcreate"            m = Channel                            -> Cache -> m ()
+  EHType "channelupdate"            m = Channel -> Channel                 -> Cache -> m ()
+  EHType "channeldelete"            m = Channel                            -> Cache -> m ()
+  EHType "channelpinsupdate"        m = Channel -> Maybe UTCTime           -> Cache -> m ()
+  EHType "guildcreate"              m = Guild -> Bool                      -> Cache -> m ()
+  EHType "guildupdate"              m = Guild -> Guild                     -> Cache -> m ()
+  EHType "guilddelete"              m = Guild -> Bool                      -> Cache -> m ()
+  EHType "guildbanadd"              m = Guild -> User                      -> Cache -> m ()
+  EHType "guildbanremove"           m = Guild -> User                      -> Cache -> m ()
+  EHType "guildemojisupdate"        m = Guild -> [Emoji]                   -> Cache -> m ()
+  EHType "guildintegrationsupdate"  m = Guild                              -> Cache -> m ()
+  EHType "guildmemberadd"           m = Member                             -> Cache -> m ()
+  EHType "guildmemberremove"        m = Member                             -> Cache -> m ()
+  EHType "guildmemberupdate"        m = Member -> Member                   -> Cache -> m ()
+  EHType "guildmemberschunk"        m = Guild -> [Member]                  -> Cache -> m ()
+  EHType "guildrolecreate"          m = Guild -> Role                      -> Cache -> m ()
+  EHType "guildroleupdate"          m = Guild -> Role -> Role              -> Cache -> m ()
+  EHType "guildroledelete"          m = Guild -> Role                      -> Cache -> m ()
+  EHType "messagecreate"            m = Message                            -> Cache -> m ()
+  EHType "messageupdate"            m = Message -> Message                 -> Cache -> m ()
+  EHType "messagedelete"            m = Message                            -> Cache -> m ()
+  EHType "messagedeletebulk"        m = [Message]                          -> Cache -> m ()
+  EHType "messagereactionadd"       m = Message -> Reaction                -> Cache -> m ()
+  EHType "messagereactionremove"    m = Message -> Reaction                -> Cache -> m ()
+  EHType "messagereactionremoveall" m = Message                            -> Cache -> m ()
+  EHType "typingstart"              m = Channel -> Member -> UnixTimestamp -> Cache -> m ()
+  EHType "userupdate"               m = User -> User                       -> Cache -> m ()
+  EHType s _ = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
   -- EHType "voicestateupdate"         = VoiceStateUpdateData -> EventM ()
   -- EHType "voiceserverupdate"        = VoiceServerUpdateData -> EventM ()
   -- EHType "webhooksupdate"           = WebhooksUpdateData -> EventM ()
 
-newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
+type family EHType' d where
+  EHType' "ready"                    = Dynamic
+  EHType' "channelcreate"            = Dynamic
+  EHType' "channelupdate"            = Dynamic
+  EHType' "channeldelete"            = Dynamic
+  EHType' "channelpinsupdate"        = Dynamic
+  EHType' "guildcreate"              = Dynamic
+  EHType' "guildupdate"              = Dynamic
+  EHType' "guilddelete"              = Dynamic
+  EHType' "guildbanadd"              = Dynamic
+  EHType' "guildbanremove"           = Dynamic
+  EHType' "guildemojisupdate"        = Dynamic
+  EHType' "guildintegrationsupdate"  = Dynamic
+  EHType' "guildmemberadd"           = Dynamic
+  EHType' "guildmemberremove"        = Dynamic
+  EHType' "guildmemberupdate"        = Dynamic
+  EHType' "guildmemberschunk"        = Dynamic
+  EHType' "guildrolecreate"          = Dynamic
+  EHType' "guildroleupdate"          = Dynamic
+  EHType' "guildroledelete"          = Dynamic
+  EHType' "messagecreate"            = Dynamic
+  EHType' "messageupdate"            = Dynamic
+  EHType' "messagedelete"            = Dynamic
+  EHType' "messagedeletebulk"        = Dynamic
+  EHType' "messagereactionadd"       = Dynamic
+  EHType' "messagereactionremove"    = Dynamic
+  EHType' "messagereactionremoveall" = Dynamic
+  EHType' "typingstart"              = Dynamic
+  EHType' "userupdate"               = Dynamic
+  EHType' s = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
+
+data EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
 newtype EventHandler d = EH
-  { unwrapEventHandler :: [EHType d]
+  { unwrapEventHandler :: [EHType' d]
   }
   deriving newtype ( Semigroup, Monoid )
 
@@ -179,6 +191,3 @@ instance Semigroup EventHandlers where
 
 instance Monoid EventHandlers where
   mempty = def
-
-
-P.makeSem ''EventState
