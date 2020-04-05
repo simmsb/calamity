@@ -22,20 +22,21 @@ import           Data.Text.Strict.Lens
 import           Network.Wreq
 import           Network.Wreq.Types               ( Postable, Putable )
 
-import qualified Polysemy.Error                        as P
-import qualified Polysemy.Reader                       as P
-import Polysemy (Sem)
+import           Polysemy                         ( Sem )
+import qualified Polysemy                         as P
+import qualified Polysemy.Error                   as P
+import qualified Polysemy.Reader                  as P
 
-fromResult :: Monad m => Result a -> ExceptT RestError m a
+fromResult :: P.Member (P.Error RestError) r => Result a -> Sem r a
 fromResult (Success a) = pure a
-fromResult (Error e) = throwE (DecodeError $ e ^. packed)
+fromResult (Error e) = P.throw (DecodeError $ e ^. packed)
 
-fromJSONDecode :: Monad m => Either String a -> ExceptT RestError m a
+fromJSONDecode :: P.Member (P.Error RestError) r => Either String a -> Sem r a
 fromJSONDecode (Right a) = pure a
-fromJSONDecode (Left e) = throwE (DecodeError $ e ^. packed)
+fromJSONDecode (Left e) = P.throw (DecodeError $ e ^. packed)
 
-extractRight :: Monad m => Either a b -> ExceptT a m b
-extractRight (Left a) = throwE a
+extractRight :: P.Member (P.Error e) r => Either e a -> Sem r a
+extractRight (Left e) = P.throw e
 extractRight (Right a) = pure a
 
 class ReadResponse a where
@@ -44,7 +45,7 @@ class ReadResponse a where
 instance ReadResponse () where
   readResp = const (Right ())
 
-instance {-# OVERLAPS #-} FromJSON a => ReadResponse a where
+instance {-# OVERLAPS #-}FromJSON a => ReadResponse a where
   readResp = eitherDecode
 
 class Request a r | a -> r where
@@ -56,17 +57,14 @@ class Request a r | a -> r where
   toAction :: a -> Options -> String -> IO (Response LB.ByteString)
 
   invokeRequest :: forall reffs. (BotC reffs, FromJSON r) => a -> Sem reffs (Either RestError r)
-  invokeRequest a = runError inner
-    where
-      inner :: Sem (P.Error RestError ': reffs) r
-      inner = do
-        rlState' <- P.asks rlState
-        token' <- P.asks token
+  invokeRequest a = do
+      rlState' <- P.asks rlState
+      token' <- P.asks token
 
-        resp <- attr "route" (toRoute r ^. #path) $ doRequest rlState' (toRoute a)
-          (toAction r (requestOptions token') (Calamity.HTTP.Internal.Request.url r))
+      resp <- attr "route" (toRoute a ^. #path) $ doRequest rlState' (toRoute a)
+        (toAction a (requestOptions token') (Calamity.HTTP.Internal.Request.url a))
 
-        (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
+      P.runError $ (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
 
 defaultRequestOptions :: Options
 defaultRequestOptions = defaults

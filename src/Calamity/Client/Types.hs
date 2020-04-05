@@ -11,15 +11,12 @@ module Calamity.Client.Types
     , EventC
     , Event
     , EHType
+    , EventState(..)
     , EventHandlers(..)
     , EventHandler(..)
-    , Handlers
-    , runBot
     , runEvent
-    , runHandlers
     , getCache
-    , syncCache
-    , react ) where
+    , syncCache ) where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
@@ -55,6 +52,8 @@ import qualified Polysemy.Error                        as P
 import qualified Polysemy.Output                       as P
 import qualified Polysemy.Reader                       as P
 import qualified Polysemy.State                        as P
+import qualified Polysemy.AtomicState                  as P
+import qualified Polysemy.Async                        as P
 
 import qualified StmContainers.Set                     as TS
 
@@ -77,19 +76,13 @@ data Client = Client
   , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState
-  , eventStream   :: S.Serial DispatchData
-  , eventQueue    :: TQueue DispatchData -- ^ for shards to take
+  , eventQueue    :: TQueue DispatchData
   , cache         :: TVar Cache
   , activeTasks   :: TS.Set (Async ()) -- ^ events currently being handled
-  , eventHandlers :: EventHandlers
   }
   deriving ( Generic )
 
-type BotC r = (LogC r, P.Members '[P.Reader Client, P.Embed IO] r)
-
-runBot :: Client -> Sem (P.Reader Client ': r) a -> Sem r a
-runBot = P.runReader
-
+type BotC r = (LogC r, P.Members '[P.Reader Client, P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r)
 
 data EventState m a where
   GetCache :: EventState m Cache
@@ -104,29 +97,8 @@ reinterpretEventStateToState =
       cache <- P.embed . readTVarIO . cache $ client
       P.put cache
 
-type EventC r a = (BotC r, P.Members '[P.Error Text, EventState] r)
-type Event a = Sem '[P.Error Text, EventState, P.Reader Client, LogEff, P.Embed IO] a
-
-runEvent :: BotC r => Cache -> Sem (P.Error Text ': EventState ': r) a -> Sem r ()
-runEvent c eff = do
-  r <- P.evalState c
-        . reinterpretEventStateToState
-        . P.runError $ eff
-  case r of
-    Left e ->
-      DiPolysemy.error e
-    _ -> pure ()
-
-data Handlers m a where
-  React :: EventHandlers -> Handlers m ()
-
-runHandlers :: Sem (Handlers ': r) () -> Sem r EventHandlers
-runHandlers = do
-  (fst <$>) . P.runOutputMonoid identity . reinterp
-
-  where reinterp :: Sem (Handlers ': r) a -> Sem (P.Output EventHandlers ': r) a
-        reinterp = P.reinterpret $ \case
-          React h -> P.output h
+type EventC r = (BotC r, P.Members '[P.Error Text, EventState] r)
+type Event a = Sem '[P.Error Text, EventState, LogEff, P.Reader Client, P.AtomicState EventHandlers, P.Async, P.Embed IO, P.Final IO] a
 
 type family EHType d where
   EHType "ready"                    = ReadyData                          -> Event ()
@@ -197,9 +169,9 @@ instance Default EventHandlers where
                                  , WrapTypeable $ EH @"messagereactionremoveall" []
                                  , WrapTypeable $ EH @"typingstart" []
                                  , WrapTypeable $ EH @"userupdate" []
-                                 -- , WrapTypeable $ EH @"voicestateupdate" []
-                                 -- , WrapTypeable $ EH @"voiceserverupdate" []
-                                 -- , WrapTypeable $ EH @"webhooksupdate" []
+                                 -- , WrapTypeable $ EH m @"voicestateupdate" []
+                                 -- , WrapTypeable $ EH m @"voiceserverupdate" []
+                                 -- , WrapTypeable $ EH m @"webhooksupdate" []
                                  ]
 
 instance Semigroup EventHandlers where
@@ -210,4 +182,3 @@ instance Monoid EventHandlers where
 
 
 P.makeSem ''EventState
-P.makeSem ''Handlers

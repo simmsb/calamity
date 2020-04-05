@@ -25,8 +25,8 @@ import           Network.HTTP.Date
 import           Network.HTTP.Types           hiding ( statusCode )
 import           Network.Wreq
 
+import qualified Polysemy                     as P
 import           Polysemy                     ( Sem )
-import           Polysemy.Embed ( embed )
 
 import qualified StmContainers.Map            as SC
 
@@ -47,7 +47,7 @@ doDiscordRequest
   => IO (Response LB.ByteString)
   -> Sem r DiscordResponseType
 doDiscordRequest r = do
-  r' <- embed r
+  r' <- P.embed r
   let status = r' ^. responseStatus
   if
     | statusIsSuccessful status -> do
@@ -61,7 +61,7 @@ doDiscordRequest r = do
       pure $ ServerError (status ^. statusCode)
     | status == status429 -> do
       info "Got 429 from discord, retrying."
-      rv <- embed $ asValue r'
+      rv <- P.embed $ asValue r'
       pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
     | statusIsClientError status -> do
       let err = r' ^. responseBody
@@ -135,24 +135,24 @@ doSingleRequest gl l r = do
   r' <- doDiscordRequest r
   case r' of
     Good v -> do
-      embed . atomically $ L.release l
+      P.embed . atomically $ L.release l
       pure $ RGood v
 
     ExhaustedBucket v d -> do
       info $ "Exhausted bucket, unlocking after " +| d |+ "ms"
-      void . embed . forkIO $ do
+      void . P.embed . forkIO $ do
         threadDelay $ 1000 * d
         atomically $ L.release l
       pure $ RGood v
 
     Ratelimited d False -> do
       info $ "429 ratelimited on route, sleeping for " +| d |+ " ms"
-      embed . threadDelay $ 1000 * d
+      P.embed . threadDelay $ 1000 * d
       pure $ Retry (HTTPError 429 Nothing)
 
     Ratelimited d True -> do
       info "429 ratelimited globally"
-      embed $ do
+      P.embed $ do
         E.clear gl
         threadDelay $ 1000 * d
         E.set gl
@@ -171,13 +171,13 @@ doRequest
   -> IO (Response LB.ByteString)
   -> Sem r (Either RestError LB.ByteString)
 doRequest rlState route action = do
-  embed $ E.wait (globalLock rlState)
+  P.embed $ E.wait (globalLock rlState)
 
-  ratelimit <- embed . atomically $ do
+  ratelimit <- P.embed . atomically $ do
     lock <- getRateLimit rlState route
     L.acquire lock
     pure lock
 
   retryRequest 5
                (doSingleRequest (globalLock rlState) ratelimit action)
-               (embed . atomically $ L.release ratelimit)
+               (P.embed . atomically $ L.release ratelimit)

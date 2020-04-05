@@ -1,15 +1,8 @@
 -- | The client
 module Calamity.Client.Client
     ( Client(..)
-    , BotM
-    , EventM
-    , HandlersM
-    , newClient
     , react
-    , withHandlers
-    , runWithHandlers
-    , clientLoop
-    , startClient ) where
+    , runBotIO ) where
 
 import           Calamity.Client.ShardManager
 import           Calamity.Client.Types
@@ -24,6 +17,7 @@ import           Calamity.Types.Updateable
 
 import           Control.Concurrent.Async              ( forConcurrently_ )
 import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.STM.TQueue
 import           Control.Lens                          ( (.=) )
 import           Control.Monad.Writer.Lazy
 
@@ -36,101 +30,93 @@ import qualified Data.Vector                           as V
 
 import qualified StmContainers.Set                     as TS
 
-import qualified Streamly.Prelude                      as S
-
 import qualified System.Log.Simple                     as SLS
 
+import           Polysemy                              ( Sem )
+import qualified Polysemy                              as P
+import qualified Polysemy.Embed                        as P
+import qualified Polysemy.Reader                       as P
+import qualified Polysemy.Error                        as P
+import qualified Polysemy.Final                        as P
+import qualified Polysemy.Async                        as P
+import qualified Polysemy.Resource                     as P
+import qualified Polysemy.AtomicState                  as P
+
+import qualified DiPolysemy as Di
 
 newClient :: Token -> IO Client
 newClient token = do
-  shards'                     <- newTVarIO []
-  numShards'                  <- newEmptyMVar
-  rlState'                    <- newRateLimitState
-  (eventStream', eventQueue') <- mkQueueRecvStream
-  cache'                      <- newTVarIO emptyCache
-  activeTasks'                <- TS.newIO
+  shards'        <- newTVarIO []
+  numShards'     <- newEmptyMVar
+  rlState'       <- newRateLimitState
+  eventQueue'    <- newTQueueIO
+  cache'         <- newTVarIO emptyCache
+  activeTasks'   <- TS.newIO
 
   pure $ Client shards'
                 numShards'
                 token
                 rlState'
-                eventStream'
                 eventQueue'
                 cache'
                 activeTasks'
-                def
 
--- TODO: user & bot logins
--- TODO: more login types
-
-startClient :: Client -> IO ()
-startClient client = do
-  logEnv <- newLog
-    (logCfg [("", SLS.Info), ("calamity", SLS.Info), ("calamity_shard", SLS.Info), ("calamity_cache_log", SLS.Info)])
-    [handler text coloredConsole]
-  runBotM client logEnv . component "calamity" $ do
+runBotIO :: P.Members '[P.Embed IO, P.Final IO] r => Token -> Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) () -> Sem r ()
+runBotIO token setup = do
+  client <- P.embed $ newClient token
+  handlers <- P.embed $ newTVarIO def
+  P.asyncToIO . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO $ do
+    setup
     shardBot
     clientLoop
 
-react :: forall (s :: Symbol). (KnownSymbol s, Member Handlers r) => EHType s -> Sem r ()
-react f = react . EventHandlers . TM.one $ EH @s [f]
-
-withHandlers :: HandlersM () -> Client -> Client
-withHandlers (HandlersM h) c@Client { eventHandlers } = c { eventHandlers = eventHandlers <> execWriter h }
-
-runWithHandlers :: Token -> HandlersM () -> IO ()
-runWithHandlers token h = do
-  client <- withHandlers h <$> newClient token
-  startClient client
+react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r) => EHType s -> Sem r ()
+react f =
+  let handlers = EventHandlers . TM.one $ EH @s [f]
+  in P.atomicModify (handlers <>)
 
 emptyCache :: Cache
 emptyCache = Cache Nothing SM.empty SM.empty SM.empty RSM.empty LS.empty def
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
-clientLoop :: BotM ()
+clientLoop :: BotC r => Sem r ()
 clientLoop = do
-  evtStream <- asks eventStream
-  client' <- ask
-  logEnv' <- askLog
-  -- trace "entering clientLoop"
-  liftIO $ S.mapM_ (runBotM client' logEnv' . handleEvent) evtStream
-  -- trace "exiting clientLoop"
+  evtQueue <- P.asks eventQueue
+  forever $ do
+    evt <- P.embed . atomically $ readTQueue evtQueue
+    handleEvent evt
 
-handleEvent :: DispatchData -> BotM ()
+handleEvent :: BotC r => DispatchData -> Sem r ()
 handleEvent data' = do
   -- trace "handling an event"
-  cache' <- asks cache
-  (oldCache, newCache) <- liftIO . atomically $ do
+  cache' <- P.asks cache
+  (oldCache, newCache) <- P.embed . atomically $ do
     oldCache <- readTVar cache'
     let newCache = execState (updateCache data') oldCache
     writeTVar cache' newCache
     pure (oldCache, newCache)
 
   runEventHandlers oldCache newCache data'
-  component "calamity_cache_log" $ do
-    -- trace $ "finished handling an event, new cache is: " <> show newCache
 
-runEventHandlers :: Cache -> Cache -> DispatchData -> BotM ()
+runEventHandlers :: BotC r => Cache -> Cache -> DispatchData -> Sem r ()
 runEventHandlers oldCache newCache data' = do
-  eventHandlers <- asks eventHandlers
-  client' <- ask
-  logEnv' <- askLog
+  eventHandlers <- P.atomicGet
   let actionHandlers = handleActions oldCache newCache eventHandlers data'
   case actionHandlers of
-    Just actions -> liftIO
-      $ forConcurrently_ actions (runBotM client' logEnv' . runEventM newCache)
+    Just actions -> void $ for actions (P.async . runEvent newCache)
     Nothing
       -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
 
-unwrapEvent :: forall a r. KnownSymbol a => EventHandlers -> [EHType a r]
-unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler a))
+unwrapEvent :: forall s r. KnownSymbol s => EventHandlers -> [EHType s]
+unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler s))
 
-handleActions :: Cache -- ^ The old cache
+handleActions :: EventC r
+              => Cache -- ^ The old cache
               -> Cache -- ^ The new cache
               -> EventHandlers
               -> DispatchData
-              -> Maybe [EventM ()]
+              -> Maybe [Event ()]
 handleActions _ _ eh (Ready rd) = pure $ map ($ rd) (unwrapEvent @"ready" eh)
 
 handleActions _ ns eh (ChannelCreate chan) = do

@@ -1,5 +1,5 @@
 -- |
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE RecursiveDo, TemplateHaskell #-}
 
 module Calamity.Gateway.Shard
     ( Shard(..)
@@ -26,6 +26,7 @@ import Control.Concurrent.STM.TBMQueue
 
 import           Polysemy                              ( Sem )
 import qualified Polysemy.Embed                        as P
+import qualified Polysemy.Reader                       as P
 import qualified Polysemy.Error                        as P
 import qualified Polysemy.Final                        as P
 import qualified Polysemy.Async                        as P
@@ -38,6 +39,30 @@ import qualified Polysemy as P
 import qualified Polysemy.Embed as P
 
 import           Wuss
+
+data Websocket m a where
+  RunWebsocket :: Text -> Text -> (Connection -> m a) -> Websocket m a
+
+P.makeSem ''Websocket
+
+websocketToIO :: forall r a. P.Member (P.Embed IO) r => Sem (Websocket ': r) a -> Sem r a
+websocketToIO m = do
+  P.interpretH (\case
+                   RunWebsocket host path a -> do
+                     istate <- P.getInitialStateT
+                     ma  <- P.bindT a
+
+                     P.withLowerToIO $ \lower finish -> do
+                       let done :: Sem (Websocket ': r) x -> IO x
+                           done = lower . P.raise . websocketToIO
+
+                       runSecureClient (host ^. unpacked)
+                         443
+                         (path ^. unpacked)
+                         (\x -> do
+                             res <- done (ma $ istate $> x)
+                             finish
+                             pure res)) m
 
 newShardState :: Shard -> ShardState
 newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Nothing
@@ -116,7 +141,7 @@ shardLoop = do
         r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
         when r inner
 
-  discordStream :: P.Members '[LogEff, P.Embed IO] r => _ -> TBMQueue ShardMsg -> Sem r ()
+  discordStream :: P.Members '[LogEff, P.Embed IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
   discordStream ws outqueue = inner
     where inner = do
             msg <- P.embed . checkWSClose $ receiveData ws
@@ -131,11 +156,10 @@ shardLoop = do
                 let decoded = A.eitherDecode msg'
                 r <- case decoded of
                   Right a ->
-                    P.embed . atomically $ tryWriteTBMQueue' outqueue a
+                    P.embed . atomically $ tryWriteTBMQueue' outqueue (Discord a)
                   Left e -> do
                     error $ "Failed to decode: "+|e|+""
                     pure True
-
                 when r inner
 
   -- mergedStream ::  Log -> Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
@@ -148,26 +172,22 @@ shardLoop = do
   -- the shard, or maybe force a resharding
   outerloop :: ShardC r => Sem r (Either ShardException ())
   outerloop = P.runError . forever $ do
-    shard <- P.atomicGets (^. #shardS)
+    shard :: Shard <- P.atomicGets (^. #shardS)
     let host = shard ^. #gateway
     let host' =  fromMaybe host $ stripPrefix "wss://" host
     info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
 
-    -- ins <- P.getInspectorS
-    -- -- innerloop' <- P.runS innerloop
-    -- innerLoopVal <- P.embed $ runSecureClient (host' ^. unpacked)
-    --                 443
-    --                 "/?v=7&encoding=json"
-    --                 ((P.inspect ins <$>) . innerloop)
 
-    -- case innerLoopVal of
-    --   ShardExcShutDown -> do
-    --     info "Shutting down shard"
-    --     P.throw ShardExcShutDown
+    innerLoopVal <- websocketToIO $ runWebsocket host' "/?v=7&encoding=json" innerloop
 
-    --   ShardExcRestart ->
-    --     info "Restaring shard"
-    --     -- we restart normally when we loop
+    case innerLoopVal of
+      ShardExcShutDown -> do
+        info "Shutting down shard"
+        P.throw ShardExcShutDown
+
+      ShardExcRestart ->
+        info "Restaring shard"
+        -- we restart normally when we loop
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- and then decides what to do with it
@@ -175,8 +195,8 @@ shardLoop = do
   innerloop ws = do
     -- trace "Entering inner loop of shard"
 
-    shard <- fromJust <$> P.atomicGets shardS
-    P.atomicPut $ Just ws
+    shard <- P.atomicGets (^. #shardS)
+    P.atomicModify (#wsConn ?~ ws)
 
     seqNum'    <- P.atomicGets (^. #seqNum)
     sessionID' <- P.atomicGets (^. #sessionID)
@@ -204,19 +224,20 @@ shardLoop = do
                   , presence = Nothing
                   })
 
-    result <- P.runResource $ P.bracket (P.embed newTBMQueueIO) (\q -> do
-        controlThread <- P.async $ controlStream shard q
-        discordThread <- P.async $ discordStream ws q
-        P.runError $ forever $ do
-          -- only we close the queue
-          Just msg <- P.embed . atomically $ readTBMQueue q
-          handleMsg msg)
+    result <- P.runResource $ P.bracket (P.embed $ newTBMQueueIO 1)
       (\q -> P.embed . atomically $ closeTBMQueue q)
+      (\q -> do
+        _controlThread <- P.async . P.embed $ controlStream shard q
+        _discordThread <- P.async $ discordStream ws q
+        (fromEitherVoid <$>) . P.raise . P.runError . forever $ do
+          -- only we close the queue
+          msg <- P.embed . atomically $ readTBMQueue q
+          handleMsg $ fromJust msg)
 
     debug "Exiting inner loop of shard"
 
-    P.atomicModify (wsConn .~ Nothing)
-    pure . fromEitherVoid $ result
+    P.atomicModify (#wsConn .~ Nothing)
+    pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
   handleMsg :: (ShardC r, P.Member (P.Error ShardException) r) => ShardMsg -> Sem r ()
