@@ -17,17 +17,17 @@ import           Calamity.Types.Snowflake
 -- )
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad.State.Concurrent.Strict
+import           Control.Monad                   ( fail )
 
 import           Data.Aeson
-import qualified Data.Aeson.Types                      as AT
-import           Data.Generics.Labels                  ()
+import qualified Data.Aeson.Types                as AT
+import           Data.Generics.Labels            ()
 
-import           Network.WebSockets.Connection         ( Connection )
+import           Network.WebSockets.Connection   ( Connection )
 
-import qualified Polysemy                              as P
-import qualified Polysemy.Async                        as P
-import qualified Polysemy.AtomicState                  as P
+import qualified Polysemy                        as P
+import qualified Polysemy.Async                  as P
+import qualified Polysemy.AtomicState            as P
 
 
 data ShardMsg

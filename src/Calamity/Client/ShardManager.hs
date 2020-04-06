@@ -2,18 +2,15 @@
 module Calamity.Client.ShardManager
     ( shardBot ) where
 
--- , shardUserBot
 import           Calamity.Client.Types
 import           Calamity.Gateway
 import           Calamity.HTTP
 
-import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Monad
 
 import           Polysemy                      ( Sem )
 import qualified Polysemy                      as P
-import qualified Polysemy.Async                as P
 import qualified Polysemy.Reader               as P
 
 import qualified Protolude.Error

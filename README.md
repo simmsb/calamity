@@ -11,7 +11,6 @@ import           Calamity.Types.General
 
 import           Control.Concurrent.STM.TVar
 
-import           Data.Default
 import           Data.Text.Strict.Lens
 
 import qualified Polysemy               as P

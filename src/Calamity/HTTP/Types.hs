@@ -7,7 +7,7 @@ import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
-import           Data.Default
+import           Data.Default.Class
 
 data ChannelUpdate = ChannelUpdate
   { name                 :: Maybe ShortText

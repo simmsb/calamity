@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 2b5e64f842875b3fa1d0dc428bed07142bf53d9120ccfc74702bb325e46e4038
+-- hash: 5e04301ec08a212d92588cfe329eac630221f61f354e10e2dc3efee00f5cdd4d
 
 name:           calamity
 version:        0.1.0.0
@@ -76,37 +76,30 @@ library
     , base-noprelude >=4.12 && <5
     , bytestring >=0.10
     , concurrent-extra >=0.7
-    , concurrent-state >=0.6
-    , data-default-extra >=0.1.0
-    , df1
+    , data-default-class >=0.1
+    , df1 >=0.3
     , di-polysemy
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
-    , generic-lens >=1.2
+    , generic-lens >=2.0
     , hashable >=1.2
     , http-date >=0.0.8
     , http-types >=0.12
-    , lens >=4.17
+    , lens >=4.18
     , lens-aeson >=1.1
-    , monad-control >=1.0
-    , mtl >=2.2
-    , polysemy >=0.3
+    , polysemy >=1.3
     , polysemy-plugin >=0.2
     , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
-    , simple-log >=0.9
     , stm >=2.5
     , stm-chans >=3.0
     , stm-containers >=1.1
-    , streamly >=0.7
     , text >=1.2
     , text-short >=0.1
     , time >=1.8
-    , transformers >=0.5
-    , transformers-base >=0.4
     , typerep-map >=0.3
     , unordered-containers >=0.2
     , vector >=0.12
@@ -122,7 +115,7 @@ executable test-calamity-exe
   hs-source-dirs:
       app
   default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
-  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -threaded -rtsopts -with-rtsopts=-T -O3
+  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -flate-specialise -threaded -rtsopts -with-rtsopts=-T -O2
   build-depends:
       aeson >=1.4
     , async >=2.2
@@ -130,37 +123,30 @@ executable test-calamity-exe
     , bytestring >=0.10
     , calamity
     , concurrent-extra >=0.7
-    , concurrent-state >=0.6
-    , data-default-extra >=0.1.0
-    , df1
+    , data-default-class >=0.1
+    , df1 >=0.3
     , di-polysemy
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
-    , generic-lens >=1.2
+    , generic-lens >=2.0
     , hashable >=1.2
     , http-date >=0.0.8
     , http-types >=0.12
-    , lens >=4.17
+    , lens >=4.18
     , lens-aeson >=1.1
-    , monad-control >=1.0
-    , mtl >=2.2
-    , polysemy >=0.3
+    , polysemy >=1.3
     , polysemy-plugin >=0.2
     , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
-    , simple-log >=0.9
     , stm >=2.5
     , stm-chans >=3.0
     , stm-containers >=1.1
-    , streamly >=0.7
     , text >=1.2
     , text-short >=0.1
     , time >=1.8
-    , transformers >=0.5
-    , transformers-base >=0.4
     , typerep-map >=0.3
     , unordered-containers >=0.2
     , vector >=0.12
@@ -185,37 +171,30 @@ test-suite calamity-test
     , bytestring >=0.10
     , calamity
     , concurrent-extra >=0.7
-    , concurrent-state >=0.6
-    , data-default-extra >=0.1.0
-    , df1
+    , data-default-class >=0.1
+    , df1 >=0.3
     , di-polysemy
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
-    , generic-lens >=1.2
+    , generic-lens >=2.0
     , hashable >=1.2
     , http-date >=0.0.8
     , http-types >=0.12
-    , lens >=4.17
+    , lens >=4.18
     , lens-aeson >=1.1
-    , monad-control >=1.0
-    , mtl >=2.2
-    , polysemy >=0.3
+    , polysemy >=1.3
     , polysemy-plugin >=0.2
     , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
-    , simple-log >=0.9
     , stm >=2.5
     , stm-chans >=3.0
     , stm-containers >=1.1
-    , streamly >=0.7
     , text >=1.2
     , text-short >=0.1
     , time >=1.8
-    , transformers >=0.5
-    , transformers-base >=0.4
     , typerep-map >=0.3
     , unordered-containers >=0.2
     , vector >=0.12

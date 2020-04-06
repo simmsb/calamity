@@ -8,7 +8,7 @@ module Calamity.Types.MessageStore
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 
-import           Data.Default
+import           Data.Default.Class
 import qualified Data.PQueue.Prio.Min     as PQ
 import           Data.PQueue.Prio.Min     ( MinPQueue )
 

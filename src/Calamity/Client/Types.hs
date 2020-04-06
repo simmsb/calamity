@@ -26,35 +26,22 @@ import           Calamity.Types.UnixTimestamp
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 
-import           Data.Default
+import           Data.Default.Class
+import           Data.Dynamic
 import qualified Data.HashSet                          as LS
-import           Data.String                           ( String )
 import           Data.Time
 import qualified Data.TypeRepMap                       as TM
 import           Data.TypeRepMap                       ( TypeRepMap, WrapTypeable(..) )
 
-import qualified Df1
-
-import           DiPolysemy
-
 import           GHC.Exts                              ( fromList )
 import qualified GHC.TypeLits                          as TL
 
-import           Polysemy                              ( Sem )
 import qualified Polysemy                              as P
--- import qualified Polysemy.Embed                        as P
-import qualified Polysemy.Error                        as P
-import qualified Polysemy.Output                       as P
-import qualified Polysemy.Reader                       as P
-import qualified Polysemy.State                        as P
-import qualified Polysemy.AtomicState                  as P
 import qualified Polysemy.Async                        as P
+import qualified Polysemy.AtomicState                  as P
+import qualified Polysemy.Reader                       as P
 
 import qualified StmContainers.Set                     as TS
-
-import qualified Streamly                              as S
-
-import Data.Dynamic
 
 
 data Cache = Cache

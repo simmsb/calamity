@@ -15,36 +15,27 @@ import           Calamity.Types.Snowflake
 import qualified Calamity.Types.SnowflakeMap           as SM
 import           Calamity.Types.Updateable
 
-import           Control.Concurrent.Async              ( forConcurrently_ )
-import           Control.Concurrent.STM.TVar
 import           Control.Concurrent.STM.TQueue
+import           Control.Concurrent.STM.TVar
 import           Control.Lens                          ( (.=) )
-import           Control.Monad.Writer.Lazy
 
-import           Data.Default
+import           Data.Default.Class
+import           Data.Dynamic
 import qualified Data.HashSet                          as LS
 import           Data.HashSet.Lens
 import           Data.Maybe
 import qualified Data.TypeRepMap                       as TM
 import qualified Data.Vector                           as V
 
-import qualified StmContainers.Set                     as TS
-
-import qualified System.Log.Simple                     as SLS
+import qualified DiPolysemy                            as Di
 
 import           Polysemy                              ( Sem )
 import qualified Polysemy                              as P
-import qualified Polysemy.Embed                        as P
-import qualified Polysemy.Reader                       as P
-import qualified Polysemy.Error                        as P
-import qualified Polysemy.Final                        as P
 import qualified Polysemy.Async                        as P
-import qualified Polysemy.Resource                     as P
 import qualified Polysemy.AtomicState                  as P
+import qualified Polysemy.Reader                       as P
 
-import qualified DiPolysemy as Di
-
-import Data.Dynamic
+import qualified StmContainers.Set                     as TS
 
 newClient :: Token -> IO Client
 newClient token = do

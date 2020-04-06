@@ -1,5 +1,6 @@
 -- |
-{-# LANGUAGE RecursiveDo, TemplateHaskell #-}
+{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Calamity.Gateway.Shard
     ( Shard(..)
@@ -9,34 +10,24 @@ import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
 import           Calamity.Types.General
 
+import           Control.Concurrent.STM.TBMQueue
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Lens                          ( (.=) )
-import           Control.Monad.State.Concurrent.Strict
-import           Control.Monad.Trans.Maybe
 
-import qualified Data.Aeson                            as A
+import qualified Data.Aeson                      as A
 import           Data.Maybe
-import           Data.Text                             ( stripPrefix )
+import           Data.Text                       ( stripPrefix )
 import           Data.Text.Strict.Lens
 
-import           Network.WebSockets                    ( Connection, ConnectionException(..), receiveData, sendCloseCode
-                                                       , sendTextData )
-import Control.Concurrent.STM.TBMQueue
+import           Network.WebSockets              ( Connection, ConnectionException(..), receiveData, sendCloseCode
+                                                 , sendTextData )
 
-import           Polysemy                              ( Sem )
-import qualified Polysemy.Embed                        as P
-import qualified Polysemy.Reader                       as P
-import qualified Polysemy.Error                        as P
-import qualified Polysemy.Final                        as P
-import qualified Polysemy.Async                        as P
-import qualified Polysemy.Resource                     as P
-import qualified Polysemy.AtomicState                  as P
-
-import qualified System.Log.Simple                     as SLS
-
-import qualified Polysemy as P
-import qualified Polysemy.Embed as P
+import           Polysemy                        ( Sem )
+import qualified Polysemy                        as P
+import qualified Polysemy.Async                  as P
+import qualified Polysemy.AtomicState            as P
+import qualified Polysemy.Error                  as P
+import qualified Polysemy.Resource               as P
 
 import           Wuss
 
@@ -92,15 +83,6 @@ sendToWs data' = do
   debug $ "sending " +|| data' ||+ " encoded to " +|| encodedData ||+ " to gateway"
   P.embed . sendTextData wsConn $ encodedData
   -- trace "done sending data"
-
-untilResult :: Monad m => m (Maybe a) -> m a
-untilResult m = m >>= \case
-  Just a  -> pure a
-  Nothing -> untilResult m
-
-fromEither :: Either a a -> a
-fromEither (Left a) = a
-fromEither (Right a) = a
 
 fromEitherVoid :: Either a Void -> a
 fromEitherVoid (Left a) = a
@@ -296,7 +278,6 @@ shardLoop = do
 startHeartBeatLoop :: ShardC r => Int -> Sem r ()
 startHeartBeatLoop interval = do
   haltHeartBeat -- cancel any currently running hb thread
-  shard <- P.atomicGets (^. #shardS)
   void . P.async $ heartBeatLoop interval
 
 haltHeartBeat :: ShardC r => Sem r ()
