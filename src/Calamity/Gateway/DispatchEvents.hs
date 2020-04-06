@@ -77,7 +77,7 @@ data GuildEmojisUpdateData = GuildEmojisUpdateData
 newtype GuildIntegrationsUpdateData = GuildIntegrationsUpdateData
   { guildID :: Snowflake Guild
   }
-  deriving ( Show, Generic )
+  deriving newtype ( Show, Generic )
   deriving FromJSON via CalamityJSON GuildIntegrationsUpdateData
 
 data GuildMemberRemoveData = GuildMemberRemoveData
@@ -160,13 +160,13 @@ data TypingStartData = TypingStartData
   deriving FromJSON via CalamityJSON TypingStartData
 
 newtype VoiceStateUpdateData = VoiceStateUpdateData Value
-  deriving ( Show, Generic )
+  deriving newtype ( Show, Generic )
   deriving newtype ( ToJSON, FromJSON )
 
 newtype VoiceServerUpdateData = VoiceServerUpdateData Value
-  deriving ( Show, Generic )
+  deriving newtype ( Show, Generic )
   deriving newtype ( ToJSON, FromJSON )
 
 newtype WebhooksUpdateData = WebhooksUpdateData Value
-  deriving ( Show, Generic )
+  deriving newtype ( Show, Generic )
   deriving newtype ( ToJSON, FromJSON )

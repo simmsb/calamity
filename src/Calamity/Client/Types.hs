@@ -1,9 +1,4 @@
 -- | Types for the client
-{-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE TypeApplications #-}
-
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Calamity.Client.Types
     ( Client(..)
     , Cache(..)
@@ -133,7 +128,7 @@ type family EHType' d where
   EHType' "userupdate"               = Dynamic
   EHType' s = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
 
-data EventHandlers = EventHandlers (TypeRepMap EventHandler)
+newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
 newtype EventHandler d = EH
   { unwrapEventHandler :: [EHType' d]

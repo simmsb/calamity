@@ -37,31 +37,33 @@ data Websocket m a where
 P.makeSem ''Websocket
 
 websocketToIO :: forall r a. P.Member (P.Embed IO) r => Sem (Websocket ': r) a -> Sem r a
-websocketToIO m = do
-  P.interpretH (\case
-                   RunWebsocket host path a -> do
-                     istate <- P.getInitialStateT
-                     ma  <- P.bindT a
+websocketToIO = P.interpretH
+  (\case
+     RunWebsocket host path a -> do
+       istate <- P.getInitialStateT
+       ma <- P.bindT a
 
-                     P.withLowerToIO $ \lower finish -> do
-                       let done :: Sem (Websocket ': r) x -> IO x
-                           done = lower . P.raise . websocketToIO
+       P.withLowerToIO $ \lower finish -> do
+         let done :: Sem (Websocket ': r) x -> IO x
+             done = lower . P.raise . websocketToIO
 
-                       runSecureClient (host ^. unpacked)
-                         443
-                         (path ^. unpacked)
-                         (\x -> do
-                             res <- done (ma $ istate $> x)
-                             finish
-                             pure res)) m
+         runSecureClient (host ^. unpacked) 443 (path ^. unpacked)
+           (\x -> do
+              res <- done (ma $ istate $> x)
+              finish
+              pure res))
 
 newShardState :: Shard -> ShardState
 newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
 newShard :: P.Members '[LogEff, P.Embed IO, P.Final IO, P.Async] r
-  => Text -> Int -> Int -> Token -> TQueue DispatchData
-  -> Sem r (Shard, Async (Maybe ()))
+         => Text
+         -> Int
+         -> Int
+         -> Token
+         -> TQueue DispatchData
+         -> Sem r (Shard, Async (Maybe ()))
 newShard gateway id count token evtQueue = do
   (shard, stateVar) <- P.embed $ mdo
     cmdQueue' <- newTQueueIO
@@ -70,7 +72,7 @@ newShard gateway id count token evtQueue = do
     pure (shard, stateVar)
 
   let runShard = P.runAtomicStateTVar stateVar shardLoop
-  let action = attr "shard-id" id $ push "calamity-shard" $ runShard
+  let action = attr "shard-id" id . push "calamity-shard" $ runShard
 
   thread' <- P.async action
 

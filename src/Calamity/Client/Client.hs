@@ -99,7 +99,7 @@ runEventHandlers oldCache newCache data' = do
   eventHandlers <- P.atomicGet
   let actionHandlers = handleActions oldCache newCache eventHandlers data'
   case actionHandlers of
-    Just actions -> void $ for actions $ \action -> (P.async $ action newCache)
+    Just actions -> for_ actions $ \action -> P.async $ action newCache
     Nothing
       -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
 
@@ -303,13 +303,13 @@ updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nic
 updateCache (GuildMembersChunk GuildMembersChunkData { members }) =
   traverse_ (updateCache . GuildMemberAdd) members
 
-updateCache (GuildRoleCreate GuildRoleData { guildID, role }) = do
+updateCache (GuildRoleCreate GuildRoleData { guildID, role }) =
   #guilds . at guildID . _Just . #roles %= SM.insert role
 
-updateCache (GuildRoleUpdate GuildRoleData { guildID, role }) = do
+updateCache (GuildRoleUpdate GuildRoleData { guildID, role }) =
   #guilds . at guildID . _Just . #roles %= SM.insert role
 
-updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) = do
+updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) =
   #guilds . at guildID . _Just . #roles %= sans roleID
 
 updateCache (MessageCreate msg) = #messages %= addMessage msg

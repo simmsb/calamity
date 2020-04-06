@@ -14,7 +14,7 @@ class FromChannel a where
   type FromRet a = Either Text a
 
   -- | Convert from a channel into a more specific channel type
-  fromChannel :: Proxy a -> Channel -> FromRet a
+  fromChannel :: Channel -> FromRet a
 
   -- | Convert from a specific channel type back to the generic channel type
   toChannel :: a -> Channel
@@ -40,7 +40,7 @@ defChannel s t = Channel (coerceSnowflake s) t Nothing Nothing Nothing Nothing N
   Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 instance FromChannel SingleDM where
-  fromChannel _ c = do
+  fromChannel c = do
     ensureChannelType (c ^. field @"type_") DMType
     recipients <- ensureField "recipients" $ c ^. field @"recipients"
     pure $ SingleDM (coerceSnowflake $ c ^. field @"id") (c ^. field @"lastMessageID") recipients
@@ -50,7 +50,7 @@ instance FromChannel SingleDM where
     & field @"recipients" ?~ recipients
 
 instance FromChannel GroupDM where
-  fromChannel _ c = do
+  fromChannel c = do
     ensureChannelType (c ^. field @"type_") GroupDMType
     owner <- ensureField "ownerID" $ c ^. field @"ownerID"
     recipients <- ensureField "recipients" $ c ^. field @"recipients"
@@ -66,18 +66,18 @@ instance FromChannel GroupDM where
     & field @"name" ?~ name
 
 instance FromChannel DMChannel where
-  fromChannel _ c@Channel { type_ } = case type_ of
-    DMType      -> Single <$> fromChannel (Proxy @SingleDM) c
-    GroupDMType -> Group <$> fromChannel (Proxy @GroupDM) c
+  fromChannel c@Channel { type_ } = case type_ of
+    DMType      -> Single <$> fromChannel @SingleDM c
+    GroupDMType -> Group <$> fromChannel @GroupDM c
     _           -> Left "Channel was not one of DMType or GroupDMType"
 
   toChannel (Single dm) = toChannel dm
   toChannel (Group dm) = toChannel dm
 
 instance FromChannel GuildChannel where
-  fromChannel _ c@Channel { type_ } = case type_ of
-    GuildTextType  -> GuildTextChannel <$> fromChannel (Proxy @TextChannel) c
-    GuildVoiceType -> GuildVoiceChannel <$> fromChannel (Proxy @VoiceChannel) c
+  fromChannel c@Channel { type_ } = case type_ of
+    GuildTextType  -> GuildTextChannel <$> fromChannel @TextChannel c
+    GuildVoiceType -> GuildVoiceChannel <$> fromChannel @VoiceChannel c
     _              -> Left "Channel was not one of GuildTextType, GuildVoiceType, or GuildCategoryType"
 
   toChannel (GuildTextChannel c) = toChannel c
@@ -86,7 +86,7 @@ instance FromChannel GuildChannel where
 instance FromChannel Category where
   type FromRet Category = SnowflakeMap GuildChannel -> Either Text Category
 
-  fromChannel _ c channels = do
+  fromChannel c channels = do
     ensureChannelType (c ^. field @"type_") GuildCategoryType
     permissionOverwrites <- ensureField "permissionOverwrites" $ c ^. field @"permissionOverwrites"
     name <- ensureField "name" $ c ^. field @"name"
@@ -103,7 +103,7 @@ instance FromChannel Category where
     & field @"guildID" ?~ guildID
 
 instance FromChannel TextChannel where
-  fromChannel _ c = do
+  fromChannel c = do
     ensureChannelType (c ^. field @"type_") GuildTextType
     let id = coerceSnowflake $ c ^. field @"id"
     guildID <- ensureField "guildID" $ c ^. field @"guildID"
@@ -136,7 +136,7 @@ instance FromChannel TextChannel where
     & field @"parentID" .~ parentID
 
 instance FromChannel VoiceChannel where
-  fromChannel _ c = do
+  fromChannel c = do
     ensureChannelType (c ^. field @"type_") GuildVoiceType
     guildID <- ensureField "guildID" $ c ^. field @"guildID"
     position <- ensureField "position" $ c ^. field @"position"
