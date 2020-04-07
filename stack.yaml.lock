@@ -126,19 +126,19 @@ packages:
     url: https://github.com/nitros12/wreq/archive/f8f2d8d571f76b2df2cec73a08e29519fa681d7b.tar.gz
     sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
 - completed:
-    size: 7818
-    url: https://github.com/nitros12/di-polysemy/archive/6355b7998ebab46c4794ff27a92078abda60e9b1.tar.gz
+    size: 7735
+    url: https://github.com/nitros12/di-polysemy/archive/863cc0072d846b1d96eca6467bc836bd098f7bb7.tar.gz
     cabal-file:
       size: 2170
-      sha256: f75444163e033d932a12327faabf94fe9a50d40aa71fc101ea272585a1350e65
+      sha256: d108f34dd856b4d6cdb5e27079d3386730e153ebba06f92fc0fc5949847e0010
     name: di-polysemy
-    version: 0.0.1
-    sha256: 6fa706f6f7250bc82c617e6e10927a12d34fcaac237582e4048f64c38d71c3e4
+    version: 0.0.2
+    sha256: 6298d5635db4ee101e5aae32aef45bc978ff299d67b736b565932a20a7df4bed
     pantry-tree:
       size: 526
-      sha256: e716d85b7a7e979493ac1dd9e7a4e290165a9fb0bcf00ab502dd29df331777eb
+      sha256: ec0a67c88cae36fca5073a65f792acda415a29a14f41ae7bb9adb97f768405ba
   original:
-    url: https://github.com/nitros12/di-polysemy/archive/6355b7998ebab46c4794ff27a92078abda60e9b1.tar.gz
+    url: https://github.com/nitros12/di-polysemy/archive/863cc0072d846b1d96eca6467bc836bd098f7bb7.tar.gz
 snapshots:
 - completed:
     size: 524996

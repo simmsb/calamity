@@ -61,7 +61,7 @@ extra-deps:
     size: 129361
     sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
   - github: nitros12/di-polysemy
-    commit: 6355b7998ebab46c4794ff27a92078abda60e9b1
+    commit: 863cc0072d846b1d96eca6467bc836bd098f7bb7
 
 
 # Override default flag values for local packages and extra-deps

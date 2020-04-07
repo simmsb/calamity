@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5e04301ec08a212d92588cfe329eac630221f61f354e10e2dc3efee00f5cdd4d
+-- hash: 8c73cc4790bab99ff67bdf8e6c6a745071ed9e0b810b0327c92b2735e4732df4
 
 name:           calamity
 version:        0.1.0.0
@@ -78,7 +78,7 @@ library
     , concurrent-extra >=0.7
     , data-default-class >=0.1
     , df1 >=0.3
-    , di-polysemy
+    , di-polysemy >=0.0.2
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
@@ -125,7 +125,7 @@ executable test-calamity-exe
     , concurrent-extra >=0.7
     , data-default-class >=0.1
     , df1 >=0.3
-    , di-polysemy
+    , di-polysemy >=0.0.2
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0
@@ -173,7 +173,7 @@ test-suite calamity-test
     , concurrent-extra >=0.7
     , data-default-class >=0.1
     , df1 >=0.3
-    , di-polysemy
+    , di-polysemy >=0.0.2
     , exceptions >=0.10
     , fmt >=0.6
     , focus >=1.0

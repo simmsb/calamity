@@ -26,6 +26,7 @@ import           Network.HTTP.Types           hiding ( statusCode )
 import           Network.Wreq
 
 import qualified Polysemy                     as P
+import qualified Polysemy.Async               as P
 import           Polysemy                     ( Sem )
 
 import qualified StmContainers.Map            as SC
@@ -47,22 +48,26 @@ doDiscordRequest
   => IO (Response LB.ByteString)
   -> Sem r DiscordResponseType
 doDiscordRequest r = do
+  --debug "making request"
+  --maskState <- P.embed getMaskingState
+  --print maskState
   r' <- P.embed r
   let status = r' ^. responseStatus
   if
     | statusIsSuccessful status -> do
       let resp = r' ^. responseBody
-      debug $ "Got good response from discord: " +|| r' ||+ ""
+      debug $ "Got good response from discord: " +|| r' ^. responseStatus ||+ ""
       pure $ if isExhausted r'
         then ExhaustedBucket resp $ parseRateLimitHeader r'
         else Good resp
     | statusIsServerError status -> do
-      info $ "Got server error from discord: " +| status ^. statusCode |+ ""
+      debug $ "Got server error from discord: " +| status ^. statusCode |+ ""
       pure $ ServerError (status ^. statusCode)
     | status == status429 -> do
-      info "Got 429 from discord, retrying."
-      rv <- P.embed $ asValue r'
-      pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
+      debug "Got 429 from discord, retrying."
+      case asValue r' of
+        Just rv -> pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
+        Nothing -> pure $ ClientError (status ^. statusCode) "429 with invalid json???"
     | statusIsClientError status -> do
       let err = r' ^. responseBody
       error $ "You fucked up: " +|| err ||+ " response: " +|| r' ||+ ""
@@ -112,11 +117,11 @@ retryRequest max_retries action failAction = retryInner 0
     res <- action
     case res of
       Retry r | num_retries > max_retries -> do
-        info $ "Request failed after " +| max_retries |+ " retries."
+        debug $ "Request failed after " +| max_retries |+ " retries."
         doFail $ Left r
       Retry _ -> retryInner (succ num_retries)
       RFail r -> do
-        info "Request failed due to error response."
+        debug "Request failed due to error response."
         doFail $ Left r
       RGood r -> pure $ Right r
     where doFail v = failAction $> v
@@ -139,19 +144,21 @@ doSingleRequest gl l r = do
       pure $ RGood v
 
     ExhaustedBucket v d -> do
-      info $ "Exhausted bucket, unlocking after " +| d |+ "ms"
-      void . P.embed . forkIO $ do
-        threadDelay $ 1000 * d
-        atomically $ L.release l
+      debug $ "Exhausted bucket, unlocking after " +| d |+ "ms"
+      void . P.async $ do
+        P.embed $ do
+          threadDelay $ 1000 * d
+          atomically $ L.release l
+        debug "unlocking bucket"
       pure $ RGood v
 
     Ratelimited d False -> do
-      info $ "429 ratelimited on route, sleeping for " +| d |+ " ms"
+      debug $ "429 ratelimited on route, sleeping for " +| d |+ " ms"
       P.embed . threadDelay $ 1000 * d
       pure $ Retry (HTTPError 429 Nothing)
 
     Ratelimited d True -> do
-      info "429 ratelimited globally"
+      debug "429 ratelimited globally"
       P.embed $ do
         E.clear gl
         threadDelay $ 1000 * d
@@ -159,7 +166,7 @@ doSingleRequest gl l r = do
       pure $ Retry (HTTPError 429 Nothing)
 
     ServerError c -> do
-      info "Server failed, retrying"
+      debug "Server failed, retrying"
       pure $ Retry (HTTPError c Nothing)
 
     ClientError c v -> pure $ RFail (HTTPError c $ decode v)

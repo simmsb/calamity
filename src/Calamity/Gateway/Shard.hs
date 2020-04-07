@@ -256,7 +256,7 @@ shardLoop = do
         info "Received non-resumable invalid session, sleeping for 15 seconds then retrying"
         P.atomicModify (#sessionID .~ Nothing)
         P.atomicModify (#seqNum .~ Nothing)
-        P.embed $ threadDelay 1500000
+        P.embed $ threadDelay (15 * 1000 * 1000)
       else
         info "Received resumable invalid session"
       P.throw ShardExcRestart
