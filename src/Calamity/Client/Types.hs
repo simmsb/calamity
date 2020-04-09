@@ -13,9 +13,8 @@ import           Calamity.Gateway.Shard
 import           Calamity.HTTP.Internal.Types
 import           Calamity.Types.General
 import           Calamity.Types.MessageStore
-import qualified Calamity.Types.RefCountedSnowflakeMap as RSM
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap           as SM
+import qualified Calamity.Types.SnowflakeMap     as SM
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Concurrent.STM.TQueue
@@ -23,20 +22,20 @@ import           Control.Concurrent.STM.TVar
 
 import           Data.Default.Class
 import           Data.Dynamic
-import qualified Data.HashSet                          as LS
+import qualified Data.HashSet                    as LS
 import           Data.Time
-import qualified Data.TypeRepMap                       as TM
-import           Data.TypeRepMap                       ( TypeRepMap, WrapTypeable(..) )
+import qualified Data.TypeRepMap                 as TM
+import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) )
 
-import           GHC.Exts                              ( fromList )
-import qualified GHC.TypeLits                          as TL
+import           GHC.Exts                        ( fromList )
+import qualified GHC.TypeLits                    as TL
 
-import qualified Polysemy                              as P
-import qualified Polysemy.Async                        as P
-import qualified Polysemy.AtomicState                  as P
-import qualified Polysemy.Reader                       as P
+import qualified Polysemy                        as P
+import qualified Polysemy.Async                  as P
+import qualified Polysemy.AtomicState            as P
+import qualified Polysemy.Reader                 as P
 
-import qualified StmContainers.Set                     as TS
+import qualified StmContainers.Set               as TS
 
 
 data Cache = Cache
@@ -44,7 +43,7 @@ data Cache = Cache
   , guilds            :: SM.SnowflakeMap Guild
   , dms               :: SM.SnowflakeMap DMChannel
   , channels          :: SM.SnowflakeMap Channel
-  , users             :: RSM.RefCountedSnowflakeMap User
+  , users             :: SM.SnowflakeMap User
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
   , messages          :: MessageStore
   }
