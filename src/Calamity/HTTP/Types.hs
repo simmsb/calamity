@@ -3,6 +3,7 @@ module Calamity.HTTP.Types
     ( ChannelUpdate(..)
     , ChannelMessagesQuery(..) ) where
 
+import           Calamity.Internal.AesonThings
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 

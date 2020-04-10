@@ -9,7 +9,6 @@ module Prelude
     , module Control.Arrow
     , module Data.Text.Short
     , module Data.Semigroup
-    , module Calamity.Types.AesonThings
     , module Calamity.LogEff
     , module DiPolysemy
     , whenJust
@@ -19,7 +18,6 @@ module Prelude
     , error ) where
 
 import           Calamity.LogEff
-import           Calamity.Types.AesonThings
 
 import           Control.Arrow              ( (>>>) )
 import           Control.Lens               hiding ( (.=), (<.>), Level, Strict, from, op, to, uncons, unsnoc )

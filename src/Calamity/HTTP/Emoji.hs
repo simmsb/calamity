@@ -4,6 +4,7 @@ module Calamity.HTTP.Emoji
 
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
+import           Calamity.Internal.AesonThings
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 

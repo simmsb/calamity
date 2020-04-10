@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ad4806ce3bd67708121d52720a2101604b05d829fc0932ffe61daa4d22ebb410
+-- hash: a6558b17fbdceb3b05d2895703fa01ef099174266c7022b4fd26121ba5e27faf
 
 name:           calamity
 version:        0.1.0.0
@@ -51,17 +51,17 @@ library
       Calamity.HTTP.Internal.Types
       Calamity.HTTP.MiscRoutes
       Calamity.HTTP.Types
+      Calamity.Internal.AesonThings
+      Calamity.Internal.MessageStore
+      Calamity.Internal.SnowflakeMap
+      Calamity.Internal.Updateable
       Calamity.LogEff
-      Calamity.Types.AesonThings
       Calamity.Types.FromChannel
       Calamity.Types.General
-      Calamity.Types.MessageStore
       Calamity.Types.Partial
       Calamity.Types.Snowflake
-      Calamity.Types.SnowflakeMap
       Calamity.Types.Token
       Calamity.Types.UnixTimestamp
-      Calamity.Types.Updateable
       Prelude
   other-modules:
       Paths_calamity
@@ -76,6 +76,7 @@ library
     , bytestring >=0.10
     , concurrent-extra >=0.7
     , data-default-class >=0.1
+    , deque >=0.1
     , df1 >=0.3
     , di-polysemy >=0.0.2
     , exceptions >=0.10
@@ -89,7 +90,6 @@ library
     , lens-aeson >=1.1
     , polysemy >=1.3
     , polysemy-plugin >=0.2
-    , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
@@ -123,6 +123,7 @@ executable test-calamity-exe
     , calamity
     , concurrent-extra >=0.7
     , data-default-class >=0.1
+    , deque >=0.1
     , df1 >=0.3
     , di-polysemy >=0.0.2
     , exceptions >=0.10
@@ -136,7 +137,6 @@ executable test-calamity-exe
     , lens-aeson >=1.1
     , polysemy >=1.3
     , polysemy-plugin >=0.2
-    , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
@@ -171,6 +171,7 @@ test-suite calamity-test
     , calamity
     , concurrent-extra >=0.7
     , data-default-class >=0.1
+    , deque >=0.1
     , df1 >=0.3
     , di-polysemy >=0.0.2
     , exceptions >=0.10
@@ -184,7 +185,6 @@ test-suite calamity-test
     , lens-aeson >=1.1
     , polysemy >=1.3
     , polysemy-plugin >=0.2
-    , pqueue >=1.4
     , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3

@@ -30,22 +30,23 @@ module Calamity.Types.General
     , formatToken
     , rawToken ) where
 
+import           Calamity.Internal.AesonThings
+import qualified Calamity.Internal.SnowflakeMap as SM
+import           Calamity.Internal.SnowflakeMap ( SnowflakeMap(..) )
 import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap  as SM
-import           Calamity.Types.SnowflakeMap  ( SnowflakeMap(..) )
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Monad
 
 import           Data.Aeson
 import           Data.Generics.Product.Fields
-import           Data.HashMap.Lazy            ( HashMap )
-import qualified Data.HashMap.Lazy            as LH
+import           Data.HashMap.Lazy              ( HashMap )
+import qualified Data.HashMap.Lazy              as LH
 import           Data.Scientific
 import           Data.Time
-import           Data.Vector                  ( Vector )
-import qualified Data.Vector.Unboxed          as UV
+import           Data.Vector                    ( Vector )
+import qualified Data.Vector.Unboxed            as UV
 
 -- Unfortunately all our data models have to go in here since we share a lot of types
 data Token

@@ -4,6 +4,7 @@
 module Calamity.Gateway.Types where
 
 import           Calamity.Gateway.DispatchEvents
+import           Calamity.Internal.AesonThings
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 
@@ -28,7 +29,6 @@ import           Network.WebSockets.Connection   ( Connection )
 import qualified Polysemy                        as P
 import qualified Polysemy.Async                  as P
 import qualified Polysemy.AtomicState            as P
-
 
 data ShardMsg
   = Discord ReceivedDiscordMessage

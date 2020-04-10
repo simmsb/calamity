@@ -11,10 +11,10 @@ module Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
 import           Calamity.HTTP.Internal.Types
+import           Calamity.Internal.MessageStore
+import qualified Calamity.Internal.SnowflakeMap  as SM
 import           Calamity.Types.General
-import           Calamity.Types.MessageStore
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap     as SM
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Concurrent.STM.TQueue

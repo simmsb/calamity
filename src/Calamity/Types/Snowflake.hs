@@ -39,16 +39,20 @@ instance FromJSON (Snowflake t) where
 coerceSnowflake :: Snowflake a -> Snowflake b
 coerceSnowflake (Snowflake t) = Snowflake t
 
+-- | A typeclass for types that contain snowflakes
 class HasID a where
+  -- | One of the types of snowflake this type contains
   type HasIDRes a
 
   type HasIDRes a = a
 
+  -- | Retrieve the ID from the type
   getID :: a -> Snowflake (HasIDRes a)
 
--- ^ A type 't' that has some Snowflake in it of type 'r'
+-- | A type 't' that has some Snowflake in it of type 'r'
 type HasSpecificID t r = (HasID t, HasIDRes t ~ r)
 
+-- | A newtype wrapper for deriving HasID generically
 newtype HasIDField a = HasIDField a
 
 instance HasField' "id" a (Snowflake a) => HasID (HasIDField a) where
@@ -56,7 +60,7 @@ instance HasField' "id" a (Snowflake a) => HasID (HasIDField a) where
 
   getID (HasIDField a) = a ^. field' @"id"
 
--- ^ A data `a` which contains an ID of type `Snowflake a`
+-- | A data `a` which contains an ID of type `Snowflake a`
 --   which should be swapped with `Snowflake b` upon fetching
 newtype HasIDFieldCoerce a b = HasIDFieldCoerce a
 
@@ -65,7 +69,7 @@ instance HasField' "id" a (Snowflake a) => HasID (HasIDFieldCoerce a (b :: Type)
 
   getID (HasIDFieldCoerce a) = coerceSnowflake . getID $ a ^. field' @"id"
 
--- ^ A data `a` which contains an ID of type `Snowflake b`
+-- | A data `a` which contains an ID of type `Snowflake b`
 newtype HasIDFieldAlt a b = HasIDFieldAlt a
 
 instance HasField' "id" a (Snowflake b) => HasID (HasIDFieldAlt a (b :: Type)) where
@@ -73,6 +77,7 @@ instance HasField' "id" a (Snowflake b) => HasID (HasIDFieldAlt a (b :: Type)) w
 
   getID (HasIDFieldAlt a) = a ^. field' @"id"
 
+-- | Snowflakes of type `a` contain themselves I guess
 instance HasID (Snowflake (a :: Type)) where
   type HasIDRes (Snowflake a) = a
 

@@ -47,7 +47,7 @@ dependencies:
 - bytestring >= 0.10
 - async >= 2.2
 - scientific >= 0.3
-- pqueue >= 1.4
+- deque >= 0.1
 - text-short >= 0.1
 - vector >= 0.12
 - reflection >= 2.1

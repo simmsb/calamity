@@ -301,8 +301,7 @@ heartBeatLoop :: ShardC r => Int -> Sem r ()
 heartBeatLoop interval = void . P.runError . forever $ do
   sendHeartBeat
   P.embed . threadDelay $ interval * 1000
-  hasResp <- P.atomicGets (^. #hbResponse)
-  unless hasResp $ do
+  unlessM (P.atomicGets (^. #hbResponse)) $ do
     debug "No heartbeat response, restarting shard"
     wsConn <- fromJust <$> P.atomicGets (^. #wsConn)
     P.embed $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: Text)

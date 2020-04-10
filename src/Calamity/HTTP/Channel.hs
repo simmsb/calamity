@@ -8,6 +8,7 @@ module Calamity.HTTP.Channel
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
 import           Calamity.HTTP.Types
+import           Calamity.Internal.AesonThings
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 

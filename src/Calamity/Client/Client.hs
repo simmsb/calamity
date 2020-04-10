@@ -8,11 +8,11 @@ import           Calamity.Client.ShardManager
 import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.HTTP.Internal.Ratelimit
+import           Calamity.Internal.MessageStore
+import qualified Calamity.Internal.SnowflakeMap   as SM
+import           Calamity.Internal.Updateable
 import           Calamity.Types.General
-import           Calamity.Types.MessageStore
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap      as SM
-import           Calamity.Types.Updateable
 
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar

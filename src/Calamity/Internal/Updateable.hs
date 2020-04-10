@@ -1,5 +1,5 @@
 -- | Updateable objects
-module Calamity.Types.Updateable
+module Calamity.Internal.Updateable
     ( Updateable(..) ) where
 
 import           Calamity.Types.General

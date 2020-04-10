@@ -1,5 +1,5 @@
 -- | Module for custom instance of Data.HashMap.Lazy that decodes from any list of objects that have an id field
-module Calamity.Types.SnowflakeMap where
+module Calamity.Internal.SnowflakeMap where
 
 import           Calamity.Types.Snowflake
 
@@ -225,7 +225,7 @@ fromListWith f = SnowflakeMap . LH.fromListWith f . Prelude.map (\v -> (coerceSn
 instance (FromJSON a, HasID a) => FromJSON (SnowflakeMap a) where
   parseJSON = withArray "SnowflakeMap" $ \l -> do
     parsed <- traverse parseJSON l
-    pure . Calamity.Types.SnowflakeMap.fromList . Prelude.toList $ parsed
+    pure . Calamity.Internal.SnowflakeMap.fromList . Prelude.toList $ parsed
 
 instance ToJSON a => ToJSON (SnowflakeMap a) where
   toEncoding = toEncoding . elems

@@ -7,14 +7,15 @@ module Calamity.HTTP.Internal.Types
     , BotGatewayResponse ) where
 
 import           Calamity.HTTP.Internal.Route
+import           Calamity.Internal.AesonThings
 
-import           Control.Concurrent.Event     ( Event )
-import           Control.Concurrent.STM.Lock  ( Lock )
+import           Control.Concurrent.Event      ( Event )
+import           Control.Concurrent.STM.Lock   ( Lock )
 
 import           Data.Aeson
-import qualified Data.ByteString.Lazy         as LB
+import qualified Data.ByteString.Lazy          as LB
 
-import qualified StmContainers.Map            as SC
+import qualified StmContainers.Map             as SC
 
 data RestError
   = HTTPError

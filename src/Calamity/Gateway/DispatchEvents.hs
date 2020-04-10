@@ -1,13 +1,14 @@
 -- | module containing all dispatch events
 module Calamity.Gateway.DispatchEvents where
 
+import           Calamity.Internal.AesonThings
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
 import           Calamity.Types.UnixTimestamp
 
 import           Data.Aeson
 import           Data.Time
-import qualified Data.Vector.Unboxed          as UV
+import qualified Data.Vector.Unboxed           as UV
 
 data DispatchData
   = Ready ReadyData

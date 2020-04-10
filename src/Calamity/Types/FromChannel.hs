@@ -2,9 +2,9 @@
 module Calamity.Types.FromChannel
     ( FromChannel(..) ) where
 
+import           Calamity.Internal.SnowflakeMap ( SnowflakeMap(..) )
 import           Calamity.Types.General
 import           Calamity.Types.Snowflake
-import           Calamity.Types.SnowflakeMap  ( SnowflakeMap(..) )
 
 import           Data.Generics.Product.Fields
 

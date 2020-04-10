@@ -1,6 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Calamity.Types.AesonThings
+module Calamity.Internal.AesonThings
     ( WithSpecialCases
     , WithSpecialCasesInner(..)
     , type IfNoneThen
