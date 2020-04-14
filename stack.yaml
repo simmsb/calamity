@@ -62,6 +62,11 @@ extra-deps:
     sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
   - github: nitros12/di-polysemy
     commit: 863cc0072d846b1d96eca6467bc836bd098f7bb7
+  - github: estatico/generic-override
+    commit: cbc64fa80dffb492187772b6343fe8e11443769a
+    subdirs:
+      - .
+      - aeson
 
 
 # Override default flag values for local packages and extra-deps

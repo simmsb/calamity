@@ -139,6 +139,38 @@ packages:
       sha256: ec0a67c88cae36fca5073a65f792acda415a29a14f41ae7bb9adb97f768405ba
   original:
     url: https://github.com/nitros12/di-polysemy/archive/863cc0072d846b1d96eca6467bc836bd098f7bb7.tar.gz
+- completed:
+    size: 7984
+    subdir: .
+    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
+    cabal-file:
+      size: 1169
+      sha256: fb9b5af767f6fe21550fa3f03677ed4ca4aa936b17675ffe6fc1af13df1503b9
+    name: generic-override
+    version: 0.0.0.1
+    sha256: 7986affad943aa5ef17b8a07c07488f3057aeeb9e8389f7574e9cc8885c9035e
+    pantry-tree:
+      size: 1198
+      sha256: bc5a1bcaec15bbb1c71b7646e1e1ae4745dfffbdcc71b3bd651201db0ef2e39a
+  original:
+    subdir: .
+    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
+- completed:
+    size: 7984
+    subdir: aeson
+    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
+    cabal-file:
+      size: 1547
+      sha256: f4d482b3249fda5ce44fb6a4876de0343ba4b753b3706c2d5ee4980f3e78d915
+    name: generic-override-aeson
+    version: 0.0.0.1
+    sha256: 7986affad943aa5ef17b8a07c07488f3057aeeb9e8389f7574e9cc8885c9035e
+    pantry-tree:
+      size: 353
+      sha256: df339d8ca0b1c25df7537b31d5713c023f2a6c156eebaa8b3c4bec48e6337526
+  original:
+    subdir: aeson
+    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
 snapshots:
 - completed:
     size: 524996

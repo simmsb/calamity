@@ -3,8 +3,8 @@
 * DONE Things to test
 CLOSED: [2019-04-27 Sat 16:25]
 - Test using text-short and intern for certain strings
-* CANCELLED Shards need some way of making requests (get gateway, etc)
-CLOSED: [2019-02-24 Sun 18:29]
+* DONE CANCELLED Shards need some way of making requests (get gateway, etc)
+CLOSED: [2020-04-10 Fri 22:03]
 - [X] Instead we just pass the gateway url to shards, it never changes, so w/e
 
 * TODO Function to log out the bot, waiting for all stuff to end, etc
@@ -15,7 +15,6 @@ CLOSED: [2019-02-24 Sun 18:29]
 - Send shutdown signal to shard
 - Shard shuts down and sends a control message with it's own thread to the client stating that it is closed?
 - Client removes shard from the set of shards
-
 * DONE Move from lists of objects to maps of id => object
 CLOSED: [2019-03-05 Tue 02:44]
 * DONE Partial data
@@ -32,6 +31,8 @@ CLOSED: [2019-05-26 Sun 05:33]
 CLOSED: [2019-05-27 Mon 02:58]
 instead of having a copy for each user object discord gives us.
 This is probably a much better optimisation that discarding presences.
-* TODO Migrate from Transformers and MTL to Free monads
+* DONE Migrate from Transformers and MTL to Free monads
+CLOSED: [2020-04-10 Fri 22:02]
 should be fun
-* TODO Use barbies for data that updates (w/ magic defaulting stuff for aeson idk?)
+* KILL Use barbies for data that updates (w/ magic defaulting stuff for aeson idk?)
+CLOSED: [2020-04-10 Fri 22:02]

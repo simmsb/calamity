@@ -8,7 +8,7 @@ module Calamity.Gateway.Shard
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
-import           Calamity.Types.General
+import           Calamity.Types.Token
 
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Concurrent.STM.TQueue
@@ -103,8 +103,8 @@ checkWSClose m = (Right <$> m) `catch` \case
 
 tryWriteTBMQueue' :: TBMQueue a -> a -> STM Bool
 tryWriteTBMQueue' q v = do
-  v <- tryWriteTBMQueue q v
-  case v of
+  v' <- tryWriteTBMQueue q v
+  case v' of
     Just False -> retry
     Just True  -> pure True
     Nothing    -> pure False

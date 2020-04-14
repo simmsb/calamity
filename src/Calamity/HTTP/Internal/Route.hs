@@ -11,15 +11,15 @@ module Calamity.HTTP.Internal.Route
     , Route(path)
     , S(..)
     , ID(..)
-    , RouteFragmentable(..)
-    ) where
+    , RouteFragmentable(..) ) where
 
-import           Calamity.Types.General
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild
 import           Calamity.Types.Snowflake
 
-import           Data.List                ( lookup )
-import           Data.Maybe               ( fromJust )
-import qualified Data.Text                as T
+import           Data.List                        ( lookup )
+import           Data.Maybe                       ( fromJust )
+import qualified Data.Text                        as T
 
 data RouteFragment
   = S' Text

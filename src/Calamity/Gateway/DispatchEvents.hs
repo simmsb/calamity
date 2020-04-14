@@ -2,13 +2,21 @@
 module Calamity.Gateway.DispatchEvents where
 
 import           Calamity.Internal.AesonThings
-import           Calamity.Types.General
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Channel.Message
+import           Calamity.Types.Model.Guild.Emoji
+import           Calamity.Types.Model.Guild.Guild
+import           Calamity.Types.Model.Guild.Member
+import           Calamity.Types.Model.Guild.Role
+import           Calamity.Types.Model.Guild.UnavailableGuild
+import           Calamity.Types.Model.Presence.Presence
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 import           Calamity.Types.UnixTimestamp
 
 import           Data.Aeson
 import           Data.Time
-import qualified Data.Vector.Unboxed           as UV
+import           Data.Vector.Unboxed                         ( Vector )
 
 data DispatchData
   = Ready ReadyData
@@ -37,7 +45,7 @@ data DispatchData
   | MessageReactionAdd Reaction
   | MessageReactionRemove Reaction
   | MessageReactionRemoveAll MessageReactionRemoveAllData
-  | PresenceUpdate Presence
+  | PresenceUpdate PresenceUpdateData
   | TypingStart TypingStartData
   | UserUpdate User
   | VoiceStateUpdate VoiceStateUpdateData
@@ -90,7 +98,7 @@ data GuildMemberRemoveData = GuildMemberRemoveData
 
 data GuildMemberUpdateData = GuildMemberUpdateData
   { guildID :: Snowflake Guild
-  , roles   :: UV.Vector (Snowflake Role)
+  , roles   :: Vector (Snowflake Role)
   , user    :: User
   , nick    :: Maybe ShortText
   }
@@ -150,6 +158,20 @@ data MessageReactionRemoveAllData = MessageReactionRemoveAllData
   }
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON MessageReactionRemoveAllData
+
+data PresenceUpdateData = PresenceUpdateData
+  { userID   :: Snowflake User
+  , roles    :: Vector (Snowflake Role)
+  , presence :: Presence
+  }
+  deriving ( Show, Generic )
+
+instance FromJSON PresenceUpdateData where
+  parseJSON = withObject "PresenceUpdate" $ \v -> do
+    user <- (v .: "user") >>= (.: "id")
+    roles <- v .: "roles"
+    presence <- parseJSON $ Object v
+    pure $ PresenceUpdateData user roles presence
 
 data TypingStartData = TypingStartData
   { channelID :: Snowflake Channel

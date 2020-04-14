@@ -2,13 +2,16 @@
 module Calamity.Internal.Updateable
     ( Updateable(..) ) where
 
-import           Calamity.Types.General
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Channel.Message
+import           Calamity.Types.Model.Guild.Guild
+import           Calamity.Types.Model.User
 
--- import           Data.Semigroup ( Last(..) )
 import           Data.Generics.Product.Fields
 
 class Updateable a where
   type Updated a
+  type Updated a = a
 
   update :: Updated a -> a -> a
 
@@ -40,8 +43,12 @@ instance Updateable Message where
     & mergeF @"pinned" o n
 
 instance Updateable Channel where
-  type Updated Channel = Channel
+  update n _ = n
 
+instance Updateable DMChannel where
+  update n _ = n
+
+instance Updateable GuildChannel where
   update n _ = n
 
 instance Updateable Guild where
@@ -72,8 +79,6 @@ instance Updateable Guild where
     & setF @"systemChannelID" n
 
 instance Updateable User where
-  type Updated User = User
-
   update n o = o
     & setF @"username" n
     & setF @"discriminator" n

@@ -13,8 +13,12 @@ import           Calamity.Gateway.Shard
 import           Calamity.HTTP.Internal.Types
 import           Calamity.Internal.MessageStore
 import qualified Calamity.Internal.SnowflakeMap  as SM
-import           Calamity.Types.General
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild
+import           Calamity.Types.Model.User
+import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
+import           Calamity.Types.Token
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Concurrent.STM.TQueue
@@ -42,7 +46,7 @@ data Cache = Cache
   { user              :: Maybe User
   , guilds            :: SM.SnowflakeMap Guild
   , dms               :: SM.SnowflakeMap DMChannel
-  , channels          :: SM.SnowflakeMap Channel
+  , channels          :: SM.SnowflakeMap GuildChannel
   , users             :: SM.SnowflakeMap User
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
   , messages          :: MessageStore
@@ -63,34 +67,34 @@ data Client = Client
 type BotC r = (LogC r, P.Members '[P.Reader Client, P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r, Typeable r)
 
 type family EHType d m where
-  EHType "ready"                    m = ReadyData                          -> Cache -> m ()
-  EHType "channelcreate"            m = Channel                            -> Cache -> m ()
-  EHType "channelupdate"            m = Channel -> Channel                 -> Cache -> m ()
-  EHType "channeldelete"            m = Channel                            -> Cache -> m ()
-  EHType "channelpinsupdate"        m = Channel -> Maybe UTCTime           -> Cache -> m ()
-  EHType "guildcreate"              m = Guild -> Bool                      -> Cache -> m ()
-  EHType "guildupdate"              m = Guild -> Guild                     -> Cache -> m ()
-  EHType "guilddelete"              m = Guild -> Bool                      -> Cache -> m ()
-  EHType "guildbanadd"              m = Guild -> User                      -> Cache -> m ()
-  EHType "guildbanremove"           m = Guild -> User                      -> Cache -> m ()
-  EHType "guildemojisupdate"        m = Guild -> [Emoji]                   -> Cache -> m ()
-  EHType "guildintegrationsupdate"  m = Guild                              -> Cache -> m ()
-  EHType "guildmemberadd"           m = Member                             -> Cache -> m ()
-  EHType "guildmemberremove"        m = Member                             -> Cache -> m ()
-  EHType "guildmemberupdate"        m = Member -> Member                   -> Cache -> m ()
-  EHType "guildmemberschunk"        m = Guild -> [Member]                  -> Cache -> m ()
-  EHType "guildrolecreate"          m = Guild -> Role                      -> Cache -> m ()
-  EHType "guildroleupdate"          m = Guild -> Role -> Role              -> Cache -> m ()
-  EHType "guildroledelete"          m = Guild -> Role                      -> Cache -> m ()
-  EHType "messagecreate"            m = Message                            -> Cache -> m ()
-  EHType "messageupdate"            m = Message -> Message                 -> Cache -> m ()
-  EHType "messagedelete"            m = Message                            -> Cache -> m ()
-  EHType "messagedeletebulk"        m = [Message]                          -> Cache -> m ()
-  EHType "messagereactionadd"       m = Message -> Reaction                -> Cache -> m ()
-  EHType "messagereactionremove"    m = Message -> Reaction                -> Cache -> m ()
-  EHType "messagereactionremoveall" m = Message                            -> Cache -> m ()
-  EHType "typingstart"              m = Channel -> Member -> UnixTimestamp -> Cache -> m ()
-  EHType "userupdate"               m = User -> User                       -> Cache -> m ()
+  EHType "ready"                    m = ReadyData -> Cache                                   -> m ()
+  EHType "channelcreate"            m = Channel   -> Cache                                   -> m ()
+  EHType "channelupdate"            m = Channel   -> Channel       -> Cache                  -> m ()
+  EHType "channeldelete"            m = Channel   -> Cache                                   -> m ()
+  EHType "channelpinsupdate"        m = Channel   -> Maybe UTCTime -> Cache                  -> m ()
+  EHType "guildcreate"              m = Guild     -> Bool          -> Cache                  -> m ()
+  EHType "guildupdate"              m = Guild     -> Guild         -> Cache                  -> m ()
+  EHType "guilddelete"              m = Guild     -> Bool          -> Cache                  -> m ()
+  EHType "guildbanadd"              m = Guild     -> User          -> Cache                  -> m ()
+  EHType "guildbanremove"           m = Guild     -> User          -> Cache                  -> m ()
+  EHType "guildemojisupdate"        m = Guild     -> [Emoji]       -> Cache                  -> m ()
+  EHType "guildintegrationsupdate"  m = Guild     -> Cache                                   -> m ()
+  EHType "guildmemberadd"           m = Member    -> Cache                                   -> m ()
+  EHType "guildmemberremove"        m = Member    -> Cache                                   -> m ()
+  EHType "guildmemberupdate"        m = Member    -> Member        -> Cache                  -> m ()
+  EHType "guildmemberschunk"        m = Guild     -> [Member]      -> Cache                  -> m ()
+  EHType "guildrolecreate"          m = Guild     -> Role          -> Cache                  -> m ()
+  EHType "guildroleupdate"          m = Guild     -> Role          -> Role          -> Cache -> m ()
+  EHType "guildroledelete"          m = Guild     -> Role          -> Cache                  -> m ()
+  EHType "messagecreate"            m = Message   -> Cache                                   -> m ()
+  EHType "messageupdate"            m = Message   -> Message       -> Cache                  -> m ()
+  EHType "messagedelete"            m = Message   -> Cache                                   -> m ()
+  EHType "messagedeletebulk"        m = [Message] -> Cache                                   -> m ()
+  EHType "messagereactionadd"       m = Message   -> Reaction      -> Cache                  -> m ()
+  EHType "messagereactionremove"    m = Message   -> Reaction      -> Cache                  -> m ()
+  EHType "messagereactionremoveall" m = Message   -> Cache                                   -> m ()
+  EHType "typingstart"              m = Channel   -> Maybe Member  -> UnixTimestamp -> Cache -> m ()
+  EHType "userupdate"               m = User      -> User          -> Cache                  -> m ()
   EHType s _ = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
   -- EHType "voicestateupdate"         = VoiceStateUpdateData -> EventM ()
   -- EHType "voiceserverupdate"        = VoiceServerUpdateData -> EventM ()

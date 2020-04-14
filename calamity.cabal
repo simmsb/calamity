@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a6558b17fbdceb3b05d2895703fa01ef099174266c7022b4fd26121ba5e27faf
+-- hash: c454062d93fcbb2bee1a17c51218fc98cb501daf2734b23d296331074ea0d2d2
 
 name:           calamity
 version:        0.1.0.0
@@ -56,8 +56,33 @@ library
       Calamity.Internal.SnowflakeMap
       Calamity.Internal.Updateable
       Calamity.LogEff
-      Calamity.Types.FromChannel
-      Calamity.Types.General
+      Calamity.Types.Model
+      Calamity.Types.Model.Channel
+      Calamity.Types.Model.Channel.Attachment
+      Calamity.Types.Model.Channel.ChannelType
+      Calamity.Types.Model.Channel.DM
+      Calamity.Types.Model.Channel.Embed
+      Calamity.Types.Model.Channel.Group
+      Calamity.Types.Model.Channel.Guild
+      Calamity.Types.Model.Channel.Guild.Category
+      Calamity.Types.Model.Channel.Guild.Text
+      Calamity.Types.Model.Channel.Guild.Voice
+      Calamity.Types.Model.Channel.Message
+      Calamity.Types.Model.Channel.Reaction
+      Calamity.Types.Model.Guild
+      Calamity.Types.Model.Guild.Emoji
+      Calamity.Types.Model.Guild.Guild
+      Calamity.Types.Model.Guild.Invite
+      Calamity.Types.Model.Guild.Member
+      Calamity.Types.Model.Guild.Overwrite
+      Calamity.Types.Model.Guild.Role
+      Calamity.Types.Model.Guild.UnavailableGuild
+      Calamity.Types.Model.Presence
+      Calamity.Types.Model.Presence.Activity
+      Calamity.Types.Model.Presence.Presence
+      Calamity.Types.Model.User
+      Calamity.Types.Model.Voice
+      Calamity.Types.Model.Voice.VoiceState
       Calamity.Types.Partial
       Calamity.Types.Snowflake
       Calamity.Types.Token
@@ -83,6 +108,8 @@ library
     , fmt >=0.6
     , focus >=1.0
     , generic-lens >=2.0
+    , generic-override >=0.0.0.1
+    , generic-override-aeson >=0.0.0.1
     , hashable >=1.2
     , http-date >=0.0.8
     , http-types >=0.12
@@ -130,6 +157,8 @@ executable test-calamity-exe
     , fmt >=0.6
     , focus >=1.0
     , generic-lens >=2.0
+    , generic-override >=0.0.0.1
+    , generic-override-aeson >=0.0.0.1
     , hashable >=1.2
     , http-date >=0.0.8
     , http-types >=0.12
@@ -178,6 +207,8 @@ test-suite calamity-test
     , fmt >=0.6
     , focus >=1.0
     , generic-lens >=2.0
+    , generic-override >=0.0.0.1
+    , generic-override-aeson >=0.0.0.1
     , hashable >=1.2
     , http-date >=0.0.8
     , http-types >=0.12

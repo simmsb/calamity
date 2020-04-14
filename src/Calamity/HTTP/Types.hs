@@ -4,7 +4,8 @@ module Calamity.HTTP.Types
     , ChannelMessagesQuery(..) ) where
 
 import           Calamity.Internal.AesonThings
-import           Calamity.Types.General
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild.Overwrite
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson

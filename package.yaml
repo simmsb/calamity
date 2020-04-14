@@ -55,6 +55,8 @@ dependencies:
 - polysemy-plugin >= 0.2
 - di-polysemy >= 0.0.2
 - df1 >= 0.3
+- generic-override >= 0.0.0.1
+- generic-override-aeson >= 0.0.0.1
 
 executables:
   test-calamity-exe:

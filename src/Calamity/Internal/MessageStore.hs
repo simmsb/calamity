@@ -5,18 +5,18 @@ module Calamity.Internal.MessageStore
     , getMessage
     , dropMessage ) where
 
-import           Calamity.Types.General
+import           Calamity.Types.Model.Channel.Message
 import           Calamity.Types.Snowflake
 
-import           Control.Lens.Operators   ( (.=) )
+import           Control.Lens.Operators               ( (.=) )
 
 import           Data.Default.Class
-import           Data.Generics.Labels     ()
-import           Data.HashMap.Lazy        ( HashMap )
-import qualified Data.HashMap.Lazy        as H
+import           Data.Generics.Labels                 ()
+import           Data.HashMap.Lazy                    ( HashMap )
+import qualified Data.HashMap.Lazy                    as H
 
-import qualified Deque.Lazy               as DQ
-import           Deque.Lazy               ( Deque )
+import qualified Deque.Lazy                           as DQ
+import           Deque.Lazy                           ( Deque )
 
 data MessageStore = MessageStore
   { messageQueue :: Deque (Snowflake Message)

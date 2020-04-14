@@ -12,7 +12,7 @@ import           Calamity.Client.Types
 import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.HTTP.Internal.Route
 import           Calamity.HTTP.Internal.Types
-import           Calamity.Types.General
+import           Calamity.Types.Token
 
 import           Data.Aeson                       hiding ( Options )
 import qualified Data.ByteString.Lazy             as LB

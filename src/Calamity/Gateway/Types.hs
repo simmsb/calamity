@@ -5,7 +5,8 @@ module Calamity.Gateway.Types where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Internal.AesonThings
-import           Calamity.Types.General
+import           Calamity.Types.Model.Guild.Guild
+import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
 
 -- ( Shard(..)
@@ -18,17 +19,17 @@ import           Calamity.Types.Snowflake
 -- )
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad                   ( fail )
+import           Control.Monad                    ( fail )
 
 import           Data.Aeson
-import qualified Data.Aeson.Types                as AT
-import           Data.Generics.Labels            ()
+import qualified Data.Aeson.Types                 as AT
+import           Data.Generics.Labels             ()
 
-import           Network.WebSockets.Connection   ( Connection )
+import           Network.WebSockets.Connection    ( Connection )
 
-import qualified Polysemy                        as P
-import qualified Polysemy.Async                  as P
-import qualified Polysemy.AtomicState            as P
+import qualified Polysemy                         as P
+import qualified Polysemy.Async                   as P
+import qualified Polysemy.AtomicState             as P
 
 data ShardMsg
   = Discord ReceivedDiscordMessage
