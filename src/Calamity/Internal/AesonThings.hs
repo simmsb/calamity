@@ -19,7 +19,6 @@ import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Lens
 import           Data.Aeson.Types      ( Parser )
-import           Data.Default.Class
 import           Data.Reflection       ( Reifies(..) )
 import           Data.Text.Strict.Lens
 import           Data.Typeable         ( typeRep )
@@ -61,8 +60,8 @@ instance Reifies d Value => PerformAction ('IfNoneThen d) where
 
 instance (KnownSymbol field) => PerformAction ('ExtractField field) where
   runAction _ Null = pure Null
-  runAction _ o = (withObject (("extracting field " <> textSymbolVal @field Proxy) ^. unpacked) $ \o -> o
-                   .: (textSymbolVal @field Proxy)) o
+  runAction _ o = withObject (("extracting field " <> textSymbolVal @field Proxy) ^. unpacked)
+    (.: textSymbolVal @field Proxy) o
 
 instance (KnownSymbol idn, KnownSymbol mn) => PerformAction ('InjectID idn mn) where
   runAction _ = withObject

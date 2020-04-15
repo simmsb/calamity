@@ -8,10 +8,6 @@ module Calamity.Types.Model.Presence.Activity
     , ActivitySecrets(..) ) where
 
 import           Calamity.Internal.AesonThings
-import           Calamity.Types.Model.Channel.Guild
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
-import           Calamity.Types.Model.User
-import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
 import           Calamity.Types.UnixTimestamp
 

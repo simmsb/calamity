@@ -5,9 +5,9 @@ module Calamity.Types.Model.Channel.Reaction
 import           Calamity.Internal.AesonThings
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Emoji
+import           Calamity.Types.Model.Guild.Emoji
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
-import {-# SOURCE #-} Calamity.Types.Model.User
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson

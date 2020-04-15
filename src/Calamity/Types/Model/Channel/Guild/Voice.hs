@@ -5,7 +5,6 @@ module Calamity.Types.Model.Channel.Guild.Voice
 import           Calamity.Internal.AesonThings
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild.Category
-import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Guild.Overwrite
 import           Calamity.Types.Snowflake

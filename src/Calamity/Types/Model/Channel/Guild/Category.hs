@@ -2,7 +2,6 @@ module Calamity.Types.Model.Channel.Guild.Category
     ( Category(..) ) where
 
 import           Calamity.Internal.AesonThings
-import           Calamity.Internal.SnowflakeMap
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Guild.Overwrite

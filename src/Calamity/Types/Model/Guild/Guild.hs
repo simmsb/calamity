@@ -8,14 +8,12 @@ import           Calamity.Internal.AesonThings
 import qualified Calamity.Internal.SnowflakeMap         as SM
 import           Calamity.Internal.SnowflakeMap         ( SnowflakeMap )
 import           Calamity.Types.Model.Channel
-import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Emoji
+import           Calamity.Types.Model.Guild.Emoji
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
 import           Calamity.Types.Model.Guild.Role
 import           Calamity.Types.Model.Presence.Presence
-import {-# SOURCE #-} Calamity.Types.Model.User
+import           Calamity.Types.Model.User
 import           Calamity.Types.Model.Voice.VoiceState
-import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson

@@ -5,12 +5,10 @@ module Calamity.Types.Model.Guild.Invite
 import           Calamity.Internal.AesonThings
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild.Guild
-import {-# SOURCE #-} Calamity.Types.Model.User
-import           Calamity.Types.Partial
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
-import           Data.Vector                      ( Vector )
 
 data Invite = Invite
   { code                     :: ShortText

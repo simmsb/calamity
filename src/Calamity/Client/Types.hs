@@ -16,7 +16,6 @@ import qualified Calamity.Internal.SnowflakeMap  as SM
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
-import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
 import           Calamity.Types.UnixTimestamp

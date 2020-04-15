@@ -2,7 +2,6 @@
 module Calamity.Types.Model.Channel
     ( Channel(..)
     , Partial(PartialChannel)
-    , ChannelType
     , module Calamity.Types.Model.Channel.DM
     , module Calamity.Types.Model.Channel.Group
     , module Calamity.Types.Model.Channel.Guild
@@ -23,8 +22,6 @@ import {-# SOURCE #-} Calamity.Types.Model.Channel.Message hiding ( UpdatedMessa
 import           Calamity.Types.Model.Channel.Reaction
 import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
-
-import           Control.Monad
 
 import           Data.Aeson
 import           Data.Generics.Product.Fields

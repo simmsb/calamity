@@ -5,25 +5,20 @@ module Calamity.Types.Model.Channel.Message
     , MessageType(..) ) where
 
 import           Calamity.Internal.AesonThings
-import           Calamity.Internal.SnowflakeMap        ( SnowflakeMap )
+import           Calamity.Internal.SnowflakeMap   ( SnowflakeMap )
 import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Channel.Embed
-import           Calamity.Types.Model.Channel.Reaction
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
-import           Calamity.Types.Model.Guild.Member
 import           Calamity.Types.Model.Guild.Role
-import {-# SOURCE #-} Calamity.Types.Model.User
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Control.Monad
 
 import           Data.Aeson
-import qualified Data.Override                         as O
-import           Data.Override.Aeson                   ()
 import           Data.Scientific
 import           Data.Time
-import           Data.Vector                           ( Vector )
-import qualified Data.Vector.Unboxed                   as UV
+import           Data.Vector                      ( Vector )
+import qualified Data.Vector.Unboxed              as UV
 
 -- NOTE: make sure we fill in the guildID field when retrieving from REST
 data Message = Message

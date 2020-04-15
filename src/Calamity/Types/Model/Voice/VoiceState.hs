@@ -2,11 +2,9 @@ module Calamity.Types.Model.Voice.VoiceState
     ( VoiceState(..) ) where
 
 import           Calamity.Internal.AesonThings
-import           Calamity.Internal.SnowflakeMap
 import           Calamity.Types.Model.Channel.Guild.Voice
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
-import {-# SOURCE #-} Calamity.Types.Model.User
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson

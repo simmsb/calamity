@@ -24,7 +24,6 @@ import           Control.Lens                                ( (.=) )
 
 import           Data.Default.Class
 import           Data.Dynamic
-import           Data.Generics.Product.Subtype
 import qualified Data.HashSet                                as LS
 import           Data.HashSet.Lens
 import           Data.Maybe
@@ -366,4 +365,4 @@ updateCache (PresenceUpdate PresenceUpdateData { userID, roles, presence }) = do
 
 updateCache (UserUpdate user) = #user ?= user
 
-updateCache data' = pure () -- TODO
+updateCache _data' = pure () -- TODO

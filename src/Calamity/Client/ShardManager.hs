@@ -13,12 +13,9 @@ import           Polysemy                      ( Sem )
 import qualified Polysemy                      as P
 import qualified Polysemy.Reader               as P
 
-import qualified Protolude.Error
-
--- TODO: delete this
-aa :: Show a => Either a b -> b
-aa (Right x) = x
-aa (Left x) = Protolude.Error.error $ show x
+aa :: (Show a, Monad m) => Either a b -> m b
+aa (Right x) = pure x
+aa (Left x) = fail $ show x
 
 -- | Connects the bot to the gateway over n shards
 shardBot :: BotC r => Sem r ()
@@ -32,7 +29,7 @@ shardBot = do
   token <- P.asks Calamity.Client.Types.token
   eventQueue <- P.asks eventQueue
 
-  gateway <- aa <$> invokeRequest GetGatewayBot
+  gateway <- aa =<< invokeRequest GetGatewayBot
 
   let numShards' = gateway ^. #shards
   let host = gateway ^. #url

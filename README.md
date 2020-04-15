@@ -5,9 +5,7 @@ A discord library for haskell
 # Example
 
 ``` haskell
-import           Calamity.Client
-import           Calamity.HTTP
-import           Calamity.Types.General
+import           Calamity
 
 import           Control.Concurrent.STM.TVar
 
