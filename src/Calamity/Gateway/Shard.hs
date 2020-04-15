@@ -1,5 +1,6 @@
 -- |
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 module Calamity.Gateway.Shard
     ( Shard(..)
@@ -7,63 +8,83 @@ module Calamity.Gateway.Shard
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
-import           Calamity.Types.General
+import           Calamity.Types.Token
 
+import           Control.Concurrent.STM.TBMQueue
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Lens                          ( (.=) )
-import           Control.Monad.State.Concurrent.Strict
-import           Control.Monad.Trans.Maybe
 
-import qualified Data.Aeson                            as A
+import qualified Data.Aeson                      as A
 import           Data.Maybe
-import           Data.Text                             ( stripPrefix )
+import           Data.Text                       ( stripPrefix )
 import           Data.Text.Strict.Lens
 
-import           Network.WebSockets                    ( Connection, ConnectionException(..), receiveData, sendCloseCode
-                                                       , sendTextData )
+import           Network.WebSockets              ( Connection, ConnectionException(..), receiveData, sendCloseCode
+                                                 , sendTextData )
 
-import qualified System.Log.Simple                     as SLS
+import           Polysemy                        ( Sem )
+import qualified Polysemy                        as P
+import qualified Polysemy.Async                  as P
+import qualified Polysemy.AtomicState            as P
+import qualified Polysemy.Error                  as P
+import qualified Polysemy.Resource               as P
 
 import           Wuss
+
+data Websocket m a where
+  RunWebsocket :: Text -> Text -> (Connection -> m a) -> Websocket m a
+
+P.makeSem ''Websocket
+
+websocketToIO :: forall r a. P.Member (P.Embed IO) r => Sem (Websocket ': r) a -> Sem r a
+websocketToIO = P.interpretH
+  (\case
+     RunWebsocket host path a -> do
+       istate <- P.getInitialStateT
+       ma <- P.bindT a
+
+       P.withLowerToIO $ \lower finish -> do
+         let done :: Sem (Websocket ': r) x -> IO x
+             done = lower . P.raise . websocketToIO
+
+         runSecureClient (host ^. unpacked) 443 (path ^. unpacked)
+           (\x -> do
+              res <- done (ma $ istate $> x)
+              finish
+              pure res))
 
 newShardState :: Shard -> ShardState
 newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: Text -> Int -> Int -> Token -> Log -> TQueue DispatchData -> IO (Shard, Async ())
-newShard gateway id count token logEnv evtQueue = mdo
-  cmdQueue' <- newTQueueIO
-  stateVar <- newTVarIO (newShardState shard)
-  let shard = Shard id count gateway evtQueue cmdQueue' stateVar (rawToken token) thread'
+newShard :: P.Members '[LogEff, P.Embed IO, P.Final IO, P.Async] r
+         => Text
+         -> Int
+         -> Int
+         -> Token
+         -> TQueue DispatchData
+         -> Sem r (Shard, Async (Maybe ()))
+newShard gateway id count token evtQueue = do
+  (shard, stateVar) <- P.embed $ mdo
+    cmdQueue' <- newTQueueIO
+    stateVar <- newTVarIO (newShardState shard)
+    let shard = Shard id count gateway evtQueue cmdQueue' stateVar (rawToken token)
+    pure (shard, stateVar)
 
-  let action = component "calamity_shard" . scope ("[ShardID: " +| id |+ "]") $ shardLoop
+  let runShard = P.runAtomicStateTVar stateVar shardLoop
+  let action = attr "shard-id" id . push "calamity-shard" $ runShard
 
-  thread' <- async . runShardM shard logEnv $ action
+  thread' <- P.async action
 
   pure (shard, thread')
 
-runShardM :: Shard -> Log -> ShardM a -> IO a
-runShardM shard logEnv = evalStateC' . withLog logEnv . unShardM
-  where
-    evalStateC' s = evalStateC s (shard ^. #shardState)
-
-sendToWs :: SentDiscordMessage -> ShardM ()
+sendToWs :: ShardC r => SentDiscordMessage -> Sem r ()
 sendToWs data' = do
-  wsConn <- fromJust <$> use #wsConn
+  wsConn <- fromJust <$> P.atomicGets wsConn
   let encodedData = A.encode data'
   debug $ "sending " +|| data' ||+ " encoded to " +|| encodedData ||+ " to gateway"
-  liftIO . sendTextData wsConn $ encodedData
-  trace "done sending data"
-
-untilResult :: Monad m => m (Maybe a) -> m a
-untilResult m = m >>= \case
-  Just a  -> pure a
-  Nothing -> untilResult m
-
-fromEither :: Either a a -> a
-fromEither (Left a) = a
-fromEither (Right a) = a
+  P.embed . sendTextData wsConn $ encodedData
+  -- trace "done sending data"
 
 fromEitherVoid :: Either a Void -> a
 fromEitherVoid (Left a) = a
@@ -80,65 +101,73 @@ checkWSClose m = (Right <$> m) `catch` \case
 
   e                       -> throwIO e
 
+tryWriteTBMQueue' :: TBMQueue a -> a -> STM Bool
+tryWriteTBMQueue' q v = do
+  v' <- tryWriteTBMQueue q v
+  case v' of
+    Just False -> retry
+    Just True  -> pure True
+    Nothing    -> pure False
+
 -- | The loop a shard will run on
-shardLoop :: ShardM ()
+shardLoop :: ShardC r => Sem r ()
 shardLoop = do
-  trace "entering shardLoop"
+  -- trace "entering shardLoop"
   void outerloop
-  trace "leaving shardLoop"
+  -- trace "leaving shardLoop"
  where
-  controlStream :: Shard -> IO ShardMsg
-  controlStream shard = Control <$> (liftIO . atomically . readTQueue $ (shard ^. #cmdQueue))
+  controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
+  controlStream shard outqueue = inner
+    where
+      q = shard ^. #cmdQueue
+      inner = do
+        v <- atomically $ readTQueue q
+        r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
+        when r inner
 
-  discordStream logEnv ws = untilResult . runMaybeT $ do
-    msg <- liftIO . checkWSClose $ receiveData ws
+  discordStream :: P.Members '[LogEff, P.Embed IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
+  discordStream ws outqueue = inner
+    where inner = do
+            msg <- P.embed . checkWSClose $ receiveData ws
 
-    SLS.writeLog logEnv SLS.Trace $ "Received from stream: "+||msg||+""
+            -- trace $ "Received from stream: "+||msg||+""
 
-    case msg of
-      Left c ->
-        pure . Control $ c
+            case msg of
+              Left c ->
+                P.embed . atomically $ writeTBMQueue outqueue (Control c)
 
-      Right msg' -> do
-        let decoded = A.eitherDecode msg'
-        d <- case decoded of
-#ifndef PARSE_PRESENCES
-          -- if we're discarding presences, bin them earlier, here
-          Right (Dispatch _ (PresenceUpdate _)) ->
-            mzero
-#endif
-          Right a -> pure a
-          Left e -> do
-            SLS.writeLog logEnv SLS.Error $ "Failed to decode: "+|e|+""
-            mzero
-        pure . Discord $ d
+              Right msg' -> do
+                let decoded = A.eitherDecode msg'
+                r <- case decoded of
+                  Right a ->
+                    P.embed . atomically $ tryWriteTBMQueue' outqueue (Discord a)
+                  Left e -> do
+                    error $ "Failed to decode: "+|e|+""
+                    pure True
+                when r inner
 
-  mergedStream :: Log -> Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
-  mergedStream logEnv shard ws =
-    liftIO (fromEither <$> race (controlStream shard) (discordStream logEnv ws))
+  -- mergedStream ::  Log -> Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
+  -- mergedStream logEnv shard ws =
+  --   liftIO (fromEither <$> race (controlStream shard) (discordStream logEnv ws))
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
   -- Currently if this goes to the error path we just exit the forever loop
   -- and the shard stops, maybe we might want to do some extra logic to reboot
   -- the shard, or maybe force a resharding
-  outerloop :: ShardM (Either ShardException ())
-  outerloop = runExceptT . forever $ do
-    shard <- use #shardS
+  outerloop :: ShardC r => Sem r (Either ShardException ())
+  outerloop = P.runError . forever $ do
+    shard :: Shard <- P.atomicGets (^. #shardS)
     let host = shard ^. #gateway
     let host' =  fromMaybe host $ stripPrefix "wss://" host
     info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
 
-    logEnv <- askLog
 
-    innerLoopVal <- liftIO $ runSecureClient (host' ^. unpacked)
-                    443
-                    "/?v=7&encoding=json"
-                    (runShardM shard logEnv . innerloop)
+    innerLoopVal <- websocketToIO $ runWebsocket host' "/?v=7&encoding=json" innerloop
 
     case innerLoopVal of
       ShardExcShutDown -> do
         info "Shutting down shard"
-        throwE ShardExcShutDown
+        P.throw ShardExcShutDown
 
       ShardExcRestart ->
         info "Restaring shard"
@@ -146,15 +175,15 @@ shardLoop = do
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- and then decides what to do with it
-  innerloop :: Connection -> ShardM ShardException
+  innerloop :: ShardC r => Connection -> Sem r ShardException
   innerloop ws = do
-    trace "Entering inner loop of shard"
+    debug "Entering inner loop of shard"
 
-    shard <- use #shardS
-    #wsConn ?= ws
+    shard <- P.atomicGets (^. #shardS)
+    P.atomicModify (#wsConn ?~ ws)
 
-    seqNum'    <- use #seqNum
-    sessionID' <- use #sessionID
+    seqNum'    <- P.atomicGets (^. #seqNum)
+    sessionID' <- P.atomicGets (^. #sessionID)
 
     case (seqNum', sessionID') of
       (Just n, Just s) -> do
@@ -179,98 +208,101 @@ shardLoop = do
                   , presence = Nothing
                   })
 
-    logEnv <- askLog
-    result <- runExceptT . forever $ (mergedStream logEnv shard ws >>= handleMsg)
+    result <- P.runResource $ P.bracket (P.embed $ newTBMQueueIO 1)
+      (\q -> P.embed . atomically $ closeTBMQueue q)
+      (\q -> do
+        debug "handling events now"
+        _controlThread <- P.async . P.embed $ controlStream shard q
+        _discordThread <- P.async $ discordStream ws q
+        (fromEitherVoid <$>) . P.raise . P.runError . forever $ do
+          -- only we close the queue
+          msg <- P.embed . atomically $ readTBMQueue q
+          handleMsg $ fromJust msg)
 
     debug "Exiting inner loop of shard"
 
-    #wsConn .= Nothing
-    pure . fromEitherVoid $ result
+    P.atomicModify (#wsConn .~ Nothing)
+    pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
-  handleMsg :: ShardMsg -> ExceptT ShardException ShardM ()
+  handleMsg :: (ShardC r, P.Member (P.Error ShardException) r) => ShardMsg -> Sem r ()
   handleMsg (Discord msg) = case msg of
-    Dispatch seqNum data' -> do
-      trace $ "Handling event: ("+||data'||+")"
-      #seqNum ?= seqNum
+    Dispatch sn data' -> do
+      -- trace $ "Handling event: ("+||data'||+")"
+      P.atomicModify (#seqNum ?~ sn)
 
       case data' of
         Ready rdata' ->
-          #sessionID ?= (rdata' ^. #sessionID)
+          P.atomicModify (#sessionID ?~ (rdata' ^. #sessionID))
 
         _ -> pure ()
 
-      shard <- lift $ use #shardS
-      liftIO . atomically $ writeTQueue (shard ^. #evtQueue) data'
-      seqNum' <- use #seqNum
-      trace $ "Done handling event, seq is now: "+||seqNum'||+""
+      shard <- P.atomicGets (^. #shardS)
+      P.embed . atomically $ writeTQueue (shard ^. #evtQueue) data'
+      -- sn' <- P.atomicGets (^. #seqNum)
+      -- trace $ "Done handling event, seq is now: "+||sn'||+""
 
     HeartBeatReq -> do
       debug "Received heartbeat request"
-      lift sendHeartBeat
+      sendHeartBeat
 
     Reconnect -> do
       debug "Being asked to restart by Discord"
-      throwE ShardExcRestart
+      P.throw ShardExcRestart
 
     InvalidSession resumable -> do
       if resumable
       then do
         info "Received non-resumable invalid session, sleeping for 15 seconds then retrying"
-        #sessionID .= Nothing
-        #seqNum .= Nothing
-        liftIO $ threadDelay 1500000
+        P.atomicModify (#sessionID .~ Nothing)
+        P.atomicModify (#seqNum .~ Nothing)
+        P.embed $ threadDelay (15 * 1000 * 1000)
       else
         info "Received resumable invalid session"
-      throwE ShardExcRestart
+      P.throw ShardExcRestart
 
     Hello interval -> do
       info $ "Received hello, beginning to heartbeat at an interval of "+|interval|+"ms"
-      lift $ startHeartBeatLoop interval
+      startHeartBeatLoop interval
 
     HeartBeatAck -> do
       debug "Received heartbeat ack"
-      lift $ #hbResponse .= True
+      P.atomicModify (#hbResponse .~ True)
 
   handleMsg (Control msg) = case msg of
     SendPresence data' -> do
       debug $ "Sending presence: ("+||data'||+")"
-      lift . sendToWs $ StatusUpdate data'
+      sendToWs $ StatusUpdate data'
 
-    Restart            -> throwE ShardExcRestart
-    ShutDown           -> throwE ShardExcShutDown
+    Restart            -> P.throw ShardExcRestart
+    ShutDown           -> P.throw ShardExcShutDown
 
-startHeartBeatLoop :: Int -> ShardM ()
+startHeartBeatLoop :: ShardC r => Int -> Sem r ()
 startHeartBeatLoop interval = do
   haltHeartBeat -- cancel any currently running hb thread
-  shard <- use #shardS
-  logEnv <- askLog
-  -- TODO: we need to send a close to the ws depending on how we exited from the hb loop
-  void . liftIO . async $ finally (runShardM shard logEnv $ heartBeatLoop interval)
-    (runShardM shard logEnv haltHeartBeat)
+  void . P.async $ heartBeatLoop interval
 
-haltHeartBeat :: ShardM ()
+haltHeartBeat :: ShardC r => Sem r ()
 haltHeartBeat = do
-  thread <- use #hbThread
+  thread <- P.atomicGets (^. #hbThread)
   case thread of
-    Just t  -> liftIO $ cancel t $> ()
+    Just t  -> P.embed (void $ cancel t)
     Nothing -> pure ()
-  #hbThread .= Nothing
+  P.atomicModify (#hbThread .~ Nothing)
 
-sendHeartBeat :: ShardM ()
+sendHeartBeat :: ShardC r => Sem r ()
 sendHeartBeat = do
-  seqNum <- use #seqNum
-  debug $ "Sending heartbeat (seq: " +|| seqNum ||+ ")"
-  sendToWs $ HeartBeat seqNum
-  #hbResponse .= False
+  sn <- P.atomicGets (^. #seqNum)
+  debug $ "Sending heartbeat (seq: " +|| sn ||+ ")"
+  sendToWs $ HeartBeat sn
+  P.atomicModify (#hbResponse .~ False)
 
-heartBeatLoop :: Int -> ShardM ()
-heartBeatLoop interval = ($> ()) . runMaybeT . forever $ do
-  lift sendHeartBeat
-  liftIO . threadDelay $ interval * 1000
-  hasResp <- use #hbResponse
-  unless hasResp $ do
+heartBeatLoop :: ShardC r => Int -> Sem r ()
+heartBeatLoop interval = void . P.runError . forever $ do
+  sendHeartBeat
+  P.embed . threadDelay $ interval * 1000
+  unlessM (P.atomicGets (^. #hbResponse)) $ do
     debug "No heartbeat response, restarting shard"
-    wsConn <- fromJust <$> use #wsConn
-    liftIO $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: Text)
-    mzero -- exit the loop, we had no response
+    wsConn <- fromJust <$> P.atomicGets (^. #wsConn)
+    P.embed $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: Text)
+    P.throw ()

@@ -1,6 +1,8 @@
 module Calamity
-    ( someFunc
-    ) where
+    ( module Calamity.Client
+    , module Calamity.HTTP
+    , module Calamity.Types ) where
 
-someFunc :: IO ()
-someFunc = putStr ("someFunc" :: Text)
+import           Calamity.Client
+import           Calamity.HTTP
+import           Calamity.Types

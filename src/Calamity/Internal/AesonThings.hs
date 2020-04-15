@@ -1,9 +1,10 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
-module Calamity.Types.AesonThings
+module Calamity.Internal.AesonThings
     ( WithSpecialCases
     , WithSpecialCasesInner(..)
     , type IfNoneThen
+    , type ExtractField
     , type InjectID
     , SpecialRule
     , DefaultToEmptyArray
@@ -38,10 +39,14 @@ data SpecialRule (label :: Symbol) (action :: SpecialRuleAction)
 
 data SpecialRuleAction
   = forall d. IfNoneThen d
+  | forall field. ExtractField field
   | forall mn idn. InjectID idn mn
 
 type IfNoneThen label d =
   SpecialRule label ('IfNoneThen d)
+
+type ExtractField label field =
+  SpecialRule label ('ExtractField field)
 
 type InjectID label mn idn =
   SpecialRule label ('InjectID mn idn)
@@ -52,6 +57,11 @@ class PerformAction (action :: SpecialRuleAction) where
 instance Reifies d Value => PerformAction ('IfNoneThen d) where
   runAction _ Null = pure $ reflect @d Proxy
   runAction _ x = pure x
+
+instance (KnownSymbol field) => PerformAction ('ExtractField field) where
+  runAction _ Null = pure Null
+  runAction _ o = withObject (("extracting field " <> textSymbolVal @field Proxy) ^. unpacked)
+    (.: textSymbolVal @field Proxy) o
 
 instance (KnownSymbol idn, KnownSymbol mn) => PerformAction ('InjectID idn mn) where
   runAction _ = withObject
@@ -106,7 +116,6 @@ data DefaultToFalse
 
 instance Reifies DefaultToFalse Value where
   reflect _ = Bool False
-
 
 newtype CalamityJSON a = CalamityJSON
   { unCalamityJSON :: a

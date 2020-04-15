@@ -1,10 +1,11 @@
 -- | Emoji endpoints
 module Calamity.HTTP.Emoji
-  ( EmojiRequest(..) ) where
+    ( EmojiRequest(..) ) where
 
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
-import           Calamity.Types.General
+import           Calamity.Internal.AesonThings
+import           Calamity.Types.Model.Guild
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson

@@ -4,8 +4,10 @@ module Calamity.HTTP.Guild
 
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
-import           Calamity.Types.General
-import           Calamity.Types.Partial
+import           Calamity.Internal.AesonThings
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson

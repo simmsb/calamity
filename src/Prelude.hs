@@ -4,55 +4,38 @@
 module Prelude
     ( module Protolude
     , module Control.Lens
-    , module System.Log.Simple
     , module Fmt
     , module Data.Aeson.Lens
     , module Control.Arrow
     , module Data.Text.Short
     , module Data.Semigroup
-    , module Calamity.Types.AesonThings
-    , LogMessage
+    , module Calamity.LogEff
+    , module DiPolysemy
+    , whenJust
+    , lastMaybe
     , debug
     , info
-    , warning
-    , error
-    , fatal
-    , trace
-    , whenJust
-    , lastMaybe ) where
+    , error ) where
 
-import           Control.Arrow     ( (>>>) )
-import           Control.Lens      hiding ( (.=), (<.>), Level, Strict, from, op, to, uncons, unsnoc )
+import           Calamity.LogEff
 
-import           Data.Aeson        hiding ( Error )
+import           Control.Arrow              ( (>>>) )
+import           Control.Lens               hiding ( (.=), (<.>), Level, Strict, from, op, to, uncons, unsnoc )
+
+import           Data.Aeson                 hiding ( Error )
 import           Data.Aeson.Lens
-import           Data.Semigroup    ( Last(..) )
-import qualified Data.Text.Short   as ST
-import           Data.Text.Short   ( ShortText )
+import           Data.Semigroup             ( Last(..) )
+import qualified Data.Text.Short            as ST
+import           Data.Text.Short            ( ShortText )
+
+import           DiPolysemy                 hiding ( debug, info, error )
+import qualified DiPolysemy                 as Di
 
 import           Fmt
 
-import           Protolude         hiding ( HasField, Last, getField, getLast, trace )
+import qualified Polysemy                   as P
 
-import           System.Log.Simple hiding ( Debug, Error, Fatal, Info, Message, Trace, Warning, trace )
-import qualified System.Log.Simple as SLS
-
-import           Calamity.Types.AesonThings
-
-type LogMessage = SLS.Message
-
-debug, info, warning, error, fatal, trace :: MonadLog m => Text -> m ()
-debug = sendLog SLS.Debug
-
-info = sendLog SLS.Info
-
-warning = sendLog SLS.Warning
-
-error = sendLog SLS.Error
-
-fatal = sendLog SLS.Fatal
-
-trace = sendLog SLS.Trace
+import           Protolude                  hiding ( HasField, Last, getField, getLast, log, trace )
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
@@ -67,3 +50,12 @@ instance ToJSON ShortText where
 
 lastMaybe :: Maybe a -> Maybe a -> Maybe a
 lastMaybe l r = getLast <$> fmap Last l <> fmap Last r
+
+debug :: P.Member LogEff r => Text -> P.Sem r ()
+debug = Di.debug
+
+info :: P.Member LogEff r => Text -> P.Sem r ()
+info = Di.info
+
+error :: P.Member LogEff r => Text -> P.Sem r ()
+error = Di.error

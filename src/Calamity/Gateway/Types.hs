@@ -4,7 +4,9 @@
 module Calamity.Gateway.Types where
 
 import           Calamity.Gateway.DispatchEvents
-import           Calamity.Types.General
+import           Calamity.Internal.AesonThings
+import           Calamity.Types.Model.Guild.Guild
+import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
 
 -- ( Shard(..)
@@ -17,14 +19,17 @@ import           Calamity.Types.Snowflake
 -- )
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad.Catch
-import           Control.Monad.State.Concurrent.Strict
+import           Control.Monad                    ( fail )
 
 import           Data.Aeson
-import qualified Data.Aeson.Types                      as AT
-import           Data.Generics.Labels                  ()
+import qualified Data.Aeson.Types                 as AT
+import           Data.Generics.Labels             ()
 
-import           Network.WebSockets.Connection         ( Connection )
+import           Network.WebSockets.Connection    ( Connection )
+
+import qualified Polysemy                         as P
+import qualified Polysemy.Async                   as P
+import qualified Polysemy.AtomicState             as P
 
 data ShardMsg
   = Discord ReceivedDiscordMessage
@@ -91,11 +96,7 @@ parseDispatchData MESSAGE_DELETE_BULK data' = MessageDeleteBulk <$> parseJSON da
 parseDispatchData MESSAGE_REACTION_ADD data' = MessageReactionAdd <$> parseJSON data'
 parseDispatchData MESSAGE_REACTION_REMOVE data' = MessageReactionRemove <$> parseJSON data'
 parseDispatchData MESSAGE_REACTION_REMOVE_ALL data' = MessageReactionRemoveAll <$> parseJSON data'
-#ifdef PARSE_PRESENCES
 parseDispatchData PRESENCE_UPDATE data' = PresenceUpdate <$> parseJSON data'
-#else
-parseDispatchData PRESENCE_UPDATE data' = pure $ PresenceUpdate data'
-#endif
 parseDispatchData TYPING_START data' = TypingStart <$> parseJSON data'
 parseDispatchData USER_UPDATE data' = UserUpdate <$> parseJSON data'
 parseDispatchData VOICE_STATE_UPDATE data' = VoiceStateUpdate <$> parseJSON data'
@@ -230,14 +231,13 @@ data Shard = Shard
   , cmdQueue    :: TQueue ControlMessage
   , shardState  :: TVar ShardState
   , token       :: Text
-  , shardThread :: Async ()
   }
   deriving ( Generic )
 
 data ShardState = ShardState
   { shardS     :: Shard
   , seqNum     :: Maybe Int
-  , hbThread   :: Maybe (Async ())
+  , hbThread   :: Maybe (Async (Maybe ()))
   , hbResponse :: Bool
   , wsHost     :: Maybe Text
   , sessionID  :: Maybe Text
@@ -245,10 +245,4 @@ data ShardState = ShardState
   }
   deriving ( Generic )
 
-newtype ShardM a = ShardM
-  { unShardM :: LogT (StateC ShardState IO) a
-  }
-  deriving ( Functor )
-  deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadState ShardState )
-
-deriving newtype instance MonadState s m => MonadState s (LogT m)
+type ShardC r = (LogC r, P.Members '[P.AtomicState ShardState, P.Embed IO, P.Final IO, P.Async] r)

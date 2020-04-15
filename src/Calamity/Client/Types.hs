@@ -1,190 +1,141 @@
 -- | Types for the client
-{-# LANGUAGE TypeApplications #-}
-
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 module Calamity.Client.Types
     ( Client(..)
-    , BotM(..)
-    , EventHandlers(..)
-    , EventHandler(..)
-    , EHType
-    , runBotM
-    , EventM
-    , runEventM
-    , runEventMCurrent
-    , syncEventM
     , Cache(..)
-    , HandlersM(..)
-    , HasClient(..)
-    ) where
+    , BotC
+    , EHType
+    , EHType'
+    , EventHandlers(..)
+    , EventHandler(..) ) where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
-import           Calamity.HTTP.Internal.Ratelimit
-import           Calamity.Types.General
-import           Calamity.Types.MessageStore
-import qualified Calamity.Types.RefCountedSnowflakeMap as RSM
+import           Calamity.HTTP.Internal.Types
+import           Calamity.Internal.MessageStore
+import qualified Calamity.Internal.SnowflakeMap  as SM
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap           as SM
+import           Calamity.Types.Token
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Monad.Catch
-import           Control.Monad.Fail
-import           Control.Monad.Trans.Reader            ( runReaderT )
-import           Control.Monad.Writer.Lazy
 
-import           Data.Default
-import qualified Data.HashSet                          as LS
-import           Data.String                           ( String )
-import           Data.Text.Strict.Lens
+import           Data.Default.Class
+import           Data.Dynamic
+import qualified Data.HashSet                    as LS
 import           Data.Time
-import qualified Data.TypeRepMap                       as TM
-import           Data.TypeRepMap                       ( TypeRepMap, WrapTypeable(..) )
+import qualified Data.TypeRepMap                 as TM
+import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) )
 
-import           GHC.Exts                              ( fromList )
-import qualified GHC.TypeLits                          as TL
+import           GHC.Exts                        ( fromList )
+import qualified GHC.TypeLits                    as TL
 
-import qualified StmContainers.Set                     as TS
+import qualified Polysemy                        as P
+import qualified Polysemy.Async                  as P
+import qualified Polysemy.AtomicState            as P
+import qualified Polysemy.Reader                 as P
 
-import qualified Streamly                              as S
+import qualified StmContainers.Set               as TS
+
 
 data Cache = Cache
   { user              :: Maybe User
   , guilds            :: SM.SnowflakeMap Guild
   , dms               :: SM.SnowflakeMap DMChannel
-  , channels          :: SM.SnowflakeMap Channel
-  , users             :: RSM.RefCountedSnowflakeMap User
+  , channels          :: SM.SnowflakeMap GuildChannel
+  , users             :: SM.SnowflakeMap User
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
   , messages          :: MessageStore
   }
   deriving ( Generic, Show )
 
 data Client = Client
-  { shards        :: TVar [(Shard, Async ())] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
+  { shards        :: TVar [(Shard, Async (Maybe ()))] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
   , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState
-  , eventStream   :: S.Serial DispatchData
-  , eventQueue    :: TQueue DispatchData -- ^ for shards to take
+  , eventQueue    :: TQueue DispatchData
   , cache         :: TVar Cache
   , activeTasks   :: TS.Set (Async ()) -- ^ events currently being handled
-  , eventHandlers :: EventHandlers
   }
   deriving ( Generic )
 
-newtype BotM a = BotM
-  { unBotM :: LogT (ReaderT Client IO) a
-  }
-  deriving ( Functor )
-  deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadReader Client )
+type BotC r = (LogC r, P.Members '[P.Reader Client, P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r, Typeable r)
 
--- | Let's us have `MonadReader Client`
-instance {-# OVERLAPPABLE #-}MonadReader a m => MonadReader a (LogT m) where
-  ask = lift ask
-
-  local f m = do
-    b <- ask
-    lift . local f $ runReaderT (runLogT m) b
-
-
-runBotM :: Client -> Log -> BotM a -> IO a
-runBotM cstate logEnv = (`runReaderT` cstate) . withLog logEnv . unBotM
-
--- | EventM is an event handler that contains a snapshot of the cache state
--- At the time of the invokation
-newtype EventM a = EventM
-  { unEventM :: ExceptT String (StateT Cache BotM) a
-  }
-  deriving ( Functor )
-  deriving newtype ( Applicative, Monad, MonadIO, MonadThrow, MonadCatch, MonadMask, MonadLog, MonadState Cache
-                   , MonadReader Client )
-
-instance MonadFail EventM where
-  fail str = EventM $ throwE str
-
-runEventM :: Cache -> EventM a -> BotM ()
-runEventM cache e = do
-  r <- (`evalStateT` cache) . runExceptT . unEventM $ e
-  case r of
-    Left e ->
-      error $ e ^. packed
-    _ -> pure ()
-
-runEventMCurrent :: EventM a -> BotM ()
-runEventMCurrent e = do
-  client <- ask
-  cache <- liftIO . readTVarIO . cache $ client
-  runEventM cache e
-
--- | Sync the internal cache of an EventM
-syncEventM :: EventM ()
-syncEventM = do
-  client <- ask
-  cache <- liftIO . readTVarIO . cache $ client
-  put cache
-
-class (Functor m) => HasClient m where
-  getClient :: m Client
-
-  asksClient :: (Client -> a) -> m a
-  asksClient = (<$> getClient)
-
-instance HasClient EventM where
-  getClient = ask
-
-instance HasClient BotM where
-  getClient = ask
-
-newtype HandlersM a = HandlersM
-  { unHandlersM :: Writer EventHandlers a
-  }
-  deriving ( Functor )
-  deriving newtype ( Monad, Applicative, MonadWriter EventHandlers )
-
-newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
-
-newtype EventHandler d = EH
-  { unwrapEventHandler :: [EHType d]
-  }
-  deriving newtype ( Semigroup, Monoid )
-
-type family EHType d where
-  EHType "ready"                    = ReadyData                          -> EventM ()
-  EHType "channelcreate"            = Channel                            -> EventM ()
-  EHType "channelupdate"            = Channel -> Channel                 -> EventM ()
-  EHType "channeldelete"            = Channel                            -> EventM ()
-  EHType "channelpinsupdate"        = Channel -> Maybe UTCTime           -> EventM ()
-  EHType "guildcreate"              = Guild -> Bool                      -> EventM ()
-  EHType "guildupdate"              = Guild -> Guild                     -> EventM ()
-  EHType "guilddelete"              = Guild -> Bool                      -> EventM ()
-  EHType "guildbanadd"              = Guild -> User                      -> EventM ()
-  EHType "guildbanremove"           = Guild -> User                      -> EventM ()
-  EHType "guildemojisupdate"        = Guild -> [Emoji]                   -> EventM ()
-  EHType "guildintegrationsupdate"  = Guild                              -> EventM ()
-  EHType "guildmemberadd"           = Member                             -> EventM ()
-  EHType "guildmemberremove"        = Member                             -> EventM ()
-  EHType "guildmemberupdate"        = Member -> Member                   -> EventM ()
-  EHType "guildmemberschunk"        = Guild -> [Member]                  -> EventM ()
-  EHType "guildrolecreate"          = Guild -> Role                      -> EventM ()
-  EHType "guildroleupdate"          = Guild -> Role -> Role              -> EventM ()
-  EHType "guildroledelete"          = Guild -> Role                      -> EventM ()
-  EHType "messagecreate"            = Message                            -> EventM ()
-  EHType "messageupdate"            = Message -> Message                 -> EventM ()
-  EHType "messagedelete"            = Message                            -> EventM ()
-  EHType "messagedeletebulk"        = [Message]                          -> EventM ()
-  EHType "messagereactionadd"       = Message -> Reaction                -> EventM ()
-  EHType "messagereactionremove"    = Message -> Reaction                -> EventM ()
-  EHType "messagereactionremoveall" = Message                            -> EventM ()
-  EHType "typingstart"              = Channel -> Member -> UnixTimestamp -> EventM ()
-  EHType "userupdate"               = User -> User                       -> EventM ()
-  EHType _ = TL.TypeError ('TL.Text "Unknown event name")
+type family EHType d m where
+  EHType "ready"                    m = ReadyData -> Cache                                   -> m ()
+  EHType "channelcreate"            m = Channel   -> Cache                                   -> m ()
+  EHType "channelupdate"            m = Channel   -> Channel       -> Cache                  -> m ()
+  EHType "channeldelete"            m = Channel   -> Cache                                   -> m ()
+  EHType "channelpinsupdate"        m = Channel   -> Maybe UTCTime -> Cache                  -> m ()
+  EHType "guildcreate"              m = Guild     -> Bool          -> Cache                  -> m ()
+  EHType "guildupdate"              m = Guild     -> Guild         -> Cache                  -> m ()
+  EHType "guilddelete"              m = Guild     -> Bool          -> Cache                  -> m ()
+  EHType "guildbanadd"              m = Guild     -> User          -> Cache                  -> m ()
+  EHType "guildbanremove"           m = Guild     -> User          -> Cache                  -> m ()
+  EHType "guildemojisupdate"        m = Guild     -> [Emoji]       -> Cache                  -> m ()
+  EHType "guildintegrationsupdate"  m = Guild     -> Cache                                   -> m ()
+  EHType "guildmemberadd"           m = Member    -> Cache                                   -> m ()
+  EHType "guildmemberremove"        m = Member    -> Cache                                   -> m ()
+  EHType "guildmemberupdate"        m = Member    -> Member        -> Cache                  -> m ()
+  EHType "guildmemberschunk"        m = Guild     -> [Member]      -> Cache                  -> m ()
+  EHType "guildrolecreate"          m = Guild     -> Role          -> Cache                  -> m ()
+  EHType "guildroleupdate"          m = Guild     -> Role          -> Role          -> Cache -> m ()
+  EHType "guildroledelete"          m = Guild     -> Role          -> Cache                  -> m ()
+  EHType "messagecreate"            m = Message   -> Cache                                   -> m ()
+  EHType "messageupdate"            m = Message   -> Message       -> Cache                  -> m ()
+  EHType "messagedelete"            m = Message   -> Cache                                   -> m ()
+  EHType "messagedeletebulk"        m = [Message] -> Cache                                   -> m ()
+  EHType "messagereactionadd"       m = Message   -> Reaction      -> Cache                  -> m ()
+  EHType "messagereactionremove"    m = Message   -> Reaction      -> Cache                  -> m ()
+  EHType "messagereactionremoveall" m = Message   -> Cache                                   -> m ()
+  EHType "typingstart"              m = Channel   -> Maybe Member  -> UnixTimestamp -> Cache -> m ()
+  EHType "userupdate"               m = User      -> User          -> Cache                  -> m ()
+  EHType s _ = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
   -- EHType "voicestateupdate"         = VoiceStateUpdateData -> EventM ()
   -- EHType "voiceserverupdate"        = VoiceServerUpdateData -> EventM ()
   -- EHType "webhooksupdate"           = WebhooksUpdateData -> EventM ()
 
+type family EHType' d where
+  EHType' "ready"                    = Dynamic
+  EHType' "channelcreate"            = Dynamic
+  EHType' "channelupdate"            = Dynamic
+  EHType' "channeldelete"            = Dynamic
+  EHType' "channelpinsupdate"        = Dynamic
+  EHType' "guildcreate"              = Dynamic
+  EHType' "guildupdate"              = Dynamic
+  EHType' "guilddelete"              = Dynamic
+  EHType' "guildbanadd"              = Dynamic
+  EHType' "guildbanremove"           = Dynamic
+  EHType' "guildemojisupdate"        = Dynamic
+  EHType' "guildintegrationsupdate"  = Dynamic
+  EHType' "guildmemberadd"           = Dynamic
+  EHType' "guildmemberremove"        = Dynamic
+  EHType' "guildmemberupdate"        = Dynamic
+  EHType' "guildmemberschunk"        = Dynamic
+  EHType' "guildrolecreate"          = Dynamic
+  EHType' "guildroleupdate"          = Dynamic
+  EHType' "guildroledelete"          = Dynamic
+  EHType' "messagecreate"            = Dynamic
+  EHType' "messageupdate"            = Dynamic
+  EHType' "messagedelete"            = Dynamic
+  EHType' "messagedeletebulk"        = Dynamic
+  EHType' "messagereactionadd"       = Dynamic
+  EHType' "messagereactionremove"    = Dynamic
+  EHType' "messagereactionremoveall" = Dynamic
+  EHType' "typingstart"              = Dynamic
+  EHType' "userupdate"               = Dynamic
+  EHType' s = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
+
+newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
+
+newtype EventHandler d = EH
+  { unwrapEventHandler :: [EHType' d]
+  }
+  deriving newtype ( Semigroup, Monoid )
 
 instance Default EventHandlers where
   def = EventHandlers $ fromList [ WrapTypeable $ EH @"ready" []
@@ -214,9 +165,9 @@ instance Default EventHandlers where
                                  , WrapTypeable $ EH @"messagereactionremoveall" []
                                  , WrapTypeable $ EH @"typingstart" []
                                  , WrapTypeable $ EH @"userupdate" []
-                                 -- , WrapTypeable $ EH @"voicestateupdate" []
-                                 -- , WrapTypeable $ EH @"voiceserverupdate" []
-                                 -- , WrapTypeable $ EH @"webhooksupdate" []
+                                 -- , WrapTypeable $ EH m @"voicestateupdate" []
+                                 -- , WrapTypeable $ EH m @"voiceserverupdate" []
+                                 -- , WrapTypeable $ EH m @"webhooksupdate" []
                                  ]
 
 instance Semigroup EventHandlers where

@@ -1,154 +1,152 @@
 -- | The client
 module Calamity.Client.Client
     ( Client(..)
-    , BotM
-    , EventM
-    , HandlersM
-    , newClient
     , react
-    , withHandlers
-    , runWithHandlers
-    , clientLoop
-    , startClient ) where
+    , runBotIO ) where
 
 import           Calamity.Client.ShardManager
 import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.HTTP.Internal.Ratelimit
-import           Calamity.Types.General
-import           Calamity.Types.MessageStore
-import qualified Calamity.Types.RefCountedSnowflakeMap as RSM
+import           Calamity.Internal.MessageStore
+import qualified Calamity.Internal.SnowflakeMap              as SM
+import           Calamity.Internal.Updateable
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild.Guild
+import           Calamity.Types.Model.Guild.UnavailableGuild
+import           Calamity.Types.Model.Presence               ( Presence(..) )
 import           Calamity.Types.Snowflake
-import qualified Calamity.Types.SnowflakeMap           as SM
-import           Calamity.Types.Updateable
+import           Calamity.Types.Token
 
-import           Control.Concurrent.Async              ( forConcurrently_ )
+import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Lens                          ( (.=) )
-import           Control.Monad.Writer.Lazy
+import           Control.Lens                                ( (.=) )
 
-import           Data.Default
-import qualified Data.HashSet                          as LS
+import           Data.Default.Class
+import           Data.Dynamic
+import qualified Data.HashSet                                as LS
 import           Data.HashSet.Lens
 import           Data.Maybe
-import qualified Data.TypeRepMap                       as TM
-import qualified Data.Vector                           as V
+import qualified Data.TypeRepMap                             as TM
+import qualified Data.Vector                                 as V
 
-import qualified StmContainers.Set                     as TS
+import qualified DiPolysemy                                  as Di
 
-import qualified Streamly.Prelude                      as S
+import           Polysemy                                    ( Sem )
+import qualified Polysemy                                    as P
+import qualified Polysemy.Async                              as P
+import qualified Polysemy.AtomicState                        as P
+import qualified Polysemy.Reader                             as P
 
-import qualified System.Log.Simple                     as SLS
-
+import qualified StmContainers.Set                           as TS
 
 newClient :: Token -> IO Client
 newClient token = do
-  shards'                     <- newTVarIO []
-  numShards'                  <- newEmptyMVar
-  rlState'                    <- newRateLimitState
-  (eventStream', eventQueue') <- mkQueueRecvStream
-  cache'                      <- newTVarIO emptyCache
-  activeTasks'                <- TS.newIO
+  shards'        <- newTVarIO []
+  numShards'     <- newEmptyMVar
+  rlState'       <- newRateLimitState
+  eventQueue'    <- newTQueueIO
+  cache'         <- newTVarIO emptyCache
+  activeTasks'   <- TS.newIO
 
   pure $ Client shards'
                 numShards'
                 token
                 rlState'
-                eventStream'
                 eventQueue'
                 cache'
                 activeTasks'
-                def
 
--- TODO: user & bot logins
--- TODO: more login types
+type SetupEff r = Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
 
-startClient :: Client -> IO ()
-startClient client = do
-  logEnv <- newLog
-    (logCfg [("", SLS.Info), ("calamity", SLS.Info), ("calamity_shard", SLS.Info), ("calamity_cache_log", SLS.Info)])
-    [handler text coloredConsole]
-  runBotM client logEnv . component "calamity" $ do
+runBotIO :: (P.Members '[P.Embed IO, P.Final IO] r, Typeable r) => Token -> SetupEff r -> Sem r ()
+runBotIO token setup = do
+  client <- P.embed $ newClient token
+  handlers <- P.embed $ newTVarIO def
+  P.asyncToIO . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO $ do
+    setup
     shardBot
     clientLoop
 
-react :: forall (s :: Symbol). KnownSymbol s => EHType s -> HandlersM ()
-react f = tell . EventHandlers . TM.one $ EH @s [f]
-
-withHandlers :: HandlersM () -> Client -> Client
-withHandlers (HandlersM h) c@Client { eventHandlers } = c { eventHandlers = eventHandlers <> execWriter h }
-
-runWithHandlers :: Token -> HandlersM () -> IO ()
-runWithHandlers token h = do
-  client <- withHandlers h <$> newClient token
-  startClient client
+react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r, EHType' s ~ Dynamic, Typeable (EHType s (Sem r))) => EHType s (Sem r) -> Sem r ()
+react f =
+  let handlers = EventHandlers . TM.one $ EH @s [toDyn f]
+  in P.atomicModify (handlers <>)
 
 emptyCache :: Cache
-emptyCache = Cache Nothing SM.empty SM.empty SM.empty RSM.empty LS.empty def
+emptyCache = Cache Nothing SM.empty SM.empty SM.empty SM.empty LS.empty def
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
-clientLoop :: BotM ()
+clientLoop :: BotC r => Sem r ()
 clientLoop = do
-  evtStream <- asks eventStream
-  client' <- ask
-  logEnv' <- askLog
-  trace "entering clientLoop"
-  liftIO $ S.mapM_ (runBotM client' logEnv' . handleEvent) evtStream
-  trace "exiting clientLoop"
+  evtQueue <- P.asks eventQueue
+  forever $ do
+    evt <- P.embed . atomically $ readTQueue evtQueue
+    handleEvent evt
 
-handleEvent :: DispatchData -> BotM ()
+handleEvent :: BotC r => DispatchData -> Sem r ()
 handleEvent data' = do
-  trace "handling an event"
-  cache' <- asks cache
-  (oldCache, newCache) <- liftIO . atomically $ do
+  debug "handling an event"
+  cache' <- P.asks cache
+  (oldCache, newCache) <- P.embed . atomically $ do
     oldCache <- readTVar cache'
     let newCache = execState (updateCache data') oldCache
     writeTVar cache' newCache
     pure (oldCache, newCache)
 
   runEventHandlers oldCache newCache data'
-  component "calamity_cache_log" $ do
-    trace $ "finished handling an event, new cache is: " <> show newCache
 
-runEventHandlers :: Cache -> Cache -> DispatchData -> BotM ()
+runEventHandlers :: BotC r => Cache -> Cache -> DispatchData -> Sem r ()
 runEventHandlers oldCache newCache data' = do
-  eventHandlers <- asks eventHandlers
-  client' <- ask
-  logEnv' <- askLog
+  eventHandlers <- P.atomicGet
   let actionHandlers = handleActions oldCache newCache eventHandlers data'
   case actionHandlers of
-    Just actions -> liftIO
-      $ forConcurrently_ actions (runBotM client' logEnv' . runEventM newCache)
+    Just actions -> for_ actions $ \action -> P.async $ action newCache
     Nothing
       -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
 
-unwrapEvent :: forall a. KnownSymbol a => EventHandlers -> [EHType a]
-unwrapEvent (EventHandlers eh) = unwrapEventHandler . fromJust $ (TM.lookup eh :: Maybe (EventHandler a))
+unwrapEvent :: forall s r. (KnownSymbol s, EHType' s ~ Dynamic, Typeable (EHType s (Sem r))) => EventHandlers -> [EHType s (Sem r)]
+unwrapEvent (EventHandlers eh) = map (fromJust . fromDynamic) . unwrapEventHandler @s . fromJust $ (TM.lookup eh :: Maybe (EventHandler s))
 
-handleActions :: Cache -- ^ The old cache
+handleActions :: BotC r
+              => Cache -- ^ The old cache
               -> Cache -- ^ The new cache
               -> EventHandlers
               -> DispatchData
-              -> Maybe [EventM ()]
+              -> Maybe [Cache -> Sem r ()]
 handleActions _ _ eh (Ready rd) = pure $ map ($ rd) (unwrapEvent @"ready" eh)
 
-handleActions _ ns eh (ChannelCreate chan) = do
-  newChan' <- ns ^? #channels . at (getID chan) . _Just
+handleActions _ ns eh (ChannelCreate (DMChannel' chan)) = do
+  newChan' <- DMChannel' <$> ns ^? #dms . at (getID chan) . _Just
   pure $ map ($ newChan') (unwrapEvent @"channelcreate" eh)
 
-handleActions os ns eh (ChannelUpdate chan) = do
-  oldChan  <- os ^? #channels . at (getID chan) . _Just
-  newChan' <- ns ^? #channels . at (getID chan) . _Just
+handleActions _ ns eh (ChannelCreate (GuildChannel' chan)) = do
+  newChan' <- GuildChannel' <$> ns ^? #channels . at (getID chan) . _Just
+  pure $ map ($ newChan') (unwrapEvent @"channelcreate" eh)
+
+handleActions os ns eh (ChannelUpdate (DMChannel' chan)) = do
+  oldChan  <- DMChannel' <$> os ^? #dms . at (getID chan) . _Just
+  newChan' <- DMChannel' <$> ns ^? #dms . at (getID chan) . _Just
+  pure $ map (\f -> f oldChan newChan') (unwrapEvent @"channelupdate" eh)
+
+handleActions os ns eh (ChannelUpdate (GuildChannel' chan)) = do
+  oldChan  <- GuildChannel' <$> os ^? #channels . at (getID chan) . _Just
+  newChan' <- GuildChannel' <$> ns ^? #channels . at (getID chan) . _Just
   pure $ map (\f -> f oldChan newChan') (unwrapEvent @"channelupdate" eh)
 
 -- NOTE: Channel will be deleted in the new cache
-handleActions os _ eh (ChannelDelete chan) = do
-  oldChan <- os ^? #channels . at (getID chan) . _Just
+handleActions os _ eh (ChannelDelete (GuildChannel' chan)) = do
+  oldChan <- GuildChannel' <$> os ^? #channels . at (getID chan) . _Just
+  pure $ map (\f -> f oldChan) (unwrapEvent @"channeldelete" eh)
+
+handleActions os _ eh (ChannelDelete (DMChannel' chan)) = do
+  oldChan <- DMChannel' <$> os ^? #dms . at (getID chan) . _Just
   pure $ map (\f -> f oldChan) (unwrapEvent @"channeldelete" eh)
 
 handleActions os _ eh (ChannelPinsUpdate ChannelPinsUpdateData { channelID, lastPinTimestamp }) = do
-  chan <- os ^? #channels . at channelID . _Just
+  chan <- (GuildChannel' <$> os ^? #channels . at (coerceSnowflake channelID) . _Just)
+    <|> (DMChannel' <$> os ^? #dms . at (coerceSnowflake channelID) . _Just)
   pure $ map (\f -> f chan lastPinTimestamp) (unwrapEvent @"channelpinsupdate" eh)
 
 handleActions _ ns eh (GuildCreate guild) = do
@@ -246,22 +244,18 @@ handleActions os _ eh (MessageReactionRemoveAll MessageReactionRemoveAllData { m
   oldMsg <- os ^. #messages . at (coerceSnowflake messageID)
   pure $ map ($ oldMsg) (unwrapEvent @"messagereactionremoveall" eh)
 
-#ifdef PARSE_PRESENCES
-handleActions os ns eh (PresenceUpdate Presence { user, guildID }) = do
-  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
-  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just
+handleActions os ns eh (PresenceUpdate PresenceUpdateData { userID, presence = Presence { guildID } }) = do
+  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake userID) . _Just
+  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake userID) . _Just
   let userUpdates = if oldMember ^. #user /= newMember ^. #user
                     then map (\f -> f (oldMember ^. #user) (newMember ^. #user)) (unwrapEvent @"userupdate" eh)
                     else mempty
   pure $ userUpdates <> map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
-#else
-handleActions _ _ _ (PresenceUpdate _) = pure []
-#endif
 
 handleActions _ ns eh (TypingStart TypingStartData { channelID, guildID, userID, timestamp }) = do
-  guild <- ns ^? #guilds . at guildID . _Just
-  channel <- ns ^? #channels . at channelID . _Just
-  member <- guild ^? #members . at (coerceSnowflake userID) . _Just
+  let member = ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake userID) . _Just
+  channel <- (GuildChannel' <$> ns ^? #channels . at (coerceSnowflake channelID) . _Just)
+    <|> (DMChannel' <$> ns ^? #dms . at (coerceSnowflake channelID) . _Just)
   pure $ map (\f -> f channel member timestamp) (unwrapEvent @"typingstart" eh)
 
 handleActions os ns eh (UserUpdate _) = do
@@ -271,30 +265,43 @@ handleActions os ns eh (UserUpdate _) = do
 
 handleActions _ _ _ _ = Nothing -- pure []
 
+getGuildID :: GuildChannel -> Snowflake Guild
+getGuildID (GuildTextChannel c) = c ^. #guildID
+getGuildID (GuildVoiceChannel c) = c ^. #guildID
+getGuildID (GuildCategory c) = c ^. #guildID
 
 updateCache :: DispatchData -> State Cache ()
 updateCache (Ready ReadyData { user, guilds }) = do
   #user ?= user
   #unavailableGuilds .= setOf (folded . #id) guilds
 
-updateCache (ChannelCreate chan) = do
-  #channels %= SM.insert chan
-  whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels %= SM.insert chan
+updateCache (ChannelCreate (DMChannel' chan)) = do
+  #dms %= SM.insert chan
 
-updateCache (ChannelUpdate chan) = do
-  #channels . at (chan ^. #id) . _Just %= update chan
-  whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels . at (chan ^. #id) . _Just
+updateCache (ChannelCreate (GuildChannel' chan)) = do
+  #channels %= SM.insert chan
+  #guilds . at (getGuildID chan) . _Just . #channels %= SM.insert chan
+
+updateCache (ChannelUpdate (DMChannel' chan)) =
+  #dms . at (getID chan) . _Just %= update chan
+
+updateCache (ChannelUpdate (GuildChannel' chan)) = do
+  #channels . at (getID chan) . _Just %= update chan
+  #guilds . at (getGuildID chan) . _Just . #channels . at (getID chan) . _Just
     %= update chan
 
-updateCache (ChannelDelete chan) = do
-  #channels %= sans (chan ^. #id)
-  whenJust (chan ^. #guildID) $ \guildID -> #guilds . at guildID . _Just . #channels %= sans (chan ^. #id)
+updateCache (ChannelDelete (DMChannel' chan)) =
+  #dms %= sans (getID chan)
+
+updateCache (ChannelDelete (GuildChannel' chan)) = do
+  #channels %= sans (getID chan)
+  #guilds . at (getGuildID chan) . _Just . #channels %= sans (getID chan)
 
 updateCache (GuildCreate guild) = do
   #guilds %= SM.insert guild
   -- also insert all channels from this guild
   #channels %= SM.union (guild ^. #channels)
-  #users %= RSM.union (RSM.fromList (guild ^.. #members . traverse . #user))
+  #users %= SM.union (SM.fromList (guild ^.. #members . traverse . #user))
 
 updateCache (GuildUpdate guild) =
   #guilds . at (guild ^. #id) . _Just %= update guild
@@ -304,35 +311,33 @@ updateCache (GuildDelete guild) = do
   whenJust guild' $ \guild'' -> do
     #guilds %= sans (guild ^. #id)
     #channels %= (`SM.difference` (guild'' ^. #channels))
-    #users %= (`RSM.difference` RSM.fromList (guild'' ^.. #members . traverse . #user))
 
 updateCache (GuildEmojisUpdate GuildEmojisUpdateData { guildID, emojis }) =
   #guilds . at guildID . _Just . #emojis .= SM.fromList emojis
 
 updateCache (GuildMemberAdd member) = do
-  #users %= RSM.insert (member ^. #user)
+  #users %= SM.insert (member ^. #user)
   #guilds . at (member ^. #guildID) . _Just . #members . at (getID member) ?= member
 
 updateCache (GuildMemberRemove GuildMemberRemoveData { guildID, user }) = do
-  #users %= RSM.delete (coerceSnowflake $ getID user)
   #guilds . at guildID . _Just . #members %= sans (coerceSnowflake $ user ^. #id)
 
 updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nick }) = do
   #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just . #roles .= roles
   #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just . #nick
     %= (`lastMaybe` nick)
-  #users %= RSM.adjust (const user) (coerceSnowflake $ getID user)
+  #users %= SM.insert user
 
 updateCache (GuildMembersChunk GuildMembersChunkData { members }) =
   traverse_ (updateCache . GuildMemberAdd) members
 
-updateCache (GuildRoleCreate GuildRoleData { guildID, role }) = do
+updateCache (GuildRoleCreate GuildRoleData { guildID, role }) =
   #guilds . at guildID . _Just . #roles %= SM.insert role
 
-updateCache (GuildRoleUpdate GuildRoleData { guildID, role }) = do
+updateCache (GuildRoleUpdate GuildRoleData { guildID, role }) =
   #guilds . at guildID . _Just . #roles %= SM.insert role
 
-updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) = do
+updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) =
   #guilds . at guildID . _Just . #roles %= sans roleID
 
 updateCache (MessageCreate msg) = #messages %= addMessage msg
@@ -354,11 +359,10 @@ updateCache (MessageReactionRemove reaction) =
 updateCache (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) =
   #messages . at messageID . _Just . #reactions .= V.empty
 
-#ifdef PARSE_PRESENCES
-updateCache (PresenceUpdate presence) =
-  #guilds . at (presence ^. #guildID) . _Just . #presences . at (coerceSnowflake . getID $ presence ^. #user) ?= presence
-#endif
+updateCache (PresenceUpdate PresenceUpdateData { userID, roles, presence }) = do
+  #guilds . at (presence ^. #guildID) . _Just . #members . at (coerceSnowflake userID) . _Just . #roles .= roles
+  #guilds . at (presence ^. #guildID) . _Just . #presences . at userID ?= presence
 
 updateCache (UserUpdate user) = #user ?= user
 
-updateCache data' = pure () -- TODO
+updateCache _data' = pure () -- TODO

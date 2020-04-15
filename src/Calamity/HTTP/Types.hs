@@ -3,11 +3,13 @@ module Calamity.HTTP.Types
     ( ChannelUpdate(..)
     , ChannelMessagesQuery(..) ) where
 
-import           Calamity.Types.General
+import           Calamity.Internal.AesonThings
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild.Overwrite
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
-import           Data.Default
+import           Data.Default.Class
 
 data ChannelUpdate = ChannelUpdate
   { name                 :: Maybe ShortText
