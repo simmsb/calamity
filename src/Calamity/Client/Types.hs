@@ -38,9 +38,6 @@ import qualified Polysemy.Async                  as P
 import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Reader                 as P
 
-import qualified StmContainers.Set               as TS
-
-
 data Cache = Cache
   { user              :: Maybe User
   , guilds            :: SM.SnowflakeMap Guild
@@ -57,9 +54,8 @@ data Client = Client
   , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState
-  , eventQueue    :: TQueue DispatchData
+  , eventQueue    :: TQueue DispatchMessage
   , cache         :: TVar Cache
-  , activeTasks   :: TS.Set (Async ()) -- ^ events currently being handled
   }
   deriving ( Generic )
 

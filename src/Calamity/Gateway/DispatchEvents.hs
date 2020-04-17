@@ -18,6 +18,10 @@ import           Data.Aeson
 import           Data.Time
 import           Data.Vector.Unboxed                         ( Vector )
 
+data DispatchMessage
+  = DispatchData' DispatchData
+  | ShutDown
+
 data DispatchData
   = Ready ReadyData
   | ChannelCreate Channel

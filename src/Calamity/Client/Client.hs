@@ -2,11 +2,13 @@
 module Calamity.Client.Client
     ( Client(..)
     , react
-    , runBotIO ) where
+    , runBotIO
+    , stopBot ) where
 
 import           Calamity.Client.ShardManager
 import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
+import           Calamity.Gateway.Types
 import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.Internal.MessageStore
 import qualified Calamity.Internal.SnowflakeMap              as SM
@@ -36,9 +38,9 @@ import           Polysemy                                    ( Sem )
 import qualified Polysemy                                    as P
 import qualified Polysemy.Async                              as P
 import qualified Polysemy.AtomicState                        as P
+import qualified Polysemy.Error                              as P
 import qualified Polysemy.Reader                             as P
 
-import qualified StmContainers.Set                           as TS
 
 newClient :: Token -> IO Client
 newClient token = do
@@ -47,7 +49,6 @@ newClient token = do
   rlState'       <- newRateLimitState
   eventQueue'    <- newTQueueIO
   cache'         <- newTVarIO emptyCache
-  activeTasks'   <- TS.newIO
 
   pure $ Client shards'
                 numShards'
@@ -55,7 +56,6 @@ newClient token = do
                 rlState'
                 eventQueue'
                 cache'
-                activeTasks'
 
 type SetupEff r = Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
 
@@ -63,15 +63,32 @@ runBotIO :: (P.Members '[P.Embed IO, P.Final IO] r, Typeable r) => Token -> Setu
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
-  P.asyncToIO . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO $ do
+  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO $ do
     setup
     shardBot
     clientLoop
+    finishUp
 
 react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r, EHType' s ~ Dynamic, Typeable (EHType s (Sem r))) => EHType s (Sem r) -> Sem r ()
 react f =
   let handlers = EventHandlers . TM.one $ EH @s [toDyn f]
   in P.atomicModify (handlers <>)
+
+stopBot :: BotC r => Sem r ()
+stopBot = do
+  debug "stopping bot"
+  shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
+  for_ shards $ \shard ->
+    P.embed . atomically $ writeTQueue (shard ^. _1 . #cmdQueue) ShutDownShard
+  eventQueue <- P.asks (^. #eventQueue)
+  P.embed . atomically $ writeTQueue eventQueue ShutDown
+
+finishUp :: BotC r => Sem r ()
+finishUp = do
+  debug "finishing up"
+  shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
+  for_ shards $ \shard -> void . P.await $ (shard ^. _2)
+  debug "bot has stopped"
 
 emptyCache :: Cache
 emptyCache = Cache Nothing SM.empty SM.empty SM.empty SM.empty LS.empty def
@@ -80,10 +97,13 @@ emptyCache = Cache Nothing SM.empty SM.empty SM.empty SM.empty LS.empty def
 -- and invoking it's handler functions
 clientLoop :: BotC r => Sem r ()
 clientLoop = do
-  evtQueue <- P.asks eventQueue
-  forever $ do
-    evt <- P.embed . atomically $ readTQueue evtQueue
-    handleEvent evt
+  evtQueue <- P.asks (^. #eventQueue)
+  void . P.runError . forever $ do
+    evt' <- P.embed . atomically $ readTQueue evtQueue
+    case evt' of
+      DispatchData' evt -> P.raise $ handleEvent evt
+      ShutDown          -> P.throw ()
+  debug "leaving client loop"
 
 handleEvent :: BotC r => DispatchData -> Sem r ()
 handleEvent data' = do
@@ -103,11 +123,26 @@ runEventHandlers oldCache newCache data' = do
   let actionHandlers = handleActions oldCache newCache eventHandlers data'
   case actionHandlers of
     Just actions -> for_ actions $ \action -> P.async $ action newCache
-    Nothing
-      -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
+    Nothing      -> debug $ "Failed handling actions for event: " +|| data' ||+ ""
 
-unwrapEvent :: forall s r. (KnownSymbol s, EHType' s ~ Dynamic, Typeable (EHType s (Sem r))) => EventHandlers -> [EHType s (Sem r)]
-unwrapEvent (EventHandlers eh) = map (fromJust . fromDynamic) . unwrapEventHandler @s . fromJust $ (TM.lookup eh :: Maybe (EventHandler s))
+-- NOTE: We have to be careful with how we run event handlers
+--       They're registered through `react` which ensures the value of `r` in the event handler
+--       is the same as the final value of `r`, but:
+--       because they're held inside a 'Dynamic' to prevent the value of `r` being recursive,
+--       we have to make sure that we don't accidentally try to execute the event handler inside a
+--       nested effect, ie: `P.runError $ {- Handle events here -}` since that will result the value of
+--       `r` where we handle events be: `(P.Error a ': r)`, which will make stuff explode when we unwrap the
+--       event handlers
+
+unwrapEvent :: forall s r.
+            (KnownSymbol s, EHType' s ~ Dynamic, Typeable r, Typeable (EHType s (Sem r)))
+            => EventHandlers
+            -> [EHType s (Sem r)]
+unwrapEvent (EventHandlers eh) = map (fromJust . fromDynamic) . unwrapEventHandler @s . fromJust
+  $ (TM.lookup eh :: Maybe (EventHandler s))
+-- where unwrapEach handler =
+--         let msg = "wanted: " <> show (typeRep $ Proxy @r) <> ", got: " <> show (dynTypeRep handler)
+--         in unwrapEvt msg . fromDynamic $ handler
 
 handleActions :: BotC r
               => Cache -- ^ The old cache

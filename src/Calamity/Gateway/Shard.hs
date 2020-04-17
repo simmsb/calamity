@@ -1,4 +1,4 @@
--- |
+-- | The shard logic
 {-# LANGUAGE RecursiveDo #-}
 {-# LANGUAGE TemplateHaskell #-}
 
@@ -13,6 +13,7 @@ import           Calamity.Types.Token
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
+import           Control.Lens                    ( (.=) )
 
 import qualified Data.Aeson                      as A
 import           Data.Maybe
@@ -62,7 +63,7 @@ newShard :: P.Members '[LogEff, P.Embed IO, P.Final IO, P.Async] r
          -> Int
          -> Int
          -> Token
-         -> TQueue DispatchData
+         -> TQueue DispatchMessage
          -> Sem r (Shard, Async (Maybe ()))
 newShard gateway id count token evtQueue = do
   (shard, stateVar) <- P.embed $ mdo
@@ -80,11 +81,13 @@ newShard gateway id count token evtQueue = do
 
 sendToWs :: ShardC r => SentDiscordMessage -> Sem r ()
 sendToWs data' = do
-  wsConn <- fromJust <$> P.atomicGets wsConn
-  let encodedData = A.encode data'
-  debug $ "sending " +|| data' ||+ " encoded to " +|| encodedData ||+ " to gateway"
-  P.embed . sendTextData wsConn $ encodedData
-  -- trace "done sending data"
+  wsConn' <- P.atomicGets wsConn
+  case wsConn' of
+    Just wsConn -> do
+      let encodedData = A.encode data'
+      debug $ "sending " +|| data' ||+ " encoded to " +|| encodedData ||+ " to gateway"
+      P.embed . sendTextData wsConn $ encodedData
+    Nothing -> debug "tried to send to closed WS"
 
 fromEitherVoid :: Either a Void -> a
 fromEitherVoid (Left a) = a
@@ -96,8 +99,8 @@ checkWSClose m = (Right <$> m) `catch` \case
   e@(CloseRequest code _) -> do
     print e
     if code `elem` [1000, 4004, 4010, 4011]
-      then pure . Left $ ShutDown
-      else pure . Left $ Restart
+      then pure . Left $ ShutDownShard
+      else pure . Left $ RestartShard
 
   e                       -> throwIO e
 
@@ -112,9 +115,8 @@ tryWriteTBMQueue' q v = do
 -- | The loop a shard will run on
 shardLoop :: ShardC r => Sem r ()
 shardLoop = do
-  -- trace "entering shardLoop"
   void outerloop
-  -- trace "leaving shardLoop"
+  debug "Shard shut down"
  where
   controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
   controlStream shard outqueue = inner
@@ -222,6 +224,7 @@ shardLoop = do
     debug "Exiting inner loop of shard"
 
     P.atomicModify (#wsConn .~ Nothing)
+    haltHeartBeat
     pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
@@ -238,7 +241,7 @@ shardLoop = do
         _ -> pure ()
 
       shard <- P.atomicGets (^. #shardS)
-      P.embed . atomically $ writeTQueue (shard ^. #evtQueue) data'
+      P.embed . atomically $ writeTQueue (shard ^. #evtQueue) (DispatchData' data')
       -- sn' <- P.atomicGets (^. #seqNum)
       -- trace $ "Done handling event, seq is now: "+||sn'||+""
 
@@ -274,21 +277,26 @@ shardLoop = do
       debug $ "Sending presence: ("+||data'||+")"
       sendToWs $ StatusUpdate data'
 
-    Restart            -> P.throw ShardExcRestart
-    ShutDown           -> P.throw ShardExcShutDown
+    RestartShard       -> P.throw ShardExcRestart
+    ShutDownShard      -> P.throw ShardExcShutDown
 
 startHeartBeatLoop :: ShardC r => Int -> Sem r ()
 startHeartBeatLoop interval = do
   haltHeartBeat -- cancel any currently running hb thread
-  void . P.async $ heartBeatLoop interval
+  thread <- P.async $ heartBeatLoop interval
+  P.atomicModify (#hbThread ?~ thread)
 
 haltHeartBeat :: ShardC r => Sem r ()
 haltHeartBeat = do
-  thread <- P.atomicGets (^. #hbThread)
+  thread <- P.atomicState @ShardState . (swap .) . runState $ do
+    thread <- use #hbThread
+    #hbThread .= Nothing
+    pure thread
   case thread of
-    Just t  -> P.embed (void $ cancel t)
+    Just t  -> do
+      debug "Stopping heartbeat thread"
+      P.embed (void $ cancel t)
     Nothing -> pure ()
-  P.atomicModify (#hbThread .~ Nothing)
 
 sendHeartBeat :: ShardC r => Sem r ()
 sendHeartBeat = do

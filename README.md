@@ -54,4 +54,7 @@ main = do
       when (msg ^. #content == "!explode") $ do
         Just x <- pure Nothing
         debug "unreachable!"
+      when (msg ^. #content == "!bye") $ do
+        void . invokeRequest $ CreateMessage (msg ^. #channelID) "bye!"
+        stopBot
 ```

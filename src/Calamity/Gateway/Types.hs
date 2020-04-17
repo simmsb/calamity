@@ -212,8 +212,8 @@ instance ToJSON IdentifyProps where
   toEncoding IdentifyProps { browser, device } = pairs ("$browser" .= browser <> "$device" .= device)
 
 data ControlMessage
-  = Restart
-  | ShutDown
+  = RestartShard
+  | ShutDownShard
   | SendPresence StatusUpdateData
   deriving ( Show )
 
@@ -227,7 +227,7 @@ data Shard = Shard
   { shardID     :: Int
   , shardCount  :: Int
   , gateway     :: Text
-  , evtQueue    :: TQueue DispatchData
+  , evtQueue    :: TQueue DispatchMessage
   , cmdQueue    :: TQueue ControlMessage
   , shardState  :: TVar ShardState
   , token       :: Text
