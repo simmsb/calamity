@@ -21,4 +21,5 @@ data Category = Category
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON ) via CalamityJSON Category
   deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "nsfw" DefaultToFalse] Category
-  deriving ( HasID ) via HasIDFieldCoerce Category Channel
+  deriving ( HasID Category ) via HasIDField "id" Category
+  deriving ( HasID Channel ) via HasIDFieldCoerce' "id" Category

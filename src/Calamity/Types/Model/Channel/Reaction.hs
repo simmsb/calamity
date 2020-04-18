@@ -21,3 +21,6 @@ data Reaction = Reaction
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON Reaction
+  deriving ( HasID User ) via HasIDField "userID" Reaction
+  deriving ( HasID Channel ) via HasIDField "channelID" Reaction
+  deriving ( HasID Message ) via HasIDField "messageID" Reaction

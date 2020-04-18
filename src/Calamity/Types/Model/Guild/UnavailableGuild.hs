@@ -14,4 +14,4 @@ data UnavailableGuild = UnavailableGuild
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON UnavailableGuild
-  deriving ( HasID ) via HasIDFieldAlt UnavailableGuild Guild
+  deriving ( HasID Guild ) via HasIDField "id" UnavailableGuild

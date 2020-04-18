@@ -5,7 +5,6 @@ module Calamity.Types.Model.Channel.Message
     , MessageType(..) ) where
 
 import           Calamity.Internal.AesonThings
-import           Calamity.Internal.SnowflakeMap   ( SnowflakeMap )
 import           Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Guild.Role
@@ -31,7 +30,7 @@ data Message = Message
   , editedTimestamp :: Maybe UTCTime
   , tts             :: Bool
   , mentionEveryone :: Bool
-  , mentions        :: SnowflakeMap (Snowflake User)
+  , mentions        :: UV.Vector (Snowflake User)
   , mentionRoles    :: UV.Vector (Snowflake Role)
   , attachments     :: Vector Attachment
   , embeds          :: Vector Embed
@@ -45,18 +44,21 @@ data Message = Message
   deriving ( ToJSON ) via CalamityJSON Message
   deriving ( FromJSON ) via WithSpecialCases
       '["author" `ExtractField` "id",
+        "mentions" `ExtractFields` "id",
         "reactions" `IfNoneThen` DefaultToEmptyArray]
       Message
-  deriving ( HasID ) via HasIDField Message
+  deriving ( HasID Message ) via HasIDField "id" Message
+  deriving ( HasID Channel ) via HasIDField "channelID" Message
+  deriving ( HasID User    ) via HasIDField "author" Message
 
 data UpdatedMessage = UpdatedMessage
-  { id              :: Snowflake UpdatedMessage
+  { id              :: Snowflake Message
   , channelID       :: Snowflake Channel
   , content         :: Maybe ShortText
   , editedTimestamp :: Maybe UTCTime
   , tts             :: Maybe Bool
   , mentionEveryone :: Maybe Bool
-  , mentions        :: Maybe (SnowflakeMap (Snowflake User))
+  , mentions        :: Maybe (UV.Vector (Snowflake User))
   , mentionRoles    :: Maybe (UV.Vector (Snowflake Role))
   , attachments     :: Maybe (Vector Attachment)
   , embeds          :: Maybe (Vector Embed)
@@ -64,8 +66,12 @@ data UpdatedMessage = UpdatedMessage
   , pinned          :: Maybe Bool
   }
   deriving ( Eq, Show, Generic )
-  deriving ( FromJSON ) via CalamityJSON UpdatedMessage
-  deriving ( HasID ) via HasIDFieldCoerce UpdatedMessage Message
+  deriving ( FromJSON ) via WithSpecialCases
+      '["author" `ExtractField` "id",
+        "mentions" `ExtractFields` "id"]
+      UpdatedMessage
+  deriving ( HasID Message ) via HasIDField "id" UpdatedMessage
+  deriving ( HasID Channel ) via HasIDField "channelID" UpdatedMessage
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
 data MessageType

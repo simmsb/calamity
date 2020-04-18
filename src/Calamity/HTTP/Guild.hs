@@ -46,8 +46,8 @@ data ModifyGuildData = ModifyGuildData
 
 data GuildRequest a where
   CreateGuild :: CreateGuildData -> GuildRequest Guild
-  GetGuild    :: HasSpecificID g Guild => g -> GuildRequest Guild
-  ModifyGuild :: HasSpecificID g Guild => g -> ModifyGuildData -> GuildRequest Guild
+  GetGuild    :: HasID Guild g => g -> GuildRequest Guild
+  ModifyGuild :: HasID Guild g => g -> ModifyGuildData -> GuildRequest Guild
 
 baseRoute :: Snowflake Guild -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "guilds" // ID @Guild

@@ -24,7 +24,7 @@ data Emoji = Emoji
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON ) via CalamityJSON Emoji
   deriving ( FromJSON ) via WithSpecialCases '["user" `ExtractField` "id"] Emoji
-  deriving ( HasID ) via HasIDField Emoji
+  deriving ( HasID Emoji ) via HasIDField "id" Emoji
 
 data instance Partial Emoji = PartialEmoji
   { id   :: Snowflake Emoji
@@ -32,7 +32,7 @@ data instance Partial Emoji = PartialEmoji
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Emoji)
-  deriving ( HasID ) via HasIDFieldAlt (Partial Emoji) Emoji
+  deriving ( HasID Emoji ) via HasIDField "id" (Partial Emoji)
 
 data RawEmoji
   = UnicodeEmoji ShortText

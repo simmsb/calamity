@@ -2,10 +2,10 @@
 module Calamity.Types.Snowflake
     ( Snowflake(..)
     , HasID(..)
+    , type HasID'
     , HasIDField(..)
-    , HasIDFieldAlt(..)
     , HasIDFieldCoerce(..)
-    , HasSpecificID
+    , type HasIDFieldCoerce'
     , coerceSnowflake ) where
 
 import           Control.Monad
@@ -39,48 +39,30 @@ instance FromJSON (Snowflake t) where
 coerceSnowflake :: Snowflake a -> Snowflake b
 coerceSnowflake (Snowflake t) = Snowflake t
 
--- | A typeclass for types that contain snowflakes
-class HasID a where
-  -- | One of the types of snowflake this type contains
-  type HasIDRes a
-
-  type HasIDRes a = a
+-- | A typeclass for types that contain snowflakes of type `b`
+class HasID b a where
 
   -- | Retrieve the ID from the type
-  getID :: a -> Snowflake (HasIDRes a)
+  getID :: a -> Snowflake b
 
--- | A type 't' that has some Snowflake in it of type 'r'
-type HasSpecificID t r = (HasID t, HasIDRes t ~ r)
+type HasID' a = HasID a a
 
 -- | A newtype wrapper for deriving HasID generically
-newtype HasIDField a = HasIDField a
+newtype HasIDField field a = HasIDField a
 
-instance HasField' "id" a (Snowflake a) => HasID (HasIDField a) where
-  type HasIDRes (HasIDField a) = a
+instance HasField' field a (Snowflake b) => HasID b (HasIDField field a) where
+  getID (HasIDField a) = a ^. field' @field
 
-  getID (HasIDField a) = a ^. field' @"id"
-
--- | A data `a` which contains an ID of type `Snowflake a`
+-- | A data `a` which contains an ID of type `Snowflake c`
 --   which should be swapped with `Snowflake b` upon fetching
-newtype HasIDFieldCoerce a b = HasIDFieldCoerce a
+newtype HasIDFieldCoerce field a c = HasIDFieldCoerce a
 
-instance HasField' "id" a (Snowflake a) => HasID (HasIDFieldCoerce a (b :: Type)) where
-  type HasIDRes (HasIDFieldCoerce a b) = b
+type HasIDFieldCoerce' field a = HasIDFieldCoerce field a a
 
-  getID (HasIDFieldCoerce a) = coerceSnowflake . getID $ a ^. field' @"id"
+instance HasField' field a (Snowflake c) => HasID b (HasIDFieldCoerce field a c) where
+  getID (HasIDFieldCoerce a) = coerceSnowflake $ a ^. field' @field
 
--- | A data `a` which contains an ID of type `Snowflake b`
-newtype HasIDFieldAlt a b = HasIDFieldAlt a
-
-instance HasField' "id" a (Snowflake b) => HasID (HasIDFieldAlt a (b :: Type)) where
-  type HasIDRes (HasIDFieldAlt a b) = b
-
-  getID (HasIDFieldAlt a) = a ^. field' @"id"
-
--- | Snowflakes of type `a` contain themselves I guess
-instance HasID (Snowflake (a :: Type)) where
-  type HasIDRes (Snowflake a) = a
-
+instance HasID a (Snowflake a) where
   getID = identity
 
 newtype instance U.MVector s (Snowflake t) = MV_Snowflake (U.MVector s Word64)

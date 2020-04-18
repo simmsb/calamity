@@ -23,4 +23,6 @@ data GroupChannel = GroupChannel
   }
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON GroupChannel
-  deriving ( HasID ) via HasIDFieldCoerce GroupChannel Channel
+  deriving ( HasID GroupChannel ) via HasIDField "id" GroupChannel
+  deriving ( HasID Channel ) via HasIDFieldCoerce' "id" GroupChannel
+  deriving ( HasID User ) via HasIDField "ownerID" GroupChannel

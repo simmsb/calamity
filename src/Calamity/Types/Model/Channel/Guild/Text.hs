@@ -31,4 +31,6 @@ data TextChannel = TextChannel
   deriving ( ToJSON ) via CalamityJSON TextChannel
   deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "nsfw" DefaultToFalse]
       TextChannel
-  deriving ( HasID ) via HasIDFieldCoerce TextChannel Channel
+  deriving ( HasID TextChannel ) via HasIDField "id" TextChannel
+  deriving ( HasID Channel ) via HasIDFieldCoerce' "id" TextChannel
+  deriving ( HasID Guild ) via HasIDField "guildID" TextChannel

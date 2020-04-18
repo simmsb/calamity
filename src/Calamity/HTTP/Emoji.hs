@@ -29,26 +29,25 @@ data ModifyGuildEmojiOptions = ModifyGuildEmojiOptions
   deriving ( ToJSON ) via CalamityJSON ModifyGuildEmojiOptions
 
 data EmojiRequest a where
-  ListGuildEmojis :: (HasSpecificID g Guild) => g -> EmojiRequest [Emoji]
-  GetGuildEmoji :: (HasSpecificID g Guild, HasSpecificID e Emoji) => g -> e -> EmojiRequest Emoji
-  CreateGuildEmoji :: (HasSpecificID g Guild) => g -> CreateGuildEmojiOptions -> EmojiRequest Emoji
-  ModifyGuildEmoji
-    :: (HasSpecificID g Guild, HasSpecificID e Emoji) => g -> e -> ModifyGuildEmojiOptions -> EmojiRequest Emoji
-  DeleteGuildEmoji :: (HasSpecificID g Guild, HasSpecificID e Emoji) => g -> e -> EmojiRequest ()
+  ListGuildEmojis :: (HasID Guild g) => g -> EmojiRequest [Emoji]
+  GetGuildEmoji :: (HasID Guild g, HasID Emoji e) => g -> e -> EmojiRequest Emoji
+  CreateGuildEmoji :: (HasID Guild g) => g -> CreateGuildEmojiOptions -> EmojiRequest Emoji
+  ModifyGuildEmoji :: (HasID Guild g, HasID Emoji e) => g -> e -> ModifyGuildEmojiOptions -> EmojiRequest Emoji
+  DeleteGuildEmoji :: (HasID Guild g, HasID Emoji e) => g -> e -> EmojiRequest ()
 
 baseRoute :: Snowflake Guild -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "guilds" // ID @Guild // S "emojis" & giveID id
 
 instance Request (EmojiRequest a) a where
   toRoute (ListGuildEmojis (getID -> gid)) = baseRoute gid & buildRoute
-  toRoute (GetGuildEmoji (getID -> gid) (getID -> eid)) = baseRoute gid // ID @Emoji
+  toRoute (GetGuildEmoji (getID -> gid) (getID @Emoji -> eid)) = baseRoute gid // ID @Emoji
     & giveID eid
     & buildRoute
   toRoute (CreateGuildEmoji (getID -> gid) _) = baseRoute gid & buildRoute
-  toRoute (ModifyGuildEmoji (getID -> gid) (getID -> eid) _) = baseRoute gid // ID @Emoji
+  toRoute (ModifyGuildEmoji (getID -> gid) (getID @Emoji -> eid) _) = baseRoute gid // ID @Emoji
     & giveID eid
     & buildRoute
-  toRoute (DeleteGuildEmoji (getID -> gid) (getID -> eid)) = baseRoute gid // ID @Emoji
+  toRoute (DeleteGuildEmoji (getID -> gid) (getID @Emoji -> eid)) = baseRoute gid // ID @Emoji
     & giveID eid
     & buildRoute
 

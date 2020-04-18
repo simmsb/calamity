@@ -24,7 +24,6 @@ import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
-import           Data.Generics.Product.Fields
 
 data Channel
   = DMChannel' DMChannel
@@ -32,10 +31,10 @@ data Channel
   | GuildChannel' GuildChannel
   deriving ( Show, Eq, Generic )
 
-instance HasID Channel where
-  getID (DMChannel' a) = coerceSnowflake $ a ^. field' @"id"
-  getID (GroupChannel' a) = coerceSnowflake $ a ^. field' @"id"
-  getID (GuildChannel' a) = coerceSnowflake $ getID a
+instance HasID Channel Channel where
+  getID (DMChannel' a) = getID a
+  getID (GroupChannel' a) = getID a
+  getID (GuildChannel' a) = getID a
 
 instance FromJSON Channel where
   parseJSON = withObject "Channel" $ \v -> do
@@ -55,5 +54,4 @@ data instance Partial Channel = PartialChannel
   }
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Channel)
-  deriving ( HasID ) via HasIDFieldAlt (Partial Channel) Channel
-
+  deriving ( HasID Channel ) via HasIDField "id" (Partial Channel)

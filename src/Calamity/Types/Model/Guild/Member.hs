@@ -24,6 +24,10 @@ data Member = Member
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON Member
+  deriving ( HasID Guild ) via HasIDField "guildID" Member
 
-instance HasID Member where
-  getID = coerceSnowflake . getID . (^. field @"user")
+instance HasID User Member where
+  getID = getID . (^. field @"user")
+
+instance HasID Member Member where
+  getID = coerceSnowflake . getID @User

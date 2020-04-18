@@ -4,6 +4,7 @@ module Calamity.Types.Model.Channel.DM
 
 import           Calamity.Internal.AesonThings
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
+import {-# SOURCE #-} Calamity.Types.Model.Channel
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
@@ -19,4 +20,5 @@ data DMChannel = DMChannel
   }
   deriving ( Show, Eq, Generic )
   deriving ( FromJSON, ToJSON ) via CalamityJSON DMChannel
-  deriving ( HasID ) via HasIDField DMChannel
+  deriving ( HasID DMChannel ) via HasIDField "id" DMChannel
+  deriving ( HasID Channel ) via HasIDFieldCoerce' "id" DMChannel

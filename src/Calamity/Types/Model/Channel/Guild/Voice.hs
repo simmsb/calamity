@@ -24,4 +24,6 @@ data VoiceChannel = VoiceChannel
   }
   deriving ( Show, Eq, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON VoiceChannel
-  deriving ( HasID ) via HasIDFieldCoerce VoiceChannel Channel
+  deriving ( HasID VoiceChannel ) via HasIDField "id" VoiceChannel
+  deriving ( HasID Channel ) via HasIDFieldCoerce' "id" VoiceChannel
+  deriving ( HasID Guild ) via HasIDField "guildID" VoiceChannel

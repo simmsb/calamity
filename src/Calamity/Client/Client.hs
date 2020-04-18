@@ -220,17 +220,17 @@ handleActions _ ns eh (GuildMemberAdd member) = do
   pure $ map ($ newMember) (unwrapEvent @"guildmemberadd" eh)
 
 handleActions os _ eh (GuildMemberRemove GuildMemberRemoveData { user, guildID }) = do
-  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
+  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (getID user) . _Just
   pure $ map ($ oldMember) (unwrapEvent @"guildmemberremove" eh)
 
 handleActions os ns eh (GuildMemberUpdate GuildMemberUpdateData { user, guildID }) = do
-  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
-  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (coerceSnowflake $ getID user) . _Just
+  oldMember <- os ^? #guilds . at guildID . _Just . #members . at (getID user) . _Just
+  newMember <- ns ^? #guilds . at guildID . _Just . #members . at (getID user) . _Just
   pure $ map (\f -> f oldMember newMember) (unwrapEvent @"guildmemberupdate" eh)
 
 handleActions _ ns eh (GuildMembersChunk GuildMembersChunkData { members, guildID }) = do
   guild <- ns ^? #guilds . at guildID . _Just
-  let members' = guild ^.. #members . foldMap at (map getID members) . _Just
+  let members' = guild ^.. #members . foldMap (at . getID) members . _Just
   pure $ map (\f -> f guild members') (unwrapEvent @"guildmemberschunk" eh)
 
 handleActions _ ns eh (GuildRoleCreate GuildRoleData { guildID, role }) = do
@@ -253,7 +253,7 @@ handleActions _ _ eh (MessageCreate msg) =
   pure $ map ($ msg) (unwrapEvent @"messagecreate" eh)
 
 handleActions os ns eh (MessageUpdate msg) = do
-  let msgID = coerceSnowflake $ msg ^. #id
+  let msgID = getID msg
   oldMsg <- os ^. #messages . at msgID
   newMsg <- ns ^. #messages . at msgID
   pure $ map (\f -> f oldMsg newMsg) (unwrapEvent @"messageupdate" eh)
@@ -268,11 +268,11 @@ handleActions os _ eh (MessageDeleteBulk MessageDeleteBulkData { ids }) = join
                  pure $ map ($ oldMsg) (unwrapEvent @"messagedelete" eh))
 
 handleActions _ ns eh (MessageReactionAdd reaction) = do
-  message <- ns ^. #messages . at (coerceSnowflake $ reaction ^. #messageID)
+  message <- ns ^. #messages . at (getID reaction)
   pure $ map (\f -> f message reaction) (unwrapEvent @"messagereactionadd" eh)
 
 handleActions _ ns eh (MessageReactionRemove reaction) = do
-  message <- ns ^. #messages . at (coerceSnowflake $ reaction ^. #messageID)
+  message <- ns ^. #messages . at (getID reaction)
   pure $ map (\f -> f message reaction) (unwrapEvent @"messagereactionremove" eh)
 
 handleActions os _ eh (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) = do
@@ -355,11 +355,11 @@ updateCache (GuildMemberAdd member) = do
   #guilds . at (member ^. #guildID) . _Just . #members . at (getID member) ?= member
 
 updateCache (GuildMemberRemove GuildMemberRemoveData { guildID, user }) = do
-  #guilds . at guildID . _Just . #members %= sans (coerceSnowflake $ user ^. #id)
+  #guilds . at guildID . _Just . #members %= sans (getID user)
 
 updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nick }) = do
-  #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just . #roles .= roles
-  #guilds . at guildID . _Just . #members . at (coerceSnowflake $ user ^. #id) . _Just . #nick
+  #guilds . at guildID . _Just . #members . at (getID user) . _Just . #roles .= roles
+  #guilds . at guildID . _Just . #members . at (getID user) . _Just . #nick
     %= (`lastMaybe` nick)
   #users %= SM.insert user
 
@@ -378,8 +378,7 @@ updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) =
 updateCache (MessageCreate msg) = #messages %= addMessage msg
 
 updateCache (MessageUpdate newMsg) = do
-  let id = coerceSnowflake $ newMsg ^. #id
-  #messages . at id . _Just %= update newMsg
+  #messages . at (getID newMsg) . _Just %= update newMsg
 
 updateCache (MessageDelete MessageDeleteData { id }) = #messages %= sans id
 

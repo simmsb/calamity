@@ -58,7 +58,7 @@ data Guild = Guild
   , presences                   :: HashMap (Snowflake User) Presence
   }
   deriving ( Eq, Show, Generic )
-  deriving ( HasID ) via HasIDField Guild
+  deriving ( HasID Guild ) via HasIDField "id" Guild
 
 instance FromJSON Guild where
   parseJSON = withObject "Guild" $ \v -> do
@@ -78,7 +78,7 @@ instance FromJSON Guild where
       presences' <- v .: "presences"
       LH.fromList <$> traverse (\m -> do
                                   p <- parseJSON $ Object (m <> "guild_id" .= id)
-                                  pure (coerceSnowflake . getID $ p ^. field @"user", p)) presences'
+                                  pure (getID $ p ^. field @"user", p)) presences'
 
     Guild id
       <$> v .: "name"
@@ -113,12 +113,12 @@ instance FromJSON Guild where
       <*> pure presences'
 
 data instance Partial Guild = PartialGuild
-  { id   :: !(Snowflake Guild)
-  , name :: !ShortText
+  { id   :: Snowflake Guild
+  , name :: ShortText
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Guild)
-  deriving ( HasID ) via HasIDFieldAlt (Partial Guild) Guild
+  deriving ( HasID Guild ) via HasIDField "id" (Partial Guild)
 
 data UpdatedGuild = UpdatedGuild
   { id                          :: Snowflake Guild
@@ -147,4 +147,4 @@ data UpdatedGuild = UpdatedGuild
   }
   deriving ( Eq, Show, Generic )
   deriving ( FromJSON ) via CalamityJSON UpdatedGuild
-  deriving ( HasID ) via HasIDFieldAlt UpdatedGuild Guild
+  deriving ( HasID Guild ) via HasIDField "id" UpdatedGuild

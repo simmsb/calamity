@@ -42,30 +42,30 @@ data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions
   deriving ( ToJSON ) via CalamityJSON GroupDMAddRecipientOptions
 
 data ChannelRequest a where
-  CreateMessage            :: (HasSpecificID c Channel) => c -> Text -> ChannelRequest Message
-  GetMessage               :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest Message
-  EditMessage              :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> Maybe Text -> Maybe Embed -> ChannelRequest Message
-  DeleteMessage            :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest ()
-  BulkDeleteMessages       :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> [m] -> ChannelRequest ()
-  GetChannel               :: (HasSpecificID c Channel) => c -> ChannelRequest Channel
-  ModifyChannel            :: (HasSpecificID c Channel) => c -> ChannelUpdate -> ChannelRequest Channel
-  DeleteChannel            :: (HasSpecificID c Channel) => c -> ChannelRequest ()
-  GetChannelMessages       :: (HasSpecificID c Channel) => c -> Maybe ChannelMessagesQuery -> ChannelRequest [Message]
-  CreateReaction           :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> ChannelRequest ()
-  DeleteOwnReaction        :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> ChannelRequest ()
-  DeleteUserReaction       :: (HasSpecificID c Channel, HasSpecificID m Message, HasSpecificID u User) => c -> m -> RawEmoji -> u -> ChannelRequest ()
-  GetReactions             :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> RawEmoji -> GetReactionsOptions -> ChannelRequest [User]
-  DeleteAllReactions       :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest ()
-  GetChannelInvites        :: (HasSpecificID c Channel) => c -> ChannelRequest [Invite]
-  CreateChannelInvite      :: (HasSpecificID c Channel) => c -> CreateChannelInviteOptions -> ChannelRequest Invite
-  EditChannelPermissions   :: (HasSpecificID c Channel) => c -> Overwrite -> ChannelRequest ()
-  DeleteChannelPermission  :: (HasSpecificID c Channel, HasSpecificID o Overwrite) => c -> o -> ChannelRequest ()
-  TriggerTyping            :: (HasSpecificID c Channel) => c -> ChannelRequest ()
-  GetPinnedMessages        :: (HasSpecificID c Channel) => c -> ChannelRequest [Message]
-  AddPinnedMessage         :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest ()
-  DeletePinnedMessage      :: (HasSpecificID c Channel, HasSpecificID m Message) => c -> m -> ChannelRequest ()
-  GroupDMAddRecipient      :: (HasSpecificID c Channel, HasSpecificID u User) => c -> u -> GroupDMAddRecipientOptions -> ChannelRequest ()
-  GroupDMRemoveRecipient   :: (HasSpecificID c Channel, HasSpecificID u User) => c -> u -> ChannelRequest ()
+  CreateMessage            :: (HasID Channel c) => c -> Text -> ChannelRequest Message
+  GetMessage               :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest Message
+  EditMessage              :: (HasID Channel c, HasID Message m) => c -> m -> Maybe Text -> Maybe Embed -> ChannelRequest Message
+  DeleteMessage            :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
+  BulkDeleteMessages       :: (HasID Channel c, HasID Message m) => c -> [m] -> ChannelRequest ()
+  GetChannel               :: (HasID Channel c) => c -> ChannelRequest Channel
+  ModifyChannel            :: (HasID Channel c) => c -> ChannelUpdate -> ChannelRequest Channel
+  DeleteChannel            :: (HasID Channel c) => c -> ChannelRequest ()
+  GetChannelMessages       :: (HasID Channel c) => c -> Maybe ChannelMessagesQuery -> ChannelRequest [Message]
+  CreateReaction           :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> ChannelRequest ()
+  DeleteOwnReaction        :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> ChannelRequest ()
+  DeleteUserReaction       :: (HasID Channel c, HasID Message m, HasID User u) => c -> m -> RawEmoji -> u -> ChannelRequest ()
+  GetReactions             :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> GetReactionsOptions -> ChannelRequest [User]
+  DeleteAllReactions       :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
+  GetChannelInvites        :: (HasID Channel c) => c -> ChannelRequest [Invite]
+  CreateChannelInvite      :: (HasID Channel c) => c -> CreateChannelInviteOptions -> ChannelRequest Invite
+  EditChannelPermissions   :: (HasID Channel c) => c -> Overwrite -> ChannelRequest ()
+  DeleteChannelPermission  :: (HasID Channel c, HasID Overwrite o) => c -> o -> ChannelRequest ()
+  TriggerTyping            :: (HasID Channel c) => c -> ChannelRequest ()
+  GetPinnedMessages        :: (HasID Channel c) => c -> ChannelRequest [Message]
+  AddPinnedMessage         :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
+  DeletePinnedMessage      :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
+  GroupDMAddRecipient      :: (HasID Channel c, HasID User u) => c -> u -> GroupDMAddRecipientOptions -> ChannelRequest ()
+  GroupDMRemoveRecipient   :: (HasID Channel c, HasID User u) => c -> u -> ChannelRequest ()
 
 
 baseRoute :: Snowflake Channel -> RouteBuilder _
@@ -78,35 +78,35 @@ instance Request (ChannelRequest a) a where
   toRoute (ModifyChannel (getID -> id) _)      = baseRoute id                 & buildRoute
   toRoute (DeleteChannel (getID -> id))        = baseRoute id                 & buildRoute
   toRoute (GetChannelMessages (getID -> id) _) = baseRoute id // S "messages" & buildRoute
-  toRoute (GetMessage (getID -> cid) (getID -> mid)) = baseRoute cid // S "messages" // ID @Message
+  toRoute (GetMessage (getID -> cid) (getID @Message -> mid)) = baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
-  toRoute (CreateReaction (getID -> cid) (getID -> mid) emoji) =
+  toRoute (CreateReaction (getID -> cid) (getID @Message -> mid) emoji) =
     baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // S "@me"
     & giveID mid
     & buildRoute
-  toRoute (DeleteOwnReaction (getID -> cid) (getID -> mid) emoji) =
+  toRoute (DeleteOwnReaction (getID -> cid) (getID @Message -> mid) emoji) =
     baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // S "@me"
     & giveID mid
     & buildRoute
-  toRoute (DeleteUserReaction (getID -> cid) (getID -> mid) emoji (getID -> uid)) =
+  toRoute (DeleteUserReaction (getID -> cid) (getID @Message -> mid) emoji (getID @User -> uid)) =
     baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // ID @User
     & giveID mid
     & giveID uid
     & buildRoute
-  toRoute (GetReactions (getID -> cid) (getID -> mid) emoji _) =
+  toRoute (GetReactions (getID -> cid) (getID @Message -> mid) emoji _) =
     baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji)
     & giveID mid
     & buildRoute
-  toRoute (DeleteAllReactions (getID -> cid) (getID -> mid)) =
+  toRoute (DeleteAllReactions (getID -> cid) (getID @Message -> mid)) =
     baseRoute cid // S "messages" // ID @Message // S "reactions"
     & giveID mid
     & buildRoute
-  toRoute (EditMessage (getID -> cid) (getID -> mid) _ _) =
+  toRoute (EditMessage (getID -> cid) (getID @Message -> mid) _ _) =
     baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
-  toRoute (DeleteMessage (getID -> cid) (getID -> mid)) =
+  toRoute (DeleteMessage (getID -> cid) (getID @Message -> mid)) =
     baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
@@ -115,26 +115,26 @@ instance Request (ChannelRequest a) a where
     & buildRoute
   toRoute (GetChannelInvites (getID -> cid)) = baseRoute cid // S "invites" & buildRoute
   toRoute (CreateChannelInvite (getID -> cid) _) = baseRoute cid // S "invites" & buildRoute
-  toRoute (EditChannelPermissions (getID -> cid) (getID -> oid)) =
+  toRoute (EditChannelPermissions (getID -> cid) (getID @Overwrite -> oid)) =
     baseRoute cid // S "permissions" // ID @Overwrite
     & giveID oid
     & buildRoute
-  toRoute (DeleteChannelPermission (getID -> cid) (getID -> oid)) =
+  toRoute (DeleteChannelPermission (getID -> cid) (getID @Overwrite -> oid)) =
     baseRoute cid // S "permissions" // ID @Overwrite
     & giveID oid
     & buildRoute
   toRoute (TriggerTyping (getID -> cid)) = baseRoute cid // S "typing" & buildRoute
   toRoute (GetPinnedMessages (getID -> cid)) = baseRoute cid // S "pins" & buildRoute
-  toRoute (AddPinnedMessage (getID -> cid) (getID -> mid)) = baseRoute cid // S "pins" // ID @Message
+  toRoute (AddPinnedMessage (getID -> cid) (getID @Message -> mid)) = baseRoute cid // S "pins" // ID @Message
     & giveID mid
     & buildRoute
-  toRoute (DeletePinnedMessage (getID -> cid) (getID -> mid)) = baseRoute cid // S "pins" // ID @Message
+  toRoute (DeletePinnedMessage (getID -> cid) (getID @Message -> mid)) = baseRoute cid // S "pins" // ID @Message
     & giveID mid
     & buildRoute
-  toRoute (GroupDMAddRecipient (getID -> cid) (getID -> uid) _) = baseRoute cid // S "recipients" // ID @User
+  toRoute (GroupDMAddRecipient (getID -> cid) (getID @User -> uid) _) = baseRoute cid // S "recipients" // ID @User
     & giveID uid
     & buildRoute
-  toRoute (GroupDMRemoveRecipient (getID -> cid) (getID -> uid)) = baseRoute cid // S "recipients" // ID @User
+  toRoute (GroupDMRemoveRecipient (getID -> cid) (getID @User -> uid)) = baseRoute cid // S "recipients" // ID @User
     & giveID uid
     & buildRoute
 
@@ -159,7 +159,7 @@ instance Request (ChannelRequest a) a where
   toAction (EditMessage _ _ content embed) = patchWith'
     (object ["content" .= content, "embed" .= embed])
   toAction (DeleteMessage _ _)                       = deleteWith
-  toAction (BulkDeleteMessages _ (map getID -> ids)) = postWith' (object ["messages" .= ids])
+  toAction (BulkDeleteMessages _ (map (getID @Message) -> ids)) = postWith' (object ["messages" .= ids])
   toAction (GetChannelInvites _)                     = getWith
   toAction (CreateChannelInvite _ o)                 = postWith' (toJSON o)
   toAction (EditChannelPermissions _ o)              = putWith' (toJSON o)

@@ -5,6 +5,7 @@ module Calamity.Internal.AesonThings
     , WithSpecialCasesInner(..)
     , type IfNoneThen
     , type ExtractField
+    , type ExtractFields
     , type InjectID
     , SpecialRule
     , DefaultToEmptyArray
@@ -40,6 +41,7 @@ data SpecialRule (label :: Symbol) (action :: SpecialRuleAction)
 data SpecialRuleAction
   = forall d. IfNoneThen d
   | forall field. ExtractField field
+  | forall field. ExtractFields field
   | forall mn idn. InjectID idn mn
 
 type IfNoneThen label d =
@@ -47,6 +49,9 @@ type IfNoneThen label d =
 
 type ExtractField label field =
   SpecialRule label ('ExtractField field)
+
+type ExtractFields label field =
+  SpecialRule label ('ExtractFields field)
 
 type InjectID label mn idn =
   SpecialRule label ('InjectID mn idn)
@@ -63,6 +68,11 @@ instance (KnownSymbol field) => PerformAction ('ExtractField field) where
   runAction _ o = withObject (("extracting field " <> textSymbolVal @field Proxy) ^. unpacked)
     (.: textSymbolVal @field Proxy) o
 
+instance (KnownSymbol field) => PerformAction ('ExtractFields field) where
+  runAction _ Null = pure Null
+  runAction _ o = withArray (("extracting fields " <> textSymbolVal @field Proxy) ^. unpacked)
+    ((Array <$>) . traverse (withObject "extracting field" (.: textSymbolVal @field Proxy))) o
+
 instance (KnownSymbol idn, KnownSymbol mn) => PerformAction ('InjectID idn mn) where
   runAction _ = withObject
     (("injecting id from " <> textSymbolVal @idn Proxy <> " into " <> textSymbolVal @mn Proxy) ^. unpacked) $ \o -> do
@@ -76,7 +86,9 @@ type family FoldSpecialCases (rules :: [Type]) :: SpecialCaseList where
   FoldSpecialCases (SpecialRule label action ': xs) = 'SpecialCaseElem label action (FoldSpecialCases xs)
   FoldSpecialCases _ = TL.TypeError ('TL.Text "What did you do?")
 
-newtype WithSpecialCasesInner (rules :: SpecialCaseList) a = WithSpecialCasesInner a
+newtype WithSpecialCasesInner (rules :: SpecialCaseList) a = WithSpecialCasesInner
+  { unwrapWithSpecialCases :: a
+  }
 
 type family WithSpecialCases rules a :: Type where
   WithSpecialCases rules a = WithSpecialCasesInner (FoldSpecialCases rules) a

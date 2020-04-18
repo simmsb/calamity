@@ -15,4 +15,4 @@ data Overwrite = Overwrite
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON Overwrite
-  deriving ( HasID ) via HasIDField Overwrite
+  deriving ( HasID Overwrite ) via HasIDField "id" Overwrite

@@ -19,4 +19,4 @@ data Role = Role
   }
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON Role
-  deriving ( HasID ) via HasIDField Role
+  deriving ( HasID Role ) via HasIDField "id" Role
