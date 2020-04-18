@@ -58,20 +58,20 @@ dependencies:
 - generic-override >= 0.0.0.1
 - generic-override-aeson >= 0.0.0.1
 
-executables:
-  test-calamity-exe:
-    main: Main.hs
-    source-dirs: app
-    ghc-options:
-      - -fplugin=Polysemy.Plugin
-      - -funbox-strict-fields
-      - -flate-specialise
-      - -threaded
-      - -rtsopts
-      - -with-rtsopts=-T
-      - -O2
-    dependencies:
-      - calamity
+# executables:
+#   test-calamity-exe:
+#     main: Main.hs
+#     source-dirs: app
+#     ghc-options:
+#       - -fplugin=Polysemy.Plugin
+#       - -funbox-strict-fields
+#       - -flate-specialise
+#       - -threaded
+#       - -rtsopts
+#       - -with-rtsopts=-T
+#       - -O2
+#     dependencies:
+#       - calamity
 
 flags:
   parse-presences:

@@ -4,7 +4,7 @@ cabal-version: 1.12
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 51ae9156777adb27b6179f765cc6727fa0c2a01e8f86f2ce6fc652e55c10c089
+-- hash: 5c06a2f3a8a0a896d54004d337923a39eac00c97b8c2d22e79df2a64b7de93c1
 
 name:           calamity
 version:        0.1.0.0
@@ -100,55 +100,6 @@ library
     , async >=2.2
     , base-noprelude >=4.12 && <5
     , bytestring >=0.10
-    , concurrent-extra >=0.7
-    , data-default-class >=0.1
-    , deque >=0.1
-    , df1 >=0.3
-    , di-polysemy >=0.0.2
-    , exceptions >=0.10
-    , fmt >=0.6
-    , focus >=1.0
-    , generic-lens >=2.0
-    , generic-override >=0.0.0.1
-    , generic-override-aeson >=0.0.0.1
-    , hashable >=1.2
-    , http-date >=0.0.8
-    , http-types >=0.12
-    , lens >=4.18
-    , lens-aeson >=1.1
-    , polysemy >=1.3
-    , polysemy-plugin >=0.2
-    , protolude >=0.2
-    , reflection >=2.1
-    , scientific >=0.3
-    , stm >=2.5
-    , stm-chans >=3.0
-    , stm-containers >=1.1
-    , text >=1.2
-    , text-short >=0.1
-    , time >=1.8
-    , typerep-map >=0.3
-    , unordered-containers >=0.2
-    , vector >=0.12
-    , websockets >=0.12
-    , wreq >=0.5
-    , wuss >=1.1
-  default-language: Haskell2010
-
-executable test-calamity-exe
-  main-is: Main.hs
-  other-modules:
-      Paths_calamity
-  hs-source-dirs:
-      app
-  default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
-  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -flate-specialise -threaded -rtsopts -with-rtsopts=-T -O2
-  build-depends:
-      aeson >=1.4
-    , async >=2.2
-    , base-noprelude >=4.12 && <5
-    , bytestring >=0.10
-    , calamity
     , concurrent-extra >=0.7
     , data-default-class >=0.1
     , deque >=0.1
