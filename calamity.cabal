@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 39581523dce6ef96c8b52bc46e019ad2ed5189e375978f21822b74588d419a2e
+-- hash: e78ef2507b75c4f1774f413337ef2a61aaf36918be21f5a4a973a8c55a0c2021
 
 name:           calamity
 version:        0.1.0.0
@@ -22,6 +22,8 @@ build-type:     Simple
 extra-source-files:
     README.md
     ChangeLog.md
+    cabal.project
+    cabal.project.freeze
 extra-doc-files:
     README.md
 
