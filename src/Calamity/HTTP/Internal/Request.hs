@@ -20,7 +20,7 @@ import           Data.String                      ( String )
 import           Data.Text.Strict.Lens
 
 import           Network.Wreq
-import           Network.Wreq.Types               ( Postable, Putable )
+import           Network.Wreq.Types               ( Patchable, Postable, Putable )
 
 import           Polysemy                         ( Sem )
 import qualified Polysemy                         as P
@@ -85,7 +85,7 @@ postEmpty o s = postWith o s ("" :: ByteString)
 putWith' :: Putable a => a -> Options -> String -> IO (Response LB.ByteString)
 putWith' p o s = putWith o s p
 
-patchWith' :: Postable a => a -> Options -> String -> IO (Response LB.ByteString)
+patchWith' :: Patchable a => a -> Options -> String -> IO (Response LB.ByteString)
 patchWith' p o s = patchWith o s p
 
 putEmpty :: Options -> String -> IO (Response LB.ByteString)

@@ -110,67 +110,53 @@ packages:
   original:
     hackage: primitive-unlifted-0.1.3.0@sha256:a98f827740f5dcf097d885b3a47c32f4462204449620abc9d51b8c4f8619f9e6,1427
 - completed:
-    size: 129361
-    url: https://github.com/nitros12/wreq/archive/f8f2d8d571f76b2df2cec73a08e29519fa681d7b.tar.gz
-    cabal-file:
-      size: 5317
-      sha256: b8bfaa1a38fdfcffa92d842d83392f91a9299e3f94b70eb7719eac1527a563b0
     name: wreq
     version: 0.5.3.2
-    sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
+    git: https://github.com/nitros12/wreq
     pantry-tree:
       size: 2806
-      sha256: 2c44570ca365b23dbb42533405c47fc175c8b223235f79536f524926f3eff006
+      sha256: b27b06d69806025ed459cf32acb9e29013ee4c4f703650a65d39aea0caa3c7d1
+    commit: d80bf7d939aab3664e0b9c48efefd22a243df48b
   original:
-    size: 129361
-    url: https://github.com/nitros12/wreq/archive/f8f2d8d571f76b2df2cec73a08e29519fa681d7b.tar.gz
-    sha256: 9d9949599155cff09ac5bb83042b4256f8d9572ee7693dbab6c93a8635d45cdc
+    git: https://github.com/nitros12/wreq
+    commit: d80bf7d939aab3664e0b9c48efefd22a243df48b
 - completed:
-    size: 7735
-    url: https://github.com/nitros12/di-polysemy/archive/863cc0072d846b1d96eca6467bc836bd098f7bb7.tar.gz
-    cabal-file:
-      size: 2170
-      sha256: d108f34dd856b4d6cdb5e27079d3386730e153ebba06f92fc0fc5949847e0010
     name: di-polysemy
     version: 0.0.2
-    sha256: 6298d5635db4ee101e5aae32aef45bc978ff299d67b736b565932a20a7df4bed
+    git: https://github.com/nitros12/di-polysemy
     pantry-tree:
       size: 526
       sha256: ec0a67c88cae36fca5073a65f792acda415a29a14f41ae7bb9adb97f768405ba
+    commit: 863cc0072d846b1d96eca6467bc836bd098f7bb7
   original:
-    url: https://github.com/nitros12/di-polysemy/archive/863cc0072d846b1d96eca6467bc836bd098f7bb7.tar.gz
+    git: https://github.com/nitros12/di-polysemy
+    commit: 863cc0072d846b1d96eca6467bc836bd098f7bb7
 - completed:
-    size: 7984
     subdir: .
-    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
-    cabal-file:
-      size: 1169
-      sha256: fb9b5af767f6fe21550fa3f03677ed4ca4aa936b17675ffe6fc1af13df1503b9
     name: generic-override
     version: 0.0.0.1
-    sha256: 7986affad943aa5ef17b8a07c07488f3057aeeb9e8389f7574e9cc8885c9035e
+    git: https://github.com/estatico/generic-override
     pantry-tree:
       size: 1198
       sha256: bc5a1bcaec15bbb1c71b7646e1e1ae4745dfffbdcc71b3bd651201db0ef2e39a
+    commit: cbc64fa80dffb492187772b6343fe8e11443769a
   original:
     subdir: .
-    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
+    git: https://github.com/estatico/generic-override
+    commit: cbc64fa80dffb492187772b6343fe8e11443769a
 - completed:
-    size: 7984
     subdir: aeson
-    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
-    cabal-file:
-      size: 1547
-      sha256: f4d482b3249fda5ce44fb6a4876de0343ba4b753b3706c2d5ee4980f3e78d915
     name: generic-override-aeson
     version: 0.0.0.1
-    sha256: 7986affad943aa5ef17b8a07c07488f3057aeeb9e8389f7574e9cc8885c9035e
+    git: https://github.com/estatico/generic-override
     pantry-tree:
       size: 353
       sha256: df339d8ca0b1c25df7537b31d5713c023f2a6c156eebaa8b3c4bec48e6337526
+    commit: cbc64fa80dffb492187772b6343fe8e11443769a
   original:
     subdir: aeson
-    url: https://github.com/estatico/generic-override/archive/cbc64fa80dffb492187772b6343fe8e11443769a.tar.gz
+    git: https://github.com/estatico/generic-override
+    commit: cbc64fa80dffb492187772b6343fe8e11443769a
 snapshots:
 - completed:
     size: 524996
