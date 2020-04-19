@@ -1,14 +1,22 @@
 name:               calamity
 version:            0.1.0.0
 github:             "nitros12/calamity"
+synopsis:           "A library for writing discord bots"
+homepage:           "https://github.com/nitros12/calamity"
+bug-reports:        "https://github.com/nitros12/calamity/issues"
 license:            MIT
+license-file:       LICENSE
 author:             "Ben Simms"
 maintainer:         "ben@bensimms.moe"
-copyright:          "2018 Ben Simms"
+copyright:          "2020 Ben Simms"
+category:           Network, Web
 
 extra-source-files:
-- README.md
-- ChangeLog.md
+  - README.md
+  - ChangeLog.md
+
+extra-doc-files:
+  - README.md
 
 # Metadata used when publishing your package
 # synopsis:            Short description of your package
@@ -73,12 +81,6 @@ dependencies:
 #     dependencies:
 #       - calamity
 
-flags:
-  parse-presences:
-    description: If the library should parse presences or not
-    manual: false
-    default: true
-
 library:
   ghc-options:
     - -fplugin=Polysemy.Plugin
@@ -138,14 +140,3 @@ default-extensions:
   - TypeOperators
   - TypeApplications
   - RoleAnnotations
-
-tests:
-  calamity-test:
-    main:                Spec.hs
-    source-dirs:         test
-    ghc-options:
-    - -threaded
-    - -rtsopts
-    - -with-rtsopts=-N
-    dependencies:
-    - calamity

@@ -1,34 +1,33 @@
-cabal-version: 1.12
+cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 5c06a2f3a8a0a896d54004d337923a39eac00c97b8c2d22e79df2a64b7de93c1
+-- hash: 39581523dce6ef96c8b52bc46e019ad2ed5189e375978f21822b74588d419a2e
 
 name:           calamity
 version:        0.1.0.0
+synopsis:       A library for writing discord bots
 description:    Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
-homepage:       https://github.com/nitros12/calamity#readme
+category:       Network, Web
+homepage:       https://github.com/nitros12/calamity
 bug-reports:    https://github.com/nitros12/calamity/issues
 author:         Ben Simms
 maintainer:     ben@bensimms.moe
-copyright:      2018 Ben Simms
+copyright:      2020 Ben Simms
 license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 extra-source-files:
     README.md
     ChangeLog.md
+extra-doc-files:
+    README.md
 
 source-repository head
   type: git
   location: https://github.com/nitros12/calamity
-
-flag parse-presences
-  description: If the library should parse presences or not
-  manual: False
-  default: True
 
 library
   exposed-modules:
@@ -100,56 +99,6 @@ library
     , async >=2.2
     , base-noprelude >=4.12 && <5
     , bytestring >=0.10
-    , concurrent-extra >=0.7
-    , data-default-class >=0.1
-    , deque >=0.1
-    , df1 >=0.3
-    , di-polysemy >=0.0.2
-    , exceptions >=0.10
-    , fmt >=0.6
-    , focus >=1.0
-    , generic-lens >=2.0
-    , generic-override >=0.0.0.1
-    , generic-override-aeson >=0.0.0.1
-    , hashable >=1.2
-    , http-date >=0.0.8
-    , http-types >=0.12
-    , lens >=4.18
-    , lens-aeson >=1.1
-    , polysemy >=1.3
-    , polysemy-plugin >=0.2
-    , protolude >=0.2
-    , reflection >=2.1
-    , scientific >=0.3
-    , stm >=2.5
-    , stm-chans >=3.0
-    , stm-containers >=1.1
-    , text >=1.2
-    , text-short >=0.1
-    , time >=1.8
-    , typerep-map >=0.3
-    , unordered-containers >=0.2
-    , vector >=0.12
-    , websockets >=0.12
-    , wreq >=0.5
-    , wuss >=1.1
-  default-language: Haskell2010
-
-test-suite calamity-test
-  type: exitcode-stdio-1.0
-  main-is: Spec.hs
-  other-modules:
-      Paths_calamity
-  hs-source-dirs:
-      test
-  default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
-  ghc-options: -threaded -rtsopts -with-rtsopts=-N
-  build-depends:
-      aeson >=1.4
-    , async >=2.2
-    , base-noprelude >=4.12 && <5
-    , bytestring >=0.10
-    , calamity
     , concurrent-extra >=0.7
     , data-default-class >=0.1
     , deque >=0.1
