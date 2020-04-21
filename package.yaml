@@ -33,7 +33,7 @@ dependencies:
 - base-noprelude >= 4.12 && < 5
 - websockets >= 0.12
 - wuss >= 1.1
-- wreq >= 0.5
+- wreq-patchable >= 0.5
 - lens >= 4.18
 - stm >= 2.5
 - http-types >= 0.12
