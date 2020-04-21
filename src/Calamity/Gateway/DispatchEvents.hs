@@ -179,7 +179,7 @@ instance FromJSON PresenceUpdateData where
 
 data TypingStartData = TypingStartData
   { channelID :: Snowflake Channel
-  , guildID   :: Snowflake Guild
+  , guildID   :: Maybe (Snowflake Guild)
   , userID    :: Snowflake User
   , timestamp :: UnixTimestamp
   }

@@ -1,10 +1,10 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e78ef2507b75c4f1774f413337ef2a61aaf36918be21f5a4a973a8c55a0c2021
+-- hash: 8c9fd9a8a46882aec4387b515a66916353267b128a485a94851bea62d35bb3d6
 
 name:           calamity
 version:        0.1.0.0
@@ -34,6 +34,8 @@ source-repository head
 library
   exposed-modules:
       Calamity
+      Calamity.Cache.Eff
+      Calamity.Cache.InMemory
       Calamity.Client
       Calamity.Client.Client
       Calamity.Client.ShardManager

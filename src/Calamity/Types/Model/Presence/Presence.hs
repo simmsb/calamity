@@ -23,6 +23,8 @@ data Presence = Presence
   deriving ( Eq, Show, Generic )
   deriving ( ToJSON, FromJSON ) via CalamityJSON
       (O.Override Presence '["user" `O.As` Partial User])
+  deriving ( HasID User ) via HasIDField "user" Presence
+  deriving ( HasID Guild ) via HasIDField "guildID" Presence
 
 data ClientStatus = ClientStatus
   { desktop :: Maybe ShortText
