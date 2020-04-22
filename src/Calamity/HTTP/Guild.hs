@@ -12,7 +12,7 @@ import           Calamity.Types.Snowflake
 
 import           Data.Aeson
 import           Data.Function
-import           Data.Text.Lazy                 ( Text )
+import           Data.Text                      ( Text )
 
 import           GHC.Generics
 

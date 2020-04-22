@@ -22,7 +22,7 @@ import           Control.Lens                         hiding ( (.=) )
 import           Data.Aeson
 import           Data.Default.Class
 import           Data.Maybe
-import           Data.Text.Lazy                       ( Text )
+import           Data.Text                            ( Text )
 
 import           GHC.Generics
 
