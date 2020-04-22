@@ -1,19 +1,26 @@
 -- | Module for custom instance of Data.HashMap.Lazy that decodes from any list of objects that have an id field
 module Calamity.Internal.SnowflakeMap where
 
+import           Calamity.Internal.Utils  ()
 import           Calamity.Types.Snowflake
 
+import           Control.DeepSeq
 import           Control.Lens.At
+import           Control.Lens.Iso
 import           Control.Lens.Wrapped
 
 import           Data.Aeson               ( FromJSON(..), ToJSON(..), withArray )
 import           Data.Data
+import qualified Data.Foldable            as F
 import           Data.HashMap.Lazy        ( HashMap )
 import qualified Data.HashMap.Lazy        as LH
+import           Data.Hashable
 
 import           GHC.Exts                 ( IsList )
+import           GHC.Generics
 
-import           Prelude                  hiding ( over )
+import           TextShow
+import qualified TextShow.Generic         as TSG
 
 import           Unsafe.Coerce
 
@@ -21,6 +28,7 @@ newtype SnowflakeMap a = SnowflakeMap
   { unSnowflakeMap :: HashMap (Snowflake a) a
   }
   deriving ( Generic, Eq, Data, Ord, Show )
+  deriving ( TextShow ) via TSG.FromGeneric (SnowflakeMap a)
   deriving newtype ( IsList, Semigroup, Monoid )
   deriving anyclass ( NFData, Hashable )
 
@@ -225,7 +233,7 @@ fromListWith f = SnowflakeMap . LH.fromListWith f . Prelude.map (\v -> (getID v,
 instance (FromJSON a, HasID' a) => FromJSON (SnowflakeMap a) where
   parseJSON = withArray "SnowflakeMap" $ \l -> do
     parsed <- traverse parseJSON l
-    pure . Calamity.Internal.SnowflakeMap.fromList . Prelude.toList $ parsed
+    pure . Calamity.Internal.SnowflakeMap.fromList . F.toList $ parsed
 
 instance ToJSON a => ToJSON (SnowflakeMap a) where
   toEncoding = toEncoding . elems

@@ -4,15 +4,26 @@ module Calamity.Types.UnixTimestamp
     , unixToMilliseconds
     , millisecondsToUnix ) where
 
+import           Calamity.Internal.Utils ()
+
+import           Control.Arrow
+
 import           Data.Aeson
-import           Data.Aeson.Encoding   ( word64 )
+import           Data.Aeson.Encoding     ( word64 )
 import           Data.Time
 import           Data.Time.Clock.POSIX
+import           Data.Word
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic        as TSG
 
 newtype UnixTimestamp = UnixTimestamp
   { unUnixTimestamp :: UTCTime
   }
   deriving ( Show, Eq, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric UnixTimestamp
 
 unixToMilliseconds :: UnixTimestamp -> Word64
 unixToMilliseconds = unUnixTimestamp

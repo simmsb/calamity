@@ -8,15 +8,24 @@ module Calamity.Types.Snowflake
     , type HasIDFieldCoerce'
     , coerceSnowflake ) where
 
+import           Control.DeepSeq
+import           Control.Lens
 import           Control.Monad
 
 import           Data.Aeson
 import           Data.Data
 import           Data.Generics.Product.Fields
+import           Data.Hashable
 import           Data.Text.Read
 import qualified Data.Vector.Generic.Base     as V
 import qualified Data.Vector.Generic.Mutable  as MV
 import qualified Data.Vector.Unboxed          as U
+import           Data.Word
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic as TSG
 
 -- Thanks sbrg
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L78
@@ -24,10 +33,11 @@ newtype Snowflake t = Snowflake
   { fromSnowflake :: Word64
   }
   deriving ( Generic, Show, Eq, Ord, Data )
+  deriving ( TextShow ) via TSG.FromGeneric (Snowflake t)
   deriving newtype ( NFData, ToJSONKey, Hashable )
 
 instance ToJSON (Snowflake t) where
-  toJSON (Snowflake s) = String . show $ s
+  toJSON (Snowflake s) = String . showt $ s
 
 instance FromJSON (Snowflake t) where
   parseJSON = withText "Snowflake" $ \t -> do
@@ -63,7 +73,7 @@ instance HasField' field a (Snowflake c) => HasID b (HasIDFieldCoerce field a c)
   getID (HasIDFieldCoerce a) = coerceSnowflake $ a ^. field' @field
 
 instance HasID a (Snowflake a) where
-  getID = identity
+  getID = id
 
 newtype instance U.MVector s (Snowflake t) = MV_Snowflake (U.MVector s Word64)
 

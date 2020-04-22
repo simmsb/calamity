@@ -11,12 +11,15 @@ import           Calamity.Cache.Eff
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
 import           Calamity.HTTP.Internal.Types
+import           Calamity.LogEff
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Token
 import           Calamity.Types.UnixTimestamp
 
+import           Control.Concurrent.Async
+import           Control.Concurrent.MVar
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 
@@ -27,6 +30,7 @@ import qualified Data.TypeRepMap                 as TM
 import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) )
 
 import           GHC.Exts                        ( fromList )
+import           GHC.Generics
 import qualified GHC.TypeLits                    as TL
 
 import qualified Polysemy                        as P

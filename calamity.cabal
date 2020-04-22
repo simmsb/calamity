@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: fb0a01673142ef3c08e66e4f8da9dd9cb81a6392aea94ce7a171faf1f4f72980
+-- hash: 0340c09557893b82e62c119a228528cb39c8eadfd67fd2244f938d6649cef472
 
 name:           calamity
 version:        0.1.0.0
@@ -53,11 +53,11 @@ library
       Calamity.HTTP.Internal.Route
       Calamity.HTTP.Internal.Types
       Calamity.HTTP.MiscRoutes
-      Calamity.HTTP.Types
       Calamity.Internal.AesonThings
       Calamity.Internal.MessageStore
       Calamity.Internal.SnowflakeMap
       Calamity.Internal.Updateable
+      Calamity.Internal.Utils
       Calamity.LogEff
       Calamity.Types
       Calamity.Types.Model
@@ -91,7 +91,6 @@ library
       Calamity.Types.Snowflake
       Calamity.Types.Token
       Calamity.Types.UnixTimestamp
-      Prelude
   other-modules:
       Paths_calamity
   hs-source-dirs:
@@ -101,10 +100,11 @@ library
   build-depends:
       aeson >=1.4
     , async >=2.2
-    , base-noprelude >=4.12 && <5
+    , base >=4.12 && <5
     , bytestring >=0.10
     , concurrent-extra >=0.7
     , data-default-class >=0.1
+    , deepseq >=1.4.4.0
     , deque >=0.1
     , df1 >=0.3
     , di-polysemy >=0.0.2
@@ -119,16 +119,16 @@ library
     , http-types >=0.12
     , lens >=4.18
     , lens-aeson >=1.1
+    , mtl >=2.2
     , polysemy >=1.3
     , polysemy-plugin >=0.2
-    , protolude >=0.2
     , reflection >=2.1
     , scientific >=0.3
     , stm >=2.5
     , stm-chans >=3.0
     , stm-containers >=1.1
     , text >=1.2
-    , text-short >=0.1
+    , text-show >=3.8
     , time >=1.8
     , typerep-map >=0.3
     , unordered-containers >=0.2

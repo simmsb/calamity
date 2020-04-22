@@ -5,14 +5,20 @@ module Calamity.Cache.InMemory
 import           Calamity.Cache.Eff
 import           Calamity.Internal.MessageStore
 import qualified Calamity.Internal.SnowflakeMap as SM
+import           Calamity.Internal.Utils
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
+import           Control.Lens
+import           Control.Monad.State.Strict
+
+import           Data.Default.Class
 import qualified Data.HashSet                   as LS
 import           Data.IORef
-import           Data.Default.Class
+
+import           GHC.Generics
 
 import qualified Polysemy                       as P
 import qualified Polysemy.AtomicState           as P

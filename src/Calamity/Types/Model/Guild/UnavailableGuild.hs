@@ -8,10 +8,16 @@ import           Calamity.Types.Snowflake
 
 import           Data.Aeson
 
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic                 as TSG
+
 data UnavailableGuild = UnavailableGuild
   { id          :: Snowflake Guild
   , unavailable :: Bool
   }
   deriving ( Eq, Show, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric UnavailableGuild
   deriving ( ToJSON, FromJSON ) via CalamityJSON UnavailableGuild
   deriving ( HasID Guild ) via HasIDField "id" UnavailableGuild

@@ -15,14 +15,9 @@ extra-source-files:
   - README.md
   - ChangeLog.md
   - cabal.project
-  - cabal.project.freeze
 
 extra-doc-files:
   - README.md
-
-# Metadata used when publishing your package
-# synopsis:            Short description of your package
-# category:            Web
 
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
@@ -30,7 +25,7 @@ extra-doc-files:
 description:        Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 
 dependencies:
-- base-noprelude >= 4.12 && < 5
+- base >= 4.12 && < 5
 - websockets >= 0.12
 - wuss >= 1.1
 - wreq-patchable >= 0.5
@@ -40,7 +35,6 @@ dependencies:
 - aeson >= 1.4
 - lens-aeson >= 1.1
 - typerep-map >= 0.3
-- protolude >= 0.2
 - generic-lens >= 2.0
 - text >= 1.2
 - exceptions >= 0.10
@@ -58,7 +52,6 @@ dependencies:
 - async >= 2.2
 - scientific >= 0.3
 - deque >= 0.1
-- text-short >= 0.1
 - vector >= 0.12
 - reflection >= 2.1
 - polysemy >= 1.3
@@ -67,6 +60,9 @@ dependencies:
 - df1 >= 0.3
 - generic-override >= 0.0.0.1
 - generic-override-aeson >= 0.0.0.1
+- deepseq >= 1.4.4.0
+- text-show >= 3.8
+- mtl >= 2.2
 
 # executables:
 #   test-calamity-exe:

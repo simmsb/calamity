@@ -17,9 +17,18 @@ import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Snowflake
 
-import           Data.List                        ( lookup )
-import           Data.Maybe                       ( fromJust )
-import qualified Data.Text                        as T
+import           Data.Hashable
+import           Data.Kind
+import           Data.List                    ( lookup )
+import           Data.Maybe                   ( fromJust )
+import           Data.Text                    ( Text )
+import qualified Data.Text                    as T
+import           Data.Typeable
+import           Data.Word
+
+import           GHC.Generics                 hiding ( S )
+
+import           TextShow
 
 data RouteFragment
   = S' Text
@@ -133,7 +142,7 @@ buildRoute (UnsafeMkRouteBuilder route ids) = Route
   route' = reverse route
 
   goR (S'  t) = t
-  goR (ID' t) = show . fromJust $ lookup t ids
+  goR (ID' t) = showt . fromJust $ lookup t ids
 
   goIdent (S'  t) = t
-  goIdent (ID' t) = show t
+  goIdent (ID' t) = showt t

@@ -1,5 +1,3 @@
-{-# LANGUAGE NoImplicitPrelude #-}
-
 module Calamity.Internal.AesonThings
     ( WithSpecialCases
     , WithSpecialCasesInner(..)
@@ -20,14 +18,15 @@ import           Control.Lens
 import           Data.Aeson
 import           Data.Aeson.Lens
 import           Data.Aeson.Types      ( Parser )
+import           Data.Kind
 import           Data.Reflection       ( Reifies(..) )
+import           Data.Text             ( Text )
 import           Data.Text.Strict.Lens
-import           Data.Typeable         ( typeRep )
+import           Data.Typeable
 
+import           GHC.Generics
 import qualified GHC.TypeLits          as TL
-import           GHC.TypeLits          ( KnownSymbol, symbolVal )
-
-import           Protolude
+import           GHC.TypeLits          ( KnownSymbol, Symbol, symbolVal )
 
 textSymbolVal :: forall n. KnownSymbol n => Proxy n -> Text
 textSymbolVal _ = symbolVal @n Proxy ^. packed
@@ -97,7 +96,7 @@ class RunSpecialCase a where
   runSpecialCases :: Proxy a -> Object -> Parser Object
 
 instance RunSpecialCase 'SpecialCaseNil where
-  runSpecialCases _ = pure . identity
+  runSpecialCases _ = pure . id
 
 instance (RunSpecialCase inner, KnownSymbol label, PerformAction action)
   => RunSpecialCase ('SpecialCaseElem label action inner) where

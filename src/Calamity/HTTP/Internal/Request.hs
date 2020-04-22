@@ -14,10 +14,16 @@ import           Calamity.HTTP.Internal.Route
 import           Calamity.HTTP.Internal.Types
 import           Calamity.Types.Token
 
+import           Control.Lens
+
 import           Data.Aeson                       hiding ( Options )
+import           Data.ByteString                  ( ByteString )
 import qualified Data.ByteString.Lazy             as LB
-import           Data.String                      ( String )
-import           Data.Text.Strict.Lens
+import qualified Data.Text                        as TS
+import qualified Data.Text.Encoding               as TS
+import qualified Data.Text.Lazy                   as TL
+
+import           DiPolysemy                       hiding ( debug, error, info )
 
 import           Network.Wreq
 import           Network.Wreq.Types               ( Patchable, Postable, Putable )
@@ -29,11 +35,11 @@ import qualified Polysemy.Reader                  as P
 
 fromResult :: P.Member (P.Error RestError) r => Result a -> Sem r a
 fromResult (Success a) = pure a
-fromResult (Error e) = P.throw (DecodeError $ e ^. packed)
+fromResult (Error e) = P.throw (DecodeError . TL.pack $ e)
 
 fromJSONDecode :: P.Member (P.Error RestError) r => Either String a -> Sem r a
 fromJSONDecode (Right a) = pure a
-fromJSONDecode (Left e) = P.throw (DecodeError $ e ^. packed)
+fromJSONDecode (Left e) = P.throw (DecodeError . TL.pack $ e)
 
 extractRight :: P.Member (P.Error e) r => Either e a -> Sem r a
 extractRight (Left e) = P.throw e
@@ -52,7 +58,7 @@ class Request a r | a -> r where
   toRoute :: a -> Route
 
   url :: a -> String
-  url r = path (toRoute r) ^. unpacked
+  url = TS.unpack . path . toRoute
 
   toAction :: a -> Options -> String -> IO (Response LB.ByteString)
 
@@ -68,13 +74,13 @@ class Request a r | a -> r where
 
 defaultRequestOptions :: Options
 defaultRequestOptions = defaults
-  & header "User-Agent" .~ ["Calamity (https://github.com/nitros12/yet-another-haskell-discord-library)"]
+  & header "User-Agent" .~ ["Calamity (https://github.com/nitros12/calamity)"]
   & header "X-RateLimit-Precision" .~ ["millisecond"]
   & checkResponse ?~ (\_ _ -> pure ())
 
 requestOptions :: Token -> Options
 requestOptions t = defaultRequestOptions
-  & header "Authorization" .~ [encodeUtf8 $ formatToken t]
+  & header "Authorization" .~ [TS.encodeUtf8 . TL.toStrict $ formatToken t]
 
 postWith' :: Postable a => a -> Options -> String -> IO (Response LB.ByteString)
 postWith' p o s = postWith o s p

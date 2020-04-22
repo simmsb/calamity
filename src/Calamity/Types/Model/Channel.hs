@@ -24,12 +24,19 @@ import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
+import           Data.Text.Lazy                           ( Text )
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic                         as TSG
 
 data Channel
   = DMChannel' DMChannel
   | GroupChannel' GroupChannel
   | GuildChannel' GuildChannel
   deriving ( Show, Eq, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric Channel
 
 instance HasID Channel Channel where
   getID (DMChannel' a) = getID a
@@ -49,9 +56,10 @@ instance FromJSON Channel where
 
 data instance Partial Channel = PartialChannel
   { id    :: Snowflake Channel
-  , name  :: ShortText
+  , name  :: Text
   , type_ :: ChannelType
   }
   deriving ( Show, Eq, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric (Partial Channel)
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Channel)
   deriving ( HasID Channel ) via HasIDField "id" (Partial Channel)

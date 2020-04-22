@@ -8,17 +8,29 @@ module Calamity.Gateway.Shard
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
+import           Calamity.Internal.Utils
+import           Calamity.LogEff
 import           Calamity.Types.Token
 
+import           Control.Concurrent
+import           Control.Concurrent.Async
+import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
-import           Control.Concurrent.STM.TQueue
-import           Control.Concurrent.STM.TVar
-import           Control.Lens                    ( (.=) )
+import           Control.Exception
+import           Control.Lens
+import           Control.Monad
+import           Control.Monad.State.Lazy
 
 import qualified Data.Aeson                      as A
+import           Data.Functor
 import           Data.Maybe
-import           Data.Text                       ( stripPrefix )
-import           Data.Text.Strict.Lens
+import           Data.Text.Lazy                  ( Text, stripPrefix )
+import           Data.Text.Lazy.Lens
+import           Data.Void
+
+import           DiPolysemy                      hiding ( debug, error, info )
+
+import           Fmt
 
 import           Network.WebSockets              ( Connection, ConnectionException(..), receiveData, sendCloseCode
                                                  , sendTextData )
@@ -29,6 +41,8 @@ import qualified Polysemy.Async                  as P
 import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Error                  as P
 import qualified Polysemy.Resource               as P
+
+import           Prelude                         hiding ( error )
 
 import           Wuss
 

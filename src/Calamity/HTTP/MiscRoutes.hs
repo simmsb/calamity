@@ -5,6 +5,8 @@ import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
 import           Calamity.HTTP.Internal.Types
 
+import           Data.Function
+
 import           Network.Wreq
 
 data MiscRequest a where

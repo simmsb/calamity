@@ -1,29 +1,28 @@
--- | Types for shards
 {-# OPTIONS_GHC -Wno-orphans #-}
 
+-- | Types for shards
 module Calamity.Gateway.Types where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Internal.AesonThings
+import           Calamity.LogEff
 import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
 
--- ( Shard(..)
--- , ShardState(..)
--- , ShardM(..)
--- , ShardMsg(..)
--- , DiscordMessage(..)
--- , RawWsPayload(..)
--- , ControlMessage(..)
--- )
+import           Control.Concurrent.Async
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
+import           Control.Exception
 import           Control.Monad                    ( fail )
 
 import           Data.Aeson
 import qualified Data.Aeson.Types                 as AT
 import           Data.Generics.Labels             ()
+import           Data.Maybe
+import           Data.Text.Lazy                   ( Text )
+
+import           GHC.Generics
 
 import           Network.WebSockets.Connection    ( Connection )
 
@@ -177,7 +176,7 @@ data IdentifyData = IdentifyData
 data StatusUpdateData = StatusUpdateData
   { since  :: Maybe Integer
   , game   :: Maybe Value
-  , status :: ShortText
+  , status :: Text
   , afk    :: Bool
   }
   deriving ( Show, Generic )

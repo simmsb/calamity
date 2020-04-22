@@ -3,21 +3,30 @@ module Calamity.HTTP.Internal.Ratelimit
     ( newRateLimitState
     , doRequest ) where
 
-import           Calamity.Client.Types ( BotC )
+import           Calamity.Client.Types        ( BotC )
 import           Calamity.HTTP.Internal.Route
 import           Calamity.HTTP.Internal.Types
+import           Calamity.Internal.Utils
 
+import           Control.Concurrent
 import           Control.Concurrent.Event     ( Event )
 import qualified Control.Concurrent.Event     as E
+import           Control.Concurrent.STM
 import           Control.Concurrent.STM.Lock  ( Lock )
 import qualified Control.Concurrent.STM.Lock  as L
+import           Control.Lens
 import           Control.Monad
 
 import           Data.Aeson
+import           Data.Aeson.Lens
+import           Data.ByteString              ( ByteString )
 import qualified Data.ByteString.Lazy         as LB
+import           Data.Functor
 import           Data.Maybe
 import           Data.Time
 import           Data.Time.Clock.POSIX
+
+import           Fmt
 
 import           Focus
 
@@ -26,8 +35,10 @@ import           Network.HTTP.Types           hiding ( statusCode )
 import           Network.Wreq
 
 import qualified Polysemy                     as P
-import qualified Polysemy.Async               as P
 import           Polysemy                     ( Sem )
+import qualified Polysemy.Async               as P
+
+import           Prelude                      hiding ( error )
 
 import qualified StmContainers.Map            as SC
 

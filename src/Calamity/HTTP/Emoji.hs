@@ -5,24 +5,29 @@ module Calamity.HTTP.Emoji
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.Utils        ()
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
+import           Data.Function
+import           Data.Text.Lazy                 ( Text )
+
+import           GHC.Generics
 
 import           Network.Wreq
 
 
 data CreateGuildEmojiOptions = CreateGuildEmojiOptions
-  { name  :: ShortText
-  , image :: ShortText
+  { name  :: Text
+  , image :: Text
   , roles :: [Snowflake Role]
   }
   deriving ( Show, Generic )
   deriving ( ToJSON ) via CalamityJSON CreateGuildEmojiOptions
 
 data ModifyGuildEmojiOptions = ModifyGuildEmojiOptions
-  { name  :: ShortText
+  { name  :: Text
   , roles :: [Snowflake Role]
   }
   deriving ( Show, Generic )

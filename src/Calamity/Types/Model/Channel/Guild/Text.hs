@@ -3,6 +3,7 @@ module Calamity.Types.Model.Channel.Guild.Text
     ( TextChannel(..) ) where
 
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.Utils                     ()
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild.Category
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
@@ -11,16 +12,21 @@ import           Calamity.Types.Model.Guild.Overwrite
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
+import           Data.Text.Lazy                              ( Text )
 import           Data.Time
-import           Data.Vector                                 ( Vector )
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic                            as TSG
 
 data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
   , position             :: Int
-  , permissionOverwrites :: Vector Overwrite
-  , name                 :: ShortText
-  , topic                :: Maybe ShortText
+  , permissionOverwrites :: [Overwrite]
+  , name                 :: Text
+  , topic                :: Maybe Text
   , nsfw                 :: Bool
   , lastMessageID        :: Maybe (Snowflake Message)
   , lastPinTimestamp     :: Maybe UTCTime
@@ -28,6 +34,7 @@ data TextChannel = TextChannel
   , parentID             :: Maybe (Snowflake Category)
   }
   deriving ( Show, Eq, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric TextChannel
   deriving ( ToJSON ) via CalamityJSON TextChannel
   deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "nsfw" DefaultToFalse]
       TextChannel

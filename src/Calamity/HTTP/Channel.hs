@@ -1,22 +1,65 @@
 -- | Channel endpoints
 module Calamity.HTTP.Channel
-    ( ChannelRequest(..)
+    ( ChannelUpdate(..)
+    , ChannelMessagesQuery(..)
+    , ChannelRequest(..)
     , GetReactionsOptions(..)
     , CreateChannelInviteOptions(..)
     , GroupDMAddRecipientOptions(..) ) where
 
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
-import           Calamity.HTTP.Types
 import           Calamity.Internal.AesonThings
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
+import           Calamity.Types.Model.Guild.Overwrite
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
+import           Control.Arrow
+import           Control.Lens                         hiding ( (.=) )
+
 import           Data.Aeson
+import           Data.Default.Class
+import           Data.Maybe
+import           Data.Text.Lazy                       ( Text )
+
+import           GHC.Generics
 
 import           Network.Wreq
+
+import           TextShow
+
+data ChannelUpdate = ChannelUpdate
+  { name                 :: Maybe Text
+  , position             :: Maybe Int
+  , topic                :: Maybe Text
+  , nsfw                 :: Maybe Bool
+  , rateLimitPerUser     :: Maybe Int
+  , bitrate              :: Maybe Int
+  , userLimit            :: Maybe Int
+  , permissionOverwrites :: Maybe [Overwrite]
+  , parentID             :: Maybe (Snowflake Channel)
+  }
+  deriving ( Generic, Show )
+  deriving anyclass ( Default )
+  deriving ( ToJSON ) via CalamityJSON ChannelUpdate
+
+data ChannelMessagesQuery
+  = ChannelMessagesAround
+      { around :: Snowflake Message
+      }
+  | ChannelMessagesBefore
+      { before :: Snowflake Message
+      }
+  | ChannelMessagesAfter
+      { after :: Snowflake Message
+      }
+  | ChannelMessagesLimit
+      { limit :: Int
+      }
+  deriving ( Generic, Show )
+  deriving ( ToJSON ) via CalamityJSON ChannelMessagesQuery
 
 data GetReactionsOptions = GetReactionsOptions
   { before :: Maybe (Snowflake User)
@@ -35,8 +78,8 @@ data CreateChannelInviteOptions = CreateChannelInviteOptions
   deriving ( ToJSON ) via CalamityJSON CreateChannelInviteOptions
 
 data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions
-  { accessToken :: ShortText
-  , nick        :: ShortText
+  { accessToken :: Text
+  , nick        :: Text
   }
   deriving ( Show, Generic )
   deriving ( ToJSON ) via CalamityJSON GroupDMAddRecipientOptions
@@ -82,20 +125,20 @@ instance Request (ChannelRequest a) a where
     & giveID mid
     & buildRoute
   toRoute (CreateReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
     & giveID mid
     & buildRoute
   toRoute (DeleteOwnReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
     & giveID mid
     & buildRoute
   toRoute (DeleteUserReaction (getID -> cid) (getID @Message -> mid) emoji (getID @User -> uid)) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji) // ID @User
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // ID @User
     & giveID mid
     & giveID uid
     & buildRoute
   toRoute (GetReactions (getID -> cid) (getID @Message -> mid) emoji _) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (show emoji)
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji)
     & giveID mid
     & buildRoute
   toRoute (DeleteAllReactions (getID -> cid) (getID @Message -> mid)) =
@@ -142,19 +185,19 @@ instance Request (ChannelRequest a) a where
   toAction (GetChannel _)      = getWith
   toAction (ModifyChannel _ p) = putWith' (toJSON p)
   toAction (DeleteChannel _)   = deleteWith
-  toAction (GetChannelMessages _ (Just (ChannelMessagesAround (show . fromSnowflake -> a)))) = getWithP (param "around" .~ [a])
-  toAction (GetChannelMessages _ (Just (ChannelMessagesBefore (show . fromSnowflake -> a)))) = getWithP (param "before" .~ [a])
-  toAction (GetChannelMessages _ (Just (ChannelMessagesAfter  (show . fromSnowflake -> a)))) = getWithP (param "after"  .~ [a])
-  toAction (GetChannelMessages _ (Just (ChannelMessagesLimit  (show -> a))))                 = getWithP (param "around" .~ [a])
+  toAction (GetChannelMessages _ (Just (ChannelMessagesAround (showt . fromSnowflake -> a)))) = getWithP (param "around" .~ [a])
+  toAction (GetChannelMessages _ (Just (ChannelMessagesBefore (showt . fromSnowflake -> a)))) = getWithP (param "before" .~ [a])
+  toAction (GetChannelMessages _ (Just (ChannelMessagesAfter  (showt . fromSnowflake -> a)))) = getWithP (param "after"  .~ [a])
+  toAction (GetChannelMessages _ (Just (ChannelMessagesLimit  (showt -> a))))                 = getWithP (param "around" .~ [a])
   toAction (GetChannelMessages _ Nothing) = getWith
   toAction (GetMessage _ _)               = getWith
   toAction CreateReaction {}              = putEmpty
   toAction DeleteOwnReaction {}           = deleteWith
   toAction DeleteUserReaction {}          = deleteWith
   toAction (GetReactions _ _ _ GetReactionsOptions { before, after, limit }) = getWithP
-    (param "before" .~ maybeToList (show <$> before)
-     >>> param "after" .~ maybeToList (show <$> after)
-     >>> param "limit" .~ maybeToList (show <$> limit))
+    (param "before" .~ maybeToList (showt <$> before)
+     >>> param "after" .~ maybeToList (showt <$> after)
+     >>> param "limit" .~ maybeToList (showt <$> limit))
   toAction (DeleteAllReactions _ _) = deleteWith
   toAction (EditMessage _ _ content embed) = patchWith'
     (object ["content" .= content, "embed" .= embed])

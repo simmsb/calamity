@@ -2,9 +2,17 @@
 module Calamity.Types.Model.Channel.Attachment
     ( Attachment(..) ) where
 
+import           Calamity.Internal.AesonThings ()
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
+import           Data.Text.Lazy                ( Text )
+import           Data.Word
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic              as TSG
 
 fuseTup2 :: Monad f => (f a, f b) -> f (a, b)
 fuseTup2 (a, b) = do
@@ -14,13 +22,15 @@ fuseTup2 (a, b) = do
 
 data Attachment = Attachment
   { id         :: Snowflake Attachment
-  , filename   :: ShortText
+  , filename   :: Text
   , size       :: Word64
-  , url        :: ShortText
-  , proxyUrl   :: ShortText
+  , url        :: Text
+  , proxyUrl   :: Text
   , dimensions :: Maybe (Word64, Word64)
   }
   deriving ( Eq, Show, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric Attachment
+  deriving ( HasID Attachment ) via HasIDField "id" Attachment
 
 instance ToJSON Attachment where
   toEncoding Attachment { id, filename, size, url, proxyUrl, dimensions = Just (width, height) } = pairs

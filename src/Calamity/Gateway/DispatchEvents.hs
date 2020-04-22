@@ -2,6 +2,7 @@
 module Calamity.Gateway.DispatchEvents where
 
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.Utils                     ()
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Channel.Message
 import           Calamity.Types.Model.Guild.Emoji
@@ -15,12 +16,16 @@ import           Calamity.Types.Snowflake
 import           Calamity.Types.UnixTimestamp
 
 import           Data.Aeson
+import           Data.Text.Lazy                              ( Text )
 import           Data.Time
 import           Data.Vector.Unboxed                         ( Vector )
+
+import           GHC.Generics
 
 data DispatchMessage
   = DispatchData' DispatchData
   | ShutDown
+  deriving ( Show, Generic )
 
 data DispatchData
   = Ready ReadyData
@@ -104,7 +109,7 @@ data GuildMemberUpdateData = GuildMemberUpdateData
   { guildID :: Snowflake Guild
   , roles   :: Vector (Snowflake Role)
   , user    :: User
-  , nick    :: Maybe ShortText
+  , nick    :: Maybe Text
   }
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON GuildMemberUpdateData

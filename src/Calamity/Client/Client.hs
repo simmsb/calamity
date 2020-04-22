@@ -13,27 +13,31 @@ import           Calamity.Gateway.Types
 import           Calamity.HTTP.Internal.Ratelimit
 import qualified Calamity.Internal.SnowflakeMap              as SM
 import           Calamity.Internal.Updateable
+import           Calamity.Internal.Utils
+import           Calamity.LogEff
 import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Guild.UnavailableGuild
 import           Calamity.Types.Model.Presence               ( Presence(..) )
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
 
-import           Control.Concurrent.STM.TQueue
-import           Control.Concurrent.STM.TVar
-import           Control.Lens                                ( (.=) )
-import           Control.Monad                               ( fail )
+import           Control.Concurrent.MVar
+import           Control.Concurrent.STM
+import           Control.Lens
+import           Control.Monad
 
 import           Data.Default.Class
 import           Data.Dynamic
-import qualified Data.HashSet                                as LS
-import           Data.HashSet.Lens
+import           Data.Foldable
 import           Data.Maybe
+import           Data.Traversable
 import qualified Data.TypeRepMap                             as TM
-import qualified Data.Vector                                 as V
 
 import qualified DiPolysemy                                  as Di
+
+import           Fmt
+
+import           GHC.TypeLits
 
 import           Polysemy                                    ( Sem )
 import qualified Polysemy                                    as P
@@ -401,13 +405,13 @@ updateCache (MessageDeleteBulk MessageDeleteBulkData { ids }) =
   for_ ids delMessage
 
 updateCache (MessageReactionAdd reaction) =
-  updateMessage (getID reaction) (#reactions %~ V.cons reaction)
+  updateMessage (getID reaction) (#reactions %~ cons reaction)
 
 updateCache (MessageReactionRemove reaction) =
-  updateMessage (getID reaction) (#reactions %~ V.filter (\r -> r ^. #emoji /= reaction ^. #emoji))
+  updateMessage (getID reaction) (#reactions %~ filter (\r -> r ^. #emoji /= reaction ^. #emoji))
 
 updateCache (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) =
-  updateMessage messageID (#reactions .~ V.empty)
+  updateMessage messageID (#reactions .~ mempty)
 
 updateCache (PresenceUpdate PresenceUpdateData { userID, roles, presence }) =
   updateGuild (getID presence) ((#members . at (coerceSnowflake userID) . _Just . #roles .~ roles)

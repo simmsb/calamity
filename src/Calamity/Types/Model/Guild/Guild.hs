@@ -7,6 +7,7 @@ module Calamity.Types.Model.Guild.Guild
 import           Calamity.Internal.AesonThings
 import qualified Calamity.Internal.SnowflakeMap         as SM
 import           Calamity.Internal.SnowflakeMap         ( SnowflakeMap )
+import           Calamity.Internal.Utils                ()
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild.Emoji
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
@@ -16,22 +17,30 @@ import           Calamity.Types.Model.User
 import           Calamity.Types.Model.Voice.VoiceState
 import           Calamity.Types.Snowflake
 
+import           Control.Lens                           ( (^.) )
+
 import           Data.Aeson
 import           Data.Generics.Product.Fields
 import           Data.HashMap.Lazy                      ( HashMap )
 import qualified Data.HashMap.Lazy                      as LH
+import           Data.Text.Lazy                         ( Text )
 import           Data.Time
-import           Data.Vector                            ( Vector )
+import           Data.Word
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic                       as TSG
 
 data Guild = Guild
   { id                          :: Snowflake Guild
-  , name                        :: ShortText
-  , icon                        :: Maybe ShortText
-  , splash                      :: Maybe ShortText
+  , name                        :: Text
+  , icon                        :: Maybe Text
+  , splash                      :: Maybe Text
   , owner                       :: Maybe Bool
   , ownerID                     :: Snowflake User
   , permissions                 :: Word64
-  , region                      :: ShortText
+  , region                      :: Text
   , afkChannelID                :: Maybe (Snowflake GuildChannel)
   , afkTimeout                  :: Int
   , embedEnabled                :: Bool
@@ -41,7 +50,7 @@ data Guild = Guild
   , explicitContentFilter       :: Int
   , roles                       :: SnowflakeMap Role
   , emojis                      :: SnowflakeMap Emoji
-  , features                    :: Vector ShortText
+  , features                    :: [Text]
   , mfaLevel                    :: Int
   , applicationID               :: Maybe (Snowflake User)
   , widgetEnabled               :: Bool
@@ -52,12 +61,13 @@ data Guild = Guild
   , large                       :: Bool
   , unavailable                 :: Bool
   , memberCount                 :: Int
-  , voiceStates                 :: Vector VoiceState
+  , voiceStates                 :: [VoiceState]
   , members                     :: SnowflakeMap Member
   , channels                    :: SnowflakeMap GuildChannel
   , presences                   :: HashMap (Snowflake User) Presence
   }
   deriving ( Eq, Show, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric Guild
   deriving ( HasID Guild ) via HasIDField "id" Guild
 
 instance FromJSON Guild where
@@ -114,21 +124,22 @@ instance FromJSON Guild where
 
 data instance Partial Guild = PartialGuild
   { id   :: Snowflake Guild
-  , name :: ShortText
+  , name :: Text
   }
   deriving ( Eq, Show, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric (Partial Guild)
   deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Guild)
   deriving ( HasID Guild ) via HasIDField "id" (Partial Guild)
 
 data UpdatedGuild = UpdatedGuild
   { id                          :: Snowflake Guild
-  , name                        :: ShortText
-  , icon                        :: Maybe ShortText
-  , splash                      :: Maybe ShortText
+  , name                        :: Text
+  , icon                        :: Maybe Text
+  , splash                      :: Maybe Text
   , owner                       :: Maybe Bool
   , ownerID                     :: Snowflake User
   , permissions                 :: Maybe Word64
-  , region                      :: ShortText
+  , region                      :: Text
   , afkChannelID                :: Maybe (Snowflake GuildChannel)
   , afkTimeout                  :: Int
   , embedEnabled                :: Maybe Bool
@@ -138,7 +149,7 @@ data UpdatedGuild = UpdatedGuild
   , explicitContentFilter       :: Int
   , roles                       :: SnowflakeMap Role
   , emojis                      :: SnowflakeMap Emoji
-  , features                    :: Vector ShortText
+  , features                    :: [Text]
   , mfaLevel                    :: Int
   , applicationID               :: Maybe (Snowflake User)
   , widgetEnabled               :: Maybe Bool
@@ -146,5 +157,6 @@ data UpdatedGuild = UpdatedGuild
   , systemChannelID             :: Maybe (Snowflake GuildChannel)
   }
   deriving ( Eq, Show, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric UpdatedGuild
   deriving ( FromJSON ) via CalamityJSON UpdatedGuild
   deriving ( HasID Guild ) via HasIDField "id" UpdatedGuild

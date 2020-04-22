@@ -14,6 +14,9 @@ import           Control.Concurrent.STM.Lock   ( Lock )
 
 import           Data.Aeson
 import qualified Data.ByteString.Lazy          as LB
+import           Data.Text.Lazy
+
+import           GHC.Generics
 
 import qualified StmContainers.Map             as SC
 

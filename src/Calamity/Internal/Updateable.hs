@@ -2,12 +2,18 @@
 module Calamity.Internal.Updateable
     ( Updateable(..) ) where
 
+import           Calamity.Internal.Utils
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Channel.Message
 import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.User
 
+import           Control.Lens
+
 import           Data.Generics.Product.Fields
+import           Data.Maybe
+
+import           GHC.TypeLits
 
 class Updateable a where
   type Updated a

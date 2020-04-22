@@ -29,13 +29,14 @@ module Calamity.Cache.Eff
     , getMessage
     , delMessage ) where
 
+import           Calamity.Internal.Utils
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Polysemy
-import qualified Polysemy as P
+import qualified Polysemy                     as P
 
 data CacheEff m a where
   -- | Set the 'User' representing the bot itself

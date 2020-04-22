@@ -1,5 +1,6 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
+-- | The logging effect we use
 module Calamity.LogEff
     ( LogEff
     , LogC ) where

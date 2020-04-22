@@ -13,16 +13,22 @@ import           Calamity.Types.Model.Channel.Guild.Voice
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Snowflake
 
-import           Control.Monad
+import           Control.Lens
 
 import           Data.Aeson
 import           Data.Generics.Product.Fields
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic                            as TSG
 
 data GuildChannel
   = GuildTextChannel TextChannel
   | GuildVoiceChannel VoiceChannel
   | GuildCategory Category
   deriving ( Show, Eq, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric GuildChannel
 
 instance FromJSON GuildChannel where
   parseJSON = withObject "GuildChannel" $ \v -> do

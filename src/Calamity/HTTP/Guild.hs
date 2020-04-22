@@ -11,13 +11,17 @@ import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
+import           Data.Function
+import           Data.Text.Lazy                 ( Text )
+
+import           GHC.Generics
 
 import           Network.Wreq
 
 data CreateGuildData = CreateGuildData
-  { name                        :: ShortText
-  , region                      :: ShortText
-  , icon                        :: ShortText
+  { name                        :: Text
+  , region                      :: Text
+  , icon                        :: Text
   , verificationLevel           :: Integer -- TODO: enums for these
   , defaultMessageNotifications :: Integer
   , explicitContentFilter       :: Integer
@@ -28,17 +32,17 @@ data CreateGuildData = CreateGuildData
   deriving ( ToJSON ) via CalamityJSON CreateGuildData
 
 data ModifyGuildData = ModifyGuildData
-  { name                        :: Maybe ShortText
-  , region                      :: Maybe ShortText
-  , icon                        :: Maybe ShortText
+  { name                        :: Maybe Text
+  , region                      :: Maybe Text
+  , icon                        :: Maybe Text
   , verificationLevel           :: Maybe Integer -- TODO: enums for these
   , defaultMessageNotifications :: Maybe Integer
   , explicitContentFilter       :: Maybe Integer
   , afkChannelID                :: Maybe (Snowflake Channel)
   , afkTimeout                  :: Maybe Integer
   , ownerID                     :: Maybe (Snowflake User)
-  , splash                      :: Maybe ShortText
-  , banner                      :: Maybe ShortText
+  , splash                      :: Maybe Text
+  , banner                      :: Maybe Text
   , systemChannelID             :: Maybe (Snowflake Channel)
   }
   deriving ( Show, Generic )

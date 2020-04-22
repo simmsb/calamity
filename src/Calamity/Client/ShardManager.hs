@@ -5,13 +5,20 @@ module Calamity.Client.ShardManager
 import           Calamity.Client.Types
 import           Calamity.Gateway
 import           Calamity.HTTP
+import           Calamity.Internal.Utils
 
-import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.MVar
+import           Control.Concurrent.STM
+import           Control.Lens
 import           Control.Monad
 
-import           Polysemy                      ( Sem )
-import qualified Polysemy                      as P
-import qualified Polysemy.Reader               as P
+import           Data.Traversable
+
+import           Fmt
+
+import           Polysemy                    ( Sem )
+import qualified Polysemy                    as P
+import qualified Polysemy.Reader             as P
 
 aa :: (Show a, Monad m) => Either a b -> m b
 aa (Right x) = pure x

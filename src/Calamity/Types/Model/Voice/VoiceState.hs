@@ -8,6 +8,12 @@ import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
+import           Data.Text.Lazy                           ( Text )
+
+import           GHC.Generics
+
+import           TextShow
+import qualified TextShow.Generic                         as TSG
 
 data VoiceState = VoiceState
   { guildID   :: Maybe (Snowflake Guild)
@@ -21,4 +27,5 @@ data VoiceState = VoiceState
   , suppress  :: Bool
   }
   deriving ( Show, Eq, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric VoiceState
   deriving ( ToJSON, FromJSON ) via CalamityJSON VoiceState
