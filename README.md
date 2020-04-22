@@ -5,44 +5,73 @@ A discord library for haskell
 # Example
 
 ``` haskell
+{-# LANGUAGE DataKinds #-}
+{-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE GADTs #-}
+{-# LANGUAGE LambdaCase #-}
+{-# LANGUAGE OverloadedLabels #-}
+
+{-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE PolyKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
+{-# LANGUAGE TemplateHaskell #-}
+{-# LANGUAGE TypeApplications #-}
+
+{-# LANGUAGE TypeOperators #-}
+
+module Main where
+
 import           Calamity
+import           Calamity.Cache.InMemory
 
+import           Control.Concurrent
 import           Control.Concurrent.STM.TVar
+import           Control.Lens
+import           Control.Monad
 
+import           Data.Text.Lazy              ( Text, fromStrict )
 import           Data.Text.Strict.Lens
 
-import qualified Polysemy               as P
-import qualified Polysemy.AtomicState   as P
-import qualified Polysemy.Fail          as P
-import qualified Polysemy.Async         as P
-import qualified Polysemy.Embed         as P
+import qualified DiPolysemy                  as DiP
 
+import qualified Polysemy                    as P
+import qualified Polysemy.Async              as P
+import qualified Polysemy.AtomicState        as P
+import qualified Polysemy.Embed              as P
+import qualified Polysemy.Fail               as P
+
+import           Prelude                     hiding ( error )
+
+import           TextShow
 
 data Counter m a where
   GetCounter :: Counter m Int
 
 P.makeSem ''Counter
 
-runCounterAtomic :: P.Members '[P.Embed IO] r => P.Sem (Counter ': r) () -> P.Sem r ()
+runCounterAtomic :: P.Member (P.Embed IO) r => P.Sem (Counter ': r) () -> P.Sem r ()
 runCounterAtomic m = do
   var <- P.embed $ newTVarIO (0 :: Int)
-  P.runAtomicStateTVar var $ P.reinterpret (\case GetCounter -> P.atomicState (\v -> (v + 1, v))) m
+  P.runAtomicStateTVar var $ P.reinterpret (\case
+                                              GetCounter -> P.atomicState (\v -> (v + 1, v))) m
 
 handleErrorByLogging m = do
   r <- P.runFail m
   case r of
-    Left e ->
-      error (e ^. packed)
-    _ -> pure ()
+    Left e -> DiP.error (e ^. packed)
+    _      -> pure ()
+
+info = DiP.info @Text
+debug = DiP.info @Text
 
 main :: IO ()
 main = do
-  P.runFinal . P.embedToFinal . runCounterAtomic $ runBotIO (BotToken "") $ do
-    react @"messagecreate" $ \msg state -> handleErrorByLogging $ do
+  P.runFinal . P.embedToFinal . runCounterAtomic . runCacheInMemory $ runBotIO (BotToken "") $ do
+    react @"messagecreate" $ \msg -> handleErrorByLogging $ do
       when (msg ^. #content == "!count") $ replicateM_ 3 $ do
         val <- getCounter
-        info $ "the counter is: " +|| val ||+ ""
-        void . invokeRequest $ CreateMessage (msg ^. #channelID) ("The value is: " <> show val)
+        info $ "the counter is: " <> fromStrict (showt val)
+        void . invokeRequest $ CreateMessage (msg ^. #channelID) ("The value is: " <> showt val)
       when (msg ^. #content == "!say hi") $ replicateM_ 3 . P.async $ do
         info "saying heya"
         Right msg' <- invokeRequest $ CreateMessage (msg ^. #channelID) "heya"
