@@ -110,53 +110,33 @@ packages:
   original:
     hackage: primitive-unlifted-0.1.3.0@sha256:a98f827740f5dcf097d885b3a47c32f4462204449620abc9d51b8c4f8619f9e6,1427
 - completed:
-    name: wreq-patchable
-    version: 0.5.3.2
-    git: https://github.com/nitros12/wreq-patchable
+    hackage: generic-override-0.0.0.0@sha256:4022243b06e2f225a5d09c54e26a3f545f6bc5cce07a7a8267d10fa64344a189,924
     pantry-tree:
-      size: 2816
-      sha256: 4919f927e6ddfafd8130c14fd85cf1e151c85a0488a8160c0b2daf34d1d734ed
-    commit: 4d0bd500909e3739c3c8baf17b625bb381a25f97
+      size: 389
+      sha256: a5faf528b3536c92314f12eeba87a9e53bec30ac0738f3b1956d1e21e6647261
   original:
-    git: https://github.com/nitros12/wreq-patchable
-    commit: 4d0bd500909e3739c3c8baf17b625bb381a25f97
+    hackage: generic-override-0.0.0.0@sha256:4022243b06e2f225a5d09c54e26a3f545f6bc5cce07a7a8267d10fa64344a189,924
 - completed:
-    name: di-polysemy
-    version: 0.0.2
-    git: https://github.com/nitros12/di-polysemy
+    hackage: generic-override-aeson-0.0.0.0@sha256:b36feb72bf33b8c93e75faac7ea99bbebfec5a22c1259d844706fd03fe71b34e,1446
     pantry-tree:
-      size: 526
-      sha256: ec0a67c88cae36fca5073a65f792acda415a29a14f41ae7bb9adb97f768405ba
-    commit: 863cc0072d846b1d96eca6467bc836bd098f7bb7
+      size: 301
+      sha256: 170c425ee5ed0a520e638c24d9409e6595c7c2dd7c6032c1394eb9fe9c974de6
   original:
-    git: https://github.com/nitros12/di-polysemy
-    commit: 863cc0072d846b1d96eca6467bc836bd098f7bb7
+    hackage: generic-override-aeson-0.0.0.0@sha256:b36feb72bf33b8c93e75faac7ea99bbebfec5a22c1259d844706fd03fe71b34e,1446
 - completed:
-    subdir: .
-    name: generic-override
-    version: 0.0.0.1
-    git: https://github.com/estatico/generic-override
+    hackage: di-polysemy-0.1.0.0@sha256:ffe0ddf4db87c45573366372909fae6a2fbefb34b1ac3cfab92c477719b521b2,2356
     pantry-tree:
-      size: 1198
-      sha256: bc5a1bcaec15bbb1c71b7646e1e1ae4745dfffbdcc71b3bd651201db0ef2e39a
-    commit: cbc64fa80dffb492187772b6343fe8e11443769a
+      size: 320
+      sha256: 9e1efbd9b9d75a8f6f867af334b248b05a9f824c8919981608ce2f742cc50ad0
   original:
-    subdir: .
-    git: https://github.com/estatico/generic-override
-    commit: cbc64fa80dffb492187772b6343fe8e11443769a
+    hackage: di-polysemy-0.1.0.0
 - completed:
-    subdir: aeson
-    name: generic-override-aeson
-    version: 0.0.0.1
-    git: https://github.com/estatico/generic-override
+    hackage: wreq-patchable-1.0.0.0@sha256:83fbdcc7c6bf30454fb71816dbc20442268b762f53899be5afb96c0c82ece45b,4818
     pantry-tree:
-      size: 353
-      sha256: df339d8ca0b1c25df7537b31d5713c023f2a6c156eebaa8b3c4bec48e6337526
-    commit: cbc64fa80dffb492187772b6343fe8e11443769a
+      size: 2431
+      sha256: 42d4a01b115fbf4f3a88dca62e3b36002542972b2b11ddaf1328b31e9e428747
   original:
-    subdir: aeson
-    git: https://github.com/estatico/generic-override
-    commit: cbc64fa80dffb492187772b6343fe8e11443769a
+    hackage: wreq-patchable-1.0.0.0
 snapshots:
 - completed:
     size: 524996
