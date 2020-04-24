@@ -124,12 +124,12 @@ packages:
   original:
     hackage: generic-override-aeson-0.0.0.0@sha256:b36feb72bf33b8c93e75faac7ea99bbebfec5a22c1259d844706fd03fe71b34e,1446
 - completed:
-    hackage: di-polysemy-0.1.0.0@sha256:ffe0ddf4db87c45573366372909fae6a2fbefb34b1ac3cfab92c477719b521b2,2356
+    hackage: di-polysemy-0.1.1.0@sha256:028231694b57f6140bc425a21ed8cd730808da8d4ab6cdbb0fa98c9e9cc8bf4f,2185
     pantry-tree:
       size: 320
-      sha256: 9e1efbd9b9d75a8f6f867af334b248b05a9f824c8919981608ce2f742cc50ad0
+      sha256: 72fe40db975e30dbd43952d5612b827983881fbc2cd25e8edbccd2c8eb8de0b3
   original:
-    hackage: di-polysemy-0.1.0.0
+    hackage: di-polysemy-0.1.1.0
 - completed:
     hackage: wreq-patchable-1.0.0.0@sha256:83fbdcc7c6bf30454fb71816dbc20442268b762f53899be5afb96c0c82ece45b,4818
     pantry-tree:
