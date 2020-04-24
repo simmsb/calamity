@@ -125,6 +125,11 @@
         "spaces": "after",
         "linebreaks": "before"
       },
+      ": in type": {
+        "force-linebreak": false,
+        "spaces": "both",
+        "linebreaks": "before"
+      },
       ":": {
         "force-linebreak": false,
         "spaces": "none",

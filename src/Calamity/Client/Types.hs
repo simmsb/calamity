@@ -2,11 +2,13 @@
 module Calamity.Client.Types
     ( Client(..)
     , BotC
+    , SetupEff
     , EHType
     , EHType'
     , EventHandlers(..)
     , EventHandler(..) ) where
 
+import           Calamity.Metrics.Eff
 import           Calamity.Cache.Eff
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Shard
@@ -47,7 +49,12 @@ data Client = Client
   }
   deriving ( Generic )
 
-type BotC r = (LogC r, P.Members '[CacheEff, P.Reader Client, P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r, Typeable r)
+type BotC r =
+  ( P.Members '[LogEff, MetricEff, CacheEff, P.Reader Client,
+  P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r
+  , Typeable r)
+
+type SetupEff r = P.Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
 
 type family EHType d m where
   EHType "ready"                    m = ReadyData                                   -> m ()

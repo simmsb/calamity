@@ -10,6 +10,7 @@ import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
 import           Calamity.Internal.Utils
 import           Calamity.LogEff
+import           Calamity.Metrics.Eff
 import           Calamity.Types.Token
 
 import           Control.Concurrent
@@ -72,7 +73,7 @@ newShardState :: Shard -> ShardState
 newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
-newShard :: P.Members '[LogEff, P.Embed IO, P.Final IO, P.Async] r
+newShard :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r
          => Text
          -> Int
          -> Int
@@ -141,7 +142,7 @@ shardLoop = do
         r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
         when r inner
 
-  discordStream :: P.Members '[LogEff, P.Embed IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
+  discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
   discordStream ws outqueue = inner
     where inner = do
             msg <- P.embed . checkWSClose $ receiveData ws

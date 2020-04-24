@@ -14,7 +14,7 @@ import           Calamity.HTTP.Internal.Ratelimit
 import qualified Calamity.Internal.SnowflakeMap              as SM
 import           Calamity.Internal.Updateable
 import           Calamity.Internal.Utils
-import           Calamity.LogEff
+import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild.UnavailableGuild
 import           Calamity.Types.Model.Presence               ( Presence(..) )
@@ -39,7 +39,6 @@ import           Fmt
 
 import           GHC.TypeLits
 
-import           Polysemy                                    ( Sem )
 import qualified Polysemy                                    as P
 import qualified Polysemy.Async                              as P
 import qualified Polysemy.AtomicState                        as P
@@ -61,9 +60,7 @@ newClient token = do
                 rlState'
                 eventQueue'
 
-type SetupEff r = Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
-
-runBotIO :: (P.Members '[P.Embed IO, P.Final IO, CacheEff] r, Typeable r) => Token -> SetupEff r -> Sem r ()
+runBotIO :: (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r -> P.Sem r ()
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
@@ -73,12 +70,12 @@ runBotIO token setup = do
     clientLoop
     finishUp
 
-react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r, EHType' s ~ Dynamic, Typeable (EHType s (Sem r))) => EHType s (Sem r) -> Sem r ()
+react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r, EHType' s ~ Dynamic, Typeable (EHType s (P.Sem r))) => EHType s (P.Sem r) -> P.Sem r ()
 react f =
   let handlers = EventHandlers . TM.one $ EH @s [toDyn f]
   in P.atomicModify (handlers <>)
 
-stopBot :: BotC r => Sem r ()
+stopBot :: BotC r => P.Sem r ()
 stopBot = do
   debug "stopping bot"
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
@@ -87,7 +84,7 @@ stopBot = do
   eventQueue <- P.asks (^. #eventQueue)
   P.embed . atomically $ writeTQueue eventQueue ShutDown
 
-finishUp :: BotC r => Sem r ()
+finishUp :: BotC r => P.Sem r ()
 finishUp = do
   debug "finishing up"
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
@@ -96,7 +93,7 @@ finishUp = do
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
-clientLoop :: BotC r => Sem r ()
+clientLoop :: BotC r => P.Sem r ()
 clientLoop = do
   evtQueue <- P.asks (^. #eventQueue)
   void . P.runError . forever $ do
@@ -106,7 +103,7 @@ clientLoop = do
       ShutDown          -> P.throw ()
   debug "leaving client loop"
 
-handleEvent :: BotC r => DispatchData -> Sem r ()
+handleEvent :: BotC r => DispatchData -> P.Sem r ()
 handleEvent data' = do
   debug "handling an event"
   eventHandlers <- P.atomicGet
@@ -125,9 +122,9 @@ handleEvent data' = do
 --       event handlers
 
 unwrapEvent :: forall s r.
-            (KnownSymbol s, EHType' s ~ Dynamic, Typeable r, Typeable (EHType s (Sem r)))
+            (KnownSymbol s, EHType' s ~ Dynamic, Typeable r, Typeable (EHType s (P.Sem r)))
             => EventHandlers
-            -> [EHType s (Sem r)]
+            -> [EHType s (P.Sem r)]
 unwrapEvent (EventHandlers eh) = map (fromJust . fromDynamic) . unwrapEventHandler @s . fromJust
   $ (TM.lookup eh :: Maybe (EventHandler s))
 -- where unwrapEach handler =
@@ -137,7 +134,7 @@ unwrapEvent (EventHandlers eh) = map (fromJust . fromDynamic) . unwrapEventHandl
 handleEvent' :: BotC r
               => EventHandlers
               -> DispatchData
-              -> Sem (P.Fail ': r) [Sem r ()]
+              -> P.Sem (P.Fail ': r) [P.Sem r ()]
 handleEvent' eh evt@(Ready rd@ReadyData { user, guilds }) = do
   updateCache evt
   pure $ map ($ rd) (unwrapEvent @"ready" eh)
@@ -333,7 +330,7 @@ handleEvent' eh evt@(UserUpdate _) = do
 
 handleEvent' _ e = fail $ "Unhandled event: " <> show e
 
-updateCache :: P.Members '[CacheEff, P.Fail] r => DispatchData -> Sem r ()
+updateCache :: P.Members '[CacheEff, P.Fail] r => DispatchData -> P.Sem r ()
 updateCache (Ready ReadyData { user, guilds }) = do
   setBotUser user
   for_ (map getID guilds) setUnavailableGuild

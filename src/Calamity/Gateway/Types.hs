@@ -1,8 +1,7 @@
-{-# OPTIONS_GHC -Wno-orphans #-}
-
 -- | Types for shards
 module Calamity.Gateway.Types where
 
+import Calamity.Metrics.Eff
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Internal.AesonThings
 import           Calamity.LogEff
@@ -29,6 +28,9 @@ import           Network.WebSockets.Connection    ( Connection )
 import qualified Polysemy                         as P
 import qualified Polysemy.Async                   as P
 import qualified Polysemy.AtomicState             as P
+
+type ShardC r = P.Members '[LogEff, P.AtomicState ShardState, P.Embed IO, P.Final IO,
+  P.Async, MetricEff] r
 
 data ShardMsg
   = Discord ReceivedDiscordMessage
@@ -243,5 +245,3 @@ data ShardState = ShardState
   , wsConn     :: Maybe Connection
   }
   deriving ( Generic )
-
-type ShardC r = (LogC r, P.Members '[P.AtomicState ShardState, P.Embed IO, P.Final IO, P.Async] r)

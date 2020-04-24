@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.0.0
+version:            0.1.1.0
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -47,6 +47,7 @@ dependencies:
 - data-default-class >= 0.1 && < 0.2
 - hashable >= 1.2 && < 2
 - time >= 1.8 && < 1.11
+- containers >= 0.6 && < 0.7
 - unordered-containers >= 0.2 && < 0.3
 - http-date >= 0.0.8 && < 0.1
 - bytestring >= 0.10 && < 0.11
