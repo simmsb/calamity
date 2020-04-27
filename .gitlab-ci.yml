@@ -43,7 +43,7 @@ docs:
     - cabal v2-update
     - cabal v2-haddock
       --haddock-for-hackage
-      --haddock-contents-location /tmp/docs.tar.gz
+      --enable-documentation
     - cabal upload
       -d
       -u "${HACKAGE_USERNAME}"
