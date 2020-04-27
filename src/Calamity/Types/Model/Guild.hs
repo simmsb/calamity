@@ -9,7 +9,7 @@ module Calamity.Types.Model.Guild
     , module Calamity.Types.Model.Guild.UnavailableGuild ) where
 
 import           Calamity.Types.Model.Guild.Emoji
-import           Calamity.Types.Model.Guild.Guild            hiding ( UpdatedGuild )
+import           Calamity.Types.Model.Guild.Guild            hiding ( UpdatedGuild(..) )
 import           Calamity.Types.Model.Guild.Invite
 import           Calamity.Types.Model.Guild.Member
 import           Calamity.Types.Model.Guild.Overwrite

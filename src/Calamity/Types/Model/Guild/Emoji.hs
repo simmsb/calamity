@@ -1,6 +1,7 @@
 -- | Discord emojis
 module Calamity.Types.Model.Guild.Emoji
     ( Emoji(..)
+    , Partial(PartialEmoji)
     , RawEmoji(..) ) where
 
 import           Calamity.Internal.AesonThings

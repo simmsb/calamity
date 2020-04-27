@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.4.0
+
+* Added back extra exports of `Calamity.Types.Partial` from
+  `Calamity.Types.Model.Guild.Guild`, `Calamity.Type.Model.Guild.Emoji`, and
+  `Calamity.Types.Model.Channel`. There is now way to export the constructor
+  without also exporting Partial apparently?
+
+
 ## 0.1.3.0
 
 *2020-04-27*
