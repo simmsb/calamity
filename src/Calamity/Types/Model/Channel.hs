@@ -1,7 +1,6 @@
 -- | The generic channel type
 module Calamity.Types.Model.Channel
     ( Channel(..)
-    , Partial(PartialChannel)
     , module Calamity.Types.Model.Channel.DM
     , module Calamity.Types.Model.Channel.Group
     , module Calamity.Types.Model.Channel.Guild

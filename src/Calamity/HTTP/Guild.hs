@@ -1,6 +1,8 @@
 -- | Guild endpoints
 module Calamity.HTTP.Guild
-    ( GuildRequest(..) ) where
+    ( GuildRequest(..)
+    , CreateGuildData(..)
+    , ModifyGuildData(..) ) where
 
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route

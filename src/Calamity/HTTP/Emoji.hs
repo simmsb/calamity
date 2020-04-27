@@ -1,6 +1,8 @@
 -- | Emoji endpoints
 module Calamity.HTTP.Emoji
-    ( EmojiRequest(..) ) where
+    ( EmojiRequest(..)
+    , CreateGuildEmojiOptions(..)
+    , ModifyGuildEmojiOptions(..) ) where
 
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route

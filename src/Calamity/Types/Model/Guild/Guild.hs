@@ -1,7 +1,6 @@
 -- | Discord Guilds
 module Calamity.Types.Model.Guild.Guild
     ( Guild(..)
-    , Partial(PartialGuild)
     , UpdatedGuild(..) ) where
 
 import           Calamity.Internal.AesonThings

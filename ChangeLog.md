@@ -1,5 +1,19 @@
 # Changelog for Calamity
 
+## 0.1.3.0
+
+*2020-04-27*
+
+* Removed extra exports of `Calamity.Types.Partial` from
+  `Calamity.Types.Model.Guild.Guild`, `Calamity.Type.Model.Guild.Emoji`, and
+  `Calamity.Types.Model.Channel`
+
+* Added missing exports of `CreateGuildEmojiOptions` and
+  `ModifyGuildEmojiOptions` from `Calamity.HTTP.Emoji`
+
+* Added missing exports of `CreateGuildData` and `ModifyGuildData` from
+  `Calamity.HTTP.Guild`
+
 ## 0.1.2.0
 
 *2020-04-27*
