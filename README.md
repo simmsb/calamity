@@ -56,10 +56,16 @@ runCounterAtomic m = do
   P.runAtomicStateTVar var $ P.reinterpret (\case
                                               GetCounter -> P.atomicState (\v -> (v + 1, v))) m
 
-handleErrorByLogging m = do
+handleFailByLogging m = do
   r <- P.runFail m
   case r of
     Left e -> DiP.error (e ^. packed)
+    _      -> pure ()
+
+handleFailByPrinting m = do
+  r <- P.runFail m
+  case r of
+    Left e -> P.embed $ print (show e)
     _      -> pure ()
 
 info = DiP.info @Text
@@ -67,9 +73,9 @@ debug = DiP.info @Text
 
 main :: IO ()
 main = do
-  P.runFinal . P.embedToFinal . handleErrorByLogging . runCounterAtomic . runCacheInMemory . runMetricsNoop $ runBotIO
+  P.runFinal . P.embedToFinal . handleFailByPrinting . runCounterAtomic . runCacheInMemory . runMetricsNoop $ runBotIO
     (BotToken "") $ do
-      react @"messagecreate" $ \msg -> handleErrorByLogging $ do
+      react @"messagecreate" $ \msg -> handleFailByLogging $ do
         when (msg ^. #content == "!count") $ replicateM_ 3 $ do
           val <- getCounter
           info $ "the counter is: " <> fromStrict (showt val)
