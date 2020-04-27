@@ -40,10 +40,10 @@ docs:
   extends: build-backend
   stage: docs
   script:
-    - cabal v2-update
-    - cabal v2-haddock
+    - cabal new-update
+    - cabal new-haddock
       --haddock-for-hackage
-      --enable-documentation
+      #      --enable-documentation
     - cabal upload
       -d
       -u "${HACKAGE_USERNAME}"
@@ -52,3 +52,4 @@ docs:
       --publish
   only:
     - tags
+    - web
