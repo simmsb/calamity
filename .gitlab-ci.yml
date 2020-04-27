@@ -1,6 +1,7 @@
 stages:
   - build
   - publish
+  - docs
 
 variables:
   DOCKER_DRIVER: overlay2
@@ -32,5 +33,21 @@ hackage:
     - stack
       --stack-root ${STACK_ROOT}
       upload .
+  only:
+    - tags
+
+docs:
+  extends: build-backend
+  stage: docs
+  script:
+    - cabal new-haddock
+      --haddock-for-hackage
+      --haddock-contents-location /tmp/docs.tar.gz
+    - cabal upload
+      -d
+      -u "${HACKAGE_USERNAME}"
+      -p "${HACKAGE_PASSWORD}"
+      "dist-newstyle/$(cabal info . | head -n 1 | grep -oP "(?<=\\* )\S+")-docs.tar.gz"
+      --publish
   only:
     - tags
