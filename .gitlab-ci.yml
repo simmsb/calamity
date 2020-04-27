@@ -40,7 +40,8 @@ docs:
   extends: build-backend
   stage: docs
   script:
-    - cabal new-haddock
+    - cabal v2-update
+    - cabal v2-haddock
       --haddock-for-hackage
       --haddock-contents-location /tmp/docs.tar.gz
     - cabal upload
