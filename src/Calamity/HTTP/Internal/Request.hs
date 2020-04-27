@@ -12,9 +12,12 @@ import           Calamity.Client.Types
 import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.HTTP.Internal.Route
 import           Calamity.HTTP.Internal.Types
+import           Calamity.Internal.Utils
+import           Calamity.Metrics.Eff
 import           Calamity.Types.Token
 
 import           Control.Lens
+import           Control.Monad
 
 import           Data.Aeson                       hiding ( Options )
 import           Data.ByteString                  ( ByteString )
@@ -22,6 +25,7 @@ import qualified Data.ByteString.Lazy             as LB
 import qualified Data.Text                        as TS
 import qualified Data.Text.Encoding               as TS
 import qualified Data.Text.Lazy                   as TL
+import           Data.Text.Strict.Lens
 
 import           DiPolysemy                       hiding ( debug, error, info )
 
@@ -32,6 +36,8 @@ import           Polysemy                         ( Sem )
 import qualified Polysemy                         as P
 import qualified Polysemy.Error                   as P
 import qualified Polysemy.Reader                  as P
+
+import           TextShow
 
 fromResult :: P.Member (P.Error RestError) r => Result a -> Sem r a
 fromResult (Success a) = pure a
@@ -67,8 +73,21 @@ class Request a r | a -> r where
       rlState' <- P.asks rlState
       token' <- P.asks token
 
-      resp <- attr "route" (toRoute a ^. #path) $ doRequest rlState' (toRoute a)
-        (toAction a (requestOptions token') (Calamity.HTTP.Internal.Request.url a))
+      let route = toRoute a
+
+      inFlightRequests <- registerGauge "inflight_requests" [("route", route ^. #path)]
+      totalRequests <- registerCounter "total_requests" [("route", route ^. #path)]
+      void $ modifyGauge succ inFlightRequests
+      void $ addCounter 1 totalRequests
+
+      whenJust (route ^. #guildID) $ \guildID -> do
+        totalRequestsGuild <- registerCounter "total_requests" [("guild", showt guildID)]
+        void $ addCounter 1 totalRequestsGuild
+
+      resp <- attr "route" (toRoute a ^. #path) $ doRequest rlState' route
+        (toAction a (requestOptions token') (route ^. #path . unpacked))
+
+      void $ modifyGauge pred inFlightRequests
 
       P.runError $ (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
 

@@ -45,6 +45,8 @@ import qualified Polysemy.Resource               as P
 
 import           Prelude                         hiding ( error )
 
+import           TextShow
+
 import           Wuss
 
 data Websocket m a where
@@ -130,7 +132,10 @@ tryWriteTBMQueue' q v = do
 -- | The loop a shard will run on
 shardLoop :: ShardC r => Sem r ()
 shardLoop = do
+  activeShards <- registerGauge "active_shards" mempty
+  void $ modifyGauge succ activeShards
   void outerloop
+  void $ modifyGauge pred activeShards
   debug "Shard shut down"
  where
   controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
@@ -225,14 +230,17 @@ shardLoop = do
                   , presence = Nothing
                   })
 
+    receivedMessages <- registerCounter "received_messages" [("shard", showt $ shard ^. #shardID)]
+
     result <- P.runResource $ P.bracket (P.embed $ newTBMQueueIO 1)
-      (\q -> P.embed . atomically $ closeTBMQueue q)
+      (P.embed . atomically . closeTBMQueue)
       (\q -> do
         debug "handling events now"
         _controlThread <- P.async . P.embed $ controlStream shard q
         _discordThread <- P.async $ discordStream ws q
         (fromEitherVoid <$>) . P.raise . P.runError . forever $ do
           -- only we close the queue
+          void $ addCounter 1 receivedMessages
           msg <- P.embed . atomically $ readTBMQueue q
           handleMsg $ fromJust msg)
 

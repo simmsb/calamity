@@ -175,12 +175,7 @@ doSingleRequest gl l r = do
 
     ClientError c v -> pure $ RFail (HTTPError c $ decode v)
 
-doRequest
-  :: BotC r
-  => RateLimitState
-  -> Route
-  -> IO (Response LB.ByteString)
-  -> Sem r (Either RestError LB.ByteString)
+doRequest :: BotC r => RateLimitState -> Route -> IO (Response LB.ByteString) -> Sem r (Either RestError LB.ByteString)
 doRequest rlState route action = do
   P.embed $ E.wait (globalLock rlState)
 
@@ -189,6 +184,5 @@ doRequest rlState route action = do
     L.acquire lock
     pure lock
 
-  retryRequest 5
-               (doSingleRequest (globalLock rlState) ratelimit action)
-               (P.embed . atomically $ L.release ratelimit)
+  retryRequest 5 (doSingleRequest (globalLock rlState) ratelimit action)
+    (P.embed . atomically $ L.release ratelimit)

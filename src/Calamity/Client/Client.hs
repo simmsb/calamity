@@ -30,6 +30,8 @@ import           Data.Default.Class
 import           Data.Dynamic
 import           Data.Foldable
 import           Data.Maybe
+import           Data.Time.Clock
+import           Data.Time.Clock.POSIX
 import           Data.Traversable
 import qualified Data.TypeRepMap                             as TM
 
@@ -45,6 +47,15 @@ import qualified Polysemy.AtomicState                        as P
 import qualified Polysemy.Error                              as P
 import qualified Polysemy.Fail                               as P
 import qualified Polysemy.Reader                             as P
+
+
+timeA :: P.Member (P.Embed IO) r => P.Sem r a -> P.Sem r (Double, a)
+timeA m = do
+  start <- P.embed getPOSIXTime
+  res <- m
+  end <- P.embed getPOSIXTime
+  let duration = fromRational . toRational $ end - start
+  pure (duration, res)
 
 
 newClient :: Token -> IO Client
@@ -107,9 +118,19 @@ handleEvent :: BotC r => DispatchData -> P.Sem r ()
 handleEvent data' = do
   debug "handling an event"
   eventHandlers <- P.atomicGet
-  actions <- P.runFail $ handleEvent' eventHandlers data'
+
+  actions <- P.runFail $ do
+    cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20..100]
+    (time, res) <- timeA $ handleEvent' eventHandlers data'
+    void $ observeHistogram time cacheUpdateHisto
+    pure res
+
+  eventHandleHisto <- registerHistogram "event_handle" mempty [10, 20..100]
+
   case actions of
-    Right actions -> for_ actions P.async
+    Right actions -> for_ actions $ \action -> P.async $ do
+      (time, _) <- timeA action
+      void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
 
 -- NOTE: We have to be careful with how we run event handlers
@@ -266,6 +287,8 @@ handleEvent' eh evt@(GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) = 
   pure $ map (\f -> f guild role) (unwrapEvent @"guildroledelete" eh)
 
 handleEvent' eh evt@(MessageCreate msg) = do
+  messagesReceived <- registerCounter "messages_received" mempty
+  void $ addCounter 1 messagesReceived
   updateCache evt
   pure $ map ($ msg) (unwrapEvent @"messagecreate" eh)
 
