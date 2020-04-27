@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f2a574749d434880d7147c6519fac0ba5bf3333f5cefbf6a04435b7aad9d956c
+-- hash: d58d4118390485680eba20c1d9dbc30df68a2f58ff358e7fd5f1a04be6a5b3c0
 
 name:           calamity
-version:        0.1.1.0
+version:        0.1.2.0
 synopsis:       A library for writing discord bots
 description:    Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 category:       Network, Web
@@ -18,7 +18,7 @@ maintainer:     ben@bensimms.moe
 copyright:      2020 Ben Simms
 license:        MIT
 license-file:   LICENSE
-tested-with:    GHC == 8.6.5
+tested-with:    GHC == 8.6.5, GHC == 8.8.3
 build-type:     Simple
 extra-source-files:
     README.md
@@ -98,7 +98,7 @@ library
       Paths_calamity
   hs-source-dirs:
       src
-  default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction AutoDeriveTypeable BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MonadFailDesugaring MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
+  default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall
   build-depends:
       aeson >=1.4 && <2
@@ -111,7 +111,7 @@ library
     , deepseq >=1.4.4.0 && <2
     , deque >=0.4 && <0.5
     , df1 >=0.3 && <0.4
-    , di-polysemy >=0.1 && <0.2
+    , di-polysemy >=0.1.1 && <0.2
     , exceptions >=0.10 && <0.11
     , fmt >=0.6 && <0.7
     , focus >=1.0 && <2

@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.1.0
+version:            0.1.2.0
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -9,7 +9,7 @@ author:             "Ben Simms"
 maintainer:         "ben@bensimms.moe"
 copyright:          2020 Ben Simms
 category:           Network, Web
-tested-with:        GHC == 8.6.5
+tested-with:        GHC == 8.6.5, GHC == 8.8.3
 
 extra-source-files:
   - README.md
@@ -58,7 +58,7 @@ dependencies:
 - reflection >= 2.1 && < 3
 - polysemy >= 1.3 && < 2
 - polysemy-plugin >= 0.2 && < 0.3
-- di-polysemy >= 0.1 && < 0.2
+- di-polysemy >= 0.1.1 && < 0.2
 - df1 >= 0.3 && < 0.4
 - generic-override >= 0.0.0.0 && < 0.0.1
 - generic-override-aeson >= 0.0.0.0 && < 0.0.1
@@ -93,7 +93,6 @@ default-extensions:
   - AllowAmbiguousTypes
   - BlockArguments
   - NoMonomorphismRestriction
-  - AutoDeriveTypeable
   - BangPatterns
   - BinaryLiterals
   - UndecidableInstances
@@ -120,7 +119,6 @@ default-extensions:
   - InstanceSigs
   - KindSignatures
   - LambdaCase
-  - MonadFailDesugaring
   - MultiParamTypeClasses
   - MultiWayIf
   - NamedFieldPuns

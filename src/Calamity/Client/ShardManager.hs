@@ -17,15 +17,12 @@ import           Data.Traversable
 import           Fmt
 
 import           Polysemy                    ( Sem )
+import qualified Polysemy.Fail               as P
 import qualified Polysemy                    as P
 import qualified Polysemy.Reader             as P
 
-aa :: (Show a, Monad m) => Either a b -> m b
-aa (Right x) = pure x
-aa (Left x) = fail $ show x
-
 -- | Connects the bot to the gateway over n shards
-shardBot :: BotC r => Sem r ()
+shardBot :: (BotC r, P.Member P.Fail r) => Sem r ()
 shardBot = do
   numShardsVar <- P.asks numShards
   shardsVar <- P.asks shards
@@ -36,7 +33,7 @@ shardBot = do
   token <- P.asks Calamity.Client.Types.token
   eventQueue <- P.asks eventQueue
 
-  gateway <- aa =<< invokeRequest GetGatewayBot
+  Right gateway <- invokeRequest GetGatewayBot
 
   let numShards' = gateway ^. #shards
   let host = gateway ^. #url

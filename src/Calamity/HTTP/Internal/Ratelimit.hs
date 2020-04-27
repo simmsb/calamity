@@ -54,14 +54,8 @@ lookupOrInsertDefaultM aM = casesM
 getRateLimit :: RateLimitState -> Route -> STM Lock
 getRateLimit s h = SC.focus (lookupOrInsertDefaultM L.new) h (rateLimits s)
 
-doDiscordRequest
-  :: BotC r
-  => IO (Response LB.ByteString)
-  -> Sem r DiscordResponseType
+doDiscordRequest :: BotC r => IO (Response LB.ByteString) -> Sem r DiscordResponseType
 doDiscordRequest r = do
-  --debug "making request"
-  --maskState <- P.embed getMaskingState
-  --print maskState
   r' <- P.embed r
   let status = r' ^. responseStatus
   if
@@ -69,11 +63,8 @@ doDiscordRequest r = do
       let resp = r' ^. responseBody
       debug $ "Got good response from discord: " +|| r' ^. responseStatus ||+ ""
       pure $ if isExhausted r'
-        then ExhaustedBucket resp $ parseRateLimitHeader r'
-        else Good resp
-    | statusIsServerError status -> do
-      debug $ "Got server error from discord: " +| status ^. statusCode |+ ""
-      pure $ ServerError (status ^. statusCode)
+             then ExhaustedBucket resp $ parseRateLimitHeader r'
+             else Good resp
     | status == status429 -> do
       debug "Got 429 from discord, retrying."
       case asValue r' of
@@ -83,7 +74,9 @@ doDiscordRequest r = do
       let err = r' ^. responseBody
       error $ "You fucked up: " +|| err ||+ " response: " +|| r' ||+ ""
       pure $ ClientError (status ^. statusCode) err
-    | otherwise -> fail "Bogus response, discord fix your shit"
+    | otherwise -> do
+      debug $ "Got server error from discord: " +| status ^. statusCode |+ ""
+      pure $ ServerError (status ^. statusCode)
 
 parseDiscordTime :: ByteString -> Maybe UTCTime
 parseDiscordTime s = httpDateToUTC <$> parseHTTPDate s

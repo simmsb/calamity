@@ -1,0 +1,36 @@
+stages:
+  - build
+  - publish
+
+variables:
+  DOCKER_DRIVER: overlay2
+  STACK_ROOT: ${CI_PROJECT_DIR}/.stack
+
+build-backend:
+  stage: build
+  image: haskell:latest
+  cache:
+    paths:
+      - ${STACK_ROOT}
+      - .stack-work
+  script:
+    - stack
+      --stack-root ${STACK_ROOT}
+      build
+
+hackage:
+  extends: build-backend
+  interruptible: false
+  stage: publish
+  script:
+    - mkdir -p ${STACK_ROOT}/upload &&
+      echo "{\"username\":\"${HACKAGE_USERNAME}\",\"password\":\"${HACKAGE_PASSWORD}\"}"
+      > ${STACK_ROOT}/upload/credentials.json
+    - stack
+      --stack-root ${STACK_ROOT}
+      sdist
+    - stack
+      --stack-root ${STACK_ROOT}
+      upload .
+  only:
+    - tags

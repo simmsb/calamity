@@ -1,10 +1,10 @@
 -- | Types for shards
 module Calamity.Gateway.Types where
 
-import Calamity.Metrics.Eff
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Internal.AesonThings
 import           Calamity.LogEff
+import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
@@ -13,7 +13,6 @@ import           Control.Concurrent.Async
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 import           Control.Exception
-import           Control.Monad                    ( fail )
 
 import           Data.Aeson
 import qualified Data.Aeson.Types                 as AT

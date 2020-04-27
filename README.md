@@ -66,7 +66,7 @@ debug = DiP.info @Text
 
 main :: IO ()
 main = do
-  P.runFinal . P.embedToFinal . runCounterAtomic . runCacheInMemory $ runBotIO (BotToken "") $ do
+  P.runFinal . P.embedToFinal . handleErrorbylogging . runCounterAtomic . runCacheInMemory $ runBotIO (BotToken "") $ do
     react @"messagecreate" $ \msg -> handleErrorByLogging $ do
       when (msg ^. #content == "!count") $ replicateM_ 3 $ do
         val <- getCounter

@@ -60,7 +60,7 @@ newClient token = do
                 rlState'
                 eventQueue'
 
-runBotIO :: (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r -> P.Sem r ()
+runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r -> P.Sem r ()
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
