@@ -1,15 +1,15 @@
 <h1 align="center">Calamity</h1>
 
-<!-- ![Hackage](https://img.shields.io/hackage/v/calamity) -->
-<!-- ![Gitlab pipeline status](https://img.shields.io/gitlab/pipeline/nitros12/calamity) -->
-<!-- ![GitHub](https://img.shields.io/github/license/nitros12/calamity) -->
-<!-- ![Hackage-Deps](https://img.shields.io/hackage-deps/v/calamity) -->
+<!-- [![Hackage](https://img.shields.io/hackage/v/calamity)](https://hackage.haskell.org/package/calamity) -->
+<!-- [![Gitlab pipeline status](https://img.shields.io/gitlab/pipeline/nitros12/calamity)](https://gitlab.com/nitros12/calamity/pipelines) -->
+<!-- [![License](https://img.shields.io/github/license/nitros12/calamity)](https://github.com/nitros12/calamity/blob/master/LICENSE) -->
+<!-- [![Hackage-Deps](https://img.shields.io/hackage-deps/v/calamity)](https://hackage.haskell.org/package/calamity) -->
 
 <p align="center">
-  <img src="https://img.shields.io/hackage/v/calamity" alt="Hackage">
-  <img src="https://img.shields.io/gitlab/pipeline/nitros12/calamity" alt="Gitlab pipeline status">
-  <img src="https://img.shields.io/github/license/nitros12/calamity" alt="GitHub">
-  <img src="https://img.shields.io/hackage-deps/v/calamity" alt="Hackage-Deps">
+  <a href="https://hackage.haskell.org/package/calamity"><img src="https://img.shields.io/hackage/v/calamity" alt="Hackage"></a>
+  <a href="https://gitlab.com/nitros12/calamity/pipelines"><img src="https://img.shields.io/gitlab/pipeline/nitros12/calamity" alt="Gitlab pipeline status"></a>
+  <a href="https://github.com/nitros12/calamity/blob/master/LICENSE"><img src="https://img.shields.io/github/license/nitros12/calamity" alt="License"></a>
+  <a href="https://hackage.haskell.org/package/calamity"><img src="https://img.shields.io/hackage-deps/v/calamity" alt="Hackage-Deps"></a>
 </p>
 
 Calamity is a Haskell library for writing discord bots, it uses
