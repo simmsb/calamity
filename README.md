@@ -1,8 +1,41 @@
-# Calamity
+<h1 align="center">Calamity</h1>
 
-A discord library for haskell
+<!-- ![Hackage](https://img.shields.io/hackage/v/calamity) -->
+<!-- ![Gitlab pipeline status](https://img.shields.io/gitlab/pipeline/nitros12/calamity) -->
+<!-- ![GitHub](https://img.shields.io/github/license/nitros12/calamity) -->
+<!-- ![Hackage-Deps](https://img.shields.io/hackage-deps/v/calamity) -->
+
+<p align="center">
+  <img src="https://img.shields.io/hackage/v/calamity" alt="Hackage">
+  <img src="https://img.shields.io/gitlab/pipeline/nitros12/calamity" alt="Gitlab pipeline status">
+  <img src="https://img.shields.io/github/license/nitros12/calamity" alt="GitHub">
+  <img src="https://img.shields.io/hackage-deps/v/calamity" alt="Hackage-Deps">
+</p>
+
+Calamity is a Haskell library for writing discord bots, it uses
+[Polysemy](https://hackage.haskell.org/package/polysemy) as the core library for
+handling effects, allowing you to pick and choose how to handle certain features
+of the library.
+
+The current customisable effects are:
+
+* Cache: The default cache handler keeps the cache in memory, however you could
+  write a cache handler that stores cache in a database for example.
+
+* Metrics: The library has counters, gauges, and histograms installed to measure
+  useful things, by default these are not used (and cost nothing), but could be
+  combined with [Prometheus](https://hackage.haskell.org/package/prometheus). An
+  example of using prometheus as the metrics handler can be found
+  [here](https://github.com/nitros12/calamity-example).
+
+# Docs
+
+You can find documentation on hackage: [here](https://hackage.haskell.org/package/calamity)
 
 # Example
+
+An example project can be found at:
+[nitros12/calamity-example](https://github.com/nitros12/calamity-example)
 
 ``` haskell
 {-# LANGUAGE DataKinds #-}
