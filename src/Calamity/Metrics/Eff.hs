@@ -5,7 +5,7 @@ module Calamity.Metrics.Eff
     ( Counter
     , Gauge
     , Histogram
-    , HistogramSample
+    , HistogramSample(..)
     , MetricEff(..)
     , registerCounter
     , registerGauge

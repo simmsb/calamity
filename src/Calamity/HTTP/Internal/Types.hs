@@ -35,17 +35,14 @@ data RateLimitState = RateLimitState
   deriving ( Generic )
 
 data DiscordResponseType
-  = -- | A good response
-    Good LB.ByteString
-    -- | We got a response but also exhausted the bucket
-  | ExhaustedBucket LB.ByteString Int -- ^ Retry after (milliseconds)
-    -- | We hit a 429, no response and ratelimited
-  | Ratelimited Int -- ^ Retry after (milliseconds)
-                Bool -- ^ Global ratelimit
-    -- | Discord's error, we should retry (HTTP 5XX)
-  | ServerError Int
-    -- | Our error, we should fail
-  | ClientError Int LB.ByteString
+  = Good LB.ByteString -- ^ A good response
+  | ExhaustedBucket -- ^ We got a response but also exhausted the bucket
+      LB.ByteString Int -- ^ Retry after (milliseconds)
+  | Ratelimited -- ^ We hit a 429, no response and ratelimited
+      Int -- ^ Retry after (milliseconds)
+      Bool -- ^ Global ratelimit
+  | ServerError Int -- ^ Discord's error, we should retry (HTTP 5XX)
+  | ClientError Int LB.ByteString -- ^ Our error, we should fail
 
 newtype GatewayResponse = GatewayResponse
   { url :: Text
