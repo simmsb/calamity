@@ -3,7 +3,7 @@ module Calamity.Cache.InMemory
     ( runCacheInMemory ) where
 
 import           Calamity.Cache.Eff
-import           Calamity.Internal.MessageStore
+import           Calamity.Internal.BoundedStore
 import qualified Calamity.Internal.SnowflakeMap as SM
 import           Calamity.Internal.Utils
 import           Calamity.Types.Model.Channel
@@ -15,6 +15,7 @@ import           Control.Lens
 import           Control.Monad.State.Strict
 
 import           Data.Default.Class
+import           Data.Foldable
 import qualified Data.HashSet                   as LS
 import           Data.IORef
 
@@ -30,7 +31,7 @@ data Cache = Cache
   , channels          :: SM.SnowflakeMap GuildChannel
   , users             :: SM.SnowflakeMap User
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
-  , messages          :: MessageStore
+  , messages          :: BoundedStore Message
   }
   deriving ( Generic, Show )
 
@@ -40,33 +41,37 @@ emptyCache = Cache Nothing SM.empty SM.empty SM.empty SM.empty LS.empty def
 runCacheInMemory :: P.Member (P.Embed IO) r => P.Sem (CacheEff ': r) a -> P.Sem r a
 runCacheInMemory m = do
   var <- P.embed $ newIORef emptyCache
-  P.runAtomicStateIORef var $ P.reinterpret updateCache' m
+  P.runAtomicStateIORef var $ P.reinterpret runCache' m
 
-updateCache' :: P.Member (P.AtomicState Cache) r => CacheEff m a -> P.Sem r a
-updateCache' act = P.atomicState' ((swap .) . runState $ updateCache act)
+runCache' :: P.Member (P.AtomicState Cache) r => CacheEff m a -> P.Sem r a
+runCache' act = P.atomicState' ((swap .) . runState $ runCache act)
 
-updateCache :: CacheEff m a -> State Cache a
+runCache :: CacheEff m a -> State Cache a
 
-updateCache (SetBotUser u) = #user ?= u
-updateCache GetBotUser     = use #user
+runCache (SetBotUser u) = #user ?= u
+runCache GetBotUser     = use #user
 
-updateCache (SetGuild g)   = #guilds %= SM.insert g
-updateCache (GetGuild gid) = use (#guilds . at gid)
-updateCache (DelGuild gid) = #guilds %= sans gid
+runCache (SetGuild g)   = #guilds %= SM.insert g
+runCache (GetGuild gid) = use (#guilds . at gid)
+runCache GetGuilds      = SM.elems <$> use #guilds
+runCache (DelGuild gid) = #guilds %= sans gid
 
+runCache (SetDM dm)  = #dms %= SM.insert dm
+runCache (GetDM did) = use (#dms . at did)
+runCache GetDMs      = SM.elems <$> use #dms
+runCache (DelDM did) = #dms %= sans did
 
-updateCache (SetDM dm)   = #dms %= SM.insert dm
-updateCache (GetDM did) = use (#dms . at did)
-updateCache (DelDM did) = #dms %= sans did
+runCache (SetUser u)   = #users %= SM.insert u
+runCache (GetUser uid) = use (#users . at uid)
+runCache GetUsers      = SM.elems <$> use #users
+runCache (DelUser uid) = #users %= sans uid
 
-updateCache (SetUser u)   = #users %= SM.insert u
-updateCache (GetUser uid) = use (#users . at uid)
-updateCache (DelUser uid) = #users %= sans uid
+runCache (SetUnavailableGuild gid) = #unavailableGuilds %= LS.insert gid
+runCache (IsUnavailableGuild gid)  = use (#unavailableGuilds . contains gid)
+runCache GetUnavailableGuilds      = LS.toList <$> use #unavailableGuilds
+runCache (DelUnavailableGuild gid) = #unavailableGuilds %= sans gid
 
-updateCache (SetUnavailableGuild gid) = #unavailableGuilds %= LS.insert gid
-updateCache (IsUnavailableGuild gid) = use (#unavailableGuilds . contains gid)
-updateCache (DelUnavailableGuild gid) = #unavailableGuilds %= sans gid
-
-updateCache (SetMessage m)   = #messages %= addMessage m
-updateCache (GetMessage mid) = use (#messages . at mid)
-updateCache (DelMessage mid) = #messages %= sans mid
+runCache (SetMessage m)   = #messages %= addItem m
+runCache (GetMessage mid) = use (#messages . at mid)
+runCache GetMessages      = toList <$> use #messages
+runCache (DelMessage mid) = #messages %= sans mid
