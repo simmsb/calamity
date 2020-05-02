@@ -55,9 +55,10 @@ instance FromJSON Channel where
       GroupDMType       -> GroupChannel' <$> parseJSON (Object v)
 
 data instance Partial Channel = PartialChannel
-  { id    :: Snowflake Channel
-  , name  :: Text
-  , type_ :: ChannelType
+  { id       :: Snowflake Channel
+  , name     :: Text
+  , type_    :: ChannelType
+  , parentID :: Maybe (Snowflake Category)
   }
   deriving ( Show, Eq, Generic )
   deriving ( TextShow ) via TSG.FromGeneric (Partial Channel)

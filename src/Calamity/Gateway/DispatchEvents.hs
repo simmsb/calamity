@@ -5,6 +5,7 @@ import           Calamity.Internal.AesonThings
 import           Calamity.Internal.Utils                     ()
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Channel.Message
+import           Calamity.Types.Model.Guild.Ban
 import           Calamity.Types.Model.Guild.Emoji
 import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Guild.Member
@@ -36,8 +37,8 @@ data DispatchData
   | GuildCreate Guild
   | GuildUpdate UpdatedGuild
   | GuildDelete UnavailableGuild
-  | GuildBanAdd GuildBanData
-  | GuildBanRemove GuildBanData
+  | GuildBanAdd BanData
+  | GuildBanRemove BanData
   | GuildEmojisUpdate GuildEmojisUpdateData
   | GuildIntegrationsUpdate GuildIntegrationsUpdateData
   | GuildMemberAdd Member
@@ -77,13 +78,6 @@ data ChannelPinsUpdateData = ChannelPinsUpdateData
   }
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON ChannelPinsUpdateData
-
-data GuildBanData = GuildBanData
-  { guildID :: Snowflake Guild
-  , user    :: User
-  }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON GuildBanData
 
 data GuildEmojisUpdateData = GuildEmojisUpdateData
   { guildID :: Snowflake Guild

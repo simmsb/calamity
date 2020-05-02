@@ -36,11 +36,11 @@ data ModifyGuildEmojiOptions = ModifyGuildEmojiOptions
   deriving ( ToJSON ) via CalamityJSON ModifyGuildEmojiOptions
 
 data EmojiRequest a where
-  ListGuildEmojis :: (HasID Guild g) => g -> EmojiRequest [Emoji]
-  GetGuildEmoji :: (HasID Guild g, HasID Emoji e) => g -> e -> EmojiRequest Emoji
-  CreateGuildEmoji :: (HasID Guild g) => g -> CreateGuildEmojiOptions -> EmojiRequest Emoji
+  ListGuildEmojis  :: (HasID Guild g) =>                g ->                                 EmojiRequest [Emoji]
+  GetGuildEmoji    :: (HasID Guild g, HasID Emoji e) => g -> e ->                            EmojiRequest Emoji
+  CreateGuildEmoji :: (HasID Guild g) =>                g -> CreateGuildEmojiOptions ->      EmojiRequest Emoji
   ModifyGuildEmoji :: (HasID Guild g, HasID Emoji e) => g -> e -> ModifyGuildEmojiOptions -> EmojiRequest Emoji
-  DeleteGuildEmoji :: (HasID Guild g, HasID Emoji e) => g -> e -> EmojiRequest ()
+  DeleteGuildEmoji :: (HasID Guild g, HasID Emoji e) => g -> e ->                            EmojiRequest ()
 
 baseRoute :: Snowflake Guild -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "guilds" // ID @Guild // S "emojis" & giveID id

@@ -69,7 +69,7 @@ over :: (HashMap (Snowflake a) a -> HashMap (Snowflake b) b) -> SnowflakeMap a -
 over f =  SnowflakeMap . f . unSnowflakeMap
 {-# INLINABLE over #-}
 
--- I guess I could just do this by unwrapping everything and using coerceSnowflake
+-- SAFETY: 'Snowflake' always uses the underlying hash function (Word64)
 coerceSnowflakeMap :: HashMap (Snowflake a) v -> HashMap (Snowflake b) v
 coerceSnowflakeMap = unsafeCoerce
 {-# INLINABLE coerceSnowflakeMap #-}

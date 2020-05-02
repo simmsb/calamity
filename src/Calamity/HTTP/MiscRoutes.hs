@@ -10,7 +10,7 @@ import           Data.Function
 import           Network.Wreq
 
 data MiscRequest a where
-  GetGateway :: MiscRequest GatewayResponse
+  GetGateway    :: MiscRequest GatewayResponse
   GetGatewayBot :: MiscRequest BotGatewayResponse
 
 instance Request (MiscRequest a) a where

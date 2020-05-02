@@ -41,7 +41,7 @@ import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Reader                 as P
 
 data Client = Client
-  { shards        :: TVar [(Shard, Async (Maybe ()))] -- TODO: migrate this to a set of Shard (make Shard hash to it's shardThread)
+  { shards        :: TVar [(Shard, Async (Maybe ()))]
   , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState

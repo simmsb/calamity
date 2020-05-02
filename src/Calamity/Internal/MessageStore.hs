@@ -10,7 +10,6 @@ import           Calamity.Types.Model.Channel.Message
 import           Calamity.Types.Snowflake
 
 import           Control.Lens
-import           Control.Lens.Operators               ( (.=) )
 import           Control.Monad.State.Lazy
 
 import           Data.Default.Class

@@ -38,6 +38,8 @@ import           Calamity.Types.Snowflake
 import           Polysemy
 import qualified Polysemy                     as P
 
+-- TODO: allGuilds/allDMs/...
+
 data CacheEff m a where
   -- | Set the 'User' representing the bot itself
   SetBotUser :: User -> CacheEff m ()

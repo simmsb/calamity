@@ -1,13 +1,13 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.31.2.
+-- This file has been generated from package.yaml by hpack version 0.33.0.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 7abac2efea437078125c5a92e9a9d5f3bef88949e3c3f3625cc91919091950b8
+-- hash: ea0639f72242783dc493879b570a8f1d46454a6d2f2bbd632082a772c432521d
 
 name:           calamity
-version:        0.1.4.1
+version:        0.1.4.2
 synopsis:       A library for writing discord bots
 description:    Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 category:       Network, Web
@@ -77,6 +77,7 @@ library
       Calamity.Types.Model.Channel.Message
       Calamity.Types.Model.Channel.Reaction
       Calamity.Types.Model.Guild
+      Calamity.Types.Model.Guild.Ban
       Calamity.Types.Model.Guild.Emoji
       Calamity.Types.Model.Guild.Guild
       Calamity.Types.Model.Guild.Invite
@@ -89,6 +90,7 @@ library
       Calamity.Types.Model.Presence.Presence
       Calamity.Types.Model.User
       Calamity.Types.Model.Voice
+      Calamity.Types.Model.Voice.VoiceRegion
       Calamity.Types.Model.Voice.VoiceState
       Calamity.Types.Partial
       Calamity.Types.Snowflake

@@ -19,7 +19,6 @@ import           Calamity.Types.Snowflake
 
 import           Data.Hashable
 import           Data.Kind
-import           Data.List                    ( lookup )
 import           Data.Maybe                   ( fromJust )
 import           Data.Text                    ( Text )
 import qualified Data.Text                    as T

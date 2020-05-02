@@ -1,8 +1,8 @@
 -- | Channel endpoints
 module Calamity.HTTP.Channel
-    ( ChannelUpdate(..)
+    ( ChannelRequest(..)
+    , ChannelUpdate(..)
     , ChannelMessagesQuery(..)
-    , ChannelRequest(..)
     , GetReactionsOptions(..)
     , CreateChannelInviteOptions(..)
     , GroupDMAddRecipientOptions(..) ) where
@@ -12,7 +12,6 @@ import           Calamity.HTTP.Internal.Route
 import           Calamity.Internal.AesonThings
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
-import           Calamity.Types.Model.Guild.Overwrite
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
@@ -85,30 +84,30 @@ data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions
   deriving ( ToJSON ) via CalamityJSON GroupDMAddRecipientOptions
 
 data ChannelRequest a where
-  CreateMessage            :: (HasID Channel c) => c -> Text -> ChannelRequest Message
-  GetMessage               :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest Message
-  EditMessage              :: (HasID Channel c, HasID Message m) => c -> m -> Maybe Text -> Maybe Embed -> ChannelRequest Message
-  DeleteMessage            :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
-  BulkDeleteMessages       :: (HasID Channel c, HasID Message m) => c -> [m] -> ChannelRequest ()
-  GetChannel               :: (HasID Channel c) => c -> ChannelRequest Channel
-  ModifyChannel            :: (HasID Channel c) => c -> ChannelUpdate -> ChannelRequest Channel
-  DeleteChannel            :: (HasID Channel c) => c -> ChannelRequest ()
-  GetChannelMessages       :: (HasID Channel c) => c -> Maybe ChannelMessagesQuery -> ChannelRequest [Message]
-  CreateReaction           :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> ChannelRequest ()
-  DeleteOwnReaction        :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> ChannelRequest ()
-  DeleteUserReaction       :: (HasID Channel c, HasID Message m, HasID User u) => c -> m -> RawEmoji -> u -> ChannelRequest ()
-  GetReactions             :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> GetReactionsOptions -> ChannelRequest [User]
-  DeleteAllReactions       :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
-  GetChannelInvites        :: (HasID Channel c) => c -> ChannelRequest [Invite]
-  CreateChannelInvite      :: (HasID Channel c) => c -> CreateChannelInviteOptions -> ChannelRequest Invite
-  EditChannelPermissions   :: (HasID Channel c) => c -> Overwrite -> ChannelRequest ()
-  DeleteChannelPermission  :: (HasID Channel c, HasID Overwrite o) => c -> o -> ChannelRequest ()
-  TriggerTyping            :: (HasID Channel c) => c -> ChannelRequest ()
-  GetPinnedMessages        :: (HasID Channel c) => c -> ChannelRequest [Message]
-  AddPinnedMessage         :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
-  DeletePinnedMessage      :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
-  GroupDMAddRecipient      :: (HasID Channel c, HasID User u) => c -> u -> GroupDMAddRecipientOptions -> ChannelRequest ()
-  GroupDMRemoveRecipient   :: (HasID Channel c, HasID User u) => c -> u -> ChannelRequest ()
+  CreateMessage            :: (HasID Channel c) =>                                c -> Text ->                                 ChannelRequest Message
+  GetMessage               :: (HasID Channel c, HasID Message m) =>               c -> m ->                                    ChannelRequest Message
+  EditMessage              :: (HasID Channel c, HasID Message m) =>               c -> m -> Maybe Text -> Maybe Embed ->       ChannelRequest Message
+  DeleteMessage            :: (HasID Channel c, HasID Message m) =>               c -> m ->                                    ChannelRequest ()
+  BulkDeleteMessages       :: (HasID Channel c, HasID Message m) =>               c -> [m] ->                                  ChannelRequest ()
+  GetChannel               :: (HasID Channel c) =>                                c ->                                         ChannelRequest Channel
+  ModifyChannel            :: (HasID Channel c) =>                                c -> ChannelUpdate ->                        ChannelRequest Channel
+  DeleteChannel            :: (HasID Channel c) =>                                c ->                                         ChannelRequest ()
+  GetChannelMessages       :: (HasID Channel c) =>                                c -> Maybe ChannelMessagesQuery ->           ChannelRequest [Message]
+  CreateReaction           :: (HasID Channel c, HasID Message m) =>               c -> m -> RawEmoji ->                        ChannelRequest ()
+  DeleteOwnReaction        :: (HasID Channel c, HasID Message m) =>               c -> m -> RawEmoji ->                        ChannelRequest ()
+  DeleteUserReaction       :: (HasID Channel c, HasID Message m, HasID User u) => c -> m -> RawEmoji -> u ->                   ChannelRequest ()
+  GetReactions             :: (HasID Channel c, HasID Message m) =>               c -> m -> RawEmoji -> GetReactionsOptions -> ChannelRequest [User]
+  DeleteAllReactions       :: (HasID Channel c, HasID Message m) =>               c -> m ->                                    ChannelRequest ()
+  GetChannelInvites        :: (HasID Channel c) =>                                c ->                                         ChannelRequest [Invite]
+  CreateChannelInvite      :: (HasID Channel c) =>                                c -> CreateChannelInviteOptions ->           ChannelRequest Invite
+  EditChannelPermissions   :: (HasID Channel c) =>                                c -> Overwrite ->                            ChannelRequest ()
+  DeleteChannelPermission  :: (HasID Channel c, HasID Overwrite o) =>             c -> o ->                                    ChannelRequest ()
+  TriggerTyping            :: (HasID Channel c) =>                                c ->                                         ChannelRequest ()
+  GetPinnedMessages        :: (HasID Channel c) =>                                c ->                                         ChannelRequest [Message]
+  AddPinnedMessage         :: (HasID Channel c, HasID Message m) =>               c -> m ->                                    ChannelRequest ()
+  DeletePinnedMessage      :: (HasID Channel c, HasID Message m) =>               c -> m ->                                    ChannelRequest ()
+  GroupDMAddRecipient      :: (HasID Channel c, HasID User u) =>                  c -> u -> GroupDMAddRecipientOptions ->      ChannelRequest ()
+  GroupDMRemoveRecipient   :: (HasID Channel c, HasID User u) =>                  c -> u ->                                    ChannelRequest ()
 
 
 baseRoute :: Snowflake Channel -> RouteBuilder _

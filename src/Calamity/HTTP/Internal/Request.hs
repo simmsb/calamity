@@ -5,7 +5,9 @@ module Calamity.HTTP.Internal.Request
     , putWith'
     , patchWith'
     , putEmpty
+    , putEmptyP
     , postEmpty
+    , postEmptyP
     , getWithP ) where
 
 import           Calamity.Client.Types
@@ -115,6 +117,12 @@ patchWith' p o s = patchWith o s p
 
 putEmpty :: Options -> String -> IO (Response LB.ByteString)
 putEmpty o s = putWith o s ("" :: ByteString)
+
+putEmptyP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
+putEmptyP = (putEmpty .)
+
+postEmptyP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
+postEmptyP = (postEmpty .)
 
 getWithP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
 getWithP oF o = getWith (oF o)

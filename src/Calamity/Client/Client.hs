@@ -11,13 +11,13 @@ import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
 import           Calamity.HTTP.Internal.Ratelimit
-import qualified Calamity.Internal.SnowflakeMap              as SM
+import qualified Calamity.Internal.SnowflakeMap   as SM
 import           Calamity.Internal.Updateable
 import           Calamity.Internal.Utils
 import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild.UnavailableGuild
-import           Calamity.Types.Model.Presence               ( Presence(..) )
+import           Calamity.Types.Model.Guild
+import           Calamity.Types.Model.Presence    ( Presence(..) )
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
 
@@ -33,20 +33,20 @@ import           Data.Maybe
 import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           Data.Traversable
-import qualified Data.TypeRepMap                             as TM
+import qualified Data.TypeRepMap                  as TM
 
-import qualified DiPolysemy                                  as Di
+import qualified DiPolysemy                       as Di
 
 import           Fmt
 
 import           GHC.TypeLits
 
-import qualified Polysemy                                    as P
-import qualified Polysemy.Async                              as P
-import qualified Polysemy.AtomicState                        as P
-import qualified Polysemy.Error                              as P
-import qualified Polysemy.Fail                               as P
-import qualified Polysemy.Reader                             as P
+import qualified Polysemy                         as P
+import qualified Polysemy.Async                   as P
+import qualified Polysemy.AtomicState             as P
+import qualified Polysemy.Error                   as P
+import qualified Polysemy.Fail                    as P
+import qualified Polysemy.Reader                  as P
 
 
 timeA :: P.Member (P.Embed IO) r => P.Sem r a -> P.Sem r (Double, a)
@@ -219,12 +219,12 @@ handleEvent' eh evt@(GuildDelete UnavailableGuild { id, unavailable }) = do
   updateCache evt
   pure $ map (\f -> f oldGuild unavailable) (unwrapEvent @"guilddelete" eh)
 
-handleEvent' eh evt@(GuildBanAdd GuildBanData { guildID, user }) = do
+handleEvent' eh evt@(GuildBanAdd BanData { guildID, user }) = do
   Just guild <- getGuild guildID
   updateCache evt
   pure $ map (\f -> f guild user) (unwrapEvent @"guildbanadd" eh)
 
-handleEvent' eh evt@(GuildBanRemove GuildBanData { guildID, user }) = do
+handleEvent' eh evt@(GuildBanRemove BanData { guildID, user }) = do
   Just guild <- getGuild guildID
   updateCache evt
   pure $ map (\f -> f guild user) (unwrapEvent @"guildbanremove" eh)
