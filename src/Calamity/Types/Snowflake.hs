@@ -60,8 +60,8 @@ type HasID' a = HasID a a
 -- | A newtype wrapper for deriving HasID generically
 newtype HasIDField field a = HasIDField a
 
-instance HasField' field a (Snowflake b) => HasID b (HasIDField field a) where
-  getID (HasIDField a) = a ^. field' @field
+instance (HasID b c, HasField' field a c) => HasID b (HasIDField field a) where
+  getID (HasIDField a) = getID $ a ^. field' @field
 
 -- | A data `a` which contains an ID of type `Snowflake c`
 --   which should be swapped with `Snowflake b` upon fetching
@@ -69,8 +69,8 @@ newtype HasIDFieldCoerce field a c = HasIDFieldCoerce a
 
 type HasIDFieldCoerce' field a = HasIDFieldCoerce field a a
 
-instance HasField' field a (Snowflake c) => HasID b (HasIDFieldCoerce field a c) where
-  getID (HasIDFieldCoerce a) = coerceSnowflake $ a ^. field' @field
+instance (HasID c d, HasField' field a d) => HasID b (HasIDFieldCoerce field a c) where
+  getID (HasIDFieldCoerce a) = coerceSnowflake . getID @c $ a ^. field' @field
 
 instance HasID a (Snowflake a) where
   getID = id
