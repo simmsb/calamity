@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-name-shadowing #-}
+
 -- | The client
 module Calamity.Client.Client
     ( Client(..)
@@ -30,7 +32,6 @@ import           Data.Default.Class
 import           Data.Dynamic
 import           Data.Foldable
 import           Data.Maybe
-import           Data.Time.Clock
 import           Data.Time.Clock.POSIX
 import           Data.Traversable
 import qualified Data.TypeRepMap                  as TM
@@ -156,7 +157,7 @@ handleEvent' :: BotC r
               => EventHandlers
               -> DispatchData
               -> P.Sem (P.Fail ': r) [P.Sem r ()]
-handleEvent' eh evt@(Ready rd@ReadyData { user, guilds }) = do
+handleEvent' eh evt@(Ready rd@ReadyData {}) = do
   updateCache evt
   pure $ map ($ rd) (unwrapEvent @"ready" eh)
 
@@ -400,7 +401,7 @@ updateCache (GuildMemberRemove GuildMemberRemoveData { guildID, user }) =
 
 updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nick }) = do
   setUser user
-  updateGuild guildID (#members . at (getID user) . _Just %~ (#roles .~ roles) . (#nick .~ nick))
+  updateGuild guildID (#members . ix (getID user) %~ (#roles .~ roles) . (#nick .~ nick))
 
 updateCache (GuildMembersChunk GuildMembersChunkData { members }) =
   traverse_ (updateCache . GuildMemberAdd) members
@@ -439,4 +440,19 @@ updateCache (PresenceUpdate PresenceUpdateData { userID, roles, presence }) =
 
 updateCache (UserUpdate user) = setBotUser user
 
-updateCache _data' = pure () -- TODO
+-- we don't handle group channels currently
+updateCache (ChannelCreate (GroupChannel' _)) = pure ()
+updateCache (ChannelUpdate (GroupChannel' _)) = pure ()
+updateCache (ChannelDelete (GroupChannel' _)) = pure ()
+
+-- these don't modify state
+updateCache (GuildBanAdd _) = pure ()
+updateCache (GuildBanRemove _) = pure ()
+updateCache (GuildIntegrationsUpdate _) = pure ()
+updateCache (TypingStart _) = pure ()
+updateCache (ChannelPinsUpdate _) = pure ()
+updateCache (WebhooksUpdate _) = pure ()
+
+-- we don't handle voice state currently
+updateCache (VoiceStateUpdate _) = pure ()
+updateCache (VoiceServerUpdate _) = pure ()

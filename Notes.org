@@ -7,7 +7,8 @@ CLOSED: [2019-04-27 Sat 16:25]
 CLOSED: [2020-04-10 Fri 22:03]
 - [X] Instead we just pass the gateway url to shards, it never changes, so w/e
 
-* TODO Function to log out the bot, waiting for all stuff to end, etc
+* DONE Function to log out the bot, waiting for all stuff to end, etc
+CLOSED: [2020-05-03 Sun 01:47]
 - we'll need some control messages that tell the client to enter a loop of
   waiting for all shards to signal that they are closed.
 
