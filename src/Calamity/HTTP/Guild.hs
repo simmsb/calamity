@@ -25,6 +25,7 @@ import           Control.Arrow
 import           Control.Lens                   hiding ( (.=) )
 
 import           Data.Aeson
+import           Data.Default.Class
 import           Data.Maybe
 import           Data.Text                      ( Text )
 
@@ -61,7 +62,7 @@ data ModifyGuildData = ModifyGuildData
   , banner                      :: Maybe Text
   , systemChannelID             :: Maybe (Snowflake GuildChannel)
   }
-  deriving ( Show, Generic )
+  deriving ( Show, Generic, Default )
   deriving ( ToJSON ) via CalamityJSON ModifyGuildData
 
 data ChannelCreateData = ChannelCreateData
@@ -90,7 +91,7 @@ data ListMembersOptions = ListMembersOptions
   { limit :: Maybe Integer
   , after :: Maybe (Snowflake User)
   }
-  deriving ( Show, Generic )
+  deriving ( Show, Generic, Default )
 
 data AddGuildMemberData = AddGuildMemberData
   { accessToken :: Text
@@ -109,14 +110,14 @@ data ModifyGuildMemberData = ModifyGuildMemberData
   , deaf      :: Maybe Bool
   , channelID :: Maybe (Snowflake VoiceChannel)
   }
-  deriving ( Show, Generic )
+  deriving ( Show, Generic, Default )
   deriving ( ToJSON ) via CalamityJSON ModifyGuildMemberData
 
 data CreateGuildBanData = CreateGuildBanData
   { deleteMessageDays :: Maybe Integer
   , reason            :: Maybe Text
   }
-  deriving ( Show, Generic )
+  deriving ( Show, Generic, Default )
 
 data ModifyGuildRoleData = ModifyGuildRoleData
   { name        :: Maybe Text
@@ -125,7 +126,7 @@ data ModifyGuildRoleData = ModifyGuildRoleData
   , hoist       :: Maybe Bool
   , mentionable :: Maybe Bool
   }
-  deriving ( Show, Generic )
+  deriving ( Show, Generic, Default )
   deriving ( ToJSON ) via CalamityJSON ModifyGuildRoleData
 
 data ModifyGuildRolePositionsData = ModifyGuildRolePositionsData

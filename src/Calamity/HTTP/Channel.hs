@@ -40,8 +40,7 @@ data ChannelUpdate = ChannelUpdate
   , permissionOverwrites :: Maybe [Overwrite]
   , parentID             :: Maybe (Snowflake Channel)
   }
-  deriving ( Generic, Show )
-  deriving anyclass ( Default )
+  deriving ( Generic, Show, Default )
   deriving ( ToJSON ) via CalamityJSON ChannelUpdate
 
 data ChannelMessagesQuery
@@ -65,7 +64,7 @@ data GetReactionsOptions = GetReactionsOptions
   , after  :: Maybe (Snowflake User)
   , limit  :: Maybe Integer
   }
-  deriving ( Show )
+  deriving ( Show, Generic, Default )
 
 data CreateChannelInviteOptions = CreateChannelInviteOptions
   { maxAge    :: Maybe Int
@@ -73,7 +72,7 @@ data CreateChannelInviteOptions = CreateChannelInviteOptions
   , temporary :: Maybe Bool
   , unique    :: Maybe Bool
   }
-  deriving ( Show, Generic )
+  deriving ( Show, Generic, Default )
   deriving ( ToJSON ) via CalamityJSON CreateChannelInviteOptions
 
 data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions

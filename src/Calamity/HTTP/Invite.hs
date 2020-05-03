@@ -15,7 +15,7 @@ import           Network.Wreq
 import           TextShow
 
 data InviteRequest a where
-  GetInvite :: Text -> InviteRequest Invite
+  GetInvite    :: Text -> InviteRequest Invite
   DeleteInvite :: Text -> InviteRequest ()
 
 baseRoute :: RouteBuilder _

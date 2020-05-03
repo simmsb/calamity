@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: e8c7e00bd04fedacb90cff1154ce9b9c7c505a7b7b239033c44e06401be3d448
+-- hash: d0688013878c0420453e6e65ce530eee332f034261986b1cb4af9b10bee35f09
 
 name:           calamity
 version:        0.1.4.3
@@ -54,6 +54,7 @@ library
       Calamity.HTTP.Internal.Types
       Calamity.HTTP.Invite
       Calamity.HTTP.MiscRoutes
+      Calamity.HTTP.User
       Calamity.Internal.AesonThings
       Calamity.Internal.BoundedStore
       Calamity.Internal.SnowflakeMap
@@ -93,6 +94,7 @@ library
       Calamity.Types.Model.Voice
       Calamity.Types.Model.Voice.VoiceRegion
       Calamity.Types.Model.Voice.VoiceState
+      Calamity.Types.Model.Webhook
       Calamity.Types.Partial
       Calamity.Types.Snowflake
       Calamity.Types.Token
