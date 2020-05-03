@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d0688013878c0420453e6e65ce530eee332f034261986b1cb4af9b10bee35f09
+-- hash: be510d66d49f55eee979f88e81ccd03d77fc73990d6f0cbc83c7242e64ddeec7
 
 name:           calamity
 version:        0.1.4.3
@@ -78,6 +78,7 @@ library
       Calamity.Types.Model.Channel.Guild.Voice
       Calamity.Types.Model.Channel.Message
       Calamity.Types.Model.Channel.Reaction
+      Calamity.Types.Model.Channel.Webhook
       Calamity.Types.Model.Guild
       Calamity.Types.Model.Guild.Ban
       Calamity.Types.Model.Guild.Emoji
@@ -94,7 +95,6 @@ library
       Calamity.Types.Model.Voice
       Calamity.Types.Model.Voice.VoiceRegion
       Calamity.Types.Model.Voice.VoiceState
-      Calamity.Types.Model.Webhook
       Calamity.Types.Partial
       Calamity.Types.Snowflake
       Calamity.Types.Token

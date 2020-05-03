@@ -1,5 +1,9 @@
 #+TITLE: Notes
 
+* TODO Add 'Reason' request thing
+I think a good way to do this is a wrapper request type that injects it
+* TODO Webhook endpoints
+* TODO Audit log model & endpoints
 * DONE Things to test
 CLOSED: [2019-04-27 Sat 16:25]
 - Test using text-short and intern for certain strings

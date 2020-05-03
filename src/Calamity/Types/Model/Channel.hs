@@ -7,6 +7,7 @@ module Calamity.Types.Model.Channel
     , module Calamity.Types.Model.Channel.Guild
     , module Calamity.Types.Model.Channel.Attachment
     , module Calamity.Types.Model.Channel.Reaction
+    , module Calamity.Types.Model.Channel.Webhook
     , module Calamity.Types.Model.Channel.Embed
     , module Calamity.Types.Model.Channel.ChannelType
     , module Calamity.Types.Model.Channel.Message ) where
@@ -20,6 +21,7 @@ import           Calamity.Types.Model.Channel.Group
 import           Calamity.Types.Model.Channel.Guild
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Message hiding ( UpdatedMessage )
 import           Calamity.Types.Model.Channel.Reaction
+import           Calamity.Types.Model.Channel.Webhook
 import           Calamity.Types.Partial
 import           Calamity.Types.Snowflake
 
