@@ -1,6 +1,7 @@
 -- | Channel endpoints
 module Calamity.HTTP.Channel
     ( ChannelRequest(..)
+    , CreateMessageOptions(..)
     , ChannelUpdate(..)
     , ChannelMessagesQuery(..)
     , GetReactionsOptions(..)
@@ -16,18 +17,38 @@ import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Control.Arrow
-import           Control.Lens                         hiding ( (.=) )
+import           Control.Lens                   hiding ( (.=) )
 
 import           Data.Aeson
+import           Data.ByteString.Lazy           ( ByteString )
 import           Data.Default.Class
+import           Data.Generics.Product.Subtype  ( upcast )
 import           Data.Maybe
-import           Data.Text                            ( Text )
+import           Data.Text                      ( Text )
 
 import           GHC.Generics
 
 import           Network.Wreq
 
 import           TextShow
+
+data CreateMessageOptions = CreateMessageOptions
+  { content :: Maybe Text
+  , nonce   :: Maybe Text
+  , tts     :: Maybe Bool
+  , file    :: Maybe ByteString
+  , embed   :: Maybe Embed
+  }
+  deriving ( Show, Generic, Default )
+
+data CreateMessageJson = CreateMessageJson
+  { content :: Maybe Text
+  , nonce   :: Maybe Text
+  , tts     :: Maybe Bool
+  , embed   :: Maybe Embed
+  }
+  deriving ( Show, Generic )
+  deriving ( ToJSON ) via CalamityJSON CreateMessageJson
 
 data ChannelUpdate = ChannelUpdate
   { name                 :: Maybe Text
@@ -83,7 +104,7 @@ data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions
   deriving ( ToJSON ) via CalamityJSON GroupDMAddRecipientOptions
 
 data ChannelRequest a where
-  CreateMessage            :: (HasID Channel c) =>                                c -> Text ->                                 ChannelRequest Message
+  CreateMessage            :: (HasID Channel c) =>                                c -> CreateMessageOptions ->                 ChannelRequest Message
   GetMessage               :: (HasID Channel c, HasID Message m) =>               c -> m ->                                    ChannelRequest Message
   EditMessage              :: (HasID Channel c, HasID Message m) =>               c -> m -> Maybe Text -> Maybe Embed ->       ChannelRequest Message
   DeleteMessage            :: (HasID Channel c, HasID Message m) =>               c -> m ->                                    ChannelRequest ()
@@ -114,11 +135,16 @@ baseRoute id = mkRouteBuilder // S "channels" // ID @Channel
   & giveID id
 
 instance Request (ChannelRequest a) a where
-  toRoute (CreateMessage (getID -> id) _)      = baseRoute id // S "messages" & buildRoute
-  toRoute (GetChannel    (getID -> id))        = baseRoute id                 & buildRoute
-  toRoute (ModifyChannel (getID -> id) _)      = baseRoute id                 & buildRoute
-  toRoute (DeleteChannel (getID -> id))        = baseRoute id                 & buildRoute
-  toRoute (GetChannelMessages (getID -> id) _) = baseRoute id // S "messages" & buildRoute
+  toRoute (CreateMessage (getID -> id) _) = baseRoute id // S "messages"
+    & buildRoute
+  toRoute (GetChannel (getID -> id)) = baseRoute id
+    & buildRoute
+  toRoute (ModifyChannel (getID -> id) _) = baseRoute id
+    & buildRoute
+  toRoute (DeleteChannel (getID -> id)) = baseRoute id
+    & buildRoute
+  toRoute (GetChannelMessages (getID -> id) _) = baseRoute id // S "messages"
+    & buildRoute
   toRoute (GetMessage (getID -> cid) (getID @Message -> mid)) = baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
@@ -143,19 +169,18 @@ instance Request (ChannelRequest a) a where
     baseRoute cid // S "messages" // ID @Message // S "reactions"
     & giveID mid
     & buildRoute
-  toRoute (EditMessage (getID -> cid) (getID @Message -> mid) _ _) =
-    baseRoute cid // S "messages" // ID @Message
+  toRoute (EditMessage (getID -> cid) (getID @Message -> mid) _ _) = baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
-  toRoute (DeleteMessage (getID -> cid) (getID @Message -> mid)) =
-    baseRoute cid // S "messages" // ID @Message
+  toRoute (DeleteMessage (getID -> cid) (getID @Message -> mid)) = baseRoute cid // S "messages" // ID @Message
     & giveID mid
     & buildRoute
-  toRoute (BulkDeleteMessages (getID -> cid) _) =
-    baseRoute cid // S "messages" // S "bulk-delete"
+  toRoute (BulkDeleteMessages (getID -> cid) _) = baseRoute cid // S "messages" // S "bulk-delete"
     & buildRoute
-  toRoute (GetChannelInvites (getID -> cid)) = baseRoute cid // S "invites" & buildRoute
-  toRoute (CreateChannelInvite (getID -> cid) _) = baseRoute cid // S "invites" & buildRoute
+  toRoute (GetChannelInvites (getID -> cid)) = baseRoute cid // S "invites"
+    & buildRoute
+  toRoute (CreateChannelInvite (getID -> cid) _) = baseRoute cid // S "invites"
+    & buildRoute
   toRoute (EditChannelPermissions (getID -> cid) (getID @Overwrite -> oid)) =
     baseRoute cid // S "permissions" // ID @Overwrite
     & giveID oid
@@ -164,8 +189,10 @@ instance Request (ChannelRequest a) a where
     baseRoute cid // S "permissions" // ID @Overwrite
     & giveID oid
     & buildRoute
-  toRoute (TriggerTyping (getID -> cid)) = baseRoute cid // S "typing" & buildRoute
-  toRoute (GetPinnedMessages (getID -> cid)) = baseRoute cid // S "pins" & buildRoute
+  toRoute (TriggerTyping (getID -> cid)) = baseRoute cid // S "typing"
+    & buildRoute
+  toRoute (GetPinnedMessages (getID -> cid)) = baseRoute cid // S "pins"
+    & buildRoute
   toRoute (AddPinnedMessage (getID -> cid) (getID @Message -> mid)) = baseRoute cid // S "pins" // ID @Message
     & giveID mid
     & buildRoute
@@ -179,35 +206,39 @@ instance Request (ChannelRequest a) a where
     & giveID uid
     & buildRoute
 
-  toAction (CreateMessage _ t) = postWith' (object ["content" .= t])
-  toAction (GetChannel _)      = getWith
+  toAction (CreateMessage _ o@CreateMessageOptions { file = Nothing }) = postWith'
+    (toJSON . upcast @CreateMessageJson $ o)
+  toAction (CreateMessage _ o@CreateMessageOptions { file = Just f }) = postWith'
+    [partLBS @IO "file" f, partLBS "payload_json" (encode . upcast @CreateMessageJson $ o)]
+  toAction (GetChannel _) = getWith
   toAction (ModifyChannel _ p) = putWith' (toJSON p)
-  toAction (DeleteChannel _)   = deleteWith
-  toAction (GetChannelMessages _ (Just (ChannelMessagesAround (showt . fromSnowflake -> a)))) = getWithP (param "around" .~ [a])
-  toAction (GetChannelMessages _ (Just (ChannelMessagesBefore (showt . fromSnowflake -> a)))) = getWithP (param "before" .~ [a])
-  toAction (GetChannelMessages _ (Just (ChannelMessagesAfter  (showt . fromSnowflake -> a)))) = getWithP (param "after"  .~ [a])
-  toAction (GetChannelMessages _ (Just (ChannelMessagesLimit  (showt -> a))))                 = getWithP (param "around" .~ [a])
+  toAction (DeleteChannel _) = deleteWith
+  toAction (GetChannelMessages _ (Just (ChannelMessagesAround (showt . fromSnowflake -> a)))) = getWithP
+    (param "around" .~ [a])
+  toAction (GetChannelMessages _ (Just (ChannelMessagesBefore (showt . fromSnowflake -> a)))) = getWithP
+    (param "before" .~ [a])
+  toAction (GetChannelMessages _ (Just (ChannelMessagesAfter (showt . fromSnowflake -> a)))) = getWithP
+    (param "after" .~ [a])
+  toAction (GetChannelMessages _ (Just (ChannelMessagesLimit (showt -> a)))) = getWithP (param "around" .~ [a])
   toAction (GetChannelMessages _ Nothing) = getWith
-  toAction (GetMessage _ _)               = getWith
-  toAction CreateReaction {}              = putEmpty
-  toAction DeleteOwnReaction {}           = deleteWith
-  toAction DeleteUserReaction {}          = deleteWith
+  toAction (GetMessage _ _) = getWith
+  toAction CreateReaction {} = putEmpty
+  toAction DeleteOwnReaction {} = deleteWith
+  toAction DeleteUserReaction {} = deleteWith
   toAction (GetReactions _ _ _ GetReactionsOptions { before, after, limit }) = getWithP
-    (param "before" .~ maybeToList (showt <$> before)
-     >>> param "after" .~ maybeToList (showt <$> after)
-     >>> param "limit" .~ maybeToList (showt <$> limit))
+    (param "before" .~ maybeToList (showt <$> before) >>> param "after" .~ maybeToList (showt <$> after) >>> param
+     "limit" .~ maybeToList (showt <$> limit))
   toAction (DeleteAllReactions _ _) = deleteWith
-  toAction (EditMessage _ _ content embed) = patchWith'
-    (object ["content" .= content, "embed" .= embed])
-  toAction (DeleteMessage _ _)                       = deleteWith
+  toAction (EditMessage _ _ content embed) = patchWith' (object ["content" .= content, "embed" .= embed])
+  toAction (DeleteMessage _ _) = deleteWith
   toAction (BulkDeleteMessages _ (map (getID @Message) -> ids)) = postWith' (object ["messages" .= ids])
-  toAction (GetChannelInvites _)                     = getWith
-  toAction (CreateChannelInvite _ o)                 = postWith' (toJSON o)
-  toAction (EditChannelPermissions _ o)              = putWith' (toJSON o)
-  toAction (DeleteChannelPermission _ _)             = deleteWith
-  toAction (TriggerTyping _)                         = postEmpty
-  toAction (GetPinnedMessages _)                     = getWith
-  toAction (AddPinnedMessage _ _)                    = putEmpty
-  toAction (DeletePinnedMessage _ _)                 = deleteWith
-  toAction (GroupDMAddRecipient _ _ o)               = putWith' (toJSON o)
-  toAction (GroupDMRemoveRecipient _ _)              = deleteWith
+  toAction (GetChannelInvites _) = getWith
+  toAction (CreateChannelInvite _ o) = postWith' (toJSON o)
+  toAction (EditChannelPermissions _ o) = putWith' (toJSON o)
+  toAction (DeleteChannelPermission _ _) = deleteWith
+  toAction (TriggerTyping _) = postEmpty
+  toAction (GetPinnedMessages _) = getWith
+  toAction (AddPinnedMessage _ _) = putEmpty
+  toAction (DeletePinnedMessage _ _) = deleteWith
+  toAction (GroupDMAddRecipient _ _ o) = putWith' (toJSON o)
+  toAction (GroupDMRemoveRecipient _ _) = deleteWith

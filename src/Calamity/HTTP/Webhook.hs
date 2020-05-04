@@ -15,7 +15,7 @@ import           Calamity.Types.Snowflake
 import           Control.Lens                   hiding ( (.=) )
 
 import           Data.Aeson
-import           Data.ByteString.Lazy
+import           Data.ByteString.Lazy           ( ByteString )
 import           Data.Default.Class
 import           Data.Generics.Product.Subtype  ( upcast )
 import           Data.Maybe
