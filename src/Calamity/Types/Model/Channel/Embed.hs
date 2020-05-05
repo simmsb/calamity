@@ -12,14 +12,15 @@ module Calamity.Types.Model.Channel.Embed
 import           Calamity.Internal.AesonThings
 import           Calamity.Internal.Utils       ()
 
-import Control.Lens
-import           Data.Default.Class
+import           Control.Lens
+
 import           Data.Aeson
+import           Data.Default.Class
+import           Data.Generics.Labels          ()
+import           Data.Semigroup
 import           Data.Text.Lazy                ( Text )
 import           Data.Time
 import           Data.Word
-import Data.Semigroup
-import Data.Generics.Labels ()
 
 import           GHC.Generics
 

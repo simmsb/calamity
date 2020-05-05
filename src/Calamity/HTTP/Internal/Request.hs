@@ -25,7 +25,6 @@ import           Control.Monad
 import           Data.Aeson                       hiding ( Options )
 import           Data.ByteString                  ( ByteString )
 import qualified Data.ByteString.Lazy             as LB
-import qualified Data.Text                        as TS
 import qualified Data.Text.Encoding               as TS
 import qualified Data.Text.Lazy                   as TL
 import           Data.Text.Strict.Lens
@@ -42,7 +41,7 @@ import qualified Polysemy.Reader                  as P
 
 import           TextShow
 
-fromResult :: P.Member (P.Error RestError) r => Result a -> Sem r a
+fromResult :: P.Member (P.Error RestError) r => Data.Aeson.Result a -> Sem r a
 fromResult (Success a) = pure a
 fromResult (Error e) = P.throw (DecodeError . TL.pack $ e)
 
@@ -63,32 +62,31 @@ instance ReadResponse () where
 instance {-# OVERLAPS #-}FromJSON a => ReadResponse a where
   readResp = eitherDecode
 
-class Request a r | a -> r where
-  toRoute :: a -> Route
+class Request a where
+  type Result a
 
-  url :: a -> String
-  url = TS.unpack . path . toRoute
+  route :: a -> Route
 
-  toAction :: a -> Options -> String -> IO (Response LB.ByteString)
+  action :: a -> Options -> String -> IO (Response LB.ByteString)
 
-  invokeRequest :: forall reffs. (BotC reffs, FromJSON r) => a -> Sem reffs (Either RestError r)
-  invokeRequest a = do
+  invoke :: (BotC r, FromJSON (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
+  invoke a = do
       rlState' <- P.asks rlState
       token' <- P.asks token
 
-      let route = toRoute a
+      let route' = route a
 
-      inFlightRequests <- registerGauge "inflight_requests" [("route", route ^. #path)]
-      totalRequests <- registerCounter "total_requests" [("route", route ^. #path)]
+      inFlightRequests <- registerGauge "inflight_requests" [("route", route' ^. #path)]
+      totalRequests <- registerCounter "total_requests" [("route", route' ^. #path)]
       void $ modifyGauge succ inFlightRequests
       void $ addCounter 1 totalRequests
 
-      whenJust (route ^. #guildID) $ \guildID -> do
+      whenJust (route' ^. #guildID) $ \guildID -> do
         totalRequestsGuild <- registerCounter "total_requests" [("guild", showt guildID)]
         void $ addCounter 1 totalRequestsGuild
 
-      resp <- attr "route" (toRoute a ^. #path) $ doRequest rlState' route
-        (toAction a (requestOptions token') (route ^. #path . unpacked))
+      resp <- attr "route" (route' ^. #path) $ doRequest rlState' route'
+        (action a (requestOptions token') (route' ^. #path . unpacked))
 
       void $ modifyGauge pred inFlightRequests
 

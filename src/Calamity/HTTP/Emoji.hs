@@ -45,21 +45,23 @@ data EmojiRequest a where
 baseRoute :: Snowflake Guild -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "guilds" // ID @Guild // S "emojis" & giveID id
 
-instance Request (EmojiRequest a) a where
-  toRoute (ListGuildEmojis (getID -> gid)) = baseRoute gid & buildRoute
-  toRoute (GetGuildEmoji (getID -> gid) (getID @Emoji -> eid)) = baseRoute gid // ID @Emoji
+instance Request (EmojiRequest a) where
+  type Result (EmojiRequest a) = a
+
+  route (ListGuildEmojis (getID -> gid)) = baseRoute gid & buildRoute
+  route (GetGuildEmoji (getID -> gid) (getID @Emoji -> eid)) = baseRoute gid // ID @Emoji
     & giveID eid
     & buildRoute
-  toRoute (CreateGuildEmoji (getID -> gid) _) = baseRoute gid & buildRoute
-  toRoute (ModifyGuildEmoji (getID -> gid) (getID @Emoji -> eid) _) = baseRoute gid // ID @Emoji
+  route (CreateGuildEmoji (getID -> gid) _) = baseRoute gid & buildRoute
+  route (ModifyGuildEmoji (getID -> gid) (getID @Emoji -> eid) _) = baseRoute gid // ID @Emoji
     & giveID eid
     & buildRoute
-  toRoute (DeleteGuildEmoji (getID -> gid) (getID @Emoji -> eid)) = baseRoute gid // ID @Emoji
+  route (DeleteGuildEmoji (getID -> gid) (getID @Emoji -> eid)) = baseRoute gid // ID @Emoji
     & giveID eid
     & buildRoute
 
-  toAction (ListGuildEmojis _)       = getWith
-  toAction (GetGuildEmoji _ _)       = getWith
-  toAction (CreateGuildEmoji _ o)    = postWith' (toJSON o)
-  toAction (ModifyGuildEmoji _ _ o)  = patchWith' (toJSON o)
-  toAction (DeleteGuildEmoji _ _)    = deleteWith
+  action (ListGuildEmojis _)       = getWith
+  action (GetGuildEmoji _ _)       = getWith
+  action (CreateGuildEmoji _ o)    = postWith' (toJSON o)
+  action (ModifyGuildEmoji _ _ o)  = patchWith' (toJSON o)
+  action (DeleteGuildEmoji _ _)    = deleteWith

@@ -33,7 +33,7 @@ shardBot = do
   token <- P.asks Calamity.Client.Types.token
   eventQueue <- P.asks eventQueue
 
-  Right gateway <- invokeRequest GetGatewayBot
+  Right gateway <- invoke GetGatewayBot
 
   let numShards' = gateway ^. #shards
   let host = gateway ^. #url
@@ -59,7 +59,7 @@ shardBot = do
 --   eventQueue <- asks eventQueue
 --   logEnv <- askLog
 
---   gateway <- aa <$> invokeRequest GetGateway
+--   gateway <- aa <$> invoke GetGateway
 
 --   let host = gateway ^. #url
 --   liftIO $ putMVar numShardsVar 1

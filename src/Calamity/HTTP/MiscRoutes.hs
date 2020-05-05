@@ -13,12 +13,14 @@ data MiscRequest a where
   GetGateway    :: MiscRequest GatewayResponse
   GetGatewayBot :: MiscRequest BotGatewayResponse
 
-instance Request (MiscRequest a) a where
-  toRoute GetGateway = mkRouteBuilder // S "gateway"
+instance Request (MiscRequest a) where
+  type Result (MiscRequest a) = a
+
+  route GetGateway = mkRouteBuilder // S "gateway"
     & buildRoute
 
-  toRoute GetGatewayBot = mkRouteBuilder // S "gateway" // S "bot"
+  route GetGatewayBot = mkRouteBuilder // S "gateway" // S "bot"
     & buildRoute
 
-  toAction GetGateway = getWith
-  toAction GetGatewayBot = getWith
+  action GetGateway = getWith
+  action GetGatewayBot = getWith

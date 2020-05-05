@@ -21,11 +21,13 @@ data InviteRequest a where
 baseRoute :: RouteBuilder _
 baseRoute = mkRouteBuilder // S "invites"
 
-instance Request (InviteRequest a) a where
-  toRoute (GetInvite c) = baseRoute // S c
+instance Request (InviteRequest a) where
+  type Result (InviteRequest a) = a
+
+  route (GetInvite c) = baseRoute // S c
     & buildRoute
-  toRoute (DeleteInvite c) = baseRoute // S c
+  route (DeleteInvite c) = baseRoute // S c
     & buildRoute
 
-  toAction (GetInvite _) = getWithP (param "with_counts" .~ [showt True])
-  toAction (DeleteInvite _) = deleteWith
+  action (GetInvite _) = getWithP (param "with_counts" .~ [showt True])
+  action (DeleteInvite _) = deleteWith

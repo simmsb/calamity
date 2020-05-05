@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 619faa6c67b037e67809e37e6bca4f969c2ea75be335c4d45553b1e2fdd9f1d1
+-- hash: f561ce413a082335ef09622acc47b1e0091f082a689c1faa9ce464d91cef1ce8
 
 name:           calamity
 version:        0.1.5.0
@@ -54,6 +54,7 @@ library
       Calamity.HTTP.Internal.Types
       Calamity.HTTP.Invite
       Calamity.HTTP.MiscRoutes
+      Calamity.HTTP.Reason
       Calamity.HTTP.User
       Calamity.HTTP.Webhook
       Calamity.Internal.AesonThings

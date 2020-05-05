@@ -69,7 +69,7 @@ runToMessage = flip appEndo def . intoMsg
 tell :: forall msg r t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r (Either RestError Message)
 tell target (runToMessage -> msg) = P.runError $ do
   cid <- getChannel target
-  r <- invokeRequest $ CreateMessage cid msg
+  r <- invoke $ CreateMessage cid msg
   P.fromEither r
 
 instance Tellable DMChannel where
@@ -89,7 +89,7 @@ instance Tellable Message where
 
 messageUser :: (BotC r, P.Member (P.Error RestError) r, HasID User a) => a -> P.Sem r (Snowflake Channel)
 messageUser (getID @User -> uid) = do
-  c <- invokeRequest $ CreateDM uid
+  c <- invoke $ CreateDM uid
   getID <$> P.fromEither c
 
 instance Tellable (Snowflake Member) where

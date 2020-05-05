@@ -1,6 +1,7 @@
 #+TITLE: Notes
 
-* TODO Add 'Reason' request thing
+* DONE Add 'Reason' request thing
+CLOSED: [2020-05-05 Tue 21:44]
 I think a good way to do this is a wrapper request type that injects it
 * DONE Webhook endpoints
 CLOSED: [2020-05-04 Mon 05:41]

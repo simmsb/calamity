@@ -81,42 +81,44 @@ data WebhookRequest a where
 baseRoute :: Snowflake Webhook -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "webhooks" // ID @Webhook & giveID id
 
-instance Request (WebhookRequest a) a where
-  toRoute (CreateWebhook (getID @Channel -> cid) _) = mkRouteBuilder // S "channels" // ID @Channel // S "webhooks"
+instance Request (WebhookRequest a) where
+  type Result (WebhookRequest a) = a
+
+  route (CreateWebhook (getID @Channel -> cid) _) = mkRouteBuilder // S "channels" // ID @Channel // S "webhooks"
     & giveID cid
     & buildRoute
-  toRoute (GetChannelWebhooks (getID @Channel -> cid)) = mkRouteBuilder // S "channels" // ID @Channel // S "webhooks"
+  route (GetChannelWebhooks (getID @Channel -> cid)) = mkRouteBuilder // S "channels" // ID @Channel // S "webhooks"
     & giveID cid
     & buildRoute
-  toRoute (GetGuildWebhooks (getID @Guild -> gid)) = mkRouteBuilder // S "guilds" // ID @Guild // S "webhooks"
+  route (GetGuildWebhooks (getID @Guild -> gid)) = mkRouteBuilder // S "guilds" // ID @Guild // S "webhooks"
     & giveID gid
     & buildRoute
-  toRoute (GetWebhook (getID @Webhook -> wid)) = baseRoute wid
+  route (GetWebhook (getID @Webhook -> wid)) = baseRoute wid
     & buildRoute
-  toRoute (GetWebhookToken (getID @Webhook -> wid) t) = baseRoute wid // S t
+  route (GetWebhookToken (getID @Webhook -> wid) t) = baseRoute wid // S t
     & buildRoute
-  toRoute (ModifyWebhook (getID @Webhook -> wid) _) = baseRoute wid
+  route (ModifyWebhook (getID @Webhook -> wid) _) = baseRoute wid
     & buildRoute
-  toRoute (ModifyWebhookToken (getID @Webhook -> wid) t _) = baseRoute wid // S t
+  route (ModifyWebhookToken (getID @Webhook -> wid) t _) = baseRoute wid // S t
     & buildRoute
-  toRoute (DeleteWebhook (getID @Webhook -> wid)) = baseRoute wid
+  route (DeleteWebhook (getID @Webhook -> wid)) = baseRoute wid
     & buildRoute
-  toRoute (DeleteWebhookToken (getID @Webhook -> wid) t) = baseRoute wid // S t
+  route (DeleteWebhookToken (getID @Webhook -> wid) t) = baseRoute wid // S t
     & buildRoute
-  toRoute (ExecuteWebhook (getID @Webhook -> wid) t _) = baseRoute wid // S t
+  route (ExecuteWebhook (getID @Webhook -> wid) t _) = baseRoute wid // S t
     & buildRoute
 
-  toAction (CreateWebhook _ o) = postWith' (toJSON o)
-  toAction (GetChannelWebhooks _) = getWith
-  toAction (GetGuildWebhooks _) = getWith
-  toAction (GetWebhook _) = getWith
-  toAction (GetWebhookToken _ _) = getWith
-  toAction (ModifyWebhook _ o) = patchWith' (toJSON o)
-  toAction (ModifyWebhookToken _ _ o) = patchWith' (toJSON o)
-  toAction (DeleteWebhook _) = deleteWith
-  toAction (DeleteWebhookToken _ _) = deleteWith
-  toAction (ExecuteWebhook _ _ o@ExecuteWebhookOptions { file = Nothing }) = postWithP'
+  action (CreateWebhook _ o) = postWith' (toJSON o)
+  action (GetChannelWebhooks _) = getWith
+  action (GetGuildWebhooks _) = getWith
+  action (GetWebhook _) = getWith
+  action (GetWebhookToken _ _) = getWith
+  action (ModifyWebhook _ o) = patchWith' (toJSON o)
+  action (ModifyWebhookToken _ _ o) = patchWith' (toJSON o)
+  action (DeleteWebhook _) = deleteWith
+  action (DeleteWebhookToken _ _) = deleteWith
+  action (ExecuteWebhook _ _ o@ExecuteWebhookOptions { file = Nothing }) = postWithP'
     (toJSON . upcast @ExecuteWebhookJson $ o) (param "wait" .~ maybeToList (showt <$> o ^. #wait))
-  toAction (ExecuteWebhook _ _ o@ExecuteWebhookOptions { file = Just f }) = postWithP'
+  action (ExecuteWebhook _ _ o@ExecuteWebhookOptions { file = Just f }) = postWithP'
     [partLBS @IO "file" f, partLBS "payload_json" (encode . upcast @ExecuteWebhookJson $ o)]
     (param "wait" .~ maybeToList (showt <$> o ^. #wait))

@@ -52,27 +52,29 @@ data UserRequest a where
 baseRoute :: RouteBuilder _
 baseRoute = mkRouteBuilder // S "users" // S "@me"
 
-instance Request (UserRequest a) a where
-  toRoute GetCurrentUser = baseRoute
+instance Request (UserRequest a) where
+  type Result (UserRequest a) = a
+
+  route GetCurrentUser = baseRoute
     & buildRoute
-  toRoute (GetUser (getID @User -> uid)) = mkRouteBuilder // S "users" // ID @User
+  route (GetUser (getID @User -> uid)) = mkRouteBuilder // S "users" // ID @User
     & giveID uid
     & buildRoute
-  toRoute (ModifyCurrentUser _) = baseRoute
+  route (ModifyCurrentUser _) = baseRoute
     & buildRoute
-  toRoute (GetCurrentUserGuilds _) = baseRoute // S "guilds"
+  route (GetCurrentUserGuilds _) = baseRoute // S "guilds"
     & buildRoute
-  toRoute (LeaveGuild (getID @Guild -> gid)) = baseRoute // S "guilds" // ID @Guild
+  route (LeaveGuild (getID @Guild -> gid)) = baseRoute // S "guilds" // ID @Guild
     & giveID gid
     & buildRoute
-  toRoute (CreateDM _) = baseRoute // S "channels"
+  route (CreateDM _) = baseRoute // S "channels"
     & buildRoute
 
-  toAction GetCurrentUser = getWith
-  toAction (GetUser _) = getWith
-  toAction (ModifyCurrentUser o) = patchWith' (toJSON o)
-  toAction (GetCurrentUserGuilds GetCurrentUserGuildsOptions { before, after, limit }) = getWithP
+  action GetCurrentUser = getWith
+  action (GetUser _) = getWith
+  action (ModifyCurrentUser o) = patchWith' (toJSON o)
+  action (GetCurrentUserGuilds GetCurrentUserGuildsOptions { before, after, limit }) = getWithP
     (param "before" .~ maybeToList (showt <$> before) >>> param "after" .~ maybeToList (showt <$> after) >>> param
      "limit" .~ maybeToList (showt <$> limit))
-  toAction (LeaveGuild _) = deleteWith
-  toAction (CreateDM (getID @User -> uid)) = postWith' (object ["recipient_id" .= uid])
+  action (LeaveGuild _) = deleteWith
+  action (CreateDM (getID @User -> uid)) = postWith' (object ["recipient_id" .= uid])
