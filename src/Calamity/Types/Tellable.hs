@@ -56,7 +56,7 @@ runToMessage :: ToMessage a => a -> CreateMessageOptions
 runToMessage = flip appEndo def . intoMsg
 
 -- | Send a message to something that is messageable
-tell :: forall r msg t a. (BotC r, ToMessage msg, Tellable t, HasID t a) => a -> msg -> P.Sem r (Either RestError Message)
+tell :: forall r msg t. (BotC r, ToMessage msg, Tellable t, HasID' t) => t -> msg -> P.Sem r (Either RestError Message)
 tell (getID @t -> tid) (runToMessage -> msg) = P.runError $ do
   cid <- getChannel tid
   r <- invokeRequest $ CreateMessage cid msg
