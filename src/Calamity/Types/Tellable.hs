@@ -1,6 +1,6 @@
 -- | Things that are messageable
 module Calamity.Types.Tellable
-    ( ToMessage
+    ( ToMessage(..)
     , Tellable(..)
     , TFile(..)
     , tell ) where
@@ -29,15 +29,24 @@ newtype TFile = TFile ByteString
   deriving ( Show, Generic )
 
 -- | Things that can be used to send a message
+--
+-- Can be used to compose text, embeds, and files. /e.g./
+--
+-- @
+-- 'intoMsg' @'Text' "A message" '<>' 'intoMsg' @'Embed' ('def' '&' #description '?~' "Embed description")
+-- @
 class ToMessage a where
   intoMsg :: a -> Endo CreateMessageOptions
 
+-- | Message content, '(<>)' concatenates the content
 instance ToMessage Text where
   intoMsg t = Endo (#content %~ (<> Just t))
 
+-- | Message embed, '(<>)' merges embeds using '(<>)'
 instance ToMessage Embed where
   intoMsg e = Endo (#embed %~ (<> Just e))
 
+-- | Message file, '(<>)' keeps the last added file
 instance ToMessage TFile where
   intoMsg (TFile f) = Endo (#file %~ getLast . (<> Last (Just f)) . Last)
 
@@ -57,7 +66,7 @@ runToMessage :: ToMessage a => a -> CreateMessageOptions
 runToMessage = flip appEndo def . intoMsg
 
 -- | Send a message to something that is messageable
-tell :: forall r msg t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r (Either RestError Message)
+tell :: forall msg r t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r (Either RestError Message)
 tell target (runToMessage -> msg) = P.runError $ do
   cid <- getChannel target
   r <- invokeRequest $ CreateMessage cid msg

@@ -104,7 +104,7 @@ handleFailByPrinting m = do
 info = DiP.info @Text
 debug = DiP.info @Text
 
-tellt = tell @_ @Text
+tellt = tell @Text
 
 main :: IO ()
 main = do
