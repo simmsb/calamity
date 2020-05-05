@@ -8,6 +8,7 @@ module Calamity.Types.Tellable
 import           Calamity.Client.Types
 import           Calamity.HTTP
 import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
@@ -21,7 +22,7 @@ import           Data.Text                    ( Text )
 import           GHC.Generics
 
 import qualified Polysemy                     as P
-import qualified Polysemy.Error as P
+import qualified Polysemy.Error               as P
 
 -- | A wrapper type for sending files
 newtype TFile = TFile ByteString
@@ -50,25 +51,46 @@ instance ToMessage CreateMessageOptions where
   intoMsg = Endo . const
 
 class Tellable a where
-  getChannel :: (BotC r, P.Member (P.Error RestError) r) => Snowflake a -> P.Sem r (Snowflake Channel)
+  getChannel :: (BotC r, P.Member (P.Error RestError) r) => a -> P.Sem r (Snowflake Channel)
 
 runToMessage :: ToMessage a => a -> CreateMessageOptions
 runToMessage = flip appEndo def . intoMsg
 
 -- | Send a message to something that is messageable
-tell :: forall r msg t. (BotC r, ToMessage msg, Tellable t, HasID' t) => t -> msg -> P.Sem r (Either RestError Message)
-tell (getID @t -> tid) (runToMessage -> msg) = P.runError $ do
-  cid <- getChannel tid
+tell :: forall r msg t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r (Either RestError Message)
+tell target (runToMessage -> msg) = P.runError $ do
+  cid <- getChannel target
   r <- invokeRequest $ CreateMessage cid msg
   P.fromEither r
 
 instance Tellable DMChannel where
+  getChannel = pure . getID
+
+instance Tellable (Snowflake DMChannel) where
   getChannel = pure . coerceSnowflake
 
 instance Tellable TextChannel where
+  getChannel = pure . getID
+
+instance Tellable (Snowflake TextChannel) where
   getChannel = pure . coerceSnowflake
 
+instance Tellable Message where
+  getChannel = pure . getID
+
+messageUser :: (BotC r, P.Member (P.Error RestError) r, HasID User a) => a -> P.Sem r (Snowflake Channel)
+messageUser (getID @User -> uid) = do
+  c <- invokeRequest $ CreateDM uid
+  getID <$> P.fromEither c
+
+instance Tellable (Snowflake Member) where
+  getChannel = messageUser . coerceSnowflake @_ @User
+
+instance Tellable Member where
+  getChannel = messageUser
+
 instance Tellable User where
-  getChannel uid = do
-    c <- invokeRequest $ CreateDM uid
-    getID <$> P.fromEither c
+  getChannel = messageUser
+
+instance Tellable (Snowflake User) where
+  getChannel = messageUser
