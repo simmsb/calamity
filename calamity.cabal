@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 9a8f55dead43e59b6d9adfc3d91898499dbdb8f79002101882adc4f63aa04df6
+-- hash: 619faa6c67b037e67809e37e6bca4f969c2ea75be335c4d45553b1e2fdd9f1d1
 
 name:           calamity
 version:        0.1.5.0
@@ -98,6 +98,7 @@ library
       Calamity.Types.Model.Voice.VoiceState
       Calamity.Types.Partial
       Calamity.Types.Snowflake
+      Calamity.Types.Tellable
       Calamity.Types.Token
       Calamity.Types.UnixTimestamp
   other-modules:

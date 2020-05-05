@@ -12,10 +12,14 @@ module Calamity.Types.Model.Channel.Embed
 import           Calamity.Internal.AesonThings
 import           Calamity.Internal.Utils       ()
 
+import Control.Lens
+import           Data.Default.Class
 import           Data.Aeson
 import           Data.Text.Lazy                ( Text )
 import           Data.Time
 import           Data.Word
+import Data.Semigroup
+import Data.Generics.Labels ()
 
 import           GHC.Generics
 
@@ -37,11 +41,30 @@ data Embed = Embed
   , author      :: Maybe EmbedAuthor
   , fields      :: [EmbedField]
   }
-  deriving ( Eq, Show, Generic )
+  deriving ( Eq, Show, Generic, Default )
   deriving ( TextShow ) via TSG.FromGeneric Embed
   deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "fields" DefaultToEmptyArray]
       Embed
   deriving ( ToJSON ) via CalamityJSON Embed
+
+instance Semigroup Embed where
+  l <> r = l
+    & #title       %~ (<> (r ^. #title))
+    & #type_       %~ getLast . (<> Last (r ^. #type_)) . Last
+    & #description %~ (<> (r ^. #description))
+    & #url         %~ getLast . (<> Last (r ^. #url)) . Last
+    & #timestamp   %~ getLast . (<> Last (r ^. #timestamp)) . Last
+    & #color       %~ getLast . (<> Last (r ^. #color)) . Last
+    & #footer      %~ (<> (r ^. #footer))
+    & #image       %~ getLast . (<> Last (r ^. #image)) . Last
+    & #thumbnail   %~ getLast . (<> Last (r ^. #thumbnail)) . Last
+    & #video       %~ getLast . (<> Last (r ^. #video)) . Last
+    & #provider    %~ getLast . (<> Last (r ^. #provider)) . Last
+    & #author      %~ getLast . (<> Last (r ^. #author)) . Last
+    & #fields      %~ (<> (r ^. #fields))
+
+instance Monoid Embed where
+  mempty = def
 
 data EmbedFooter = EmbedFooter
   { text         :: Text
@@ -51,6 +74,12 @@ data EmbedFooter = EmbedFooter
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric EmbedFooter
   deriving ( ToJSON, FromJSON ) via CalamityJSON EmbedFooter
+
+instance Semigroup EmbedFooter where
+  l <> r = l
+    & #text         %~ (<> (r ^. #text))
+    & #iconUrl      %~ getLast . (<> Last (r ^. #iconUrl)) . Last
+    & #proxyIconUrl %~ getLast . (<> Last (r ^. #proxyIconUrl)) . Last
 
 data EmbedImage = EmbedImage
   { url      :: Text
