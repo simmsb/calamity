@@ -104,27 +104,29 @@ handleFailByPrinting m = do
 info = DiP.info @Text
 debug = DiP.info @Text
 
+tellt = tell @_ @Text
+
 main :: IO ()
 main = do
-  P.runFinal . P.embedToFinal . handleFailByPrinting . runCounterAtomic . runCacheInMemory . runMetricsNoop $ runBotIO
-    (BotToken "") $ do
-      react @"messagecreate" $ \msg -> handleFailByLogging $ do
-        when (msg ^. #content == "!count") $ replicateM_ 3 $ do
-          val <- getCounter
-          info $ "the counter is: " <> fromStrict (showt val)
-          void . invokeRequest $ CreateMessage (msg ^. #channelID) ("The value is: " <> showt val)
-        when (msg ^. #content == "!say hi") $ replicateM_ 3 . P.async $ do
-          info "saying heya"
-          Right msg' <- invokeRequest $ CreateMessage (msg ^. #channelID) "heya"
-          info "sleeping"
-          P.embed $ threadDelay (5 * 1000 * 1000)
-          info "slept"
-          void . invokeRequest $ EditMessage (msg ^. #channelID) msg' (Just "lol") Nothing
-          info "edited"
-        when (msg ^. #content == "!explode") $ do
-          Just x <- pure Nothing
-          debug "unreachable!"
-        when (msg ^. #content == "!bye") $ do
-          void . invokeRequest $ CreateMessage (msg ^. #channelID) "bye!"
-          stopBot
+  token <- view packed <$> getEnv "BOT_TOKEN"
+  P.runFinal . P.embedToFinal . handleFailByPrinting . runCounterAtomic . runCacheInMemory . runMetricsNoop
+    $ runBotIO (BotToken token) $ react @"messagecreate" $ \msg -> handleFailByLogging $ do
+      when (msg ^. #content == "!count") $ replicateM_ 3 $ do
+        val <- getCounter
+        info $ "the counter is: " <> showt val
+        void $ tellt msg ("The value is: " <> showt val)
+      when (msg ^. #content == "!say hi") $ replicateM_ 3 . P.async $ do
+        info "saying heya"
+        Right msg' <- tellt msg "heya"
+        info "sleeping"
+        P.embed $ threadDelay (5 * 1000 * 1000)
+        info "slept"
+        void . invokeRequest $ EditMessage (msg ^. #channelID) msg' (Just "lol") Nothing
+        info "edited"
+      when (msg ^. #content == "!explode") $ do
+        Just x <- pure Nothing
+        debug "unreachable!"
+      when (msg ^. #content == "!bye") $ do
+        void $ tellt msg "bye!"
+        stopBot
 ```
