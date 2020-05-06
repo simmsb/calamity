@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: f561ce413a082335ef09622acc47b1e0091f082a689c1faa9ce464d91cef1ce8
+-- hash: cd2b6837ac1a0aafe0608b377821ae47dba465830404b42d9bfc1c20a5db9ac6
 
 name:           calamity
 version:        0.1.5.0
@@ -45,6 +45,7 @@ library
       Calamity.Gateway.Shard
       Calamity.Gateway.Types
       Calamity.HTTP
+      Calamity.HTTP.AuditLog
       Calamity.HTTP.Channel
       Calamity.HTTP.Emoji
       Calamity.HTTP.Guild
@@ -82,6 +83,7 @@ library
       Calamity.Types.Model.Channel.Reaction
       Calamity.Types.Model.Channel.Webhook
       Calamity.Types.Model.Guild
+      Calamity.Types.Model.Guild.AuditLog
       Calamity.Types.Model.Guild.Ban
       Calamity.Types.Model.Guild.Emoji
       Calamity.Types.Model.Guild.Guild

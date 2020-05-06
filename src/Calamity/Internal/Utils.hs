@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
+
 -- | Internal utilities and instances
 module Calamity.Internal.Utils
     ( whenJust
@@ -65,7 +66,7 @@ instance TextShow UTCTime where
 instance (TextShow a, VU.Unbox a) => TextShow (Vector a) where
   showb = showbList . VU.toList
 
-   -- lazy and strict use the same internal data structure
+    -- lazy and strict use the same internal data structure
 instance (Show k, Show v) => TextShow (LH.HashMap k v) where
   showb = fromString . show
 

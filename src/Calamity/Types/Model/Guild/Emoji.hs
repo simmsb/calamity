@@ -50,8 +50,8 @@ data RawEmoji
   deriving ( TextShow ) via TSG.FromGeneric RawEmoji
 
 instance ToJSON RawEmoji where
-  toEncoding (CustomEmoji e) = pairs $ "emoji" .= e
-  toEncoding (UnicodeEmoji s) = pairs $ "emoji" .= (("name" .= s) :: Object)
+  toJSON (CustomEmoji e) = object ["emoji" .= e]
+  toJSON (UnicodeEmoji s) = object ["emoji" .= object ["name" .= s]]
 
 instance FromJSON RawEmoji where
   parseJSON = withObject "RawEmoji" $ \v -> do

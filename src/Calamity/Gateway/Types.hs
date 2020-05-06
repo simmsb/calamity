@@ -113,6 +113,18 @@ data SentDiscordMessage
   deriving ( Show, Generic )
 
 instance ToJSON SentDiscordMessage where
+  toJSON (HeartBeat data') = object ["op" .= (1 :: Int), "d" .= data']
+
+  toJSON (Identify data') = object ["op" .= (2 :: Int), "d" .= data']
+
+  toJSON (StatusUpdate data') = object ["op" .= (3 :: Int), "d" .= data']
+
+  toJSON (VoiceStatusUpdate data') = object ["op" .= (4 :: Int), "d" .= data']
+
+  toJSON (Resume data') = object ["op" .= (6 :: Int), "d" .= data']
+
+  toJSON (RequestGuildMembers data') = object ["op" .= (8 :: Int), "d" .= data']
+
   toEncoding (HeartBeat data') = pairs ("op" .= (1 :: Int) <> "d" .= data')
 
   toEncoding (Identify data') = pairs ("op" .= (2 :: Int) <> "d" .= data')

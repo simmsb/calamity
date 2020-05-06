@@ -63,8 +63,8 @@ data ActivityTimestamps = ActivityTimestamps
   deriving ( TextShow ) via TSG.FromGeneric ActivityTimestamps
 
 instance ToJSON ActivityTimestamps where
-  toEncoding ActivityTimestamps { start, end } = pairs
-    ("start" .= (unixToMilliseconds <$> start) <> "end" .= (unixToMilliseconds <$> end))
+  toJSON ActivityTimestamps { start, end } = object
+    ["start" .= (unixToMilliseconds <$> start), "end" .= (unixToMilliseconds <$> end)]
 
 instance FromJSON ActivityTimestamps where
   parseJSON = withObject "ActivityTimestamps" $ \v -> do

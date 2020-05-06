@@ -33,12 +33,16 @@ data Attachment = Attachment
   deriving ( HasID Attachment ) via HasIDField "id" Attachment
 
 instance ToJSON Attachment where
-  toEncoding Attachment { id, filename, size, url, proxyUrl, dimensions = Just (width, height) } = pairs
-    ("id" .= id <> "filename" .= filename <> "size" .= size <> "url" .= url <> "proxy_url" .= proxyUrl
-     <> "width" .= width <> "height" .= height)
-
-  toEncoding Attachment { id, filename, size, url, proxyUrl } = pairs
-    ("id" .= id <> "filename" .= filename <> "size" .= size <> "url" .= url <> "proxy_url" .= proxyUrl)
+  toJSON Attachment { id, filename, size, url, proxyUrl, dimensions = Just (width, height) } = object
+    [ "id" .= id
+    , "filename" .= filename
+    , "size" .= size
+    , "url" .= url
+    , "proxy_url" .= proxyUrl
+    , "width" .= width
+    , "height" .= height]
+  toJSON Attachment { id, filename, size, url, proxyUrl } =
+    object ["id" .= id, "filename" .= filename, "size" .= size, "url" .= url, "proxy_url" .= proxyUrl]
 
 instance FromJSON Attachment where
   parseJSON = withObject "Attachment" $ \v -> do

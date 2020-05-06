@@ -1,6 +1,7 @@
 -- | Combined http request stuff
 module Calamity.HTTP
-    ( module Calamity.HTTP.Internal.Request
+    ( module Calamity.HTTP.AuditLog
+    , module Calamity.HTTP.Internal.Request
     , module Calamity.HTTP.Channel
     , module Calamity.HTTP.Emoji
     , module Calamity.HTTP.Guild
@@ -11,6 +12,7 @@ module Calamity.HTTP
     , module Calamity.HTTP.Internal.Types
     , module Calamity.HTTP.Webhook ) where
 
+import           Calamity.HTTP.AuditLog
 import           Calamity.HTTP.Channel
 import           Calamity.HTTP.Emoji
 import           Calamity.HTTP.Guild

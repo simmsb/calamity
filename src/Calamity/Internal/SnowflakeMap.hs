@@ -236,4 +236,5 @@ instance (FromJSON a, HasID' a) => FromJSON (SnowflakeMap a) where
     pure . Calamity.Internal.SnowflakeMap.fromList . F.toList $ parsed
 
 instance ToJSON a => ToJSON (SnowflakeMap a) where
+  toJSON = toJSON . elems
   toEncoding = toEncoding . elems

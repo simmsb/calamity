@@ -40,6 +40,11 @@ millisecondsToUnix = toRational
                      >>> UnixTimestamp
 
 instance ToJSON UnixTimestamp where
+  toJSON = unUnixTimestamp
+               >>> utcTimeToPOSIXSeconds
+               >>> toRational
+               >>> round
+               >>> toJSON @Word64
   toEncoding = unUnixTimestamp
                >>> utcTimeToPOSIXSeconds
                >>> toRational

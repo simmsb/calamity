@@ -5,7 +5,8 @@ CLOSED: [2020-05-05 Tue 21:44]
 I think a good way to do this is a wrapper request type that injects it
 * DONE Webhook endpoints
 CLOSED: [2020-05-04 Mon 05:41]
-* TODO Audit log model & endpoints
+* DONE Audit log model & endpoints
+CLOSED: [2020-05-06 Wed 03:07]
 * TODO Allowed mentions
 * DONE Things to test
 CLOSED: [2019-04-27 Sat 16:25]
