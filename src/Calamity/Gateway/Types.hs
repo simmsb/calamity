@@ -28,8 +28,10 @@ import qualified Polysemy                         as P
 import qualified Polysemy.Async                   as P
 import qualified Polysemy.AtomicState             as P
 
-type ShardC r = P.Members '[LogEff, P.AtomicState ShardState, P.Embed IO, P.Final IO,
-  P.Async, MetricEff] r
+import GHC.Stack
+
+type ShardC r = (P.Members '[LogEff, P.AtomicState ShardState, P.Embed IO, P.Final IO,
+  P.Async, MetricEff] r, HasCallStack)
 
 data ShardMsg
   = Discord ReceivedDiscordMessage

@@ -110,17 +110,6 @@ fromEitherVoid :: Either a Void -> a
 fromEitherVoid (Left a) = a
 fromEitherVoid (Right a) = absurd a -- yeet
 
--- | Catches ws close events and decides if we can restart or not
-checkWSClose :: IO a -> IO (Either ControlMessage a)
-checkWSClose m = (Right <$> m) `catch` \case
-  e@(CloseRequest code _) -> do
-    print e
-    if code `elem` [1000, 4004, 4010, 4011]
-      then pure . Left $ ShutDownShard
-      else pure . Left $ RestartShard
-
-  e                       -> throwIO e
-
 tryWriteTBMQueue' :: TBMQueue a -> a -> STM Bool
 tryWriteTBMQueue' q v = do
   v' <- tryWriteTBMQueue q v
@@ -128,6 +117,10 @@ tryWriteTBMQueue' q v = do
     Just False -> retry
     Just True  -> pure True
     Nothing    -> pure False
+
+mapLeft :: (a -> c) -> Either a b -> Either c b
+mapLeft f (Left e)  = Left (f e)
+mapLeft _ (Right x) = Right x
 
 -- | The loop a shard will run on
 shardLoop :: ShardC r => Sem r ()
@@ -147,12 +140,16 @@ shardLoop = do
         r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
         when r inner
 
-  discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
+  discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
   discordStream ws outqueue = inner
     where inner = do
-            msg <- P.embed . checkWSClose $ receiveData ws
+            msg' <- P.errorToIOFinal (P.embed $ receiveData ws)
 
-            -- trace $ "Received from stream: "+||msg||+""
+            let msg = mapLeft ((\case
+                                  Just (CloseRequest code _)
+                                    | code `elem` [1000, 4004, 4010, 4011] ->
+                                      ShutDownShard
+                                  _ -> RestartShard) . fromException) msg'
 
             case msg of
               Left c ->
@@ -167,10 +164,6 @@ shardLoop = do
                     error $ "Failed to decode: "+|e|+""
                     pure True
                 when r inner
-
-  -- mergedStream ::  Log -> Shard -> Connection -> ExceptT ShardException ShardM ShardMsg
-  -- mergedStream logEnv shard ws =
-  --   liftIO (fromEither <$> race (controlStream shard) (discordStream logEnv ws))
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
   -- Currently if this goes to the error path we just exit the forever loop
