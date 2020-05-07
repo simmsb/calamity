@@ -48,6 +48,7 @@ import qualified Polysemy.AtomicState             as P
 import qualified Polysemy.Error                   as P
 import qualified Polysemy.Fail                    as P
 import qualified Polysemy.Reader                  as P
+import Calamity.LogEff
 
 
 timeA :: P.Member (P.Embed IO) r => P.Sem r a -> P.Sem r (Double, a)
@@ -72,11 +73,25 @@ newClient token = do
                 rlState'
                 eventQueue'
 
+handleDi :: P.Member (P.Embed IO) r => P.Sem (LogEff ': r) a -> P.Sem r a
+handleDi = P.interpretH (\case
+                            Di.Log level msg -> do
+                              t <- P.embed . print $ show level <> ": " <> show msg
+                              P.pureT t
+                            Di.Flush -> pure () >>= P.pureT
+                            Di.Push s m' -> do
+                              mm <- P.runT m'
+                              P.raise $ handleDi mm
+                            Di.Attr_ k v m' -> do
+                              mm <- P.runT m'
+                              P.raise $ handleDi mm
+                            )
+
 runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r -> P.Sem r ()
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
-  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO $ do
+  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . handleDi $ do
     setup
     shardBot
     clientLoop
