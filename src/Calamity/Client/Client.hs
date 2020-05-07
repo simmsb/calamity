@@ -359,6 +359,8 @@ updateCache (Ready ReadyData { user, guilds }) = do
   setBotUser user
   for_ (map getID guilds) setUnavailableGuild
 
+updateCache Resumed = pure ()
+
 updateCache (ChannelCreate (DMChannel' chan)) =
   setDM chan
 

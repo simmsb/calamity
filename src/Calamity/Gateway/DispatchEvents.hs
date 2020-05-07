@@ -30,6 +30,7 @@ data DispatchMessage
 
 data DispatchData
   = Ready ReadyData
+  | Resumed
   | ChannelCreate Channel
   | ChannelUpdate Channel
   | ChannelDelete Channel

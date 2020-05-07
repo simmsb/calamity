@@ -70,38 +70,39 @@ instance FromJSON ReceivedDiscordMessage where
       _  -> fail $ "invalid opcode: " <> show op
 
 parseDispatchData :: DispatchType -> Value -> AT.Parser DispatchData
-parseDispatchData READY data' = Ready <$> parseJSON data'
-parseDispatchData CHANNEL_CREATE data' = ChannelCreate <$> parseJSON data'
-parseDispatchData CHANNEL_UPDATE data' = ChannelUpdate <$> parseJSON data'
-parseDispatchData CHANNEL_DELETE data' = ChannelDelete <$> parseJSON data'
-parseDispatchData CHANNEL_PINS_UPDATE data' = ChannelPinsUpdate <$> parseJSON data'
-parseDispatchData GUILD_CREATE data' = GuildCreate <$> parseJSON data'
-parseDispatchData GUILD_UPDATE data' = GuildUpdate <$> parseJSON data'
-parseDispatchData GUILD_DELETE data' = GuildDelete <$> parseJSON data'
-parseDispatchData GUILD_BAN_ADD data' = GuildBanAdd <$> parseJSON data'
-parseDispatchData GUILD_BAN_REMOVE data' = GuildBanRemove <$> parseJSON data'
-parseDispatchData GUILD_EMOJIS_UPDATE data' = GuildEmojisUpdate <$> parseJSON data'
-parseDispatchData GUILD_INTEGRATIONS_UPDATE data' = GuildIntegrationsUpdate <$> parseJSON data'
-parseDispatchData GUILD_MEMBER_ADD data' = GuildMemberAdd <$> parseJSON data'
-parseDispatchData GUILD_MEMBER_REMOVE data' = GuildMemberRemove <$> parseJSON data'
-parseDispatchData GUILD_MEMBER_UPDATE data' = GuildMemberUpdate <$> parseJSON data'
-parseDispatchData GUILD_MEMBERS_CHUNK data' = GuildMembersChunk <$> parseJSON data'
-parseDispatchData GUILD_ROLE_CREATE data' = GuildRoleCreate <$> parseJSON data'
-parseDispatchData GUILD_ROLE_UPDATE data' = GuildRoleUpdate <$> parseJSON data'
-parseDispatchData GUILD_ROLE_DELETE data' = GuildRoleDelete <$> parseJSON data'
-parseDispatchData MESSAGE_CREATE data' = MessageCreate <$> parseJSON data'
-parseDispatchData MESSAGE_UPDATE data' = MessageUpdate <$> parseJSON data'
-parseDispatchData MESSAGE_DELETE data' = MessageDelete <$> parseJSON data'
-parseDispatchData MESSAGE_DELETE_BULK data' = MessageDeleteBulk <$> parseJSON data'
-parseDispatchData MESSAGE_REACTION_ADD data' = MessageReactionAdd <$> parseJSON data'
-parseDispatchData MESSAGE_REACTION_REMOVE data' = MessageReactionRemove <$> parseJSON data'
+parseDispatchData READY data'                       = Ready <$> parseJSON data'
+parseDispatchData RESUMED _                         = pure Resumed
+parseDispatchData CHANNEL_CREATE data'              = ChannelCreate <$> parseJSON data'
+parseDispatchData CHANNEL_UPDATE data'              = ChannelUpdate <$> parseJSON data'
+parseDispatchData CHANNEL_DELETE data'              = ChannelDelete <$> parseJSON data'
+parseDispatchData CHANNEL_PINS_UPDATE data'         = ChannelPinsUpdate <$> parseJSON data'
+parseDispatchData GUILD_CREATE data'                = GuildCreate <$> parseJSON data'
+parseDispatchData GUILD_UPDATE data'                = GuildUpdate <$> parseJSON data'
+parseDispatchData GUILD_DELETE data'                = GuildDelete <$> parseJSON data'
+parseDispatchData GUILD_BAN_ADD data'               = GuildBanAdd <$> parseJSON data'
+parseDispatchData GUILD_BAN_REMOVE data'            = GuildBanRemove <$> parseJSON data'
+parseDispatchData GUILD_EMOJIS_UPDATE data'         = GuildEmojisUpdate <$> parseJSON data'
+parseDispatchData GUILD_INTEGRATIONS_UPDATE data'   = GuildIntegrationsUpdate <$> parseJSON data'
+parseDispatchData GUILD_MEMBER_ADD data'            = GuildMemberAdd <$> parseJSON data'
+parseDispatchData GUILD_MEMBER_REMOVE data'         = GuildMemberRemove <$> parseJSON data'
+parseDispatchData GUILD_MEMBER_UPDATE data'         = GuildMemberUpdate <$> parseJSON data'
+parseDispatchData GUILD_MEMBERS_CHUNK data'         = GuildMembersChunk <$> parseJSON data'
+parseDispatchData GUILD_ROLE_CREATE data'           = GuildRoleCreate <$> parseJSON data'
+parseDispatchData GUILD_ROLE_UPDATE data'           = GuildRoleUpdate <$> parseJSON data'
+parseDispatchData GUILD_ROLE_DELETE data'           = GuildRoleDelete <$> parseJSON data'
+parseDispatchData MESSAGE_CREATE data'              = MessageCreate <$> parseJSON data'
+parseDispatchData MESSAGE_UPDATE data'              = MessageUpdate <$> parseJSON data'
+parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'
+parseDispatchData MESSAGE_DELETE_BULK data'         = MessageDeleteBulk <$> parseJSON data'
+parseDispatchData MESSAGE_REACTION_ADD data'        = MessageReactionAdd <$> parseJSON data'
+parseDispatchData MESSAGE_REACTION_REMOVE data'     = MessageReactionRemove <$> parseJSON data'
 parseDispatchData MESSAGE_REACTION_REMOVE_ALL data' = MessageReactionRemoveAll <$> parseJSON data'
-parseDispatchData PRESENCE_UPDATE data' = PresenceUpdate <$> parseJSON data'
-parseDispatchData TYPING_START data' = TypingStart <$> parseJSON data'
-parseDispatchData USER_UPDATE data' = UserUpdate <$> parseJSON data'
-parseDispatchData VOICE_STATE_UPDATE data' = VoiceStateUpdate <$> parseJSON data'
-parseDispatchData VOICE_SERVER_UPDATE data' = VoiceServerUpdate <$> parseJSON data'
-parseDispatchData WEBHOOKS_UPDATE data' = WebhooksUpdate <$> parseJSON data'
+parseDispatchData PRESENCE_UPDATE data'             = PresenceUpdate <$> parseJSON data'
+parseDispatchData TYPING_START data'                = TypingStart <$> parseJSON data'
+parseDispatchData USER_UPDATE data'                 = UserUpdate <$> parseJSON data'
+parseDispatchData VOICE_STATE_UPDATE data'          = VoiceStateUpdate <$> parseJSON data'
+parseDispatchData VOICE_SERVER_UPDATE data'         = VoiceServerUpdate <$> parseJSON data'
+parseDispatchData WEBHOOKS_UPDATE data'             = WebhooksUpdate <$> parseJSON data'
 
 data SentDiscordMessage
   = StatusUpdate StatusUpdateData
@@ -141,6 +142,7 @@ instance ToJSON SentDiscordMessage where
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs
 data DispatchType
   = READY
+  | RESUMED
   | CHANNEL_CREATE
   | CHANNEL_UPDATE
   | CHANNEL_DELETE
