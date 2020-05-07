@@ -42,7 +42,7 @@ import qualified Polysemy.Async                  as P
 import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Error                  as P
 import qualified Polysemy.Resource               as P
-
+import qualified Control.Exception.Safe as Ex
 import           Prelude                         hiding ( error )
 
 import           TextShow
@@ -118,10 +118,6 @@ tryWriteTBMQueue' q v = do
     Just True  -> pure True
     Nothing    -> pure False
 
-mapLeft :: (a -> c) -> Either a b -> Either c b
-mapLeft f (Left e)  = Left (f e)
-mapLeft _ (Right x) = Right x
-
 -- | The loop a shard will run on
 shardLoop :: ShardC r => Sem r ()
 shardLoop = do
@@ -140,16 +136,17 @@ shardLoop = do
         r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
         when r inner
 
+  handleWSException :: SomeException -> IO (Either ControlMessage a)
+  handleWSException e = pure $ case fromException e of
+    Just (CloseRequest code _)
+      | code `elem` [1000, 4004, 4010, 4011] ->
+        Left ShutDownShard
+    _ -> Left RestartShard
+
   discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
   discordStream ws outqueue = inner
     where inner = do
-            msg' <- P.errorToIOFinal (P.embed $ receiveData ws)
-
-            let msg = mapLeft ((\case
-                                  Just (CloseRequest code _)
-                                    | code `elem` [1000, 4004, 4010, 4011] ->
-                                      ShutDownShard
-                                  _ -> RestartShard) . fromException) msg'
+            msg <- P.embed $ Ex.catchAny (Right <$> receiveData ws) handleWSException
 
             case msg of
               Left c ->

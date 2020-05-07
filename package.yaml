@@ -65,6 +65,7 @@ dependencies:
 - deepseq >= 1.4.4.0 && < 2
 - text-show >= 3.8 && < 4
 - mtl >= 2.2 && < 3
+- safe-exceptions >= 0.1 && < 2
 
 # executables:
 #   test-calamity-exe:

@@ -237,7 +237,7 @@ data ShardException
   = ShardExcRestart
   | ShardExcShutDown
   deriving ( Show )
-  deriving anyclass Exception
+  --deriving anyclass Exception
 
 data Shard = Shard
   { shardID     :: Int
