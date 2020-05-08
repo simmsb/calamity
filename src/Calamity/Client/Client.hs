@@ -5,7 +5,9 @@ module Calamity.Client.Client
     ( Client(..)
     , react
     , runBotIO
-    , stopBot ) where
+    , stopBot
+    , sendPresence
+    ) where
 
 import           Calamity.Cache.Eff
 import           Calamity.Client.ShardManager
@@ -86,6 +88,12 @@ react :: forall (s :: Symbol) r. (KnownSymbol s, BotC r, EHType' s ~ Dynamic, Ty
 react f =
   let handlers = EventHandlers . TM.one $ EH @s [toDyn f]
   in P.atomicModify (handlers <>)
+
+sendPresence :: BotC r => StatusUpdateData -> P.Sem r ()
+sendPresence s = do
+  shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
+  for_ shards $ \shard ->
+    P.embed . atomically $ writeTQueue (shard ^. _1 . #cmdQueue) (SendPresence s)
 
 stopBot :: BotC r => P.Sem r ()
 stopBot = do
