@@ -12,7 +12,6 @@ import           Calamity.Types.Snowflake
 import           Control.Concurrent.Async
 import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
-import           Control.Exception
 
 import           Data.Aeson
 import qualified Data.Aeson.Types                 as AT
@@ -28,10 +27,8 @@ import qualified Polysemy                         as P
 import qualified Polysemy.Async                   as P
 import qualified Polysemy.AtomicState             as P
 
-import GHC.Stack
-
 type ShardC r = (P.Members '[LogEff, P.AtomicState ShardState, P.Embed IO, P.Final IO,
-  P.Async, MetricEff] r, HasCallStack)
+  P.Async, MetricEff] r)
 
 data ShardMsg
   = Discord ReceivedDiscordMessage
@@ -233,11 +230,10 @@ data ControlMessage
   | SendPresence StatusUpdateData
   deriving ( Show )
 
-data ShardException
-  = ShardExcRestart
-  | ShardExcShutDown
+data ShardFlowControl
+  = ShardFlowRestart
+  | ShardFlowShutDown
   deriving ( Show )
-  --deriving anyclass Exception
 
 data Shard = Shard
   { shardID     :: Int

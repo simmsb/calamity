@@ -166,7 +166,7 @@ shardLoop = do
   -- Currently if this goes to the error path we just exit the forever loop
   -- and the shard stops, maybe we might want to do some extra logic to reboot
   -- the shard, or maybe force a resharding
-  outerloop :: ShardC r => Sem r (Either ShardException ())
+  outerloop :: ShardC r => Sem r (Either ShardFlowControl ())
   outerloop = P.runError . forever $ do
     shard :: Shard <- P.atomicGets (^. #shardS)
     let host = shard ^. #gateway
@@ -177,17 +177,17 @@ shardLoop = do
     innerLoopVal <- websocketToIO $ runWebsocket host' "/?v=7&encoding=json" innerloop
 
     case innerLoopVal of
-      ShardExcShutDown -> do
+      ShardFlowShutDown -> do
         info "Shutting down shard"
-        P.throw ShardExcShutDown
+        P.throw ShardFlowShutDown
 
-      ShardExcRestart ->
+      ShardFlowRestart ->
         info "Restaring shard"
         -- we restart normally when we loop
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- and then decides what to do with it
-  innerloop :: ShardC r => Connection -> Sem r ShardException
+  innerloop :: ShardC r => Connection -> Sem r ShardFlowControl
   innerloop ws = do
     debug "Entering inner loop of shard"
 
@@ -241,7 +241,7 @@ shardLoop = do
     pure result
 
   -- | Handlers for each message, not sure what they'll need to do exactly yet
-  handleMsg :: (ShardC r, P.Member (P.Error ShardException) r) => ShardMsg -> Sem r ()
+  handleMsg :: (ShardC r, P.Member (P.Error ShardFlowControl) r) => ShardMsg -> Sem r ()
   handleMsg (Discord msg) = case msg of
     Dispatch sn data' -> do
       -- trace $ "Handling event: ("+||data'||+")"
@@ -264,7 +264,7 @@ shardLoop = do
 
     Reconnect -> do
       debug "Being asked to restart by Discord"
-      P.throw ShardExcRestart
+      P.throw ShardFlowRestart
 
     InvalidSession resumable -> do
       if resumable
@@ -275,7 +275,7 @@ shardLoop = do
         P.embed $ threadDelay (15 * 1000 * 1000)
       else
         info "Received resumable invalid session"
-      P.throw ShardExcRestart
+      P.throw ShardFlowRestart
 
     Hello interval -> do
       info $ "Received hello, beginning to heartbeat at an interval of "+|interval|+"ms"
@@ -290,8 +290,8 @@ shardLoop = do
       debug $ "Sending presence: ("+||data'||+")"
       sendToWs $ StatusUpdate data'
 
-    RestartShard       -> P.throw ShardExcRestart
-    ShutDownShard      -> P.throw ShardExcShutDown
+    RestartShard       -> P.throw ShardFlowRestart
+    ShutDownShard      -> P.throw ShardFlowShutDown
 
 startHeartBeatLoop :: ShardC r => Int -> Sem r ()
 startHeartBeatLoop interval = do

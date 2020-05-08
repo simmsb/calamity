@@ -40,8 +40,6 @@ import qualified Polysemy.Async                  as P
 import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Reader                 as P
 
-import GHC.Stack
-
 data Client = Client
   { shards        :: TVar [(Shard, Async (Maybe ()))]
   , numShards     :: MVar Int
@@ -54,7 +52,7 @@ data Client = Client
 type BotC r =
   ( P.Members '[LogEff, MetricEff, CacheEff, P.Reader Client,
   P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r
-  , Typeable r, HasCallStack)
+  , Typeable r)
 
 type SetupEff r = P.Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
 
