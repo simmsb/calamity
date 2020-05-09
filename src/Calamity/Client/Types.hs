@@ -4,12 +4,15 @@ module Calamity.Client.Types
     , BotC
     , SetupEff
     , EHType
-    , EHType'
     , EventHandlers(..)
-    , EventHandler(..) ) where
+    , EventHandler(..)
+    , InsertEventHandler(..)
+    , GetEventHandlers(..)
+    , EventType(..)
+    , getCustomEventHandlers ) where
 
 import           Calamity.Cache.Eff
-import           Calamity.Gateway.DispatchEvents
+import           Calamity.Gateway.DispatchEvents ( CalamityEvent(..), ReadyData )
 import           Calamity.Gateway.Types          ( ControlMessage )
 import           Calamity.HTTP.Internal.Types
 import           Calamity.LogEff
@@ -27,13 +30,17 @@ import           Control.Concurrent.STM.TVar
 
 import           Data.Default.Class
 import           Data.Dynamic
+import           Data.Functor
+import qualified Data.HashMap.Lazy               as LH
+import           Data.Maybe
 import           Data.Time
 import qualified Data.TypeRepMap                 as TM
 import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) )
+import           Data.Typeable
+import           Data.Void
 
 import           GHC.Exts                        ( fromList )
 import           GHC.Generics
-import qualified GHC.TypeLits                    as TL
 
 import qualified Polysemy                        as P
 import qualified Polysemy.Async                  as P
@@ -57,109 +64,146 @@ type BotC r =
 
 type SetupEff r = P.Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
 
-type family EHType d m where
-  EHType "ready"                    m = ReadyData                                   -> m ()
-  EHType "channelcreate"            m = Channel                                     -> m ()
-  EHType "channelupdate"            m = Channel   -> Channel                        -> m ()
-  EHType "channeldelete"            m = Channel                                     -> m ()
-  EHType "channelpinsupdate"        m = Channel   -> Maybe UTCTime                  -> m ()
-  EHType "guildcreate"              m = Guild     -> Bool                           -> m ()
-  EHType "guildupdate"              m = Guild     -> Guild                          -> m ()
-  EHType "guilddelete"              m = Guild     -> Bool                           -> m ()
-  EHType "guildbanadd"              m = Guild     -> User                           -> m ()
-  EHType "guildbanremove"           m = Guild     -> User                           -> m ()
-  EHType "guildemojisupdate"        m = Guild     -> [Emoji]                        -> m ()
-  EHType "guildintegrationsupdate"  m = Guild                                       -> m ()
-  EHType "guildmemberadd"           m = Member                                      -> m ()
-  EHType "guildmemberremove"        m = Member                                      -> m ()
-  EHType "guildmemberupdate"        m = Member    -> Member                         -> m ()
-  EHType "guildmemberschunk"        m = Guild     -> [Member]                       -> m ()
-  EHType "guildrolecreate"          m = Guild     -> Role                           -> m ()
-  EHType "guildroleupdate"          m = Guild     -> Role          -> Role          -> m ()
-  EHType "guildroledelete"          m = Guild     -> Role                           -> m ()
-  EHType "messagecreate"            m = Message                                     -> m ()
-  EHType "messageupdate"            m = Message   -> Message                        -> m ()
-  EHType "messagedelete"            m = Message                                     -> m ()
-  EHType "messagedeletebulk"        m = [Message]                                   -> m ()
-  EHType "messagereactionadd"       m = Message   -> Reaction                       -> m ()
-  EHType "messagereactionremove"    m = Message   -> Reaction                       -> m ()
-  EHType "messagereactionremoveall" m = Message                                     -> m ()
-  EHType "typingstart"              m = Channel   -> Maybe Member  -> UnixTimestamp -> m ()
-  EHType "userupdate"               m = User      -> User                           -> m ()
-  EHType s _ = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
-  -- EHType "voicestateupdate"         = VoiceStateUpdateData -> EventM ()
-  -- EHType "voiceserverupdate"        = VoiceServerUpdateData -> EventM ()
-  -- EHType "webhooksupdate"           = WebhooksUpdateData -> EventM ()
+-- | A Data Kind used to fire custom events
+data EventType
+  = ReadyEvt
+  | ChannelCreateEvt
+  | ChannelUpdateEvt
+  | ChannelDeleteEvt
+  | ChannelpinsUpdateEvt
+  | GuildCreateEvt
+  | GuildUpdateEvt
+  | GuildDeleteEvt
+  | GuildBanAddEvt
+  | GuildBanRemoveEvt
+  | GuildEmojisUpdateEvt
+  | GuildIntegrationsUpdateEvt
+  | GuildMemberAddEvt
+  | GuildMemberRemoveEvt
+  | GuildMemberUpdateEvt
+  | GuildMembersChunkEvt
+  | GuildRoleCreateEvt
+  | GuildRoleUpdateEvt
+  | GuildRoleDeleteEvt
+  | MessageCreateEvt
+  | MessageUpdateEvt
+  | MessageDeleteEvt
+  | MessageDeleteBulkEvt
+  | MessageReactionAddEvt
+  | MessageReactionRemoveEvt
+  | MessageReactionRemoveAllEvt
+  | TypingStartEvt
+  | UserUpdateEvt
+  | forall s a. CustomEvt s a
 
-type family EHType' d where
-  EHType' "ready"                    = Dynamic
-  EHType' "channelcreate"            = Dynamic
-  EHType' "channelupdate"            = Dynamic
-  EHType' "channeldelete"            = Dynamic
-  EHType' "channelpinsupdate"        = Dynamic
-  EHType' "guildcreate"              = Dynamic
-  EHType' "guildupdate"              = Dynamic
-  EHType' "guilddelete"              = Dynamic
-  EHType' "guildbanadd"              = Dynamic
-  EHType' "guildbanremove"           = Dynamic
-  EHType' "guildemojisupdate"        = Dynamic
-  EHType' "guildintegrationsupdate"  = Dynamic
-  EHType' "guildmemberadd"           = Dynamic
-  EHType' "guildmemberremove"        = Dynamic
-  EHType' "guildmemberupdate"        = Dynamic
-  EHType' "guildmemberschunk"        = Dynamic
-  EHType' "guildrolecreate"          = Dynamic
-  EHType' "guildroleupdate"          = Dynamic
-  EHType' "guildroledelete"          = Dynamic
-  EHType' "messagecreate"            = Dynamic
-  EHType' "messageupdate"            = Dynamic
-  EHType' "messagedelete"            = Dynamic
-  EHType' "messagedeletebulk"        = Dynamic
-  EHType' "messagereactionadd"       = Dynamic
-  EHType' "messagereactionremove"    = Dynamic
-  EHType' "messagereactionremoveall" = Dynamic
-  EHType' "typingstart"              = Dynamic
-  EHType' "userupdate"               = Dynamic
-  EHType' s = TL.TypeError ('TL.Text "Unknown event name: " 'TL.:<>: 'TL.ShowType s)
+type family EHType (d :: EventType) m where
+  EHType 'ReadyEvt                    m = ReadyData                                   -> m ()
+  EHType 'ChannelCreateEvt            m = Channel                                     -> m ()
+  EHType 'ChannelUpdateEvt            m = Channel   -> Channel                        -> m ()
+  EHType 'ChannelDeleteEvt            m = Channel                                     -> m ()
+  EHType 'ChannelpinsUpdateEvt        m = Channel   -> Maybe UTCTime                  -> m ()
+  EHType 'GuildCreateEvt              m = Guild     -> Bool                           -> m ()
+  EHType 'GuildUpdateEvt              m = Guild     -> Guild                          -> m ()
+  EHType 'GuildDeleteEvt              m = Guild     -> Bool                           -> m ()
+  EHType 'GuildBanAddEvt              m = Guild     -> User                           -> m ()
+  EHType 'GuildBanRemoveEvt           m = Guild     -> User                           -> m ()
+  EHType 'GuildEmojisUpdateEvt        m = Guild     -> [Emoji]                        -> m ()
+  EHType 'GuildIntegrationsUpdateEvt  m = Guild                                       -> m ()
+  EHType 'GuildMemberAddEvt           m = Member                                      -> m ()
+  EHType 'GuildMemberRemoveEvt        m = Member                                      -> m ()
+  EHType 'GuildMemberUpdateEvt        m = Member    -> Member                         -> m ()
+  EHType 'GuildMembersChunkEvt        m = Guild     -> [Member]                       -> m ()
+  EHType 'GuildRoleCreateEvt          m = Guild     -> Role                           -> m ()
+  EHType 'GuildRoleUpdateEvt          m = Guild     -> Role          -> Role          -> m ()
+  EHType 'GuildRoleDeleteEvt          m = Guild     -> Role                           -> m ()
+  EHType 'MessageCreateEvt            m = Message                                     -> m ()
+  EHType 'MessageUpdateEvt            m = Message   -> Message                        -> m ()
+  EHType 'MessageDeleteEvt            m = Message                                     -> m ()
+  EHType 'MessageDeleteBulkEvt        m = [Message]                                   -> m ()
+  EHType 'MessageReactionAddEvt       m = Message   -> Reaction                       -> m ()
+  EHType 'MessageReactionRemoveEvt    m = Message   -> Reaction                       -> m ()
+  EHType 'MessageReactionRemoveAllEvt m = Message                                     -> m ()
+  EHType 'TypingStartEvt              m = Channel   -> Maybe Member  -> UnixTimestamp -> m ()
+  EHType 'UserUpdateEvt               m = User      -> User                           -> m ()
+  EHType ('CustomEvt s a)             m = a                                           -> m ()
+
+type family EHType' (d :: EventType) where
+  EHType' 'ReadyEvt                    = Dynamic
+  EHType' 'ChannelCreateEvt            = Dynamic
+  EHType' 'ChannelUpdateEvt            = Dynamic
+  EHType' 'ChannelDeleteEvt            = Dynamic
+  EHType' 'ChannelpinsUpdateEvt        = Dynamic
+  EHType' 'GuildCreateEvt              = Dynamic
+  EHType' 'GuildUpdateEvt              = Dynamic
+  EHType' 'GuildDeleteEvt              = Dynamic
+  EHType' 'GuildBanAddEvt              = Dynamic
+  EHType' 'GuildBanRemoveEvt           = Dynamic
+  EHType' 'GuildEmojisUpdateEvt        = Dynamic
+  EHType' 'GuildIntegrationsUpdateEvt  = Dynamic
+  EHType' 'GuildMemberAddEvt           = Dynamic
+  EHType' 'GuildMemberRemoveEvt        = Dynamic
+  EHType' 'GuildMemberUpdateEvt        = Dynamic
+  EHType' 'GuildMembersChunkEvt        = Dynamic
+  EHType' 'GuildRoleCreateEvt          = Dynamic
+  EHType' 'GuildRoleUpdateEvt          = Dynamic
+  EHType' 'GuildRoleDeleteEvt          = Dynamic
+  EHType' 'MessageCreateEvt            = Dynamic
+  EHType' 'MessageUpdateEvt            = Dynamic
+  EHType' 'MessageDeleteEvt            = Dynamic
+  EHType' 'MessageDeleteBulkEvt        = Dynamic
+  EHType' 'MessageReactionAddEvt       = Dynamic
+  EHType' 'MessageReactionRemoveEvt    = Dynamic
+  EHType' 'MessageReactionRemoveAllEvt = Dynamic
+  EHType' 'TypingStartEvt              = Dynamic
+  EHType' 'UserUpdateEvt               = Dynamic
+  EHType' ('CustomEvt _ _)             = Dynamic
 
 newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
-newtype EventHandler d = EH
-  { unwrapEventHandler :: [EHType' d]
+type family EHStorageType t where
+  EHStorageType ('CustomEvt s a) = LH.HashMap TypeRep (LH.HashMap TypeRep [Dynamic])
+  EHStorageType t                = [EHType' t]
+
+newtype EventHandler t = EH
+  { unwrapEventHandler :: (Semigroup (EHStorageType t), Monoid (EHStorageType t)) => EHStorageType t
   }
-  deriving newtype ( Semigroup, Monoid )
+
+instance Semigroup (EventHandler t) where
+  EH a <> EH b = EH $ a <> b
+
+instance Monoid (EventHandler t) where
+  mempty = EH mempty
 
 instance Default EventHandlers where
-  def = EventHandlers $ fromList [ WrapTypeable $ EH @"ready" []
-                                 , WrapTypeable $ EH @"channelcreate" []
-                                 , WrapTypeable $ EH @"channelupdate" []
-                                 , WrapTypeable $ EH @"channeldelete" []
-                                 , WrapTypeable $ EH @"channelpinsupdate" []
-                                 , WrapTypeable $ EH @"guildcreate" []
-                                 , WrapTypeable $ EH @"guildupdate" []
-                                 , WrapTypeable $ EH @"guilddelete" []
-                                 , WrapTypeable $ EH @"guildbanadd" []
-                                 , WrapTypeable $ EH @"guildbanremove" []
-                                 , WrapTypeable $ EH @"guildemojisupdate" []
-                                 , WrapTypeable $ EH @"guildintegrationsupdate" []
-                                 , WrapTypeable $ EH @"guildmemberadd" []
-                                 , WrapTypeable $ EH @"guildmemberremove" []
-                                 , WrapTypeable $ EH @"guildmemberupdate" []
-                                 , WrapTypeable $ EH @"guildrolecreate" []
-                                 , WrapTypeable $ EH @"guildroleupdate" []
-                                 , WrapTypeable $ EH @"guildroledelete" []
-                                 , WrapTypeable $ EH @"messagecreate" []
-                                 , WrapTypeable $ EH @"messageupdate" []
-                                 , WrapTypeable $ EH @"messagedelete" []
-                                 , WrapTypeable $ EH @"messagedeletebulk" []
-                                 , WrapTypeable $ EH @"messagereactionadd" []
-                                 , WrapTypeable $ EH @"messagereactionremove" []
-                                 , WrapTypeable $ EH @"messagereactionremoveall" []
-                                 , WrapTypeable $ EH @"typingstart" []
-                                 , WrapTypeable $ EH @"userupdate" []
-                                 -- , WrapTypeable $ EH m @"voicestateupdate" []
-                                 -- , WrapTypeable $ EH m @"voiceserverupdate" []
-                                 -- , WrapTypeable $ EH m @"webhooksupdate" []
+  def = EventHandlers $ fromList [ WrapTypeable $ EH @'ReadyEvt []
+                                 , WrapTypeable $ EH @'ChannelCreateEvt []
+                                 , WrapTypeable $ EH @'ChannelUpdateEvt []
+                                 , WrapTypeable $ EH @'ChannelDeleteEvt []
+                                 , WrapTypeable $ EH @'ChannelpinsUpdateEvt []
+                                 , WrapTypeable $ EH @'GuildCreateEvt []
+                                 , WrapTypeable $ EH @'GuildUpdateEvt []
+                                 , WrapTypeable $ EH @'GuildDeleteEvt []
+                                 , WrapTypeable $ EH @'GuildBanAddEvt []
+                                 , WrapTypeable $ EH @'GuildBanRemoveEvt []
+                                 , WrapTypeable $ EH @'GuildEmojisUpdateEvt []
+                                 , WrapTypeable $ EH @'GuildIntegrationsUpdateEvt []
+                                 , WrapTypeable $ EH @'GuildMemberAddEvt []
+                                 , WrapTypeable $ EH @'GuildMemberRemoveEvt []
+                                 , WrapTypeable $ EH @'GuildMemberUpdateEvt []
+                                 , WrapTypeable $ EH @'GuildMembersChunkEvt []
+                                 , WrapTypeable $ EH @'GuildRoleCreateEvt []
+                                 , WrapTypeable $ EH @'GuildRoleUpdateEvt []
+                                 , WrapTypeable $ EH @'GuildRoleDeleteEvt []
+                                 , WrapTypeable $ EH @'MessageCreateEvt []
+                                 , WrapTypeable $ EH @'MessageUpdateEvt []
+                                 , WrapTypeable $ EH @'MessageDeleteEvt []
+                                 , WrapTypeable $ EH @'MessageDeleteBulkEvt []
+                                 , WrapTypeable $ EH @'MessageReactionAddEvt []
+                                 , WrapTypeable $ EH @'MessageReactionRemoveEvt []
+                                 , WrapTypeable $ EH @'MessageReactionRemoveAllEvt []
+                                 , WrapTypeable $ EH @'TypingStartEvt []
+                                 , WrapTypeable $ EH @'UserUpdateEvt []
+                                 , WrapTypeable $ EH @('CustomEvt Void Void) LH.empty
                                  ]
 
 instance Semigroup EventHandlers where
@@ -167,3 +211,55 @@ instance Semigroup EventHandlers where
 
 instance Monoid EventHandlers where
   mempty = def
+
+-- not sure what to think of this
+
+type family EHInstanceSelector (d :: EventType) :: Bool where
+  EHInstanceSelector ('CustomEvt _ _) = 'True
+  EHInstanceSelector _                = 'False
+
+class InsertEventHandler a m where
+  makeEventHandlers :: Proxy a -> Proxy m -> EHType a m -> EventHandlers
+
+instance (EHInstanceSelector a ~ flag, InsertEventHandler' flag a m) => InsertEventHandler a m where
+  makeEventHandlers = makeEventHandlers' (Proxy @flag)
+
+class InsertEventHandler' (flag :: Bool) a m where
+  makeEventHandlers' :: Proxy flag -> Proxy a -> Proxy m -> EHType a m -> EventHandlers
+
+instance (Typeable a, Typeable s, Typeable (EHType ('CustomEvt s a) m))
+  => InsertEventHandler' 'True ('CustomEvt s a) m where
+  makeEventHandlers' _ _ _ handler = EventHandlers . TM.one $ EH @('CustomEvt Void Void)
+    (LH.singleton (typeRep $ Proxy @s) (LH.singleton (typeRep $ Proxy @a) [toDyn handler]))
+
+instance (Typeable s, EHStorageType s ~ [Dynamic], Typeable (EHType s m)) => InsertEventHandler' 'False s m where
+  makeEventHandlers' _ _ _ handler = EventHandlers . TM.one $ EH @s [toDyn handler]
+
+
+class GetEventHandlers a m where
+  getEventHandlers :: EventHandlers -> [EHType a m]
+
+instance (EHInstanceSelector a ~ flag, GetEventHandlers' flag a m) => GetEventHandlers a m where
+  getEventHandlers = getEventHandlers' (Proxy @a) (Proxy @m) (Proxy @flag)
+
+class GetEventHandlers' (flag :: Bool) a m where
+  getEventHandlers' :: Proxy a -> Proxy m -> Proxy flag -> EventHandlers -> [EHType a m]
+
+instance (Typeable a, Typeable s, Typeable (EHType ('CustomEvt s a) m)) => GetEventHandlers' 'True ('CustomEvt s a) m where
+  getEventHandlers' _ _ _ (EventHandlers handlers) =
+    let handlerMap = unwrapEventHandler @('CustomEvt Void Void) $ fromJust
+          (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Void)))
+    in concat $ LH.lookup (typeRep $ Proxy @s) handlerMap >>= LH.lookup (typeRep $ Proxy @a) <&> map
+       (fromJust . fromDynamic)
+
+instance (Typeable s, Typeable (EHType s m), EHStorageType s ~ [Dynamic]) => GetEventHandlers' 'False s m where
+  getEventHandlers' _ _ _ (EventHandlers handlers) =
+    let theseHandlers = unwrapEventHandler @s $ fromJust (TM.lookup handlers :: Maybe (EventHandler s))
+    in map (fromJust . fromDynamic) theseHandlers
+
+
+getCustomEventHandlers :: TypeRep -> TypeRep -> EventHandlers -> [Dynamic]
+getCustomEventHandlers s a (EventHandlers handlers) =
+    let handlerMap = unwrapEventHandler @('CustomEvt Void Void) $ fromJust
+          (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Void)))
+    in concat $ LH.lookup s handlerMap >>= LH.lookup a

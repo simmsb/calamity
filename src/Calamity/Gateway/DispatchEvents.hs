@@ -17,14 +17,17 @@ import           Calamity.Types.Snowflake
 import           Calamity.Types.UnixTimestamp
 
 import           Data.Aeson
+import           Data.Dynamic
 import           Data.Text.Lazy                              ( Text )
 import           Data.Time
+import           Data.Typeable
 import           Data.Vector.Unboxed                         ( Vector )
 
 import           GHC.Generics
 
 data CalamityEvent
   = Dispatch DispatchData
+  | Custom TypeRep Dynamic
   | ShutDown
   deriving ( Show, Generic )
 
