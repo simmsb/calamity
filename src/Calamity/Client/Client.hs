@@ -183,6 +183,8 @@ handleEvent' eh evt@(Ready rd@ReadyData {}) = do
   updateCache evt
   pure $ map ($ rd) (getEventHandlers @'ReadyEvt eh)
 
+handleEvent' _ Resumed = pure []
+
 handleEvent' eh evt@(ChannelCreate (DMChannel' chan)) = do
   updateCache evt
   Just newChan <- DMChannel' <<$>> getDM (getID chan)
