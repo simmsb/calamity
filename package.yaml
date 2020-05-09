@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.5.1
+version:            0.1.6.0
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -66,6 +66,7 @@ dependencies:
 - text-show >= 3.8 && < 4
 - mtl >= 2.2 && < 3
 - safe-exceptions >= 0.1 && < 2
+- unagi-chan >= 0.4 && < 0.5
 
 # executables:
 #   test-calamity-exe:

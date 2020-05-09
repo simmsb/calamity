@@ -31,7 +31,7 @@ shardBot = do
   when hasShards $ fail "don't use shardBot on an already running bot."
 
   token <- P.asks Calamity.Client.Types.token
-  eventQueue <- P.asks eventQueue
+  inc <- P.asks (^. #eventsIn)
 
   Right gateway <- invoke GetGatewayBot
 
@@ -42,7 +42,7 @@ shardBot = do
   info $ "Number of shards: " +| numShards' |+ ""
 
   shards <- for [0 .. numShards' - 1] $ \id ->
-    newShard host id numShards' token eventQueue
+    newShard host id numShards' token inc
 
   P.embed . atomically $ writeTVar shardsVar shards
 

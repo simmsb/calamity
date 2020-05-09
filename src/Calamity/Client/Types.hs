@@ -8,12 +8,12 @@ module Calamity.Client.Types
     , EventHandlers(..)
     , EventHandler(..) ) where
 
-import           Calamity.Metrics.Eff
 import           Calamity.Cache.Eff
 import           Calamity.Gateway.DispatchEvents
-import           Calamity.Gateway.Shard
+import           Calamity.Gateway.Types          ( ControlMessage )
 import           Calamity.HTTP.Internal.Types
 import           Calamity.LogEff
+import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
@@ -21,8 +21,8 @@ import           Calamity.Types.Token
 import           Calamity.Types.UnixTimestamp
 
 import           Control.Concurrent.Async
+import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
-import           Control.Concurrent.STM.TQueue
 import           Control.Concurrent.STM.TVar
 
 import           Data.Default.Class
@@ -41,11 +41,12 @@ import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Reader                 as P
 
 data Client = Client
-  { shards        :: TVar [(Shard, Async (Maybe ()))]
+  { shards        :: TVar [(InChan ControlMessage, Async (Maybe ()))]
   , numShards     :: MVar Int
   , token         :: Token
   , rlState       :: RateLimitState
-  , eventQueue    :: TQueue DispatchMessage
+  , eventsIn      :: InChan CalamityEvent
+  , eventsOut     :: OutChan CalamityEvent
   }
   deriving ( Generic )
 

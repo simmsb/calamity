@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4b9933f2e147ec50af668c14436116f39b3b15111c36ea3cfcddb816a04570d3
+-- hash: ff41b2035734187fe33f9394cd057e7ad8f187dc4e297c846472c876600e2d45
 
 name:           calamity
-version:        0.1.5.1
+version:        0.1.6.0
 synopsis:       A library for writing discord bots
 description:    Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 category:       Network, Web
@@ -146,6 +146,7 @@ library
     , text-show >=3.8 && <4
     , time >=1.8 && <1.11
     , typerep-map >=0.3 && <0.4
+    , unagi-chan >=0.4 && <0.5
     , unordered-containers >=0.2 && <0.3
     , vector >=0.12 && <0.13
     , websockets >=0.12 && <0.13

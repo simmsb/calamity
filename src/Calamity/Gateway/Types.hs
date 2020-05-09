@@ -1,5 +1,19 @@
 -- | Types for shards
-module Calamity.Gateway.Types where
+module Calamity.Gateway.Types
+    ( ShardC
+    , ShardMsg(..)
+    , ReceivedDiscordMessage(..)
+    , SentDiscordMessage(..)
+    , DispatchType(..)
+    , IdentifyData(..)
+    , StatusUpdateData(..)
+    , ResumeData(..)
+    , RequestGuildMembersData(..)
+    , IdentifyProps(..)
+    , ControlMessage(..)
+    , ShardFlowControl(..)
+    , Shard(..)
+    , ShardState(..) ) where
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Internal.AesonThings
@@ -10,12 +24,12 @@ import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
 
 import           Control.Concurrent.Async
-import           Control.Concurrent.STM.TQueue
-import           Control.Concurrent.STM.TVar
+import           Control.Concurrent.Chan.Unagi
 
 import           Data.Aeson
 import qualified Data.Aeson.Types                 as AT
 import           Data.Generics.Labels             ()
+import           Data.IORef
 import           Data.Maybe
 import           Data.Text.Lazy                   ( Text )
 
@@ -36,7 +50,7 @@ data ShardMsg
   deriving ( Show, Generic )
 
 data ReceivedDiscordMessage
-  = Dispatch Int !DispatchData
+  = EvtDispatch Int !DispatchData
   | HeartBeatReq
   | Reconnect
   | InvalidSession Bool
@@ -52,7 +66,7 @@ instance FromJSON ReceivedDiscordMessage where
         d <- v .: "d"
         t <- v .: "t"
         s <- v .: "s"
-        Dispatch s <$> parseDispatchData t d
+        EvtDispatch s <$> parseDispatchData t d
 
       1  -> pure HeartBeatReq
 
@@ -239,9 +253,9 @@ data Shard = Shard
   { shardID     :: Int
   , shardCount  :: Int
   , gateway     :: Text
-  , evtQueue    :: TQueue DispatchMessage
-  , cmdQueue    :: TQueue ControlMessage
-  , shardState  :: TVar ShardState
+  , evtIn       :: InChan CalamityEvent
+  , cmdOut      :: OutChan ControlMessage
+  , shardState  :: IORef ShardState
   , token       :: Text
   }
   deriving ( Generic )

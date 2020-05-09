@@ -7,6 +7,8 @@ module Calamity.Client.Client
     , runBotIO
     , stopBot
     , sendPresence
+    , events
+    , fire
     ) where
 
 import           Calamity.Cache.Eff
@@ -27,6 +29,7 @@ import           Calamity.Types.Token
 
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
+import           Control.Concurrent.Chan.Unagi
 import           Control.Lens
 import           Control.Monad
 
@@ -66,13 +69,14 @@ newClient token = do
   shards'        <- newTVarIO []
   numShards'     <- newEmptyMVar
   rlState'       <- newRateLimitState
-  eventQueue'    <- newTQueueIO
+  (inc, outc)    <- newChan
 
   pure $ Client shards'
                 numShards'
                 token
                 rlState'
-                eventQueue'
+                inc
+                outc
 
 runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r -> P.Sem r ()
 runBotIO token setup = do
@@ -89,38 +93,48 @@ react f =
   let handlers = EventHandlers . TM.one $ EH @s [toDyn f]
   in P.atomicModify (handlers <>)
 
+fire :: BotC r => CalamityEvent -> P.Sem r ()
+fire e = do
+  inc <- P.asks (^. #eventsIn)
+  P.embed $ writeChan inc e
+
+events :: BotC r => P.Sem r (OutChan CalamityEvent)
+events = do
+  inc <- P.asks (^. #eventsIn)
+  P.embed $ dupChan inc
+
 sendPresence :: BotC r => StatusUpdateData -> P.Sem r ()
 sendPresence s = do
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
-  for_ shards $ \shard ->
-    P.embed . atomically $ writeTQueue (shard ^. _1 . #cmdQueue) (SendPresence s)
+  for_ shards $ \(inc, _) ->
+    P.embed $ writeChan inc (SendPresence s)
 
 stopBot :: BotC r => P.Sem r ()
 stopBot = do
   debug "stopping bot"
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
-  for_ shards $ \shard ->
-    P.embed . atomically $ writeTQueue (shard ^. _1 . #cmdQueue) ShutDownShard
-  eventQueue <- P.asks (^. #eventQueue)
-  P.embed . atomically $ writeTQueue eventQueue ShutDown
+  for_ shards $ \(inc, _) ->
+    P.embed $ writeChan inc ShutDownShard
+  inc <- P.asks (^. #eventsIn)
+  P.embed $ writeChan inc ShutDown
 
 finishUp :: BotC r => P.Sem r ()
 finishUp = do
   debug "finishing up"
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
-  for_ shards $ \shard -> void . P.await $ (shard ^. _2)
+  for_ shards $ \(_, shardThread) -> P.await shardThread
   debug "bot has stopped"
 
 -- | main loop of the client, handles fetching the next event, processing the event
 -- and invoking it's handler functions
 clientLoop :: BotC r => P.Sem r ()
 clientLoop = do
-  evtQueue <- P.asks (^. #eventQueue)
+  outc <- P.asks (^. #eventsOut)
   void . P.runError . forever $ do
-    evt' <- P.embed . atomically $ readTQueue evtQueue
+    evt' <- P.embed $ readChan outc
     case evt' of
-      DispatchData' evt -> P.raise $ handleEvent evt
-      ShutDown          -> P.throw ()
+      Dispatch evt -> P.raise $ handleEvent evt
+      ShutDown     -> P.throw ()
   debug "leaving client loop"
 
 handleEvent :: BotC r => DispatchData -> P.Sem r ()

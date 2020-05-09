@@ -23,8 +23,8 @@ import           Data.Vector.Unboxed                         ( Vector )
 
 import           GHC.Generics
 
-data DispatchMessage
-  = DispatchData' DispatchData
+data CalamityEvent
+  = Dispatch DispatchData
   | ShutDown
   deriving ( Show, Generic )
 

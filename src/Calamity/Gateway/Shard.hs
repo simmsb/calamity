@@ -15,6 +15,7 @@ import           Calamity.Types.Token
 
 import           Control.Concurrent
 import           Control.Concurrent.Async
+import qualified Control.Concurrent.Chan.Unagi as UC
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Exception
@@ -25,6 +26,7 @@ import           Control.Monad.State.Lazy
 import qualified Data.Aeson                      as A
 import           Data.Functor
 import           Data.Maybe
+import           Data.IORef
 import           Data.Text.Lazy                  ( Text, stripPrefix )
 import           Data.Text.Lazy.Lens
 import           Data.Void
@@ -80,21 +82,21 @@ newShard :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r
          -> Int
          -> Int
          -> Token
-         -> TQueue DispatchMessage
-         -> Sem r (Shard, Async (Maybe ()))
-newShard gateway id count token evtQueue = do
-  (shard, stateVar) <- P.embed $ mdo
-    cmdQueue' <- newTQueueIO
-    stateVar <- newTVarIO (newShardState shard)
-    let shard = Shard id count gateway evtQueue cmdQueue' stateVar (rawToken token)
-    pure (shard, stateVar)
+         -> UC.InChan CalamityEvent
+         -> Sem r (UC.InChan ControlMessage, Async (Maybe ()))
+newShard gateway id count token evtIn = do
+  (cmdIn, stateVar) <- P.embed $ mdo
+    (cmdIn, cmdOut) <- UC.newChan
+    stateVar <- newIORef $ newShardState shard
+    let shard = Shard id count gateway evtIn cmdOut stateVar (rawToken token)
+    pure (cmdIn, stateVar)
 
-  let runShard = P.runAtomicStateTVar stateVar shardLoop
+  let runShard = P.runAtomicStateIORef stateVar shardLoop
   let action = attr "shard-id" id . push "calamity-shard" $ runShard
 
   thread' <- P.async action
 
-  pure (shard, thread')
+  pure (cmdIn, thread')
 
 sendToWs :: ShardC r => SentDiscordMessage -> Sem r ()
 sendToWs data' = do
@@ -130,9 +132,9 @@ shardLoop = do
   controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
   controlStream shard outqueue = inner
     where
-      q = shard ^. #cmdQueue
+      q = shard ^. #cmdOut
       inner = do
-        v <- atomically $ readTQueue q
+        v <- UC.readChan q
         r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
         when r inner
 
@@ -222,7 +224,7 @@ shardLoop = do
 
     receivedMessages <- registerCounter "received_messages" [("shard", showt $ shard ^. #shardID)]
 
-    result <- P.runResource $ P.bracket (P.embed $ newTBMQueueIO 1)
+    result <- P.resourceToIOFinal $ P.bracket (P.embed $ newTBMQueueIO 1)
       (P.embed . atomically . closeTBMQueue)
       (\q -> do
         debug "handling events now"
@@ -243,7 +245,7 @@ shardLoop = do
   -- | Handlers for each message, not sure what they'll need to do exactly yet
   handleMsg :: (ShardC r, P.Member (P.Error ShardFlowControl) r) => ShardMsg -> Sem r ()
   handleMsg (Discord msg) = case msg of
-    Dispatch sn data' -> do
+    EvtDispatch sn data' -> do
       -- trace $ "Handling event: ("+||data'||+")"
       P.atomicModify (#seqNum ?~ sn)
 
@@ -254,9 +256,7 @@ shardLoop = do
         _ -> pure ()
 
       shard <- P.atomicGets (^. #shardS)
-      P.embed . atomically $ writeTQueue (shard ^. #evtQueue) (DispatchData' data')
-      -- sn' <- P.atomicGets (^. #seqNum)
-      -- trace $ "Done handling event, seq is now: "+||sn'||+""
+      P.embed $ UC.writeChan (shard ^. #evtIn) (Dispatch data')
 
     HeartBeatReq -> do
       debug "Received heartbeat request"
