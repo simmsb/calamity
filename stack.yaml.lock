@@ -89,18 +89,18 @@ packages:
   original:
     hackage: wreq-patchable-1.0.0.0
 - completed:
-    size: 114571
+    size: 114553
     subdir: di-core
-    url: https://github.com/nitros12/di/archive/fe2a57ed064808d567bd2e3f869ed3cbcef0c942.tar.gz
+    url: https://github.com/nitros12/di/archive/c71c2a277a4d89dc5aaec1b5d17a181cb140d851.tar.gz
     name: di-core
     version: 1.0.4
-    sha256: 808b21d4932fb387853bdc21197c454e31720ad9762e86343555c70b0667c3a7
+    sha256: a3972249968edef2aa6b54bafe585382cb4ab46bad9f8f0d7557f4b69f637aab
     pantry-tree:
       size: 412
-      sha256: adc5f891aaa76b3a6d9bac0e2caaed686d788c2a25e28508695ce7972f297a12
+      sha256: 31e03387c3816be26fb0d5803c8fc20f3d26224379ee8848499c1ebd41220e1b
   original:
     subdir: di-core
-    url: https://github.com/nitros12/di/archive/fe2a57ed064808d567bd2e3f869ed3cbcef0c942.tar.gz
+    url: https://github.com/nitros12/di/archive/c71c2a277a4d89dc5aaec1b5d17a181cb140d851.tar.gz
 snapshots:
 - completed:
     size: 493124

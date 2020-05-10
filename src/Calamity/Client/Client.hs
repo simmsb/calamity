@@ -84,7 +84,7 @@ runBotIO token setup = do
   handlers <- P.embed $ newTVarIO def
   P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
     Di.push "calamity-setup" setup
-    Di.push "calamity-sharding" shardBot
+    shardBot
     Di.push "calamity-loop" clientLoop
     Di.push "calamity-stop" finishUp
 
@@ -161,8 +161,8 @@ handleEvent data' = do
   eventHandleHisto <- registerHistogram "event_handle" mempty [10, 20..100]
 
   case actions of
-    Right actions -> for_ actions $ \action -> Di.local (DC.pathmap $ const mempty) . P.async $ do
-      (time, _) <- timeA action
+    Right actions -> for_ actions $ \action -> P.async $ do
+      (time, _) <- timeA $ Di.local (DC.pathmap $ const mempty) action
       void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
 
