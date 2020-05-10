@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: ff41b2035734187fe33f9394cd057e7ad8f187dc4e297c846472c876600e2d45
+-- hash: 05bdeaf43828598155ec15c2ed471b6029df8b1fd7ece9e67361c97d13c66ccd
 
 name:           calamity
 version:        0.1.6.0
@@ -121,7 +121,8 @@ library
     , deepseq >=1.4.4.0 && <2
     , deque >=0.4 && <0.5
     , df1 >=0.3 && <0.4
-    , di-polysemy >=0.1.1 && <0.2
+    , di-core >=1.0.4 && <2
+    , di-polysemy >=0.1.2 && <0.2
     , exceptions >=0.10 && <0.11
     , fmt >=0.6 && <0.7
     , focus >=1.0 && <2

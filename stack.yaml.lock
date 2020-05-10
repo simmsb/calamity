@@ -75,12 +75,12 @@ packages:
   original:
     hackage: ghc-tcplugins-extra-0.3.2@sha256:1bbfd4449c3669a31618ea0ebc5d00d980a53988daad3b6218bab5c8cdff268d,1687
 - completed:
-    hackage: di-polysemy-0.1.1.2@sha256:b0496c112217f48a38b2b5b8f878cf516085da70d4c2da8cfec13696971a8ecd,2160
+    hackage: di-polysemy-0.1.2.0@sha256:d003520260ad4862105ba13d692a800a72436605d6559721005fd5d3f35f85d8,2160
     pantry-tree:
       size: 320
-      sha256: b6384f30813e608b909b519407f8442ee635ec31f9483d4f14476fec6b037bbc
+      sha256: 2243c100c1472093e8514b5bec4101595f18d117cd85c513a20d5e5ce9e2fe22
   original:
-    hackage: di-polysemy-0.1.1.2
+    hackage: di-polysemy-0.1.2.0
 - completed:
     hackage: wreq-patchable-1.0.0.0@sha256:83fbdcc7c6bf30454fb71816dbc20442268b762f53899be5afb96c0c82ece45b,4818
     pantry-tree:
@@ -88,6 +88,19 @@ packages:
       sha256: 42d4a01b115fbf4f3a88dca62e3b36002542972b2b11ddaf1328b31e9e428747
   original:
     hackage: wreq-patchable-1.0.0.0
+- completed:
+    size: 114571
+    subdir: di-core
+    url: https://github.com/nitros12/di/archive/fe2a57ed064808d567bd2e3f869ed3cbcef0c942.tar.gz
+    name: di-core
+    version: 1.0.4
+    sha256: 808b21d4932fb387853bdc21197c454e31720ad9762e86343555c70b0667c3a7
+    pantry-tree:
+      size: 412
+      sha256: adc5f891aaa76b3a6d9bac0e2caaed686d788c2a25e28508695ce7972f297a12
+  original:
+    subdir: di-core
+    url: https://github.com/nitros12/di/archive/fe2a57ed064808d567bd2e3f869ed3cbcef0c942.tar.gz
 snapshots:
 - completed:
     size: 493124

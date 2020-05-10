@@ -43,6 +43,7 @@ import           Data.Time.Clock.POSIX
 import           Data.Traversable
 import           Data.Typeable
 
+import qualified Di.Core                          as DC
 import qualified DiPolysemy                       as Di
 
 import           Fmt
@@ -81,11 +82,11 @@ runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r,
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
-  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO $ do
-    setup
-    shardBot
-    clientLoop
-    finishUp
+  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
+    Di.push "calamity-setup" setup
+    Di.push "calamity-sharding" shardBot
+    Di.push "calamity-loop" clientLoop
+    Di.push "calamity-stop" finishUp
 
 react :: forall s r. (BotC r, InsertEventHandler s (P.Sem r)) => EHType s (P.Sem r) -> P.Sem r ()
 react handler = let handlers = makeEventHandlers (Proxy @s) (Proxy @(P.Sem r)) handler
@@ -151,7 +152,6 @@ handleEvent :: BotC r => DispatchData -> P.Sem r ()
 handleEvent data' = do
   debug "handling an event"
   eventHandlers <- P.atomicGet
-
   actions <- P.runFail $ do
     cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20..100]
     (time, res) <- timeA $ handleEvent' eventHandlers data'
@@ -161,7 +161,7 @@ handleEvent data' = do
   eventHandleHisto <- registerHistogram "event_handle" mempty [10, 20..100]
 
   case actions of
-    Right actions -> for_ actions $ \action -> P.async $ do
+    Right actions -> for_ actions $ \action -> Di.local (DC.pathmap $ const mempty) . P.async $ do
       (time, _) <- timeA action
       void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
