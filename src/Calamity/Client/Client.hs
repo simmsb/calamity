@@ -145,7 +145,7 @@ handleCustomEvent s d = do
   debug "handling a custom event"
   eventHandlers <- P.atomicGet
 
-  for_ (getCustomEventHandlers s (dynTypeRep d) eventHandlers) (\h -> fromJust . fromDynamic @(P.Sem r ()) $ dynApp h d)
+  for_ (getCustomEventHandlers s (dynTypeRep d) eventHandlers) (\h -> P.async . fromJust . fromDynamic @(P.Sem r ()) $ dynApp h d)
 
 handleEvent :: BotC r => DispatchData -> P.Sem r ()
 handleEvent data' = do
@@ -329,7 +329,7 @@ handleEvent' eh evt@(MessageDelete MessageDeleteData { id }) = do
   pure $ map ($ oldMsg) (getEventHandlers @'MessageDeleteEvt eh)
 
 handleEvent' eh evt@(MessageDeleteBulk MessageDeleteBulkData { ids }) = do
-  messages <- catMaybes <$> mapM getMessage ids
+  messages <- catMaybes <$> traverse getMessage ids
   updateCache evt
   join <$> for messages (\msg -> pure $ map ($ msg) (getEventHandlers @'MessageDeleteEvt eh))
 
@@ -395,7 +395,7 @@ updateCache (ChannelUpdate (DMChannel' chan)) =
   updateDM (getID chan) (update chan)
 
 updateCache (ChannelUpdate (GuildChannel' chan)) =
-  updateGuild (getID chan) (#channels . at (getID chan) . _Just %~ update chan)
+  updateGuild (getID chan) (#channels . ix (getID chan) %~ update chan)
 
 updateCache (ChannelDelete (DMChannel' chan)) =
   delDM (getID chan)
