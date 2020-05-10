@@ -163,7 +163,7 @@ handleEvent data' = do
 
   case actions of
     Right actions -> for_ actions $ \action -> P.async $ do
-      (time, _) <- timeA $ Di.local (DC.pathmap (<> pure (Df1.Push "aa"))) action
+      (time, _) <- timeA $ Di.local (DC.pathmap (pure (Df1.Push "aa") <>)) action
       void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
 
