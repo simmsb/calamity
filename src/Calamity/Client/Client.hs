@@ -43,7 +43,6 @@ import           Data.Time.Clock.POSIX
 import           Data.Traversable
 import           Data.Typeable
 
-import qualified Di.Core                          as DC
 import qualified DiPolysemy                       as Di
 
 import           Fmt
@@ -162,7 +161,7 @@ handleEvent data' = do
 
   case actions of
     Right actions -> for_ actions $ \action -> P.async $ do
-      (time, _) <- timeA $ Di.local DC.reset action
+      (time, _) <- timeA $ Di.reset action
       void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
 
