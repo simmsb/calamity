@@ -92,7 +92,7 @@ newShard gateway id count token evtIn = do
     pure (cmdIn, stateVar)
 
   let runShard = P.runAtomicStateIORef stateVar shardLoop
-  let action = attr "shard-id" id . push "calamity-shard" $ runShard
+  let action = push "calamity-shard" . attr "shard-id" id $ runShard
 
   thread' <- P.async action
 

@@ -81,11 +81,11 @@ runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r,
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
-  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO $ do
-    setup
+  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
+    Di.push "calamity-setup" setup
     shardBot
-    clientLoop
-    finishUp
+    Di.push "calamity-loop" clientLoop
+    Di.push "calamity-stop" finishUp
 
 react :: forall s r. (BotC r, InsertEventHandler s (P.Sem r)) => EHType s (P.Sem r) -> P.Sem r ()
 react handler = let handlers = makeEventHandlers (Proxy @s) (Proxy @(P.Sem r)) handler
@@ -145,13 +145,12 @@ handleCustomEvent s d = do
   debug "handling a custom event"
   eventHandlers <- P.atomicGet
 
-  for_ (getCustomEventHandlers s (dynTypeRep d) eventHandlers) (\h -> fromJust . fromDynamic @(P.Sem r ()) $ dynApp h d)
+  for_ (getCustomEventHandlers s (dynTypeRep d) eventHandlers) (\h -> P.async . fromJust . fromDynamic @(P.Sem r ()) $ dynApp h d)
 
 handleEvent :: BotC r => DispatchData -> P.Sem r ()
 handleEvent data' = do
   debug "handling an event"
   eventHandlers <- P.atomicGet
-
   actions <- P.runFail $ do
     cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20..100]
     (time, res) <- timeA $ handleEvent' eventHandlers data'
@@ -162,7 +161,7 @@ handleEvent data' = do
 
   case actions of
     Right actions -> for_ actions $ \action -> P.async $ do
-      (time, _) <- timeA action
+      (time, _) <- timeA $ Di.reset action
       void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
 
@@ -329,7 +328,7 @@ handleEvent' eh evt@(MessageDelete MessageDeleteData { id }) = do
   pure $ map ($ oldMsg) (getEventHandlers @'MessageDeleteEvt eh)
 
 handleEvent' eh evt@(MessageDeleteBulk MessageDeleteBulkData { ids }) = do
-  messages <- catMaybes <$> mapM getMessage ids
+  messages <- catMaybes <$> traverse getMessage ids
   updateCache evt
   join <$> for messages (\msg -> pure $ map ($ msg) (getEventHandlers @'MessageDeleteEvt eh))
 
@@ -395,7 +394,7 @@ updateCache (ChannelUpdate (DMChannel' chan)) =
   updateDM (getID chan) (update chan)
 
 updateCache (ChannelUpdate (GuildChannel' chan)) =
-  updateGuild (getID chan) (#channels . at (getID chan) . _Just %~ update chan)
+  updateGuild (getID chan) (#channels . ix (getID chan) %~ update chan)
 
 updateCache (ChannelDelete (DMChannel' chan)) =
   delDM (getID chan)

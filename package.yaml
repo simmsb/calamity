@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.6.0
+version:            0.1.6.1
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -58,7 +58,7 @@ dependencies:
 - reflection >= 2.1 && < 3
 - polysemy >= 1.3 && < 2
 - polysemy-plugin >= 0.2 && < 0.3
-- di-polysemy >= 0.1.1 && < 0.2
+- di-polysemy >= 0.1.3 && < 0.2
 - df1 >= 0.3 && < 0.4
 - generic-override >= 0.0.0.0 && < 0.0.1
 - generic-override-aeson >= 0.0.0.0 && < 0.0.1
