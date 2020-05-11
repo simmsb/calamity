@@ -54,7 +54,7 @@ extra-deps:
   - di-polysemy-0.1.2.0
   - wreq-patchable-1.0.0.0
   - github: nitros12/di
-    commit: c8c00296fc7e153c6ab56dbff62ebcba1b7968ec
+    commit: 5281416443c1a2c54c235aac84c67b011d3fb158
     subdirs:
       - di-core
 
