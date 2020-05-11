@@ -135,17 +135,20 @@ clientLoop = do
   void . P.runError . forever $ do
     evt' <- P.embed $ readChan outc
     case evt' of
+      -- NOTE: these raise's are needed to raise into the Error effect
       Dispatch evt -> P.raise $ handleEvent evt
-      Custom s d   -> handleCustomEvent s d
+      Custom s d   -> P.raise $ handleCustomEvent s d
       ShutDown     -> P.throw ()
   debug "leaving client loop"
 
 handleCustomEvent :: forall r. BotC r => TypeRep -> Dynamic -> P.Sem r ()
 handleCustomEvent s d = do
-  debug "handling a custom event"
+  debug $ "handling a custom event, s: " +|| s ||+ ", d: " +|| d ||+ ""
   eventHandlers <- P.atomicGet
 
-  for_ (getCustomEventHandlers s (dynTypeRep d) eventHandlers) (\h -> P.async . fromJust . fromDynamic @(P.Sem r ()) $ dynApp h d)
+  let handlers = getCustomEventHandlers s (dynTypeRep d) eventHandlers
+
+  for_ handlers (\h -> P.async . fromJust . fromDynamic @(P.Sem r ()) . fromJust $ dynApply h d)
 
 handleEvent :: BotC r => DispatchData -> P.Sem r ()
 handleEvent data' = do
