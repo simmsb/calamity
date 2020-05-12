@@ -14,6 +14,7 @@ build-backend:
     paths:
       - ${STACK_ROOT}
       - .stack-work
+      - .cabal
   script:
     - stack
       --stack-root ${STACK_ROOT}
@@ -43,7 +44,6 @@ docs:
     - cabal new-update
     - cabal new-haddock
       --haddock-for-hackage
-      --enable-documentation
     - cabal upload
       -d
       -u "${HACKAGE_USERNAME}"
