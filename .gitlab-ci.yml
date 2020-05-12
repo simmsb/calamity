@@ -43,7 +43,7 @@ docs:
     - cabal new-update
     - cabal new-haddock
       --haddock-for-hackage
-      #      --enable-documentation
+      --enable-documentation
     - cabal upload
       -d
       -u "${HACKAGE_USERNAME}"
