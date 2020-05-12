@@ -17,8 +17,8 @@ module Calamity.Gateway.Types
 
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Internal.AesonThings
-import           Calamity.LogEff
 import           Calamity.Metrics.Eff
+import           Calamity.Types.LogEff
 import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake

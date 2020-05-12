@@ -12,7 +12,7 @@ module Calamity.Internal.Utils
     , Calamity.Internal.Utils.error
     , swap ) where
 
-import           Calamity.LogEff
+import           Calamity.Types.LogEff
 
 import           Data.Default.Class
 import qualified Data.HashMap.Lazy   as LH

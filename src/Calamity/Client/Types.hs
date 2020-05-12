@@ -1,22 +1,21 @@
 -- | Types for the client
 module Calamity.Client.Types
     ( Client(..)
+    , EventType(..)
+    , EHType
     , BotC
     , SetupEff
-    , EHType
     , EventHandlers(..)
-    , EventHandler(..)
     , InsertEventHandler(..)
-    , GetEventHandlers(..)
-    , EventType(..)
+    , getEventHandlers
     , getCustomEventHandlers ) where
 
 import           Calamity.Cache.Eff
 import           Calamity.Gateway.DispatchEvents ( CalamityEvent(..), ReadyData )
 import           Calamity.Gateway.Types          ( ControlMessage )
 import           Calamity.HTTP.Internal.Types
-import           Calamity.LogEff
 import           Calamity.Metrics.Eff
+import           Calamity.Types.LogEff
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
@@ -62,6 +61,7 @@ type BotC r =
   P.AtomicState EventHandlers, P.Embed IO, P.Final IO, P.Async] r
   , Typeable r)
 
+-- | A concrete effect stack used inside the bot
 type SetupEff r = P.Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
 
 -- | A Data Kind used to fire custom events
@@ -95,7 +95,10 @@ data EventType
   | TypingStartEvt
   | UserUpdateEvt
   | forall s a. CustomEvt s a
+  -- ^ A custom event, @s@ is the name and @a@ is the data sent to the handler
 
+-- | A type family to decide what the parameters for an event handler should be
+-- determined by the type of event it is handling.
 type family EHType (d :: EventType) m where
   EHType 'ReadyEvt                    m = ReadyData                                   -> m ()
   EHType 'ChannelCreateEvt            m = Channel                                     -> m ()
@@ -218,6 +221,8 @@ type family EHInstanceSelector (d :: EventType) :: Bool where
   EHInstanceSelector ('CustomEvt _ _) = 'True
   EHInstanceSelector _                = 'False
 
+-- | A helper typeclass that is used to decide how to register regular
+-- events, and custom events which require storing in a map at runtime.
 class InsertEventHandler a m where
   makeEventHandlers :: Proxy a -> Proxy m -> EHType a m -> EventHandlers
 

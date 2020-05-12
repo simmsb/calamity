@@ -1,7 +1,7 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 -- | The logging effect we use
-module Calamity.LogEff
+module Calamity.Types.LogEff
     ( LogEff
     , LogC ) where
 

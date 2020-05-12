@@ -36,6 +36,7 @@ newtype TFile = TFile ByteString
 -- 'intoMsg' @'Text' "A message" '<>' 'intoMsg' @'Embed' ('def' '&' #description '?~' "Embed description")
 -- @
 class ToMessage a where
+  -- | Turn @a@ into a 'CreateMessageOptions' builder
   intoMsg :: a -> Endo CreateMessageOptions
 
 -- | Message content, '(<>)' concatenates the content
@@ -66,6 +67,17 @@ runToMessage :: ToMessage a => a -> CreateMessageOptions
 runToMessage = flip appEndo def . intoMsg
 
 -- | Send a message to something that is messageable
+--
+-- To send a string literal you'll probably want to use @TypeApplication@ to
+-- specify the type of @msg@
+--
+-- ==== Examples
+--
+-- Sending a string:
+--
+-- @
+-- 'void' $ 'tell' @'Text' m ("Somebody told me to tell you about: " '<>' s)
+-- @
 tell :: forall msg r t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r (Either RestError Message)
 tell target (runToMessage -> msg) = P.runError $ do
   cid <- getChannel target

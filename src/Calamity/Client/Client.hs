@@ -2,14 +2,13 @@
 
 -- | The client
 module Calamity.Client.Client
-    ( Client(..)
-    , CalamityEvent(Dispatch, ShutDown)
-    , react
+    ( react
     , runBotIO
     , stopBot
     , sendPresence
     , events
     , fire
+    , CalamityEvent(Dispatch, ShutDown)
     , customEvt ) where
 
 import           Calamity.Cache.Eff
@@ -77,6 +76,10 @@ newClient token = do
                 inc
                 outc
 
+-- | Create a bot, run your setup action, and then loop until the bot closes.
+--
+-- This method has a 'P.Fail' effect to handle fatal errors that happen during
+-- setup (bad token, etc).
 runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r -> P.Sem r ()
 runBotIO token setup = do
   client <- P.embed $ newClient token
@@ -87,30 +90,83 @@ runBotIO token setup = do
     Di.push "calamity-loop" clientLoop
     Di.push "calamity-stop" finishUp
 
-react :: forall s r. (BotC r, InsertEventHandler s (P.Sem r)) => EHType s (P.Sem r) -> P.Sem r ()
+-- | Register an event handler.
+--
+-- Refer to 'EventType' for what events you can register, and 'EHType' for the
+-- parameters the event handlers they receive.
+--
+-- You'll probably want @TypeApplications@ and need @DataKinds@ enabled to
+-- specify the type of @s@.
+--
+-- ==== Examples
+--
+-- Reacting to every message:
+--
+-- @
+-- 'react' @\''MessageCreateEvt' '$' \msg -> 'print' '$' "Got message: " '<>' 'show' msg
+-- @
+--
+-- Reacting to a custom event:
+--
+-- @
+-- 'react' @(\''CustomEvt' "my-event" ('Data.Text.Text', 'Message')) $ \(s, m) ->
+--    'void' $ 'Calamity.Tellable.tell' @'Data.Text.Text' m ("Somebody told me to tell you about: " '<>' s)
+-- @
+--
+-- ==== Notes
+--
+-- This function is pretty bad for giving nasty type errors,
+-- since if something doesn't match then 'EHType' might not get substituted,
+-- which will result in errors about parameter counts mismatching.
+react :: forall (s :: EventType) r. (BotC r, InsertEventHandler s (P.Sem r)) => EHType s (P.Sem r) -> P.Sem r ()
 react handler = let handlers = makeEventHandlers (Proxy @s) (Proxy @(P.Sem r)) handler
                 in P.atomicModify (handlers <>)
 
+-- | Fire an event that the bot will then handle.
+--
+-- ==== Examples
+--
+-- Firing an event named \"my-event\":
+--
+-- @
+-- 'fire' '$' 'customEvt' @"my-event" ("aha" :: 'Data.Text.Text', msg)
+-- @
 fire :: BotC r => CalamityEvent -> P.Sem r ()
 fire e = do
   inc <- P.asks (^. #eventsIn)
   P.embed $ writeChan inc e
 
 -- | Build a Custom CalamityEvent
+--
+-- You'll probably want @TypeApplications@ to specify the type of @s@.
+--
+-- The types of @s@ and @a@ must match up with the event handler you want to
+-- receive it.
+--
+-- ==== Examples
+--
+-- Building an event named \"my-event\":
+--
+-- @
+-- 'customEvt' @"my-event" ("aha" :: 'Data.Text.Text', msg)
+-- @
 customEvt :: forall s a. (Typeable s, Typeable a) => a -> CalamityEvent
 customEvt x = Custom (typeRep $ Proxy @s) (toDyn x)
 
+-- | Get a copy of the event stream.
 events :: BotC r => P.Sem r (OutChan CalamityEvent)
 events = do
   inc <- P.asks (^. #eventsIn)
   P.embed $ dupChan inc
 
+-- | Set the bot's presence on all shards.
 sendPresence :: BotC r => StatusUpdateData -> P.Sem r ()
 sendPresence s = do
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
   for_ shards $ \(inc, _) ->
     P.embed $ writeChan inc (SendPresence s)
 
+-- | Initiate shutting down the bot.
 stopBot :: BotC r => P.Sem r ()
 stopBot = do
   debug "stopping bot"
@@ -127,8 +183,8 @@ finishUp = do
   for_ shards $ \(_, shardThread) -> P.await shardThread
   debug "bot has stopped"
 
--- | main loop of the client, handles fetching the next event, processing the event
--- and invoking it's handler functions
+-- | main loop of the client, handles fetching the next event, processing the
+-- event and invoking it's handler functions
 clientLoop :: BotC r => P.Sem r ()
 clientLoop = do
   outc <- P.asks (^. #eventsOut)

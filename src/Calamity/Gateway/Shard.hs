@@ -9,24 +9,25 @@ module Calamity.Gateway.Shard
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
 import           Calamity.Internal.Utils
-import           Calamity.LogEff
 import           Calamity.Metrics.Eff
+import           Calamity.Types.LogEff
 import           Calamity.Types.Token
 
 import           Control.Concurrent
 import           Control.Concurrent.Async
-import qualified Control.Concurrent.Chan.Unagi as UC
+import qualified Control.Concurrent.Chan.Unagi   as UC
 import           Control.Concurrent.STM
 import           Control.Concurrent.STM.TBMQueue
 import           Control.Exception
+import qualified Control.Exception.Safe          as Ex
 import           Control.Lens
 import           Control.Monad
 import           Control.Monad.State.Lazy
 
 import qualified Data.Aeson                      as A
 import           Data.Functor
-import           Data.Maybe
 import           Data.IORef
+import           Data.Maybe
 import           Data.Text.Lazy                  ( Text, stripPrefix )
 import           Data.Text.Lazy.Lens
 import           Data.Void
@@ -44,7 +45,7 @@ import qualified Polysemy.Async                  as P
 import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Error                  as P
 import qualified Polysemy.Resource               as P
-import qualified Control.Exception.Safe as Ex
+
 import           Prelude                         hiding ( error )
 
 import           TextShow
