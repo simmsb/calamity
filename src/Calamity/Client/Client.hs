@@ -8,6 +8,7 @@ module Calamity.Client.Client
     , sendPresence
     , events
     , fire
+    , waitUntil
     , CalamityEvent(Dispatch, ShutDown)
     , customEvt ) where
 
@@ -17,6 +18,7 @@ import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
 import           Calamity.HTTP.Internal.Ratelimit
+import           Calamity.Internal.GenericCurry
 import qualified Calamity.Internal.SnowflakeMap   as SM
 import           Calamity.Internal.Updateable
 import           Calamity.Internal.Utils
@@ -36,6 +38,7 @@ import           Control.Monad
 import           Data.Default.Class
 import           Data.Dynamic
 import           Data.Foldable
+import           Data.IORef
 import           Data.Maybe
 import           Data.Proxy
 import           Data.Time.Clock.POSIX
@@ -68,6 +71,7 @@ newClient token = do
   numShards'     <- newEmptyMVar
   rlState'       <- newRateLimitState
   (inc, outc)    <- newChan
+  ehidCounter    <- newIORef 0
 
   pure $ Client shards'
                 numShards'
@@ -75,6 +79,7 @@ newClient token = do
                 rlState'
                 inc
                 outc
+                ehidCounter
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 --
@@ -90,7 +95,7 @@ runBotIO token setup = do
     Di.push "calamity-loop" clientLoop
     Di.push "calamity-stop" finishUp
 
--- | Register an event handler.
+-- | Register an event handler, returning an action that removes the event handler from the bot.
 --
 -- Refer to 'EventType' for what events you can register, and 'EHType' for the
 -- parameters the event handlers they receive.
@@ -118,9 +123,19 @@ runBotIO token setup = do
 -- This function is pretty bad for giving nasty type errors,
 -- since if something doesn't match then 'EHType' might not get substituted,
 -- which will result in errors about parameter counts mismatching.
-react :: forall (s :: EventType) r. (BotC r, InsertEventHandler s (P.Sem r)) => EHType s (P.Sem r) -> P.Sem r ()
-react handler = let handlers = makeEventHandlers (Proxy @s) (Proxy @(P.Sem r)) handler
-                in P.atomicModify (handlers <>)
+react :: forall (s :: EventType) r.
+      (BotC r, InsertEventHandler s (P.Sem r), RemoveEventHandler s (P.Sem r))
+      => EHType s (P.Sem r) ()
+      -> P.Sem r (P.Sem r ())
+react handler = do
+  ehidC <- P.asks (^. #ehidCounter)
+  id' <- P.embed $ atomicModifyIORef ehidC (\i -> (succ i, i))
+  let handlers = makeEventHandlers (Proxy @s) (Proxy @(P.Sem r)) id' handler
+  P.atomicModify (handlers <>)
+  pure $ removeHandler @s id'
+
+removeHandler :: forall (s :: EventType) r. (BotC r, RemoveEventHandler s (P.Sem r)) => Integer -> P.Sem r ()
+removeHandler id' = P.atomicModify (removeEventHandler (Proxy @s) (Proxy @(P.Sem r)) id')
 
 -- | Fire an event that the bot will then handle.
 --
@@ -158,6 +173,56 @@ events :: BotC r => P.Sem r (OutChan CalamityEvent)
 events = do
   inc <- P.asks (^. #eventsIn)
   P.embed $ dupChan inc
+
+-- | Wait until an event satisfying a condition happens, then returns it's
+-- parameters
+--
+-- Sorry about this horrendous type sig, this is what it would look like with @s
+-- ~ \''MessageCreateEvt'@:
+--
+-- @
+-- 'waitUntil' :: ('Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r 'Message'
+-- @
+--
+-- And for @s ~ \''MessageUpdateEvt'@:
+--
+-- @
+-- 'waitUntil' :: ('Message' -> 'Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r ('Message', 'Message')
+-- @
+--
+-- ==== Examples
+--
+-- Waiting for a message containing the text \"hi\":
+--
+-- @
+-- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\m -> 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
+--        print $ msg ^. #content
+-- @
+waitUntil
+  :: forall (s :: EventType) r beh ueh.
+  ( BotC r
+  , beh ~ EHType s (P.Sem r) Bool
+  , ueh ~ EHType s (P.Sem r) ()
+  , ParametersCollector beh (P.Sem r ()) ~ ueh
+  , Uncurried beh ~ (Parameters beh -> P.Sem r Bool)
+  , Uncurry beh
+  , Params beh
+  , InsertEventHandler s (P.Sem r)
+  , RemoveEventHandler s (P.Sem r))
+  => beh
+  -> P.Sem r (Parameters beh)
+waitUntil f = do
+  result <- P.embed $ newEmptyMVar
+  remove <- react @s (applyParams @beh f (checker result))
+  res <- P.embed $ takeMVar result
+  remove
+  pure res
+  where
+    checker :: MVar (Parameters beh) -> (Parameters beh) -> P.Sem r ()
+    checker result args = do
+      res <- uncurryG f args
+      when res $ do
+        P.embed $ putMVar result args
 
 -- | Set the bot's presence on all shards.
 sendPresence :: BotC r => StatusUpdateData -> P.Sem r ()
