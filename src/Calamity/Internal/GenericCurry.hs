@@ -1,82 +1,73 @@
 -- | Generic arity curry/ uncurry
 module Calamity.Internal.GenericCurry
-    ( Params(..)
+    ( Curry(..)
     , Uncurry(..) ) where
 
 import           Data.Typeable
 
 import           GHC.TypeNats
 
-class Params t where
+class Curry t where
+  type Curried t
   type Parameters t
-  type ParametersCollector t r
 
-  collectParams :: t -> ParametersCollector t (Parameters t)
-  applyParams :: t -> (Parameters t -> r) -> ParametersCollector t r
+  curryG :: t -> Curried t
 
-type family ParamsInstanceSelector t :: Nat where
-  ParamsInstanceSelector (a -> b -> c -> d -> e -> f -> r) = 6
-  ParamsInstanceSelector (a -> b -> c -> d -> e -> r) = 5
-  ParamsInstanceSelector (a -> b -> c -> d -> r) = 4
-  ParamsInstanceSelector (a -> b -> c -> r) = 3
-  ParamsInstanceSelector (a -> b -> r) = 2
-  ParamsInstanceSelector (a -> r) = 1
+type family CurryInstanceSelector t :: Nat where
+  CurryInstanceSelector (a -> b -> c -> d -> e -> f -> r) = 6
+  CurryInstanceSelector (a -> b -> c -> d -> e -> r) = 5
+  CurryInstanceSelector (a -> b -> c -> d -> r) = 4
+  CurryInstanceSelector (a -> b -> c -> r) = 3
+  CurryInstanceSelector (a -> b -> r) = 2
+  CurryInstanceSelector (a -> r) = 1
 
-class Params' (flag :: Nat) t where
+class Curry' (flag :: Nat) t where
+  type Curried' (flag :: Nat) t
   type Parameters' (flag :: Nat) t
-  type ParametersCollector' (flag :: Nat) t r
 
-  collectParams' :: Proxy flag -> t -> ParametersCollector' flag t (Parameters' flag t)
-  applyParams' :: Proxy flag -> t -> (Parameters' flag t -> r) -> ParametersCollector' flag t r
+  curryG' :: Proxy flag -> t -> Curried' flag t
 
-instance (ParamsInstanceSelector t ~ flag, Params' flag t) => Params t where
-  type Parameters t = Parameters' (ParamsInstanceSelector t) t
-  type ParametersCollector t r = ParametersCollector' (ParamsInstanceSelector t) t r
+instance (CurryInstanceSelector t ~ flag, Curry' flag t) => Curry t where
+  type Curried t = Curried' (CurryInstanceSelector t) t
+  type Parameters t = Parameters' (CurryInstanceSelector t) t
 
-  collectParams = collectParams' (Proxy @flag)
-  applyParams = applyParams' (Proxy @flag)
+  curryG = curryG' (Proxy @flag)
 
-instance Params' 6 (a -> b -> c -> d -> e -> f -> r) where
-  type Parameters' 6 (a -> b -> c -> d -> e -> f -> r) = (a, b, c, d, e, f)
-  type ParametersCollector' 6 (a -> b -> c -> d -> e -> f -> r) rt = a -> b -> c -> d -> e -> f -> rt
+instance Curry' 6 ((a, b, c, d, e, f) -> r) where
+  type Curried' 6 ((a, b, c, d, e, f) -> r) = a -> b -> c -> d -> e -> f -> r
+  type Parameters' 6 ((a, b, c, d, e, f) -> r) = (a, b, c, d, e, f)
 
-  collectParams' _ _ = (,,,,,)
-  applyParams' _ _ fn = \a b c d e f -> fn (a, b, c, d, e, f)
+  curryG' _ fn a b c d e f = fn (a, b, c, d, e, f)
 
-instance Params' 5 (a -> b -> c -> d -> e -> r) where
-  type Parameters' 5 (a -> b -> c -> d -> e -> r) = (a, b, c, d, e)
-  type ParametersCollector' 5 (a -> b -> c -> d -> e -> r) rt = a -> b -> c -> d -> e -> rt
+instance Curry' 5 ((a, b, c, d, e) -> r) where
+  type Curried' 5 ((a, b, c, d, e) -> r) = a -> b -> c -> d -> e -> r
+  type Parameters' 5 ((a, b, c, d, e) -> r) = (a, b, c, d, e)
 
-  collectParams' _ _ = (,,,,)
-  applyParams' _ _ fn = \a b c d e -> fn (a, b, c, d, e)
+  curryG' _ fn a b c d e = fn (a, b, c, d, e)
 
-instance Params' 4 (a -> b -> c -> d -> r) where
-  type Parameters' 4 (a -> b -> c -> d -> r) = (a, b, c, d)
-  type ParametersCollector' 4 (a -> b -> c -> d -> r) rt = a -> b -> c -> d -> rt
+instance Curry' 4 ((a, b, c, d) -> r) where
+  type Curried' 4 ((a, b, c, d) -> r) = a -> b -> c -> d -> r
+  type Parameters' 4 ((a, b, c, d) -> r) = (a, b, c, d)
 
-  collectParams' _ _ = (,,,)
-  applyParams' _ _ fn = \a b c d -> fn (a, b, c, d)
+  curryG' _ fn a b c d = fn (a, b, c, d)
 
-instance Params' 3 (a -> b -> c -> r) where
-  type Parameters' 3 (a -> b -> c -> r) = (a, b, c)
-  type ParametersCollector' 3 (a -> b -> c -> r) rt = a -> b -> c -> rt
+instance Curry' 3 ((a, b, c) -> r) where
+  type Curried' 3 ((a, b, c) -> r) = a -> b -> c -> r
+  type Parameters' 3 ((a, b, c) -> r) = (a, b, c)
 
-  collectParams' _ _ = (,,)
-  applyParams' _ _ fn = \a b c -> fn (a, b, c)
+  curryG' _ fn a b c = fn (a, b, c)
 
-instance Params' 2 (a -> b -> r) where
-  type Parameters' 2 (a -> b -> r) = (a, b)
-  type ParametersCollector' 2 (a -> b -> r) rt = a -> b -> rt
+instance Curry' 2 ((a, b) -> r) where
+  type Curried' 2 ((a, b) -> r) = a -> b -> r
+  type Parameters' 2 ((a, b) -> r) = (a, b)
 
-  collectParams' _ _ = (,)
-  applyParams' _ _ fn = \a b -> fn (a, b)
+  curryG' _ fn a b = fn (a, b)
 
-instance Params' 1 (a -> r) where
+instance Curry' 1 (a -> r) where
+  type Curried' 1 (a -> r) = a -> r
   type Parameters' 1 (a -> r) = a
-  type ParametersCollector' 1 (a -> r) rt = a -> rt
 
-  collectParams' _ _ = id
-  applyParams' _ _ fn = \a -> fn a
+  curryG' _ fn = fn
 
 class Uncurry t where
   type Uncurried t
@@ -88,8 +79,8 @@ class Uncurry' (flag :: Nat) t where
 
   uncurryG' :: Proxy flag -> t -> Uncurried' flag t
 
-instance (ParamsInstanceSelector t ~ flag, Uncurry' flag t) => Uncurry t where
-  type Uncurried t = Uncurried' (ParamsInstanceSelector t) t
+instance (CurryInstanceSelector t ~ flag, Uncurry' flag t) => Uncurry t where
+  type Uncurried t = Uncurried' (CurryInstanceSelector t) t
 
   uncurryG = uncurryG' (Proxy @flag)
 

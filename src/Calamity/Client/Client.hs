@@ -199,26 +199,24 @@ events = do
 --        print $ msg ^. #content
 -- @
 waitUntil
-  :: forall (s :: EventType) r beh ueh.
+  :: forall (s :: EventType) r eh.
   ( BotC r
-  , beh ~ EHType s (P.Sem r) Bool
-  , ueh ~ EHType s (P.Sem r) ()
-  , ParametersCollector beh (P.Sem r ()) ~ ueh
-  , Uncurried beh ~ (Parameters beh -> P.Sem r Bool)
-  , Uncurry beh
-  , Params beh
+  , eh ~ EHType s (P.Sem r) Bool
+  , EHType s (P.Sem r) () ~ (Parameters eh -> P.Sem r ())
+  , Uncurried eh ~ (Parameters eh -> P.Sem r Bool)
+  , Uncurry eh
   , InsertEventHandler s (P.Sem r)
   , RemoveEventHandler s (P.Sem r))
-  => beh
-  -> P.Sem r (Parameters beh)
+  => eh
+  -> P.Sem r (Parameters eh)
 waitUntil f = do
-  result <- P.embed $ newEmptyMVar
-  remove <- react @s (applyParams @beh f (checker result))
+  result <- P.embed newEmptyMVar
+  remove <- react @s (curryG $ checker result)
   res <- P.embed $ takeMVar result
   remove
   pure res
   where
-    checker :: MVar (Parameters beh) -> (Parameters beh) -> P.Sem r ()
+    checker :: MVar (Parameters eh) -> Parameters eh -> P.Sem r ()
     checker result args = do
       res <- uncurryG f args
       when res $ do
