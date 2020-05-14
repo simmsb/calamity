@@ -65,7 +65,7 @@ type BotC r =
   , Typeable r)
 
 -- | A concrete effect stack used inside the bot
-type SetupEff r = P.Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) ()
+type SetupEff r a = P.Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) a
 
 -- | A Data Kind used to fire custom events
 data EventType

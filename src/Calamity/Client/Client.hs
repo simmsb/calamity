@@ -85,12 +85,12 @@ newClient token = do
 --
 -- This method has a 'P.Fail' effect to handle fatal errors that happen during
 -- setup (bad token, etc).
-runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r -> P.Sem r ()
+runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r a -> P.Sem r ()
 runBotIO token setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
   P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
-    Di.push "calamity-setup" setup
+    void $ Di.push "calamity-setup" setup
     shardBot
     Di.push "calamity-loop" clientLoop
     Di.push "calamity-stop" finishUp
