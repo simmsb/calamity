@@ -67,8 +67,8 @@ timeA m = do
   pure (duration, res)
 
 
-newClient :: Token -> TypeRep -> IO Client
-newClient token t = do
+newClient :: Token -> IO Client
+newClient token = do
   shards'        <- newTVarIO []
   numShards'     <- newEmptyMVar
   rlState'       <- newRateLimitState
@@ -82,12 +82,11 @@ newClient token t = do
                 inc
                 outc
                 ehidCounter
-                t
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 runBotIO :: forall r a. (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r)) => Token -> P.Sem (SetupEff r) a -> P.Sem r (Maybe StartupError)
 runBotIO token setup = do
-  client <- P.embed $ newClient token (typeRep $ Proxy @(SetupEff r))
+  client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
   P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup
@@ -133,20 +132,11 @@ ehToIO f = runIntoIOFinal go
 -- since if something doesn't match then 'EHType' might not get substituted,
 -- which will result in errors about parameter counts mismatching.
 react :: forall (s :: EventType) r t eh ehIO.
-      (BotC r
-      , InsertEventHandler s
-      , RemoveEventHandler s
-      , eh ~ EHType s (P.Sem r) ()
-      , ehIO ~ EHType s IO ()
-      , Uncurry eh
-      , Uncurried eh ~ (t -> P.Sem r ())
-      , Curry (t -> IO ())
-      , ehIO ~ Curried (t -> IO ())
-      )
-      => eh
+      (BotC r, ReactConstraints r s eh ehIO t)
+      => EHType s (P.Sem r) ()
       -> P.Sem r (P.Sem r ())
 react handler = do
-  handler' <- ehToIO (\(params :: t) -> (uncurryG handler params))
+  handler' <- ehToIO $ uncurryG handler
   ehidC <- P.asks (^. #ehidCounter)
   id' <- P.embed $ atomicModifyIORef ehidC (\i -> (succ i, i))
   let handlers = makeEventHandlers (Proxy @s) id' (curryG handler')
@@ -196,8 +186,7 @@ events = do
 -- | Wait until an event satisfying a condition happens, then returns it's
 -- parameters
 --
--- Sorry about this horrendous type sig, this is what it would look like with @s
--- ~ \''MessageCreateEvt'@:
+-- This is what it would look like with @s ~ \''MessageCreateEvt'@:
 --
 -- @
 -- 'waitUntil' :: ('Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r 'Message'
@@ -219,17 +208,7 @@ events = do
 -- @
 waitUntil
   :: forall (s :: EventType) r t eh ehB.
-  ( BotC r
-  , InsertEventHandler s
-  , RemoveEventHandler s
-  , Uncurry eh
-  , eh ~ EHType s (P.Sem r) ()
-  , eh ~ Curried (t -> P.Sem r ())
-  , Uncurry ehB
-  , Uncurried ehB ~ (t -> P.Sem r Bool)
-  , Curry (t -> IO ())
-  , Curried (t -> IO ()) ~ EHType s IO ()
-  )
+  ( BotC r, WaitUntilConstraints r s eh ehB t)
   => ehB
   -> P.Sem r t
 waitUntil f = do

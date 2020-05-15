@@ -6,6 +6,8 @@ module Calamity.Client.Types
     , EHType
     , BotC
     , SetupEff
+    , ReactConstraints
+    , WaitUntilConstraints
     , EventHandlers(..)
     , InsertEventHandler(..)
     , RemoveEventHandler(..)
@@ -16,6 +18,7 @@ import           Calamity.Cache.Eff
 import           Calamity.Gateway.DispatchEvents ( CalamityEvent(..), ReadyData )
 import           Calamity.Gateway.Types          ( ControlMessage )
 import           Calamity.HTTP.Internal.Types
+import           Calamity.Internal.GenericCurry
 import           Calamity.Metrics.Eff
 import           Calamity.Types.LogEff
 import           Calamity.Types.Model.Channel
@@ -56,7 +59,6 @@ data Client = Client
   , eventsIn            :: InChan CalamityEvent
   , eventsOut           :: OutChan CalamityEvent
   , ehidCounter         :: IORef Integer
-  , originalEffectsType :: TypeRep
   }
   deriving ( Generic )
 
@@ -67,6 +69,32 @@ type BotC r =
 
 -- | A concrete effect stack used inside the bot
 type SetupEff r = (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r)
+
+-- | Some constraints that 'Calamity.Client.Client.react' needs to work. Don't
+-- worry about these since they are satisfied for any type @s@ can be
+type ReactConstraints r s eh ehIO t =
+  ( InsertEventHandler s
+  , RemoveEventHandler s
+  , eh ~ EHType s (P.Sem r) ()
+  , ehIO ~ EHType s IO ()
+  , Uncurry eh
+  , Uncurried eh ~ (t -> P.Sem r ())
+  , Curry (t -> IO ())
+  , ehIO ~ Curried (t -> IO ()))
+
+-- | Some constraints that 'Calamity.Client.Client.waitUntil' needs to work. Don't
+-- worry about these since they are satisfied for any type @s@ can be
+type WaitUntilConstraints r s eh ehB t =
+  ( InsertEventHandler s
+  , RemoveEventHandler s
+  , Uncurry eh
+  , eh ~ EHType s (P.Sem r) ()
+  , eh ~ Curried (t -> P.Sem r ())
+  , Uncurry ehB
+  , Uncurried ehB ~ (t -> P.Sem r Bool)
+  , Curry (t -> IO ())
+  , Curried (t -> IO ()) ~ EHType s IO ()
+  )
 
 newtype StartupError = StartupError String
   deriving ( Show )
