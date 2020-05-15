@@ -21,9 +21,13 @@ import qualified Polysemy.Fail               as P
 import qualified Polysemy                    as P
 import qualified Polysemy.Reader             as P
 
+mapLeft :: (a -> c) -> Either a b -> Either c b
+mapLeft f (Left a) = Left $ f a
+mapLeft _ (Right b) = Right b
+
 -- | Connects the bot to the gateway over n shards
-shardBot :: (BotC r, P.Member P.Fail r) => Sem r ()
-shardBot = do
+shardBot :: BotC r => Sem r (Either StartupError ())
+shardBot = (mapLeft StartupError <$>) . P.runFail $ do
   numShardsVar <- P.asks numShards
   shardsVar <- P.asks shards
 

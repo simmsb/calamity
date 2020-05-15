@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.8.0
+
+*2020-05-15*
+
+* Did a large rework of how event handlers are stored internally.
+* introduced `waitUntil`
+
 ## 0.1.4.0
 
 * Added back extra exports of `Calamity.Types.Partial` from

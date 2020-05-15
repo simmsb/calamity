@@ -83,7 +83,7 @@ data Counter m a where
 
 P.makeSem ''Counter
 
-runCounterAtomic :: P.Member (P.Embed IO) r => P.Sem (Counter ': r) () -> P.Sem r ()
+runCounterAtomic :: P.Member (P.Embed IO) r => P.Sem (Counter ': r) a -> P.Sem r a
 runCounterAtomic m = do
   var <- P.embed $ newTVarIO (0 :: Int)
   P.runAtomicStateTVar var $ P.reinterpret (\case
@@ -95,27 +95,23 @@ handleFailByLogging m = do
     Left e -> DiP.error (e ^. packed)
     _      -> pure ()
 
-handleFailByPrinting m = do
-  r <- P.runFail m
-  case r of
-    Left e -> P.embed $ print (show e)
-    _      -> pure ()
-
 info = DiP.info @Text
 debug = DiP.info @Text
 
+tellt :: (BotC r, Tellable t) => t -> Text -> P.Sem r (Either RestError Message)
 tellt = tell @Text
 
 main :: IO ()
 main = do
   token <- view packed <$> getEnv "BOT_TOKEN"
-  P.runFinal . P.embedToFinal . handleFailByPrinting . runCounterAtomic . runCacheInMemory . runMetricsNoop
-    $ runBotIO (BotToken token) $ react @'MessageCreateEvt $ \msg -> handleFailByLogging $ do
-      when (msg ^. #content == "!count") $ replicateM_ 3 $ do
+  void . P.runFinal . P.embedToFinal . runCounterAtomic . runCacheInMemory . runMetricsPrometheusIO
+    $ runBotIO (BotToken token) $ do
+    react @'MessageCreateEvt $ \msg -> handleFailByLogging $ case msg ^. #content of
+      "!count" -> replicateM_ 3 $ do
         val <- getCounter
         info $ "the counter is: " <> showt val
         void $ tellt msg ("The value is: " <> showt val)
-      when (msg ^. #content == "!say hi") $ replicateM_ 3 . P.async $ do
+      "!say hi" -> replicateM_ 3 . P.async $ do
         info "saying heya"
         Right msg' <- tellt msg "heya"
         info "sleeping"
@@ -123,10 +119,18 @@ main = do
         info "slept"
         void . invoke $ EditMessage (msg ^. #channelID) msg' (Just "lol") Nothing
         info "edited"
-      when (msg ^. #content == "!explode") $ do
+      "!explode" -> do
         Just x <- pure Nothing
         debug "unreachable!"
-      when (msg ^. #content == "!bye") $ do
+      "!bye" -> do
         void $ tellt msg "bye!"
         stopBot
+      "!fire-evt" -> fire $ customEvt @"my-event" ("aha" :: Text, msg)
+      "!wait" -> do
+        void $ tellt msg "waiting for !continue"
+        waitUntil @'MessageCreateEvt (\msg -> (debug $ "got message: " <> showt msg) >> (pure $ msg ^. #content == "!continue"))
+        void $ tellt msg "got !continue"
+      _ -> pure ()
+    react @('CustomEvt "my-event" (Text, Message)) $ \(s, m) ->
+      void $ tellt m ("Somebody told me to tell you about: " <> s)
 ```

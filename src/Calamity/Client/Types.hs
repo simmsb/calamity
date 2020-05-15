@@ -1,6 +1,7 @@
 -- | Types for the client
 module Calamity.Client.Types
     ( Client(..)
+    , StartupError(..)
     , EventType(..)
     , EHType
     , BotC
@@ -30,7 +31,6 @@ import           Control.Concurrent.STM.TVar
 
 import           Data.Default.Class
 import           Data.Dynamic
-import           Data.Functor
 import qualified Data.HashMap.Lazy               as LH
 import           Data.IORef
 import           Data.Maybe
@@ -49,13 +49,14 @@ import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Reader                 as P
 
 data Client = Client
-  { shards        :: TVar [(InChan ControlMessage, Async (Maybe ()))]
-  , numShards     :: MVar Int
-  , token         :: Token
-  , rlState       :: RateLimitState
-  , eventsIn      :: InChan CalamityEvent
-  , eventsOut     :: OutChan CalamityEvent
-  , ehidCounter   :: IORef Integer
+  { shards              :: TVar [(InChan ControlMessage, Async (Maybe ()))]
+  , numShards           :: MVar Int
+  , token               :: Token
+  , rlState             :: RateLimitState
+  , eventsIn            :: InChan CalamityEvent
+  , eventsOut           :: OutChan CalamityEvent
+  , ehidCounter         :: IORef Integer
+  , originalEffectsType :: TypeRep
   }
   deriving ( Generic )
 
@@ -65,7 +66,10 @@ type BotC r =
   , Typeable r)
 
 -- | A concrete effect stack used inside the bot
-type SetupEff r a = P.Sem (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r) a
+type SetupEff r = (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r)
+
+newtype StartupError = StartupError String
+  deriving ( Show )
 
 -- | A Data Kind used to fire custom events
 data EventType
@@ -133,6 +137,8 @@ type family EHType (d :: EventType) m r where
   EHType 'UserUpdateEvt               m r = User      -> User                           -> m r
   EHType ('CustomEvt s a)             m r = a                                           -> m r
 
+type StoredEHType t = EHType t IO ()
+
 newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
 data EventHandlerWithID a = EventHandlerWithID
@@ -140,11 +146,11 @@ data EventHandlerWithID a = EventHandlerWithID
   , eh   :: a
   }
 
-type family EHStorageType t where
-  EHStorageType ('CustomEvt s a) = LH.HashMap TypeRep (LH.HashMap TypeRep [EventHandlerWithID Dynamic])
-  EHStorageType t                = [EventHandlerWithID Dynamic]
+type family EHStorageType (t :: EventType) where
+  EHStorageType ('CustomEvt s a) = LH.HashMap TypeRep (LH.HashMap TypeRep [EventHandlerWithID (StoredEHType ('CustomEvt s a))])
+  EHStorageType t                = [EventHandlerWithID (StoredEHType t)]
 
-newtype EventHandler t = EH
+newtype EventHandler (t :: EventType) = EH
   { unwrapEventHandler :: (Semigroup (EHStorageType t), Monoid (EHStorageType t)) => EHStorageType t
   }
 
@@ -183,7 +189,7 @@ instance Default EventHandlers where
                                  , WrapTypeable $ EH @'MessageReactionRemoveAllEvt []
                                  , WrapTypeable $ EH @'TypingStartEvt []
                                  , WrapTypeable $ EH @'UserUpdateEvt []
-                                 , WrapTypeable $ EH @('CustomEvt Void Void) LH.empty
+                                 , WrapTypeable $ EH @('CustomEvt Void Dynamic) LH.empty
                                  ]
 
 instance Semigroup EventHandlers where
@@ -198,70 +204,79 @@ type family EHInstanceSelector (d :: EventType) :: Bool where
   EHInstanceSelector ('CustomEvt _ _) = 'True
   EHInstanceSelector _                = 'False
 
+
+fromDynamicJust :: forall a. Typeable a => Dynamic -> a
+fromDynamicJust d = case fromDynamic d of
+  Just x -> x
+  Nothing -> error $ "Extracting dynamic failed, wanted: " <> (show . typeRep $ Proxy @a) <> ", got: " <> (show $ dynTypeRep d)
+
+
 -- | A helper typeclass that is used to decide how to register regular
 -- events, and custom events which require storing in a map at runtime.
-class InsertEventHandler a m where
-  makeEventHandlers :: Proxy a -> Proxy m -> Integer -> EHType a m () -> EventHandlers
+class InsertEventHandler a where
+  makeEventHandlers :: Proxy a -> Integer -> StoredEHType a -> EventHandlers
 
-instance (EHInstanceSelector a ~ flag, InsertEventHandler' flag a m) => InsertEventHandler a m where
+instance (EHInstanceSelector a ~ flag, InsertEventHandler' flag a) => InsertEventHandler a where
   makeEventHandlers = makeEventHandlers' (Proxy @flag)
 
-class InsertEventHandler' (flag :: Bool) a m where
-  makeEventHandlers' :: Proxy flag -> Proxy a -> Proxy m -> Integer -> EHType a m () -> EventHandlers
+class InsertEventHandler' (flag :: Bool) a where
+  makeEventHandlers' :: Proxy flag -> Proxy a -> Integer -> StoredEHType a -> EventHandlers
 
-instance (Typeable a, Typeable s, Typeable (EHType ('CustomEvt s a) m ()))
-  => InsertEventHandler' 'True ('CustomEvt s a) m where
-  makeEventHandlers' _ _ _ id' handler = EventHandlers . TM.one $ EH @('CustomEvt Void Void)
-    (LH.singleton (typeRep $ Proxy @s) (LH.singleton (typeRep $ Proxy @a) [EventHandlerWithID id' $ toDyn handler]))
+intoDynFn :: forall a. Typeable a => (a -> IO ()) -> (Dynamic -> IO ())
+intoDynFn fn = \d -> fn $ fromDynamicJust d
 
-instance (Typeable s, EHStorageType s ~ [EventHandlerWithID Dynamic], Typeable (EHType s m ())) => InsertEventHandler' 'False s m where
-  makeEventHandlers' _ _ _ id' handler = EventHandlers . TM.one $ EH @s [EventHandlerWithID id' $ toDyn handler]
+instance (Typeable a, Typeable s, Typeable (StoredEHType ('CustomEvt s a)), EHType ('CustomEvt s a) IO () ~ (a -> IO ()))
+  => InsertEventHandler' 'True ('CustomEvt s a) where
+  makeEventHandlers' _ _ id' handler = EventHandlers . TM.one $ EH @('CustomEvt Void Dynamic)
+    (LH.singleton (typeRep $ Proxy @s) (LH.singleton (typeRep $ Proxy @a) [EventHandlerWithID id' (intoDynFn handler)]))
+
+instance (Typeable s, EHStorageType s ~ [EventHandlerWithID (StoredEHType s)], Typeable (StoredEHType s)) => InsertEventHandler' 'False s where
+  makeEventHandlers' _ _ id' handler = EventHandlers . TM.one $ EH @s [EventHandlerWithID id' handler]
 
 
-class GetEventHandlers a m where
-  getEventHandlers :: EventHandlers -> [EHType a m ()]
+class GetEventHandlers a where
+  getEventHandlers :: EventHandlers -> [StoredEHType a]
 
-instance (EHInstanceSelector a ~ flag, GetEventHandlers' flag a m) => GetEventHandlers a m where
-  getEventHandlers = getEventHandlers' (Proxy @a) (Proxy @m) (Proxy @flag)
+instance (EHInstanceSelector a ~ flag, GetEventHandlers' flag a) => GetEventHandlers a where
+  getEventHandlers = getEventHandlers' (Proxy @a) (Proxy @flag)
 
-class GetEventHandlers' (flag :: Bool) a m where
-  getEventHandlers' :: Proxy a -> Proxy m -> Proxy flag -> EventHandlers -> [EHType a m ()]
+class GetEventHandlers' (flag :: Bool) a where
+  getEventHandlers' :: Proxy a -> Proxy flag -> EventHandlers -> [StoredEHType a]
 
-instance (Typeable a, Typeable s, Typeable (EHType ('CustomEvt s a) m ())) => GetEventHandlers' 'True ('CustomEvt s a) m where
-  getEventHandlers' _ _ _ (EventHandlers handlers) =
-    let handlerMap = unwrapEventHandler @('CustomEvt Void Void) $ fromJust
-          (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Void)))
-    in concat $ LH.lookup (typeRep $ Proxy @s) handlerMap >>= LH.lookup (typeRep $ Proxy @a) <&> map
-       (fromJust . fromDynamic . eh)
+instance GetEventHandlers' 'True ('CustomEvt s a) where
+  getEventHandlers' _ _ _ = error "use getCustomEventHandlers instead"
+    -- let handlerMap = unwrapEventHandler @('CustomEvt Void Dynamic) $ fromJust
+    --       (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Dynamic)))
+    -- in concat $ LH.lookup (typeRep $ Proxy @s) handlerMap >>= LH.lookup (typeRep $ Proxy @a) <&> map eh
 
-instance (Typeable s, Typeable (EHType s m ()), EHStorageType s ~ [EventHandlerWithID Dynamic]) => GetEventHandlers' 'False s m where
-  getEventHandlers' _ _ _ (EventHandlers handlers) =
+instance (Typeable s, Typeable (StoredEHType s), EHStorageType s ~ [EventHandlerWithID (StoredEHType s)]) => GetEventHandlers' 'False s where
+  getEventHandlers' _ _ (EventHandlers handlers) =
     let theseHandlers = unwrapEventHandler @s $ fromJust (TM.lookup handlers :: Maybe (EventHandler s))
-    in map (fromJust . fromDynamic . eh) theseHandlers
+    in map eh theseHandlers
 
 
-class RemoveEventHandler a m where
-  removeEventHandler :: Proxy a -> Proxy m -> Integer -> EventHandlers -> EventHandlers
+class RemoveEventHandler a where
+  removeEventHandler :: Proxy a -> Integer -> EventHandlers -> EventHandlers
 
-instance (EHInstanceSelector a ~ flag, RemoveEventHandler' flag a m) => RemoveEventHandler a m where
+instance (EHInstanceSelector a ~ flag, RemoveEventHandler' flag a) => RemoveEventHandler a where
   removeEventHandler = removeEventHandler' (Proxy @flag)
 
-class RemoveEventHandler' (flag :: Bool) a m where
-  removeEventHandler' :: Proxy flag -> Proxy a -> Proxy m -> Integer -> EventHandlers -> EventHandlers
+class RemoveEventHandler' (flag :: Bool) a where
+  removeEventHandler' :: Proxy flag -> Proxy a -> Integer -> EventHandlers -> EventHandlers
 
-instance (Typeable s, Typeable a) => RemoveEventHandler' 'True ('CustomEvt s a) m where
-  removeEventHandler' _ _ _ id' (EventHandlers handlers) = EventHandlers $ TM.adjust @('CustomEvt Void Void)
+instance (Typeable s, Typeable a) => RemoveEventHandler' 'True ('CustomEvt s a) where
+  removeEventHandler' _ _ id' (EventHandlers handlers) = EventHandlers $ TM.adjust @('CustomEvt Void Dynamic)
     (\(EH ehs) -> EH (LH.update (Just . LH.update (Just . filter ((/= id') . ehID)) (typeRep $ Proxy @a))
                       (typeRep $ Proxy @s) ehs)) handlers
 
-instance (Typeable s, Typeable (EHType s m ()), EHStorageType s ~ [EventHandlerWithID Dynamic])
-  => RemoveEventHandler' 'False s m where
-  removeEventHandler' _ _ _ id' (EventHandlers handlers) = EventHandlers $ TM.adjust @s
+instance (Typeable s, Typeable (StoredEHType s), EHStorageType s ~ [EventHandlerWithID (StoredEHType s)])
+  => RemoveEventHandler' 'False s where
+  removeEventHandler' _ _ id' (EventHandlers handlers) = EventHandlers $ TM.adjust @s
     (\(EH ehs) -> EH $ filter ((/= id') . ehID) ehs) handlers
 
 
-getCustomEventHandlers :: TypeRep -> TypeRep -> EventHandlers -> [Dynamic]
+getCustomEventHandlers :: TypeRep -> TypeRep -> EventHandlers -> [Dynamic -> IO ()]
 getCustomEventHandlers s a (EventHandlers handlers) =
-    let handlerMap = unwrapEventHandler @('CustomEvt Void Void) $ fromJust
-          (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Void)))
+    let handlerMap = unwrapEventHandler @('CustomEvt Void Dynamic) $ fromJust
+          (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Dynamic)))
     in map eh . concat $ LH.lookup s handlerMap >>= LH.lookup a

@@ -21,6 +21,7 @@ import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.Internal.GenericCurry
 import qualified Calamity.Internal.SnowflakeMap   as SM
 import           Calamity.Internal.Updateable
+import           Calamity.Internal.RunIntoIO
 import           Calamity.Internal.Utils
 import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Channel
@@ -32,6 +33,7 @@ import           Calamity.Types.Token
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
+import           Control.Exception                ( SomeException )
 import           Control.Lens
 import           Control.Monad
 
@@ -65,8 +67,8 @@ timeA m = do
   pure (duration, res)
 
 
-newClient :: Token -> IO Client
-newClient token = do
+newClient :: Token -> TypeRep -> IO Client
+newClient token t = do
   shards'        <- newTVarIO []
   numShards'     <- newEmptyMVar
   rlState'       <- newRateLimitState
@@ -80,20 +82,27 @@ newClient token = do
                 inc
                 outc
                 ehidCounter
+                t
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
---
--- This method has a 'P.Fail' effect to handle fatal errors that happen during
--- setup (bad token, etc).
-runBotIO :: (P.Members '[P.Embed IO, P.Final IO, P.Fail, CacheEff, MetricEff] r, Typeable r) => Token -> SetupEff r a -> P.Sem r ()
+runBotIO :: forall r a. (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r)) => Token -> P.Sem (SetupEff r) a -> P.Sem r (Maybe StartupError)
 runBotIO token setup = do
-  client <- P.embed $ newClient token
+  client <- P.embed $ newClient token (typeRep $ Proxy @(SetupEff r))
   handlers <- P.embed $ newTVarIO def
   P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup
-    shardBot
-    Di.push "calamity-loop" clientLoop
-    Di.push "calamity-stop" finishUp
+    r <- shardBot
+    case r of
+      Left e -> pure (Just e)
+      Right _ -> do
+        Di.push "calamity-loop" clientLoop
+        Di.push "calamity-stop" finishUp
+        pure Nothing
+
+ehToIO :: forall r p. P.Member (P.Final IO) r => (p -> P.Sem r ()) -> P.Sem r (p -> IO ())
+ehToIO f = runIntoIOFinal go
+  where go :: P.Sem (IntoIO p ': r) (p -> IO ())
+        go = intoIO (P.raise . f)
 
 -- | Register an event handler, returning an action that removes the event handler from the bot.
 --
@@ -123,19 +132,29 @@ runBotIO token setup = do
 -- This function is pretty bad for giving nasty type errors,
 -- since if something doesn't match then 'EHType' might not get substituted,
 -- which will result in errors about parameter counts mismatching.
-react :: forall (s :: EventType) r.
-      (BotC r, InsertEventHandler s (P.Sem r), RemoveEventHandler s (P.Sem r))
-      => EHType s (P.Sem r) ()
+react :: forall (s :: EventType) r t eh ehIO.
+      (BotC r
+      , InsertEventHandler s
+      , RemoveEventHandler s
+      , eh ~ EHType s (P.Sem r) ()
+      , ehIO ~ EHType s IO ()
+      , Uncurry eh
+      , Uncurried eh ~ (t -> P.Sem r ())
+      , Curry (t -> IO ())
+      , ehIO ~ Curried (t -> IO ())
+      )
+      => eh
       -> P.Sem r (P.Sem r ())
 react handler = do
+  handler' <- ehToIO (\(params :: t) -> (uncurryG handler params))
   ehidC <- P.asks (^. #ehidCounter)
   id' <- P.embed $ atomicModifyIORef ehidC (\i -> (succ i, i))
-  let handlers = makeEventHandlers (Proxy @s) (Proxy @(P.Sem r)) id' handler
+  let handlers = makeEventHandlers (Proxy @s) id' (curryG handler')
   P.atomicModify (handlers <>)
   pure $ removeHandler @s id'
 
-removeHandler :: forall (s :: EventType) r. (BotC r, RemoveEventHandler s (P.Sem r)) => Integer -> P.Sem r ()
-removeHandler id' = P.atomicModify (removeEventHandler (Proxy @s) (Proxy @(P.Sem r)) id')
+removeHandler :: forall (s :: EventType) r. (BotC r, RemoveEventHandler s) => Integer -> P.Sem r ()
+removeHandler id' = P.atomicModify (removeEventHandler (Proxy @s) id')
 
 -- | Fire an event that the bot will then handle.
 --
@@ -195,20 +214,24 @@ events = do
 -- Waiting for a message containing the text \"hi\":
 --
 -- @
--- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\m -> 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
+-- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\m -> 'pure' $ 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
 --        print $ msg ^. #content
 -- @
 waitUntil
-  :: forall (s :: EventType) r eh.
+  :: forall (s :: EventType) r t eh ehB.
   ( BotC r
-  , eh ~ EHType s (P.Sem r) Bool
-  , EHType s (P.Sem r) () ~ (Parameters eh -> P.Sem r ())
-  , Uncurried eh ~ (Parameters eh -> P.Sem r Bool)
+  , InsertEventHandler s
+  , RemoveEventHandler s
   , Uncurry eh
-  , InsertEventHandler s (P.Sem r)
-  , RemoveEventHandler s (P.Sem r))
-  => eh
-  -> P.Sem r (Parameters eh)
+  , eh ~ EHType s (P.Sem r) ()
+  , eh ~ Curried (t -> P.Sem r ())
+  , Uncurry ehB
+  , Uncurried ehB ~ (t -> P.Sem r Bool)
+  , Curry (t -> IO ())
+  , Curried (t -> IO ()) ~ EHType s IO ()
+  )
+  => ehB
+  -> P.Sem r t
 waitUntil f = do
   result <- P.embed newEmptyMVar
   remove <- react @s (curryG $ checker result)
@@ -216,9 +239,10 @@ waitUntil f = do
   remove
   pure res
   where
-    checker :: MVar (Parameters eh) -> Parameters eh -> P.Sem r ()
+    checker :: MVar t -> t -> P.Sem r ()
     checker result args = do
       res <- uncurryG f args
+      debug $ "checker result: " +|| res ||+ ""
       when res $ do
         P.embed $ putMVar result args
 
@@ -233,9 +257,6 @@ sendPresence s = do
 stopBot :: BotC r => P.Sem r ()
 stopBot = do
   debug "stopping bot"
-  shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
-  for_ shards $ \(inc, _) ->
-    P.embed $ writeChan inc ShutDownShard
   inc <- P.asks (^. #eventsIn)
   P.embed $ writeChan inc ShutDown
 
@@ -243,6 +264,8 @@ finishUp :: BotC r => P.Sem r ()
 finishUp = do
   debug "finishing up"
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
+  for_ shards $ \(inc, _) ->
+    P.embed $ writeChan inc ShutDownShard
   for_ shards $ \(_, shardThread) -> P.await shardThread
   debug "bot has stopped"
 
@@ -267,7 +290,14 @@ handleCustomEvent s d = do
 
   let handlers = getCustomEventHandlers s (dynTypeRep d) eventHandlers
 
-  for_ handlers (\h -> P.async . fromJust . fromDynamic @(P.Sem r ()) . fromJust $ dynApply h d)
+  for_ handlers (\h -> P.async . P.embed $ h d)
+
+catchAllLogging :: BotC r => P.Sem r () -> P.Sem r ()
+catchAllLogging m = do
+  r <- P.errorToIOFinal . P.fromExceptionSem @SomeException $ P.raise m
+  case r of
+    Right _ -> pure ()
+    Left e -> debug $ "got exception: " +|| e ||+ ""
 
 handleEvent :: BotC r => DispatchData -> P.Sem r ()
 handleEvent data' = do
@@ -283,7 +313,7 @@ handleEvent data' = do
 
   case actions of
     Right actions -> for_ actions $ \action -> P.async $ do
-      (time, _) <- timeA $ Di.reset action
+      (time, _) <- timeA . catchAllLogging $ P.embed action
       void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
 
@@ -299,7 +329,7 @@ handleEvent data' = do
 handleEvent' :: BotC r
               => EventHandlers
               -> DispatchData
-              -> P.Sem (P.Fail ': r) [P.Sem r ()]
+              -> P.Sem (P.Fail ': r) [IO ()]
 handleEvent' eh evt@(Ready rd@ReadyData {}) = do
   updateCache evt
   pure $ map ($ rd) (getEventHandlers @'ReadyEvt eh)
