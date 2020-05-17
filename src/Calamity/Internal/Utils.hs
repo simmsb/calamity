@@ -6,7 +6,11 @@ module Calamity.Internal.Utils
     , whenM
     , unlessM
     , lastMaybe
+    , leftToMaybe
+    , justToEither
     , (<<$>>)
+    , (<<*>>)
+    , (<.>)
     , debug
     , info
     , Calamity.Internal.Utils.error
@@ -14,18 +18,20 @@ module Calamity.Internal.Utils
 
 import           Calamity.Types.LogEff
 
+import           Control.Applicative
+
 import           Data.Default.Class
-import qualified Data.HashMap.Lazy   as LH
-import qualified Data.Map            as M
-import           Data.Semigroup      ( Last(..) )
+import qualified Data.HashMap.Lazy     as LH
+import qualified Data.Map              as M
+import           Data.Semigroup        ( Last(..) )
 import           Data.Text.Lazy
 import           Data.Time
-import qualified Data.Vector.Unboxed as VU
-import           Data.Vector.Unboxed ( Vector )
+import qualified Data.Vector.Unboxed   as VU
+import           Data.Vector.Unboxed   ( Vector )
 
-import qualified DiPolysemy          as Di
+import qualified DiPolysemy            as Di
 
-import qualified Polysemy            as P
+import qualified Polysemy              as P
 
 import           TextShow
 
@@ -43,10 +49,28 @@ unlessM = whenM . (not <$>)
 lastMaybe :: Maybe a -> Maybe a -> Maybe a
 lastMaybe l r = getLast <$> fmap Last l <> fmap Last r
 
+leftToMaybe :: Either e a -> Maybe e
+leftToMaybe (Left x) = Just x
+leftToMaybe _        = Nothing
+
+justToEither :: Maybe e -> Either e ()
+justToEither (Just x) = Left x
+justToEither _        = Right ()
+
 (<<$>>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 (<<$>>) = fmap . fmap
 
 infixl 4 <<$>>
+
+(<<*>>) :: (Applicative f, Applicative g) => f (g (a -> b)) -> f (g a) -> f (g b)
+(<<*>>) = liftA2 (<*>)
+
+infixl 4 <<*>>
+
+(<.>) :: Functor f => (a -> b) -> (c -> f a) -> (c -> f b)
+(<.>) f g x = f <$> g x
+
+infixl 4 <.>
 
 debug :: P.Member LogEff r => Text -> P.Sem r ()
 debug = Di.debug
@@ -66,7 +90,6 @@ instance TextShow UTCTime where
 instance (TextShow a, VU.Unbox a) => TextShow (Vector a) where
   showb = showbList . VU.toList
 
-    -- lazy and strict use the same internal data structure
 instance (Show k, Show v) => TextShow (LH.HashMap k v) where
   showb = fromString . show
 

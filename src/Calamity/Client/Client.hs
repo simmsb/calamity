@@ -19,9 +19,9 @@ import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
 import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.Internal.GenericCurry
+import           Calamity.Internal.RunIntoIO
 import qualified Calamity.Internal.SnowflakeMap   as SM
 import           Calamity.Internal.Updateable
-import           Calamity.Internal.RunIntoIO
 import           Calamity.Internal.Utils
 import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Channel
@@ -34,7 +34,7 @@ import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
 import           Control.Exception                ( SomeException )
-import           Control.Lens
+import           Control.Lens                     hiding ( (<.>) )
 import           Control.Monad
 
 import           Data.Default.Class
@@ -98,11 +98,6 @@ runBotIO token setup = do
         Di.push "calamity-stop" finishUp
         pure Nothing
 
-ehToIO :: forall r p. P.Member (P.Final IO) r => (p -> P.Sem r ()) -> P.Sem r (p -> IO ())
-ehToIO f = runIntoIOFinal go
-  where go :: P.Sem (IntoIO p ': r) (p -> IO ())
-        go = intoIO (P.raise . f)
-
 -- | Register an event handler, returning an action that removes the event handler from the bot.
 --
 -- Refer to 'EventType' for what events you can register, and 'EHType' for the
@@ -136,10 +131,10 @@ react :: forall (s :: EventType) r t eh ehIO.
       => EHType s (P.Sem r) ()
       -> P.Sem r (P.Sem r ())
 react handler = do
-  handler' <- ehToIO $ uncurryG handler
+  handler' <- bindSemToIO $ uncurryG handler
   ehidC <- P.asks (^. #ehidCounter)
   id' <- P.embed $ atomicModifyIORef ehidC (\i -> (succ i, i))
-  let handlers = makeEventHandlers (Proxy @s) id' (curryG handler')
+  let handlers = makeEventHandlers (Proxy @s) id' (const () <.> curryG handler')
   P.atomicModify (handlers <>)
   pure $ removeHandler @s id'
 
@@ -221,7 +216,6 @@ waitUntil f = do
     checker :: MVar t -> t -> P.Sem r ()
     checker result args = do
       res <- uncurryG f args
-      debug $ "checker result: " +|| res ||+ ""
       when res $ do
         P.embed $ putMVar result args
 
@@ -295,15 +289,6 @@ handleEvent data' = do
       (time, _) <- timeA . catchAllLogging $ P.embed action
       void $ observeHistogram time eventHandleHisto
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
-
--- NOTE: We have to be careful with how we run event handlers
---       They're registered through `react` which ensures the value of `r` in the event handler
---       is the same as the final value of `r`, but:
---       because they're held inside a 'Dynamic' to prevent the value of `r` being recursive,
---       we have to make sure that we don't accidentally try to execute the event handler inside a
---       nested effect, ie: `P.runError $ {- Handle events here -}` since that will result the value of
---       `r` where we handle events be: `(P.Error a ': r)`, which will make stuff explode when we unwrap the
---       event handlers
 
 handleEvent' :: BotC r
               => EventHandlers
