@@ -2,6 +2,7 @@
 module Calamity.Commands.Check
     ( Check(..)
     , buildCheck
+    , buildCheckPure
     , runCheck ) where
 
 import           Calamity.Commands.Context
@@ -30,6 +31,9 @@ buildCheck name cb = do
   cb' <- bindSemToIO cb
   let cb'' = fromMaybe (Just "failed internally") <.> cb'
   pure $ MkCheck name cb''
+
+buildCheckPure :: S.Text -> (Context -> Maybe L.Text) -> Check
+buildCheckPure name cb = MkCheck name (pure . cb)
 
 runCheck :: P.Member (P.Embed IO) r => Context -> Check -> P.Sem r (Either CommandError ())
 runCheck ctx chk = P.embed (callback chk ctx) <&> justToEither . (CheckError (chk ^. #name) <$>)

@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d17de417aefaf0bb32cdb3e47e20b9bb62816a788f61ee212a62c0855cb2bfab
+-- hash: d05a4db3a990d35a2b92f4ae37eba9fb9a74d4b41a4a556454b4c52f52ea94bf
 
 name:           calamity
 version:        0.1.8.1
@@ -43,6 +43,7 @@ library
       Calamity.Commands.Check
       Calamity.Commands.Command
       Calamity.Commands.Context
+      Calamity.Commands.Dsl
       Calamity.Commands.Error
       Calamity.Commands.Group
       Calamity.Gateway

@@ -4,15 +4,19 @@ module Calamity.Commands.Group
 
 import           Calamity.Commands.Check
 import {-# SOURCE #-} Calamity.Commands.Command
+import           Calamity.Commands.Context
 
-import           Data.Text                 ( Text )
+import qualified Data.Text                 as S
+import qualified Data.Text.Lazy            as L
 
 import           GHC.Generics
 
 data Group = Group
-  { name     :: Text
+  { name     :: S.Text
   , parent   :: Maybe Group
-  , children :: [Command]
+  , commands :: [Command]
+  , children :: [Group]
+  , help     :: Context -> L.Text
   , checks   :: [Check]
   }
   deriving ( Generic )
