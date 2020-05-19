@@ -7,6 +7,7 @@ module Calamity.Internal.Utils
     , unlessM
     , lastMaybe
     , leftToMaybe
+    , rightToMaybe
     , justToEither
     , (<<$>>)
     , (<<*>>)
@@ -52,6 +53,10 @@ lastMaybe l r = getLast <$> fmap Last l <> fmap Last r
 leftToMaybe :: Either e a -> Maybe e
 leftToMaybe (Left x) = Just x
 leftToMaybe _        = Nothing
+
+rightToMaybe :: Either e a -> Maybe a
+rightToMaybe (Right x) = Just x
+rightToMaybe _         = Nothing
 
 justToEither :: Maybe e -> Either e ()
 justToEither (Just x) = Left x

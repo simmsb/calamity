@@ -3,46 +3,64 @@
 -- | A DSL for generating commands and groups
 module Calamity.Commands.Dsl
     ( command'
+    , command
     , help
     , requires
     , requires'
     , requiresPure
-    , group
-    , buildCommands ) where
+    , group ) where
 
 import           Calamity.Commands.Check
-import           Calamity.Commands.Command hiding ( help )
-import           Calamity.Commands.Context
+import           Calamity.Commands.Command     hiding ( help )
+import           Calamity.Commands.Context     hiding ( command )
 import           Calamity.Commands.Error
-import           Calamity.Commands.Group   hiding ( help )
-import           Calamity.Commands.Handler
+import           Calamity.Commands.Group       hiding ( help )
 import           Calamity.Commands.LocalWriter
 
-import qualified Data.Text                 as S
-import qualified Data.Text.Lazy            as L
+import qualified Data.Text                     as S
+import qualified Data.Text.Lazy                as L
 
-import qualified Polysemy                  as P
-import qualified Polysemy.Fail             as P
-import qualified Polysemy.Fixpoint         as P
-import qualified Polysemy.Reader           as P
+import qualified Polysemy                      as P
+import qualified Polysemy.Fail                 as P
+import qualified Polysemy.Fixpoint             as P
+import qualified Polysemy.Reader               as P
 
 -- | Build a command with an already prepared invokation action
-command' :: P.Members '[LocalWriter [Command],
-                        P.Reader (Maybe Group),
-                        P.Reader (Context -> L.Text),
-                        P.Reader [Check],
-                        P.Final IO] r
-           => S.Text
-           -> (Context -> Either CommandError a)
-           -> ((Context, a) -> P.Sem (P.Fail ': r) ())
-           -> P.Sem r Command
+command'
+  :: P.Members '[LocalWriter [Command],
+                 P.Reader (Maybe Group),
+                 P.Reader (Context -> L.Text),
+                 P.Reader [Check],
+                 P.Final IO] r
+  => S.Text
+  -> (Context -> Either CommandError a)
+  -> ((Context, a) -> P.Sem (P.Fail ': r) ())
+  -> P.Sem r Command
 command' name parser cb = do
   parent <- P.ask @(Maybe Group)
   checks <- P.ask @[Check]
-  help'  <- P.ask @(Context -> L.Text)
-  cmd <- buildCommand name parent checks help' parser cb
+  help' <- P.ask @(Context -> L.Text)
+  cmd <- buildCommand' name parent checks help' parser cb
   ltell [cmd]
   pure cmd
+
+command :: forall ps a r.
+        ( P.Members '[LocalWriter [Command],
+                      P.Reader (Maybe Group),
+                      P.Reader (Context -> L.Text),
+                      P.Reader [Check],
+                      P.Final IO] r,
+          TypedCommandC ps a (P.Sem (P.Fail ': r) ()))
+        => S.Text
+        -> (Context -> CommandForParsers ps (P.Sem (P.Fail ': r) ()))
+        -> P.Sem r Command
+command name cmd = do
+  parent <- P.ask @(Maybe Group)
+  checks <- P.ask @[Check]
+  help' <- P.ask @(Context -> L.Text)
+  cmd' <- buildCommand @ps name parent checks help' cmd
+  ltell [cmd']
+  pure cmd'
 
 help :: P.Member (P.Reader (Context -> L.Text)) r
      => (Context -> L.Text)
@@ -90,20 +108,3 @@ group name m = mdo
   ltell [group']
   pure res
 
-buildCommands :: P.Member (P.Final IO) r
-                 => P.Sem (LocalWriter [Command] ':
-                             LocalWriter [Group] ':
-                             P.Reader (Maybe Group) ':
-                             P.Reader (Context -> L.Text) ':
-                             P.Reader [Check] ':
-                             P.Fixpoint ':
-                             r) a
-                 -> P.Sem r (CommandHandler, a)
-buildCommands =
-  ((\(groups, (cmds, a)) -> (CommandHandler groups cmds, a)) <$>) .
-  P.fixpointToFinal .
-  P.runReader [] .
-  P.runReader (const "This command or group has no help.") .
-  P.runReader Nothing .
-  runLocalWriter @[Group] .
-  runLocalWriter @[Command]
