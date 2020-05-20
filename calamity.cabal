@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: a01bf2ad8681a8c9c669cd89abe1b0242009b7b917e4a2775610e63922b81801
+-- hash: 6a9871dfd8a31ba807f4091d10b5747a2f60a7f545558afbf8d967ab3928456f
 
 name:           calamity
 version:        0.1.8.1
@@ -121,7 +121,7 @@ library
   hs-source-dirs:
       src
   default-extensions: CPP AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
-  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall
+  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       aeson >=1.4 && <2
     , async >=2.2 && <3
@@ -145,6 +145,7 @@ library
     , http-types >=0.12 && <0.13
     , lens >=4.18 && <5
     , lens-aeson >=1.1 && <2
+    , megaparsec >=8 && <9
     , mtl >=2.2 && <3
     , polysemy >=1.3 && <2
     , polysemy-plugin >=0.2 && <0.3

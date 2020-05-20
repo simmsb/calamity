@@ -67,6 +67,7 @@ dependencies:
 - mtl >= 2.2 && < 3
 - safe-exceptions >= 0.1 && < 2
 - unagi-chan >= 0.4 && < 0.5
+- megaparsec >= 8 && < 9
 
 # executables:
 #   test-calamity-exe:
@@ -88,6 +89,7 @@ library:
     - -fplugin=Polysemy.Plugin
     - -funbox-strict-fields
     - -Wall
+    - -fno-warn-name-shadowing
   source-dirs: src
 
 default-extensions:
