@@ -4,8 +4,9 @@ module Calamity.Commands.Group
 
 import           Calamity.Commands.Check
 import {-# SOURCE #-} Calamity.Commands.Command
-import           Calamity.Commands.Context
+import {-# SOURCE #-} Calamity.Commands.Context
 
+import qualified Data.HashMap.Lazy         as LH
 import qualified Data.Text                 as S
 import qualified Data.Text.Lazy            as L
 
@@ -14,8 +15,8 @@ import           GHC.Generics
 data Group = Group
   { name     :: S.Text
   , parent   :: Maybe Group
-  , commands :: [Command]
-  , children :: [Group]
+  , commands :: LH.HashMap S.Text Command
+  , children :: LH.HashMap S.Text Group
   , help     :: Context -> L.Text
   , checks   :: [Check]
   }

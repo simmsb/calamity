@@ -2,39 +2,50 @@
 module Calamity.Commands.Handler
     ( CommandHandler(..)
     , addCommands
-    , buildCommands ) where
+    , buildCommands
+    , buildContext ) where
 
+import           Calamity.Cache.Eff
 import           Calamity.Client.Client
 import           Calamity.Client.Types
 import           Calamity.Commands.Check
 import           Calamity.Commands.Command
+import           Calamity.Commands.CommandUtils
 import           Calamity.Commands.Context
 import           Calamity.Commands.Group
 import           Calamity.Commands.LocalWriter
 import           Calamity.Commands.ParsePrefix
+import           Calamity.Internal.Utils
+import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.User
+import           Calamity.Types.Snowflake
 
-import           Control.Lens                  hiding ( Context )
+import           Control.Applicative
+import           Control.Lens                   hiding ( Context )
 import           Control.Monad
 
-import qualified Data.Text.Lazy                as L
+import qualified Data.HashMap.Lazy              as LH
+import qualified Data.Text                      as S
+import qualified Data.Text.Lazy                 as L
 
 import           GHC.Generics
 
-import qualified Polysemy                      as P
-import qualified Polysemy.Fixpoint             as P
-import qualified Polysemy.Reader               as P
+import qualified Polysemy                       as P
+import qualified Polysemy.Fail                  as P
+import qualified Polysemy.Fixpoint              as P
+import qualified Polysemy.Reader                as P
 
 data CommandHandler = CommandHandler
-  { groups   :: [Group]
+  { groups   :: LH.HashMap S.Text Group
     -- ^ Top level groups
-  , commands :: [Command]
+  , commands :: LH.HashMap S.Text Command
     -- ^ Top level commands
   }
   deriving ( Generic )
 
 addCommands :: (BotC r, P.Member ParsePrefix r)
-            => P.Sem (LocalWriter [Command] ':
-                       LocalWriter [Group] ':
+            => P.Sem (LocalWriter (LH.HashMap S.Text Command) ':
+                       LocalWriter (LH.HashMap S.Text Group) ':
                        P.Reader (Maybe Group) ':
                        P.Reader (Context -> L.Text) ':
                        P.Reader [Check] ':
@@ -52,8 +63,8 @@ addCommands m = do
   pure (remove, res)
 
 buildCommands :: P.Member (P.Final IO) r
-              => P.Sem (LocalWriter [Command] ':
-                         LocalWriter [Group] ':
+              => P.Sem (LocalWriter (LH.HashMap S.Text Command) ':
+                         LocalWriter (LH.HashMap S.Text Group) ':
                          P.Reader (Maybe Group) ':
                          P.Reader (Context -> L.Text) ':
                          P.Reader [Check] ':
@@ -66,5 +77,31 @@ buildCommands =
   P.runReader [] .
   P.runReader (const "This command or group has no help.") .
   P.runReader Nothing .
-  runLocalWriter @[Group] .
-  runLocalWriter @[Command]
+  runLocalWriter @(LH.HashMap S.Text Group) .
+  runLocalWriter @(LH.HashMap S.Text Command)
+
+buildContext :: (BotC r, P.Member ParsePrefix r) => CommandHandler -> Message -> P.Sem r (Maybe Context)
+buildContext handler msg = (rightToMaybe <$>) . P.runFail $ do
+  Just (prefix, unparsedMessage) <- parsePrefix msg
+  Just command <- pure $ findCommand handler unparsedMessage
+  guild <- join <$> getGuild `traverse` (msg ^. #guildID)
+  let member = guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
+  let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
+  Just channel <- case gchan of
+    Just chan -> pure . pure $ GuildChannel' chan
+    _         -> DMChannel' <<$>> getDM (coerceSnowflake $ getID @Channel msg)
+  Just user <- getUser $ getID msg
+
+  pure $ Context msg guild member channel user command prefix unparsedMessage
+
+findCommand :: CommandHandler -> L.Text -> Maybe Command
+findCommand handler unparsedMessage = goH $ L.words unparsedMessage
+  where
+    goH :: [L.Text] -> Maybe Command
+    goH (x:xs) = LH.lookup (L.toStrict x) (handler ^. #commands)
+      <|> (LH.lookup (L.toStrict x) (handler ^. #groups) >>= goG xs)
+    goH [] = Nothing
+
+    goG :: [L.Text] -> Group -> Maybe Command
+    goG (x:xs) g = LH.lookup (L.toStrict x) (g ^. #commands) <|> (LH.lookup (L.toStrict x) (g ^. #children) >>= goG xs)
+    goG [] _ = Nothing

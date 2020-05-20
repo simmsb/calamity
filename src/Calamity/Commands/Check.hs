@@ -5,13 +5,14 @@ module Calamity.Commands.Check
     , buildCheckPure
     , runCheck ) where
 
-import           Calamity.Commands.Context
+import {-# SOURCE #-} Calamity.Commands.Context
 import           Calamity.Commands.Error
 import           Calamity.Internal.RunIntoIO
 import           Calamity.Internal.Utils
 
 import           Control.Lens                hiding ( (<.>), Context )
 
+import           Data.Generics.Labels        ()
 import           Data.Maybe
 import qualified Data.Text                   as S
 import qualified Data.Text.Lazy              as L
