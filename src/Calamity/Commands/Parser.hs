@@ -5,14 +5,16 @@ module Calamity.Commands.Parser
 
 import           Calamity.Cache.Eff
 import           Calamity.Commands.Context
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild
-import           Calamity.Types.Model.User
+import           Calamity.Internal.Utils
+import           Calamity.Types.Model.Channel ( Channel )
+import           Calamity.Types.Model.Guild   ( Emoji, Member, Role )
+import           Calamity.Types.Model.User    ( User )
 import           Calamity.Types.Snowflake
 
 import           Control.Lens                 hiding ( Context )
 import           Control.Monad
 
+import           Data.Bifunctor
 import           Data.Char                    ( isSpace )
 import           Data.Kind
 import           Data.List.NonEmpty           ( NonEmpty, nonEmpty )
@@ -37,24 +39,6 @@ class Parser (a :: Type) r where
 instance Parser Text r where
   parse (_ctx, msg) = pure $ runParserToCommandError item msg
 
-data KleeneConcat a
-
-instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneConcat a) r where
-  type ParserResult (KleeneConcat a) = ParserResult a
-
-  parse (ctx, msg) = Right <$> go msg mempty
-    where
-      go :: Text -> (ParserResult a) -> P.Sem r (ParserResult a, Text)
-      go t v = parse @a (ctx, t) >>= \case
-        Left _         -> pure (v, t)
-        Right (v', t') -> go t' (v <> v')
-
-instance {-# OVERLAPS #-}Parser (KleeneConcat Text) r where
-  type ParserResult (KleeneConcat Text) = ParserResult Text
-
-  -- consume rest on text just takes everything remaining
-  parse (_ctx, msg) = pure $ runParserToCommandError (someSingle) msg
-
 instance Parser a r => Parser [a] r where
   type ParserResult [a] = [ParserResult a]
 
@@ -75,24 +59,38 @@ instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
              Nothing   -> Left ("Couldn't parse at least one of " <> (L.pack . show . typeRep $ Proxy @a))
            Left e            -> Left e)
 
+data KleeneConcat a
+
+instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneConcat a) r where
+  type ParserResult (KleeneConcat a) = ParserResult a
+
+  parse (ctx, msg) = (first mconcat) <<$>> parse @[a] (ctx, msg)
+
+instance {-# OVERLAPS #-}Parser (KleeneConcat Text) r where
+  type ParserResult (KleeneConcat Text) = ParserResult Text
+
+  -- consume rest on text just takes everything remaining
+  parse (_ctx, msg) = pure $ runParserToCommandError (someSingle) msg
+
 instance Parser (Snowflake a) r where
   parse (_ctx, msg) = pure $ runParserToCommandError snowflake msg
 
 instance {-# OVERLAPS #-}Parser (Snowflake User) r where
-  parse (_ctx, msg) = pure $ runParserToCommandError (ping "@" <|> snowflake) msg
+  parse (_ctx, msg) = pure $ runParserToCommandError (try (ping "@") <|> snowflake) msg
 
 instance {-# OVERLAPS #-}Parser (Snowflake Member) r where
-  parse (_ctx, msg) = pure $ runParserToCommandError (ping "@" <|> snowflake) msg
+  parse (_ctx, msg) = pure $ runParserToCommandError (try (ping "@") <|> snowflake) msg
 
 instance {-# OVERLAPS #-}Parser (Snowflake Channel) r where
-  parse (_ctx, msg) = pure $ runParserToCommandError (ping "#" <|> snowflake) msg
+  parse (_ctx, msg) = pure $ runParserToCommandError (try (ping "#") <|> snowflake) msg
 
 instance {-# OVERLAPS #-}Parser (Snowflake Role) r where
-  parse (_ctx, msg) = pure $ runParserToCommandError (ping "@&" <|> snowflake) msg
+  parse (_ctx, msg) = pure $ runParserToCommandError (try (ping "@&") <|> snowflake) msg
 
 instance {-# OVERLAPS #-}Parser (Snowflake Emoji) r where
   parse (_ctx, msg) = pure $runParserToCommandError
-    (ping' (optional (chunk "a") *> between (chunk ":") (chunk ":") (void manyNonWS)) <|> snowflake) msg
+    (try emoji <|> snowflake) msg
+
 
 instance Parser Member r where
   parse (ctx, msg) = parse @(Snowflake Member) (ctx, msg)
@@ -127,6 +125,9 @@ ping' m = chunk "<" *> m *> snowflake <* chunk ">"
 snowflake :: MonadParsec e Text m => m (Snowflake a)
 snowflake = (Snowflake . read) <$> some digitChar
 
+emoji :: MonadParsec e Text m => m (Snowflake a)
+emoji = ping' (optional (chunk "a") *> between (chunk ":") (chunk ":") (void $ takeWhileP Nothing $ not . (== ':')))
+
 andRemaining :: MonadParsec e s m => m a -> m (a, Tokens s)
 andRemaining m = do
   a <- m
@@ -134,7 +135,7 @@ andRemaining m = do
   pure (a, rest)
 
 item :: MonadParsec e Text m => m Text
-item = betweenQuotes manySingle <|> someNonWS
+item = try quotedString <|> someNonWS
 
 manySingle :: MonadParsec e s m => m (Tokens s)
 manySingle = takeWhileP (Just "Any character") (const True)
@@ -142,11 +143,12 @@ manySingle = takeWhileP (Just "Any character") (const True)
 someSingle :: MonadParsec e s m => m (Tokens s)
 someSingle = takeWhile1P (Just "Any character") (const True)
 
-betweenQuotes :: MonadParsec e Text m => m a -> m a
-betweenQuotes m = between (chunk "'") (chunk "'") m <|> between (chunk "\"") (chunk "\"") m
+quotedString :: MonadParsec e Text m => m Text
+quotedString = try (between (chunk "'") (chunk "'") (takeWhileP Nothing $ not . (== '\''))) <|>
+               between (chunk "\"") (chunk "\"") (takeWhileP Nothing $ not . (== '"'))
 
-manyNonWS :: (Token s ~ Char, MonadParsec e s m) => m (Tokens s)
-manyNonWS = takeWhileP (Just "Any Non-Whitespace") (not . isSpace)
+-- manyNonWS :: (Token s ~ Char, MonadParsec e s m) => m (Tokens s)
+-- manyNonWS = takeWhileP (Just "Any Non-Whitespace") (not . isSpace)
 
 someNonWS :: (Token s ~ Char, MonadParsec e s m) => m (Tokens s)
 someNonWS = takeWhile1P (Just "Any Non-Whitespace") (not . isSpace)
