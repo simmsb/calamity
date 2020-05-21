@@ -1,5 +1,15 @@
 # Changelog for Calamity
 
+## 0.1.9.0
+
+*2020-05-22*
+
+* Added commands, located in `Calamity.Commands`, along with a DSL for declaring
+  commands nicely.
+  
+* Renamed `waitUntil` to `waitUntilM`, and introduced a variant with a pure
+  check function that takes the original name of `waitUntil`.
+
 ## 0.1.8.0
 
 *2020-05-15*
