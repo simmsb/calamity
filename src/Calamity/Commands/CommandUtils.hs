@@ -135,5 +135,5 @@ type family ParamsFromParsers (ps :: [Type]) where
   ParamsFromParsers (x ': xs) = (ParserResult x, ParamsFromParsers xs)
 
 type family CommandForParsers (ps :: [Type]) r where
-  CommandForParsers '[] r = P.Sem r ()
+  CommandForParsers '[] r = P.Sem (P.Fail ': r) ()
   CommandForParsers (x ': xs) r = ParserResult x -> CommandForParsers xs r
