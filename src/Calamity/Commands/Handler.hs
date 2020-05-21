@@ -8,10 +8,10 @@ module Calamity.Commands.Handler
 import           Calamity.Cache.Eff
 import           Calamity.Client.Client
 import           Calamity.Client.Types
-import           Calamity.Commands.Check
 import           Calamity.Commands.Command
 import           Calamity.Commands.CommandUtils
 import           Calamity.Commands.Context
+import           Calamity.Commands.Dsl
 import           Calamity.Commands.Error
 import           Calamity.Commands.Group
 import           Calamity.Commands.LocalWriter
@@ -46,13 +46,7 @@ data CommandHandler = CommandHandler
   deriving ( Generic )
 
 addCommands :: (BotC r, P.Member ParsePrefix r)
-            => P.Sem (LocalWriter (LH.HashMap S.Text Command) ':
-                       LocalWriter (LH.HashMap S.Text Group) ':
-                       P.Reader (Maybe Group) ':
-                       P.Reader (Context -> L.Text) ':
-                       P.Reader [Check] ':
-                       P.Fixpoint ':
-                       r) a
+            => P.Sem (DSLState r) a
             -> P.Sem r (P.Sem r (), CommandHandler, a)
 addCommands m = do
   (handler, res) <- buildCommands m
@@ -68,13 +62,7 @@ addCommands m = do
   pure (remove, handler, res)
 
 buildCommands :: P.Member (P.Final IO) r
-              => P.Sem (LocalWriter (LH.HashMap S.Text Command) ':
-                         LocalWriter (LH.HashMap S.Text Group) ':
-                         P.Reader (Maybe Group) ':
-                         P.Reader (Context -> L.Text) ':
-                         P.Reader [Check] ':
-                         P.Fixpoint ':
-                         r) a
+              => P.Sem (DSLState r) a
               -> P.Sem r (CommandHandler, a)
 buildCommands =
   ((\(groups, (cmds, a)) -> (CommandHandler groups cmds, a)) <$>) .

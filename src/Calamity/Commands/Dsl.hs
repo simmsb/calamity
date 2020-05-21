@@ -8,7 +8,9 @@ module Calamity.Commands.Dsl
     , requires
     , requires'
     , requiresPure
-    , group ) where
+    , group
+    , DSLState
+    , raiseDSL ) where
 
 import           Calamity.Commands.Check
 import           Calamity.Commands.Command     hiding ( help )
@@ -27,40 +29,42 @@ import qualified Polysemy.Fail                 as P
 import qualified Polysemy.Fixpoint             as P
 import qualified Polysemy.Reader               as P
 
+type DSLState r = (LocalWriter (LH.HashMap S.Text Command) ':
+                       LocalWriter (LH.HashMap S.Text Group) ':
+                       P.Reader (Maybe Group) ':
+                       P.Reader (Context -> L.Text) ':
+                       P.Reader [Check] ':
+                       P.Fixpoint ': r)
+
+raiseDSL :: P.Sem r a -> P.Sem (DSLState r) a
+raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise
+
 -- | Build a command with an already prepared invokation action
 command'
-  :: P.Members '[LocalWriter (LH.HashMap S.Text Command),
-                 P.Reader (Maybe Group),
-                 P.Reader (Context -> L.Text),
-                 P.Reader [Check],
-                 P.Final IO] r
+  :: P.Member (P.Final IO) r
   => S.Text
   -> (Context -> P.Sem r (Either CommandError a))
   -> ((Context, a) -> P.Sem (P.Fail ': r) ())
-  -> P.Sem r Command
+  -> P.Sem (DSLState r) Command
 command' name parser cb = do
   parent <- P.ask @(Maybe Group)
   checks <- P.ask @[Check]
   help' <- P.ask @(Context -> L.Text)
-  cmd <- buildCommand' name parent checks help' parser cb
+  cmd <- raiseDSL $ buildCommand' name parent checks help' parser cb
   ltell $ LH.singleton name cmd
   pure cmd
 
 command :: forall ps a r.
-        ( P.Members '[LocalWriter (LH.HashMap S.Text Command),
-                      P.Reader (Maybe Group),
-                      P.Reader (Context -> L.Text),
-                      P.Reader [Check],
-                      P.Final IO] r,
+        ( P.Member (P.Final IO) r,
           TypedCommandC ps a r)
         => S.Text
         -> (Context -> CommandForParsers ps r)
-        -> P.Sem r Command
+        -> P.Sem (DSLState r) Command
 command name cmd = do
   parent <- P.ask @(Maybe Group)
   checks <- P.ask @[Check]
   help' <- P.ask @(Context -> L.Text)
-  cmd' <- buildCommand @ps name parent checks help' cmd
+  cmd' <- raiseDSL $ buildCommand @ps name parent checks help' cmd
   ltell $ LH.singleton name cmd'
   pure cmd'
 
@@ -70,37 +74,29 @@ help :: P.Member (P.Reader (Context -> L.Text)) r
      -> P.Sem r a
 help = P.local . const
 
-requires :: P.Member (P.Reader [Check]) r
-         => [Check]
-         -> P.Sem r a
-         -> P.Sem r a
+requires :: [Check]
+         -> P.Sem (DSLState r) a
+         -> P.Sem (DSLState r) a
 requires = P.local . (<>)
 
-requires' :: P.Members '[P.Reader [Check], P.Final IO] r
+requires' :: P.Member (P.Final IO) r
           => S.Text
           -> (Context -> P.Sem r (Maybe L.Text))
-          -> P.Sem r a
-          -> P.Sem r a
+          -> P.Sem (DSLState r) a
+          -> P.Sem (DSLState r) a
 requires' name cb m = do
-  check <- buildCheck name cb
+  check <- raiseDSL $ buildCheck name cb
   requires [check] m
 
-requiresPure :: P.Member (P.Reader [Check]) r
-             => [(S.Text, Context -> Maybe L.Text)]
-             -> P.Sem r a
-             -> P.Sem r a
+requiresPure :: [(S.Text, Context -> Maybe L.Text)]
+             -> P.Sem (DSLState r) a
+             -> P.Sem (DSLState r) a
 requiresPure checks = requires $ map (uncurry buildCheckPure) checks
 
-group :: P.Members '[LocalWriter (LH.HashMap S.Text Command),
-                     LocalWriter (LH.HashMap S.Text Group),
-                     P.Reader (Maybe Group),
-                     P.Reader (Context -> L.Text),
-                     P.Reader [Check],
-                     P.Fixpoint,
-                     P.Final IO] r
+group :: P.Member (P.Final IO) r
          => S.Text
-         -> P.Sem r a
-         -> P.Sem r a
+         -> P.Sem (DSLState r) a
+         -> P.Sem (DSLState r) a
 group name m = mdo
   parent <- P.ask @(Maybe Group)
   checks <- P.ask @[Check]
