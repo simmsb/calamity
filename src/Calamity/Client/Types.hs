@@ -8,6 +8,7 @@ module Calamity.Client.Types
     , SetupEff
     , ReactConstraints
     , WaitUntilConstraints
+    , WaitUntilMConstraints
     , EventHandlers(..)
     , InsertEventHandler(..)
     , RemoveEventHandler(..)
@@ -84,7 +85,21 @@ type ReactConstraints r s eh ehIO t =
 
 -- | Some constraints that 'Calamity.Client.Client.waitUntil' needs to work. Don't
 -- worry about these since they are satisfied for any type @s@ can be
-type WaitUntilConstraints r s eh ehB t =
+type WaitUntilConstraints r s eh check t =
+  ( InsertEventHandler s
+  , RemoveEventHandler s
+  , Uncurry eh
+  , eh ~ EHType s (P.Sem r) ()
+  , eh ~ Curried (t -> P.Sem r ())
+  , Uncurry check
+  , Uncurried check ~ (t -> Bool)
+  , Curry (t -> IO ())
+  , Curried (t -> IO ()) ~ EHType s IO ()
+  )
+
+-- | Some constraints that 'Calamity.Client.Client.waitUntilM' needs to work. Don't
+-- worry about these since they are satisfied for any type @s@ can be
+type WaitUntilMConstraints r s eh ehB t =
   ( InsertEventHandler s
   , RemoveEventHandler s
   , Uncurry eh

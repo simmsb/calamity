@@ -9,6 +9,7 @@ module Calamity.Client.Client
     , events
     , fire
     , waitUntil
+    , waitUntilM
     , CalamityEvent(Dispatch, ShutDown)
     , customEvt ) where
 
@@ -179,18 +180,20 @@ events = do
   P.embed $ dupChan inc
 
 -- | Wait until an event satisfying a condition happens, then returns it's
--- parameters
+-- parameters.
+--
+-- The check function for this command is pure unlike 'waitUntilM'
 --
 -- This is what it would look like with @s ~ \''MessageCreateEvt'@:
 --
 -- @
--- 'waitUntil' :: ('Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r 'Message'
+-- 'waitUntil' :: ('Message' -> 'Bool') -> 'P.Sem' r 'Message'
 -- @
 --
 -- And for @s ~ \''MessageUpdateEvt'@:
 --
 -- @
--- 'waitUntil' :: ('Message' -> 'Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r ('Message', 'Message')
+-- 'waitUntil' :: ('Message' -> 'Message' -> 'Bool') -> 'P.Sem' r ('Message', 'Message')
 -- @
 --
 -- ==== Examples
@@ -198,15 +201,55 @@ events = do
 -- Waiting for a message containing the text \"hi\":
 --
 -- @
--- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\m -> 'pure' $ 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
+-- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\m -> 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
 --        print $ msg ^. #content
 -- @
 waitUntil
-  :: forall (s :: EventType) r t eh ehB.
-  ( BotC r, WaitUntilConstraints r s eh ehB t)
-  => ehB
+  :: forall (s :: EventType) r t eh check.
+  ( BotC r, WaitUntilConstraints r s eh check t)
+  => check
   -> P.Sem r t
 waitUntil f = do
+  result <- P.embed newEmptyMVar
+  remove <- react @s (curryG $ checker result)
+  res <- P.embed $ takeMVar result
+  remove
+  pure res
+  where
+    checker :: MVar t -> t -> P.Sem r ()
+    checker result args = do
+      when (uncurryG f args) $ do
+        P.embed $ putMVar result args
+
+-- | Wait until an event satisfying a condition happens, then returns it's
+-- parameters
+--
+-- This is what it would look like with @s ~ \''MessageCreateEvt'@:
+--
+-- @
+-- 'waitUntilM' :: ('Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r 'Message'
+-- @
+--
+-- And for @s ~ \''MessageUpdateEvt'@:
+--
+-- @
+-- 'waitUntilM' :: ('Message' -> 'Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r ('Message', 'Message')
+-- @
+--
+-- ==== Examples
+--
+-- Waiting for a message containing the text \"hi\":
+--
+-- @
+-- f = do msg \<\- 'waitUntilM' @\''MessageCreateEvt' (\m -> ('debug' $ "got message: " <> 'showt' msg) >> ('pure' $ 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content))
+--        print $ msg ^. #content
+-- @
+waitUntilM
+  :: forall (s :: EventType) r t eh ehB.
+  ( BotC r, WaitUntilMConstraints r s eh ehB t)
+  => ehB
+  -> P.Sem r t
+waitUntilM f = do
   result <- P.embed newEmptyMVar
   remove <- react @s (curryG $ checker result)
   res <- P.embed $ takeMVar result
