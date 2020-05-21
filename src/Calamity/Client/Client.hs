@@ -278,7 +278,7 @@ handleEvent data' = do
   eventHandlers <- P.atomicGet
   actions <- P.runFail $ do
     cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20..100]
-    (time, res) <- timeA $ handleEvent' eventHandlers data'
+    (time, res) <- timeA $ Di.reset $ handleEvent' eventHandlers data'
     void $ observeHistogram time cacheUpdateHisto
     pure res
 

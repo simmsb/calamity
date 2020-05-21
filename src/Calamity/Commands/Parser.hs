@@ -53,7 +53,7 @@ instance {-# OVERLAPS #-}Parser (KleeneConcat Text) r where
   type ParserResult (KleeneConcat Text) = ParserResult Text
 
   -- consume rest on text just takes everything remaining
-  parse (_ctx, msg) = pure $ runParserToCommandError (space *> manySingle) msg
+  parse (_ctx, msg) = pure $ runParserToCommandError (someSingle) msg
 
 instance Parser a r => Parser [a] r where
   type ParserResult [a] = [ParserResult a]
@@ -114,7 +114,7 @@ instance ShowErrorComponent Text where
   errorComponentLen = fromIntegral . L.length
 
 runParserToCommandError :: Parsec Text Text a -> Text -> Either Text (a, Text)
-runParserToCommandError m t = case runParser (andRemaining m) "" t of
+runParserToCommandError m t = case runParser (space *> andRemaining m) "" t of
   Right a -> Right a
   Left s  -> Left . L.pack . errorBundlePretty $ s
 
@@ -134,13 +134,19 @@ andRemaining m = do
   pure (a, rest)
 
 item :: MonadParsec e Text m => m Text
-item = space *> (betweenQuotes manySingle <|> manyNonWS)
+item = betweenQuotes manySingle <|> someNonWS
 
 manySingle :: MonadParsec e s m => m (Tokens s)
-manySingle = takeWhileP Nothing (const True)
+manySingle = takeWhileP (Just "Any character") (const True)
+
+someSingle :: MonadParsec e s m => m (Tokens s)
+someSingle = takeWhile1P (Just "Any character") (const True)
 
 betweenQuotes :: MonadParsec e Text m => m a -> m a
 betweenQuotes m = between (chunk "'") (chunk "'") m <|> between (chunk "\"") (chunk "\"") m
 
 manyNonWS :: (Token s ~ Char, MonadParsec e s m) => m (Tokens s)
-manyNonWS = takeWhileP Nothing (not . isSpace)
+manyNonWS = takeWhileP (Just "Any Non-Whitespace") (not . isSpace)
+
+someNonWS :: (Token s ~ Char, MonadParsec e s m) => m (Tokens s)
+someNonWS = takeWhile1P (Just "Any Non-Whitespace") (not . isSpace)
