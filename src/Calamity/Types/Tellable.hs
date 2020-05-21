@@ -17,7 +17,8 @@ import           Control.Lens
 import           Data.ByteString.Lazy         ( ByteString )
 import           Data.Default.Class
 import           Data.Monoid
-import           Data.Text                    ( Text )
+import qualified Data.Text                    as S
+import qualified Data.Text.Lazy               as L
 
 import           GHC.Generics
 
@@ -33,15 +34,23 @@ newtype TFile = TFile ByteString
 -- Can be used to compose text, embeds, and files. /e.g./
 --
 -- @
--- 'intoMsg' @'Text' "A message" '<>' 'intoMsg' @'Embed' ('def' '&' #description '?~' "Embed description")
+-- 'intoMsg' @'L.Text' "A message" '<>' 'intoMsg' @'Embed' ('def' '&' #description '?~' "Embed description")
 -- @
 class ToMessage a where
   -- | Turn @a@ into a 'CreateMessageOptions' builder
   intoMsg :: a -> Endo CreateMessageOptions
 
 -- | Message content, '(<>)' concatenates the content
-instance ToMessage Text where
+instance ToMessage L.Text where
+  intoMsg t = Endo (#content %~ (<> Just (L.toStrict t)))
+
+-- | Message content, '(<>)' concatenates the content
+instance ToMessage S.Text where
   intoMsg t = Endo (#content %~ (<> Just t))
+
+-- | Message content, '(<>)' concatenates the content
+instance ToMessage String where
+  intoMsg t = Endo (#content %~ (<> Just (S.pack t)))
 
 -- | Message embed, '(<>)' merges embeds using '(<>)'
 instance ToMessage Embed where
