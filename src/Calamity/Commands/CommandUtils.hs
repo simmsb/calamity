@@ -79,12 +79,10 @@ runCommand ctx Command { name, parser, callback } = P.embed (parser ctx) >>= \ca
   Left e   -> pure $ Left e
   Right p' -> P.embed (callback (ctx, p')) <&> justToEither . (InvokeError name <$>)
 
-invokeCommand :: P.Member (P.Embed IO) r => Context -> Command -> P.Sem r (Maybe CommandError)
-invokeCommand ctx cmd@Command { checks } =
-  let r = P.runError $ do
-        for_ checks (P.fromEither <=< runCheck ctx)
-        P.fromEither =<< runCommand ctx cmd
-  in leftToMaybe <$> r
+invokeCommand :: P.Member (P.Embed IO) r => Context -> Command -> P.Sem r (Either CommandError ())
+invokeCommand ctx cmd@Command { checks } = P.runError $ do
+  for_ checks (P.fromEither <=< runCheck ctx)
+  P.fromEither =<< runCommand ctx cmd
 
 type CommandSemType r = P.Sem (P.Fail ': r) ()
 

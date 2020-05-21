@@ -12,6 +12,7 @@ import           Calamity.Commands.Check
 import           Calamity.Commands.Command
 import           Calamity.Commands.CommandUtils
 import           Calamity.Commands.Context
+import           Calamity.Commands.Error
 import           Calamity.Commands.Group
 import           Calamity.Commands.LocalWriter
 import           Calamity.Commands.ParsePrefix
@@ -31,6 +32,7 @@ import qualified Data.Text.Lazy                 as L
 import           GHC.Generics
 
 import qualified Polysemy                       as P
+import qualified Polysemy.Error                 as P
 import qualified Polysemy.Fail                  as P
 import qualified Polysemy.Fixpoint              as P
 import qualified Polysemy.Reader                as P
@@ -55,11 +57,14 @@ addCommands :: (BotC r, P.Member ParsePrefix r)
 addCommands m = do
   (handler, res) <- buildCommands m
   remove <- react @'MessageCreateEvt $ \msg -> do
-    ctx' <- buildContext handler msg
-    case ctx' of
-      Just ctx -> void $ invokeCommand ctx (ctx ^. #command)
-      -- TODO fire error event on command failure
-      Nothing  -> pure ()
+    err <- P.runError . P.runFail $ do
+        Just (prefix, unparsedMessage) <- parsePrefix msg
+        ctx <- P.note (NotFound . head . L.words $ unparsedMessage) =<< buildContext handler msg prefix unparsedMessage
+        P.fromEither =<< invokeCommand ctx (ctx ^. #command)
+        pure ctx
+    case err of
+      Left e -> fire $ customEvt @"command-error" e
+      Right ctx -> fire $ customEvt @"command-run" ctx
   pure (remove, res)
 
 buildCommands :: P.Member (P.Final IO) r
@@ -80,10 +85,9 @@ buildCommands =
   runLocalWriter @(LH.HashMap S.Text Group) .
   runLocalWriter @(LH.HashMap S.Text Command)
 
-buildContext :: (BotC r, P.Member ParsePrefix r) => CommandHandler -> Message -> P.Sem r (Maybe Context)
-buildContext handler msg = (rightToMaybe <$>) . P.runFail $ do
-  Just (prefix, unparsedMessage) <- parsePrefix msg
-  Just command <- pure $ findCommand handler unparsedMessage
+buildContext :: BotC r => CommandHandler -> Message -> L.Text -> L.Text -> P.Sem r (Maybe Context)
+buildContext handler msg prefix unparsed = (rightToMaybe <$>) . P.runFail $ do
+  Just command <- pure $ findCommand handler unparsed
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)
   let member = guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
   let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
@@ -92,7 +96,7 @@ buildContext handler msg = (rightToMaybe <$>) . P.runFail $ do
     _         -> DMChannel' <<$>> getDM (coerceSnowflake $ getID @Channel msg)
   Just user <- getUser $ getID msg
 
-  pure $ Context msg guild member channel user command prefix unparsedMessage
+  pure $ Context msg guild member channel user command prefix unparsed
 
 findCommand :: CommandHandler -> L.Text -> Maybe Command
 findCommand handler unparsedMessage = goH $ L.words unparsedMessage

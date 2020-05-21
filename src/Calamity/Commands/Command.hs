@@ -1,22 +1,21 @@
 -- | Commands and stuff
 module Calamity.Commands.Command
-    ( Command(..)
-    ) where
+    ( Command(..) ) where
 
 import           Calamity.Commands.Check
 import           Calamity.Commands.Context
 import           Calamity.Commands.Error
 import           Calamity.Commands.Group
 
-import           Control.Lens                hiding ( (<.>), Context )
+import           Control.Lens              hiding ( (<.>), Context )
 
-import           Data.Text                   as S
-import           Data.Text.Lazy              as L
+import           Data.Text                 as S
+import           Data.Text.Lazy            as L
 
 import           GHC.Generics
 
 import           TextShow
-import qualified TextShow.Generic            as TSG
+import qualified TextShow.Generic          as TSG
 
 data Command = forall a. Command
   { name     :: S.Text
@@ -28,7 +27,7 @@ data Command = forall a. Command
   }
 
 data CommandS = CommandS
-  { name :: S.Text
+  { name   :: S.Text
   , parent :: Maybe S.Text
   , checks :: [S.Text]
   }
@@ -36,8 +35,9 @@ data CommandS = CommandS
   deriving ( TextShow ) via TSG.FromGeneric CommandS
 
 instance Show Command where
-  showsPrec d Command { name, parent, checks } = showsPrec d $ CommandS name (parent ^? _Just . #name) (checks ^.. traverse . #name)
+  showsPrec d Command { name, parent, checks } = showsPrec d $ CommandS name (parent ^? _Just . #name)
+    (checks ^.. traverse . #name)
 
 instance TextShow Command where
-  showbPrec d Command { name, parent, checks } = showbPrec d $ CommandS name (parent ^? _Just . #name) (checks ^.. traverse . #name)
-
+  showbPrec d Command { name, parent, checks } = showbPrec d $ CommandS name (parent ^? _Just . #name)
+    (checks ^.. traverse . #name)
