@@ -21,10 +21,10 @@ import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
-import           Control.Applicative
 import           Control.Lens                   hiding ( Context )
 import           Control.Monad
 
+import           Data.Char                      ( isSpace )
 import qualified Data.HashMap.Lazy              as LH
 import qualified Data.Text                      as S
 import qualified Data.Text.Lazy                 as L
@@ -45,6 +45,10 @@ data CommandHandler = CommandHandler
   }
   deriving ( Generic )
 
+mapLeft :: (e -> e') -> Either e a -> Either e' a
+mapLeft f (Left x)  = Left $ f x
+mapLeft _ (Right x) = Right x
+
 addCommands :: (BotC r, P.Member ParsePrefix r)
             => P.Sem (DSLState r) a
             -> P.Sem r (P.Sem r (), CommandHandler, a)
@@ -52,13 +56,15 @@ addCommands m = do
   (handler, res) <- buildCommands m
   remove <- react @'MessageCreateEvt $ \msg -> do
     err <- P.runError . P.runFail $ do
-        Just (prefix, unparsedMessage) <- parsePrefix msg
-        ctx <- P.note (NotFound . head . L.words $ unparsedMessage) =<< buildContext handler msg prefix unparsedMessage
+        Just (prefix, rest) <- parsePrefix msg
+        (command, unparsedParams) <- P.fromEither $ mapLeft NotFound $ findCommand handler rest
+        Just ctx <- buildContext msg prefix command unparsedParams
         P.fromEither =<< invokeCommand ctx (ctx ^. #command)
         pure ctx
     case err of
       Left e -> fire $ customEvt @"command-error" e
-      Right ctx -> fire $ customEvt @"command-run" ctx
+      Right (Right ctx) -> fire $ customEvt @"command-run" ctx
+      Right _ -> pure () -- command wasn't parsed
   pure (remove, handler, res)
 
 buildCommands :: P.Member (P.Final IO) r
@@ -73,9 +79,8 @@ buildCommands =
   runLocalWriter @(LH.HashMap S.Text Group) .
   runLocalWriter @(LH.HashMap S.Text Command)
 
-buildContext :: BotC r => CommandHandler -> Message -> L.Text -> L.Text -> P.Sem r (Maybe Context)
-buildContext handler msg prefix unparsed = (rightToMaybe <$>) . P.runFail $ do
-  Just command <- pure $ findCommand handler unparsed
+buildContext :: BotC r => Message -> L.Text -> Command -> L.Text -> P.Sem r (Maybe Context)
+buildContext msg prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)
   let member = guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
   let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
@@ -86,14 +91,33 @@ buildContext handler msg prefix unparsed = (rightToMaybe <$>) . P.runFail $ do
 
   pure $ Context msg guild member channel user command prefix unparsed
 
-findCommand :: CommandHandler -> L.Text -> Maybe Command
-findCommand handler unparsedMessage = goH $ L.words unparsedMessage
-  where
-    goH :: [L.Text] -> Maybe Command
-    goH (x:xs) = LH.lookup (L.toStrict x) (handler ^. #commands)
-      <|> (LH.lookup (L.toStrict x) (handler ^. #groups) >>= goG xs)
-    goH [] = Nothing
+nextWord :: L.Text -> (L.Text, L.Text)
+nextWord = L.break isSpace . L.stripStart
 
-    goG :: [L.Text] -> Group -> Maybe Command
-    goG (x:xs) g = LH.lookup (L.toStrict x) (g ^. #commands) <|> (LH.lookup (L.toStrict x) (g ^. #children) >>= goG xs)
-    goG [] _ = Nothing
+firstEither :: Either e a -> Either e a -> Either e a
+firstEither (Right l) _ = Right l
+firstEither l (Left _)  = l
+firstEither _ r         = r
+
+findCommand :: CommandHandler -> L.Text -> Either [L.Text] (Command, L.Text)
+findCommand handler msg = goH $ nextWord msg
+  where
+    goH :: (L.Text, L.Text) -> Either [L.Text] (Command, L.Text)
+    goH ("", _) = Left []
+    goH (x, xs) = attachSoFar x
+      (((, xs) <$> attachInitial (LH.lookup (L.toStrict x) (handler ^. #commands)))
+       `firstEither` (attachInitial (LH.lookup (L.toStrict x) (handler ^. #groups)) >>= goG (nextWord xs)))
+
+    goG :: (L.Text, L.Text) -> Group -> Either [L.Text] (Command, L.Text)
+    goG ("", _) _ = Left []
+    goG (x, xs) g = attachSoFar x
+      (((, xs) <$> attachInitial (LH.lookup (L.toStrict x) (g ^. #commands)))
+       `firstEither` (attachInitial (LH.lookup (L.toStrict x) (g ^. #children)) >>= goG (nextWord xs)))
+
+    attachInitial :: Maybe a -> Either [L.Text] a
+    attachInitial (Just a) = Right a
+    attachInitial Nothing = Left []
+
+    attachSoFar :: L.Text -> Either [L.Text] a -> Either [L.Text] a
+    attachSoFar cmd (Left xs) = Left (cmd:xs)
+    attachSoFar _ r = r

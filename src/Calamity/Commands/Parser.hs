@@ -109,10 +109,14 @@ instance P.Member CacheEff r => Parser User r where
         _           -> Left ("Couldn't find user with id: " <> showtl uid)
       Left e            -> pure $ Left e
 
+instance ShowErrorComponent Text where
+  showErrorComponent = L.unpack
+  errorComponentLen = fromIntegral . L.length
+
 runParserToCommandError :: Parsec Text Text a -> Text -> Either Text (a, Text)
 runParserToCommandError m t = case runParser (andRemaining m) "" t of
   Right a -> Right a
-  Left s  -> Left . L.pack . show $ s
+  Left s  -> Left . L.pack . errorBundlePretty $ s
 
 ping :: MonadParsec e Text m => Text -> m (Snowflake a)
 ping c = chunk ("<" <> c) *> optional (chunk "!") *> snowflake <* chunk ">"

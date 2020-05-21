@@ -100,7 +100,7 @@ buildTypedCommand
          -> P.Sem r (Either CommandError a)
      , (Context, a)
          -> P.Sem (P.Fail ': r) ())
-buildTypedCommand cmd = let parser ctx = buildTypedCommandParser @ps (ctx, ctx ^. #unparsedMessage)
+buildTypedCommand cmd = let parser ctx = buildTypedCommandParser @ps (ctx, ctx ^. #unparsedParams)
                             consumer (ctx, r) = applyTup (cmd ctx) r
                         in (parser, consumer)
 

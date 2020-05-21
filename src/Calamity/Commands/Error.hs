@@ -11,7 +11,7 @@ import           TextShow
 import qualified TextShow.Generic as TSG
 
 data CommandError
-  = NotFound L.Text
+  = NotFound [L.Text]
   | ParseError S.Text -- ^ The type of the parser
                L.Text -- ^ The reason that parsing failed
   | CheckError S.Text -- ^ The name of the check that failed
