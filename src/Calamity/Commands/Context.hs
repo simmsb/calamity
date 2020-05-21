@@ -6,6 +6,8 @@ import {-# SOURCE #-} Calamity.Commands.Command
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
+import           Calamity.Types.Snowflake
+import           Calamity.Types.Tellable
 
 import qualified Data.Text.Lazy               as L
 
@@ -27,3 +29,6 @@ data Context = Context
   }
   deriving ( Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Context
+
+instance Tellable Context where
+  getChannel Context { channel } = pure . getID $ channel

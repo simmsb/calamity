@@ -49,23 +49,29 @@ mapLeft :: (e -> e') -> Either e a -> Either e' a
 mapLeft f (Left x)  = Left $ f x
 mapLeft _ (Right x) = Right x
 
-addCommands :: (BotC r, P.Member ParsePrefix r)
-            => P.Sem (DSLState r) a
-            -> P.Sem r (P.Sem r (), CommandHandler, a)
+data FailReason
+  = NoPrefix
+  | NoCtx
+  | NF [L.Text]
+  | ERR Context CommandError
+
+addCommands :: (BotC r, P.Member ParsePrefix r) => P.Sem (DSLState r) a -> P.Sem r (P.Sem r (), CommandHandler, a)
 addCommands m = do
   (handler, res) <- buildCommands m
   remove <- react @'MessageCreateEvt $ \msg -> do
-    err <- P.runError . P.runFail $ do
-        Just (prefix, rest) <- parsePrefix msg
-        (command, unparsedParams) <- P.fromEither $ mapLeft NotFound $ findCommand handler rest
-        Just ctx <- buildContext msg prefix command unparsedParams
-        P.fromEither =<< invokeCommand ctx (ctx ^. #command)
-        pure ctx
+    err <- P.runError $ do
+      (prefix, rest) <- P.note NoPrefix =<< parsePrefix msg
+      (command, unparsedParams) <- P.fromEither $ mapLeft NF $ findCommand handler rest
+      ctx <- P.note NoCtx =<< buildContext msg prefix command unparsedParams
+      P.fromEither . mapLeft (ERR ctx) =<< invokeCommand ctx (ctx ^. #command)
+      pure ctx
     case err of
-      Left e -> fire $ customEvt @"command-error" e
-      Right (Right ctx) -> fire $ customEvt @"command-run" ctx
-      Right _ -> pure () -- command wasn't parsed
+      Left (ERR ctx e) -> fire $ customEvt @"command-error" (ctx, e)
+      Left (NF path)   -> fire $ customEvt @"command-not-found" path
+      Left _           -> pure () -- "ignore if no prefix or if context couldn't be built"
+      Right ctx        -> fire $ customEvt @"command-run" ctx
   pure (remove, handler, res)
+
 
 buildCommands :: P.Member (P.Final IO) r
               => P.Sem (DSLState r) a

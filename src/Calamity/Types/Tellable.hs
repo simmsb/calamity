@@ -87,6 +87,12 @@ tell target (runToMessage -> msg) = P.runError $ do
 instance Tellable DMChannel where
   getChannel = pure . getID
 
+instance Tellable (Snowflake Channel) where
+  getChannel = pure
+
+instance Tellable Channel where
+  getChannel = pure . getID
+
 instance Tellable (Snowflake DMChannel) where
   getChannel = pure . coerceSnowflake
 
