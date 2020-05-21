@@ -53,7 +53,7 @@ addCommands :: (BotC r, P.Member ParsePrefix r)
                        P.Reader [Check] ':
                        P.Fixpoint ':
                        r) a
-            -> P.Sem r (P.Sem r (), a)
+            -> P.Sem r (P.Sem r (), CommandHandler, a)
 addCommands m = do
   (handler, res) <- buildCommands m
   remove <- react @'MessageCreateEvt $ \msg -> do
@@ -65,7 +65,7 @@ addCommands m = do
     case err of
       Left e -> fire $ customEvt @"command-error" e
       Right ctx -> fire $ customEvt @"command-run" ctx
-  pure (remove, res)
+  pure (remove, handler, res)
 
 buildCommands :: P.Member (P.Final IO) r
               => P.Sem (LocalWriter (LH.HashMap S.Text Command) ':
