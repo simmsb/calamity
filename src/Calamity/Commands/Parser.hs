@@ -27,8 +27,9 @@ import qualified Polysemy                     as P
 
 import           Text.Megaparsec              hiding ( parse )
 import           Text.Megaparsec.Char
+import Text.Megaparsec.Error.Builder (fancy, errFancy)
 
-class Parser (a :: Type) r where
+class Typeable a => Parser (a :: Type) r where
   type ParserResult a
 
   type ParserResult a = a
@@ -36,7 +37,10 @@ class Parser (a :: Type) r where
   parse :: Context -> ParsecT Text Text (P.Sem r) (ParserResult a)
 
 instance Parser Text r where
-  parse _ctx = item
+  parse _ctx = label "Text" $ item
+
+showTypeOf :: forall a. Typeable a => String
+showTypeOf = show . typeRep $ Proxy @a
 
 instance Parser a r => Parser (Maybe a) r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
@@ -46,58 +50,69 @@ instance Parser a r => Parser (Maybe a) r where
 instance Parser a r => Parser [a] r where
   type ParserResult [a] = [ParserResult a]
 
-  parse ctx = many $ parse @a ctx
+  parse ctx = label (showTypeOf @[a]) $ many $ parse @a ctx
 
 instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
   type ParserResult (NonEmpty a) = NonEmpty (ParserResult a)
 
-  parse ctx = fromJust . nonEmpty <$> (some $ parse @a ctx)
+  parse ctx = label (showTypeOf @(NonEmpty a)) $ fromJust . nonEmpty <$> (some $ parse @a ctx)
 
 data KleeneConcat a
 
 instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneConcat a) r where
   type ParserResult (KleeneConcat a) = ParserResult a
 
-  parse ctx = mconcat <$> parse @[a] ctx
+  parse ctx = label (showTypeOf @(KleeneConcat a)) $ mconcat <$> parse @[a] ctx
 
 instance {-# OVERLAPS #-}Parser (KleeneConcat Text) r where
   type ParserResult (KleeneConcat Text) = ParserResult Text
 
   -- consume rest on text just takes everything remaining
-  parse _ctx = someSingle
+  parse _ctx = label "KleeneConcat Text" someSingle
 
-instance Parser (Snowflake a) r where
-  parse _ctx = snowflake
+instance Typeable (Snowflake a) => Parser (Snowflake a) r where
+  parse _ctx = label (showTypeOf @(Snowflake a)) snowflake
 
 instance {-# OVERLAPS #-}Parser (Snowflake User) r where
-  parse _ctx = try (ping "@") <|> snowflake
+  parse _ctx = label (showTypeOf @(Snowflake User)) $ try (ping "@") <|> snowflake
 
 instance {-# OVERLAPS #-}Parser (Snowflake Member) r where
-  parse _ctx = try (ping "@") <|> snowflake
+  parse _ctx = label (showTypeOf @(Snowflake Member)) $ try (ping "@") <|> snowflake
 
 instance {-# OVERLAPS #-}Parser (Snowflake Channel) r where
-  parse _ctx = try (ping "#") <|> snowflake
+  parse _ctx = label (showTypeOf @(Snowflake Channel)) $ try (ping "#") <|> snowflake
 
 instance {-# OVERLAPS #-}Parser (Snowflake Role) r where
-  parse _ctx = try (ping "@&") <|> snowflake
+  parse _ctx = label (showTypeOf @(Snowflake Role)) $ try (ping "@&") <|> snowflake
 
 instance {-# OVERLAPS #-}Parser (Snowflake Emoji) r where
-  parse _ctx = try emoji <|> snowflake
+  parse _ctx = label (showTypeOf @(Snowflake Emoji)) $ try emoji <|> snowflake
+
+mapParserMaybe :: (Stream s, Ord e) => ParsecT e s m a -> e -> (a -> Maybe b) -> ParsecT e s m b
+mapParserMaybe m e f = do
+  off <- getOffset
+  r <- f <$> m
+  case r of
+    Just r' -> pure r'
+    _       -> parseError .  errFancy off . fancy . ErrorCustom $ e
+
+mapParserMaybeM :: (Monad m, Stream s, Ord e) => ParsecT e s m a -> e -> (a -> m (Maybe b)) -> ParsecT e s m b
+mapParserMaybeM m e f = do
+  off <- getOffset
+  r <- m >>= lift . f
+  case r of
+    Just r' -> pure r'
+    _       -> parseError .  errFancy off . fancy . ErrorCustom $ e
 
 instance Parser Member r where
-  parse ctx = do
-    mid <- parse @(Snowflake Member) ctx
-    case ctx ^? #guild . _Just . #members . ix mid of
-      Just member -> pure member
-      _           -> customFailure "Couldn't find member with this id"
+  parse ctx = mapParserMaybe (label (showTypeOf @Member) $ parse @(Snowflake Member) ctx)
+              "Couldn't find a Member with this id"
+              (\mid -> ctx ^? #guild . _Just . #members . ix mid)
 
 instance P.Member CacheEff r => Parser User r where
-  parse ctx = do
-    uid <- parse @(Snowflake User) ctx
-    user <- lift $ getUser uid
-    case user of
-      Just user -> pure user
-      Nothing   -> customFailure "Couldn't find a user with this id"
+  parse ctx = mapParserMaybeM (label (showTypeOf @User) $ parse @(Snowflake User) ctx)
+              "Couldn't find a User with this id"
+              getUser
 
 instance (Parser a r, Parser b r) => Parser (a, b) r where
   type ParserResult (a, b) = (ParserResult a, ParserResult b)
