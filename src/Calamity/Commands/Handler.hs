@@ -100,11 +100,6 @@ buildContext msg prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
 nextWord :: L.Text -> (L.Text, L.Text)
 nextWord = L.break isSpace . L.stripStart
 
-firstEither :: Either e a -> Either e a -> Either e a
-firstEither (Right l) _ = Right l
-firstEither l (Left _)  = l
-firstEither _ r         = r
-
 findCommand :: CommandHandler -> L.Text -> Either [L.Text] (Command, L.Text)
 findCommand handler msg = goH $ nextWord msg
   where
@@ -112,13 +107,13 @@ findCommand handler msg = goH $ nextWord msg
     goH ("", _) = Left []
     goH (x, xs) = attachSoFar x
       (((, xs) <$> attachInitial (LH.lookup (L.toStrict x) (handler ^. #commands)))
-       `firstEither` (attachInitial (LH.lookup (L.toStrict x) (handler ^. #groups)) >>= goG (nextWord xs)))
+       <> (attachInitial (LH.lookup (L.toStrict x) (handler ^. #groups)) >>= goG (nextWord xs)))
 
     goG :: (L.Text, L.Text) -> Group -> Either [L.Text] (Command, L.Text)
     goG ("", _) _ = Left []
     goG (x, xs) g = attachSoFar x
       (((, xs) <$> attachInitial (LH.lookup (L.toStrict x) (g ^. #commands)))
-       `firstEither` (attachInitial (LH.lookup (L.toStrict x) (g ^. #children)) >>= goG (nextWord xs)))
+       <> (attachInitial (LH.lookup (L.toStrict x) (g ^. #children)) >>= goG (nextWord xs)))
 
     attachInitial :: Maybe a -> Either [L.Text] a
     attachInitial (Just a) = Right a
