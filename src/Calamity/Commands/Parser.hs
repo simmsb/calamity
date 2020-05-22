@@ -105,7 +105,7 @@ instance (Parser a r, Parser b r) => Parser (a, b) r where
   parse ctx = do
     space
     a <- parse @a ctx
-    space1
+    space
     b <- parse @b ctx
     pure (a, b)
 
