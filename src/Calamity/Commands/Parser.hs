@@ -70,7 +70,10 @@ instance (KnownSymbol s, Parser a r) => Parser (Named s a) r where
 
   name = (S.pack . symbolVal $ Proxy @s) <> name @a @r
 
-  parse = parse @a @r
+  parse = mapE (_1 .~ name @a @r) $ parse @a @r
+
+mapE :: P.Member (P.Error e) r => (e -> e) -> P.Sem r a -> P.Sem r a
+mapE f m = P.catch m (P.throw . f)
 
 parseMP :: S.Text -> ParsecT SpannedError Text (P.Sem (ParserCtxE r)) a -> P.Sem (ParserEffs r) a
 parseMP n m = do
