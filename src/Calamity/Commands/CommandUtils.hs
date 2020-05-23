@@ -30,6 +30,8 @@ import           Data.Text.Lazy              as L
 import qualified Polysemy                    as P
 import qualified Polysemy.Error              as P
 import qualified Polysemy.Fail               as P
+import qualified Polysemy.Reader             as P
+import qualified Polysemy.State              as P
 
 buildCommand' :: P.Member (P.Final IO) r
               => S.Text
@@ -116,7 +118,7 @@ instance ApplyTup () b where
   applyTup r () = r
 
 buildTypedCommandParser :: forall (ps :: [Type]) r. Parser (ListToTup ps) r => (Context, L.Text) -> P.Sem r (Either CommandError (ParserResult (ListToTup ps)))
-buildTypedCommandParser (ctx, t) = runParserToCommandError (parse @(ListToTup ps) ctx) t <&> \case
+buildTypedCommandParser (ctx, t) = (P.runReader ctx . P.runError . P.evalState (ParserState 0 t) $ parse @(ListToTup ps)) <&> \case
   Right r -> Right r
   Left e  -> Left $ ParseError e
 
