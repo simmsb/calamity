@@ -63,7 +63,7 @@ class Typeable a => Parser (a :: Type) r where
 parseMP :: ParsecT SpannedError Text (P.Sem (ParserCtxE r)) a -> P.Sem (ParserEffs r) a
 parseMP m = do
   s <- P.get
-  res <- P.raise . P.raise $ runParserT (skipN (s ^. #off) *> space *> trackOffsets m) "" (s ^. #msg)
+  res <- P.raise . P.raise $ runParserT (skipN (s ^. #off) *> trackOffsets (space *> m)) "" (s ^. #msg)
   case res of
     Right (a, offset) -> do
       P.modify (#off +~ offset)
