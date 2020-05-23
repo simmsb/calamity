@@ -110,19 +110,25 @@ main = do
   void . P.runFinal . P.embedToFinal . runCounterAtomic . runCacheInMemory . runMetricsPrometheusIO . useConstantPrefix "!"
     $ runBotIO (BotToken token) $ do
     addCommands $ do
-      command @'[Text, Snowflake User] "test" $ \ctx something aUser -> do
+      command @'[L.Text, Snowflake User] "test" $ \ctx something aUser -> do
         info $ "something = " <> showt something <> ", aUser = " <> showt aUser
       command @'[] "hello" $ \ctx -> do
         void $ tellt ctx "heya"
       group "testgroup" $ do
-        command @'[[Text]] "test" $ \ctx l -> do
+        command @'[[L.Text]] "test" $ \ctx l -> do
           void $ tellt ctx ("you sent: " <> showtl l)
         command @'[] "count" $ \ctx -> do
           val <- getCounter
           void $ tellt ctx ("The value is: " <> showtl val)
         group "say" $ do
-          command @'[KleeneConcat Text] "this" $ \ctx msg -> do
+          command @'[KleeneConcat L.Text] "this" $ \ctx msg -> do
             void $ tellt ctx msg
+      command @'[User] "utest" $ \ctx u -> do
+        void $ tellt ctx $ "got user: " <> showtl u
+      command @'[Named "u" User, Named "u1" User] "utest2" $ \ctx u u1 -> do
+        void $ tellt ctx $ "got user: " <> showtl u <> "\nand: " <> showtl u1
+      command @'[Snowflake Emoji] "etest" $ \ctx e -> do
+        void $ tellt ctx $ "got emoji: " <> showtl e
       command @'[] "explode" $ \ctx -> do
         Just x <- pure Nothing
         debug "unreachable!"
@@ -130,8 +136,8 @@ main = do
         void $ tellt ctx "bye!"
         stopBot
       command @'[] "fire-evt" $ \ctx -> do
-        fire $ customEvt @"my-event" ("aha" :: Text, ctx ^. #message)
-      command @'[Text] "wait-for" $ \ctx s -> do
+        fire $ customEvt @"my-event" ("aha" :: L.Text, ctx ^. #message)
+      command @'[L.Text] "wait-for" $ \ctx s -> do
         void $ tellt ctx ("waiting for !" <> s)
         waitUntil @'MessageCreateEvt (\msg -> msg ^. #content == ("!" <> s))
         void $ tellt ctx ("got !" <> s)
@@ -148,7 +154,7 @@ main = do
     react @('CustomEvt "command-error" (CommandContext.Context, CommandError)) $ \(ctx, e) -> do
       info $ "Command failed with reason: " <> showt e
       case e of
-        ParseError t r -> void . tellt ctx $ "Failed to parse parameter: " <> L.fromStrict t <> ", with reason: ```\n" <> r <> "```"
-    react @('CustomEvt "my-event" (Text, Message)) $ \(s, m) ->
+        ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
+    react @('CustomEvt "my-event" (L.Text, Message)) $ \(s, m) ->
       void $ tellt m ("Somebody told me to tell you about: " <> s)
 ```

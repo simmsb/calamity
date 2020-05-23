@@ -11,4 +11,4 @@ import           Calamity.Commands.Dsl
 import           Calamity.Commands.Error
 import           Calamity.Commands.Handler
 import           Calamity.Commands.ParsePrefix
-import           Calamity.Commands.Parser
+import           Calamity.Commands.Parser hiding ( ParserState, SpannedError )

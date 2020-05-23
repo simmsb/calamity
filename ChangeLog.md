@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.9.1
+
+*2020-05-23*
+
+* Added `Calamity.Commands.Parser.Named` for parameters that have a name.
+
+* General improvements to parser errors
+
 ## 0.1.9.0
 
 *2020-05-22*
