@@ -1,40 +1,44 @@
 -- | Something that can parse user input
 module Calamity.Commands.Parser
     ( Parser(..)
+    , SpannedError(..)
     , KleeneConcat
     , runParserToCommandError ) where
 
 import           Calamity.Cache.Eff
 import           Calamity.Commands.Context
-import           Calamity.Types.Model.Channel ( Channel )
-import           Calamity.Types.Model.Guild   ( Emoji, Member, Role )
-import           Calamity.Types.Model.User    ( User )
+import           Calamity.Types.Model.Channel  ( Channel )
+import           Calamity.Types.Model.Guild    ( Emoji, Member, Role )
+import           Calamity.Types.Model.User     ( User )
 import           Calamity.Types.Snowflake
 
-import           Control.Lens                 hiding ( Context )
+import           Control.Lens                  hiding ( Context )
 import           Control.Monad
-import           Control.Monad.Trans          ( lift )
+import           Control.Monad.Trans           ( lift )
 
-import           Data.Char                    ( isSpace )
+import           Data.Char                     ( isSpace )
 import           Data.Kind
-import           Data.List.NonEmpty           ( NonEmpty, nonEmpty )
-import           Data.Maybe                   ( fromJust )
-import qualified Data.Text.Lazy               as L
-import           Data.Text.Lazy               ( Text )
+import           Data.List.NonEmpty            ( NonEmpty, nonEmpty )
+import           Data.Maybe                    ( fromJust )
+import qualified Data.Text.Lazy                as L
+import           Data.Text.Lazy                ( Text )
 import           Data.Typeable
 
-import qualified Polysemy                     as P
+import qualified Polysemy                      as P
 
-import           Text.Megaparsec              hiding ( parse )
+import           Text.Megaparsec               hiding ( parse )
 import           Text.Megaparsec.Char
-import Text.Megaparsec.Error.Builder (fancy, errFancy)
+import           Text.Megaparsec.Error.Builder ( errFancy, fancy )
+
+data SpannedError = SpannedError Text !Int !Int
+  deriving (Show, Eq, Ord)
 
 class Typeable a => Parser (a :: Type) r where
   type ParserResult a
 
   type ParserResult a = a
 
-  parse :: Context -> ParsecT Text Text (P.Sem r) (ParserResult a)
+  parse :: Context -> ParsecT SpannedError Text (P.Sem r) (ParserResult a)
 
 instance Parser Text r where
   parse _ctx = label "Text" $ item
@@ -88,29 +92,31 @@ instance {-# OVERLAPS #-}Parser (Snowflake Role) r where
 instance {-# OVERLAPS #-}Parser (Snowflake Emoji) r where
   parse _ctx = label (showTypeOf @(Snowflake Emoji)) $ try emoji <|> snowflake
 
-mapParserMaybe :: (Stream s, Ord e) => ParsecT e s m a -> e -> (a -> Maybe b) -> ParsecT e s m b
+mapParserMaybe :: Stream s => ParsecT SpannedError s m a -> Text -> (a -> Maybe b) -> ParsecT SpannedError s m b
 mapParserMaybe m e f = do
-  off <- getOffset
+  offs <- getOffset
   r <- f <$> m
+  offe <- getOffset
   case r of
     Just r' -> pure r'
-    _       -> parseError .  errFancy off . fancy . ErrorCustom $ e
+    _       -> parseError . errFancy offs . fancy . ErrorCustom $ SpannedError e offs offe
 
-mapParserMaybeM :: (Monad m, Stream s, Ord e) => ParsecT e s m a -> e -> (a -> m (Maybe b)) -> ParsecT e s m b
+mapParserMaybeM :: (Monad m, Stream s) => ParsecT SpannedError s m a -> Text -> (a -> m (Maybe b)) -> ParsecT SpannedError s m b
 mapParserMaybeM m e f = do
-  off <- getOffset
+  offs <- getOffset
   r <- m >>= lift . f
+  offe <- getOffset
   case r of
     Just r' -> pure r'
-    _       -> parseError .  errFancy off . fancy . ErrorCustom $ e
+    _       -> parseError . errFancy offs . fancy . ErrorCustom $ SpannedError e offs offe
 
 instance Parser Member r where
-  parse ctx = mapParserMaybe (label (showTypeOf @Member) $ parse @(Snowflake Member) ctx)
+  parse ctx = mapParserMaybe (parse @(Snowflake Member) ctx)
               "Couldn't find a Member with this id"
               (\mid -> ctx ^? #guild . _Just . #members . ix mid)
 
 instance P.Member CacheEff r => Parser User r where
-  parse ctx = mapParserMaybeM (label (showTypeOf @User) $ parse @(Snowflake User) ctx)
+  parse ctx = mapParserMaybeM (parse @(Snowflake User) ctx)
               "Couldn't find a User with this id"
               getUser
 
@@ -127,11 +133,11 @@ instance (Parser a r, Parser b r) => Parser (a, b) r where
 instance Parser () r where
   parse _ctx = space
 
-instance ShowErrorComponent Text where
-  showErrorComponent = L.unpack
-  errorComponentLen = fromIntegral . L.length
+instance ShowErrorComponent SpannedError where
+  showErrorComponent (SpannedError t _ _) = L.unpack t
+  errorComponentLen (SpannedError _ s e) = max 1 $ e - s
 
-runParserToCommandError :: Monad m => ParsecT Text Text m a -> Text -> m (Either Text a)
+runParserToCommandError :: Monad m => ParsecT SpannedError Text m a -> Text -> m (Either Text a)
 runParserToCommandError m t = runParserT (space *> m) "" t <&> \case
   Right a -> Right a
   Left s  -> Left . L.pack . errorBundlePretty $ s
