@@ -43,7 +43,7 @@ buildCommand' :: P.Member (P.Final IO) r
               -> P.Sem r Command
 buildCommand' name parent checks help parser cb = do
   cb' <- buildCallback cb
-  parser' <- buildParser parser
+  parser' <- buildParser name parser
   pure $ Command name parent checks help parser' cb'
 
 buildCommand :: forall ps a r.
@@ -58,11 +58,12 @@ buildCommand name parent checks help command = let (parser, cb) = buildTypedComm
                                                in buildCommand' name parent checks help parser cb
 
 buildParser :: P.Member (P.Final IO) r
-            => (Context -> P.Sem r (Either CommandError a))
+            => S.Text
+            -> (Context -> P.Sem r (Either CommandError a))
             -> P.Sem r (Context -> IO (Either CommandError a))
-buildParser cb = do
+buildParser name cb = do
   cb' <- bindSemToIO cb
-  let cb'' ctx = fromMaybe (Left $ ParseError "failed internally") <$> cb' ctx
+  let cb'' ctx = fromMaybe (Left $ ParseError ("Parser for command: " <> name) "failed internally") <$> cb' ctx
   pure cb''
 
 buildCallback
@@ -120,7 +121,7 @@ instance ApplyTup () b where
 buildTypedCommandParser :: forall (ps :: [Type]) r. Parser (ListToTup ps) r => (Context, L.Text) -> P.Sem r (Either CommandError (ParserResult (ListToTup ps)))
 buildTypedCommandParser (ctx, t) = (P.runReader ctx . P.runError . P.evalState (ParserState 0 t) $ parse @(ListToTup ps)) <&> \case
   Right r -> Right r
-  Left e  -> Left $ ParseError e
+  Left (n, e)  -> Left $ ParseError n e
 
 type family ListToTup (ps :: [Type]) where
   ListToTup '[] = ()
