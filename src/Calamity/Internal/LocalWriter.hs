@@ -1,7 +1,7 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | A Writer monad that supports local writing, reverse reader I guess?
-module Calamity.Commands.LocalWriter
+module Calamity.Internal.LocalWriter
     ( LocalWriter(..)
     , ltell
     , llisten

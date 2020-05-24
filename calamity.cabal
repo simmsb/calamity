@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 3c7ebdf28eac3707c7b4322aa4cfcd2c315be4e5a0d442d83e1ae4ad4bb5fcab
+-- hash: aa501afabd4eb0236a79ab7fcce150852d5e22645b6d078bc0d7aebd91d3d966
 
 name:           calamity
 version:        0.1.9.1
@@ -49,9 +49,10 @@ library
       Calamity.Commands.Error
       Calamity.Commands.Group
       Calamity.Commands.Handler
-      Calamity.Commands.LocalWriter
+      Calamity.Commands.Help
       Calamity.Commands.ParsePrefix
       Calamity.Commands.Parser
+      Calamity.Commands.Utils
       Calamity.Gateway
       Calamity.Gateway.DispatchEvents
       Calamity.Gateway.Shard
@@ -73,6 +74,7 @@ library
       Calamity.Internal.AesonThings
       Calamity.Internal.BoundedStore
       Calamity.Internal.GenericCurry
+      Calamity.Internal.LocalWriter
       Calamity.Internal.RunIntoIO
       Calamity.Internal.SnowflakeMap
       Calamity.Internal.Updateable

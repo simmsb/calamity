@@ -18,7 +18,8 @@ import           Calamity.Commands.CommandUtils
 import           Calamity.Commands.Context     hiding ( command )
 import           Calamity.Commands.Error
 import           Calamity.Commands.Group       hiding ( help )
-import           Calamity.Commands.LocalWriter
+import           Calamity.Commands.Handler
+import           Calamity.Internal.LocalWriter
 
 import qualified Data.HashMap.Lazy             as LH
 import qualified Data.Text                     as S
@@ -34,10 +35,11 @@ type DSLState r = (LocalWriter (LH.HashMap S.Text Command) ':
                        P.Reader (Maybe Group) ':
                        P.Reader (Context -> L.Text) ':
                        P.Reader [Check] ':
+                       P.Reader CommandHandler ':
                        P.Fixpoint ': r)
 
 raiseDSL :: P.Sem r a -> P.Sem (DSLState r) a
-raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise
+raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise
 
 -- | Build a command with an already prepared invokation action
 command'
