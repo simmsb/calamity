@@ -30,16 +30,14 @@ data Group = Group
 data GroupS = GroupS
   { name     :: S.Text
   , parent   :: Maybe S.Text
-  , commands :: [S.Text]
-  , children :: [S.Text]
+  , commands :: LH.HashMap S.Text Command
+  , children :: LH.HashMap S.Text Group
   }
   deriving ( Generic, Show )
   deriving ( TextShow ) via TSG.FromGeneric GroupS
 
 instance Show Group where
-  showsPrec d Group { name, parent, commands, children } = showsPrec d $ GroupS name (parent ^? _Just . #name)
-    (LH.keys commands) (LH.keys children)
+  showsPrec d Group { name, parent, commands, children } = showsPrec d $ GroupS name (parent ^? _Just . #name) commands children
 
 instance TextShow Group where
-  showbPrec d Group { name, parent, commands, children } = showbPrec d $ GroupS name (parent ^? _Just . #name)
-    (LH.keys commands) (LH.keys children)
+  showbPrec d Group { name, parent, commands, children } = showbPrec d $ GroupS name (parent ^? _Just . #name) commands children

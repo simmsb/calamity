@@ -105,7 +105,9 @@ group name m = mdo
   checks <- P.ask @[Check]
   help'  <- P.ask @(Context -> L.Text)
   let group' = Group name parent commands children help' checks
-  (children, (commands, res)) <- llisten @(LH.HashMap S.Text Group) $ llisten @(LH.HashMap S.Text Command) $ P.local (const $ Just group') m
+  (children, (commands, res)) <- llisten @(LH.HashMap S.Text Group) $
+                                 llisten @(LH.HashMap S.Text Command) $
+                                 P.local @(Maybe Group) (const $ Just group') m
   ltell $ LH.singleton name group'
   pure res
 
