@@ -3,8 +3,7 @@ module Calamity.Commands.Parser
     ( Parser(..)
     , Named
     , KleeneConcat
-    , ParserState(..)
-    , SpannedError(..) ) where
+    , runCommandParser ) where
 
 import           Calamity.Cache.Eff
 import           Calamity.Commands.Context
@@ -52,14 +51,17 @@ data ParserState = ParserState
 type ParserEffs r = P.State ParserState ': P.Error (S.Text, Text) ': P.Reader Context ': r
 type ParserCtxE r = P.Reader Context ': r
 
+runCommandParser :: Context -> Text -> P.Sem (ParserEffs r) a -> P.Sem r (Either (S.Text, Text) a)
+runCommandParser ctx t = P.runReader ctx . P.runError . P.evalState (ParserState 0 t)
+
 class Typeable a => Parser (a :: Type) r where
   type ParserResult a
 
   type ParserResult a = a
 
-  name :: S.Text
-  default name :: S.Text
-  name = ":" <> S.pack (showTypeOf @a)
+  parserName :: S.Text
+  default parserName :: S.Text
+  parserName = ":" <> S.pack (showTypeOf @a)
 
   parse :: P.Sem (ParserEffs r) (ParserResult a)
 
@@ -68,9 +70,9 @@ data Named (s :: Symbol) a
 instance (KnownSymbol s, Parser a r) => Parser (Named s a) r where
   type ParserResult (Named s a) = ParserResult a
 
-  name = (S.pack . symbolVal $ Proxy @s) <> name @a @r
+  parserName = (S.pack . symbolVal $ Proxy @s) <> parserName @a @r
 
-  parse = mapE (_1 .~ name @(Named s a) @r) $ parse @a @r
+  parse = mapE (_1 .~ parserName @(Named s a) @r) $ parse @a @r
 
 mapE :: P.Member (P.Error e) r => (e -> e) -> P.Sem r a -> P.Sem r a
 mapE f m = P.catch m (P.throw . f)
@@ -86,7 +88,7 @@ parseMP n m = do
     Left s  -> P.throw (n, L.pack $ errorBundlePretty s)
 
 instance Parser Text r where
-  parse = parseMP (name @Text) item
+  parse = parseMP (parserName @Text) item
 
 instance Parser a r => Parser (Maybe a) r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
@@ -119,25 +121,25 @@ instance {-# OVERLAPS #-}Parser (KleeneConcat Text) r where
   type ParserResult (KleeneConcat Text) = ParserResult Text
 
   -- consume rest on text just takes everything remaining
-  parse = parseMP (name @(KleeneConcat Text)) someSingle
+  parse = parseMP (parserName @(KleeneConcat Text)) someSingle
 
 instance Typeable (Snowflake a) => Parser (Snowflake a) r where
-  parse = parseMP (name @(Snowflake a)) snowflake
+  parse = parseMP (parserName @(Snowflake a)) snowflake
 
 instance {-# OVERLAPS #-}Parser (Snowflake User) r where
-  parse = parseMP (name @(Snowflake User)) (try (ping "@") <|> snowflake)
+  parse = parseMP (parserName @(Snowflake User)) (try (ping "@") <|> snowflake)
 
 instance {-# OVERLAPS #-}Parser (Snowflake Member) r where
-  parse = parseMP (name @(Snowflake Member)) (try (ping "@") <|> snowflake)
+  parse = parseMP (parserName @(Snowflake Member)) (try (ping "@") <|> snowflake)
 
 instance {-# OVERLAPS #-}Parser (Snowflake Channel) r where
-  parse = parseMP (name @(Snowflake Channel)) (try (ping "#") <|> snowflake)
+  parse = parseMP (parserName @(Snowflake Channel)) (try (ping "#") <|> snowflake)
 
 instance {-# OVERLAPS #-}Parser (Snowflake Role) r where
-  parse = parseMP (name @(Snowflake Role)) (try (ping "@&") <|> snowflake)
+  parse = parseMP (parserName @(Snowflake Role)) (try (ping "@&") <|> snowflake)
 
 instance {-# OVERLAPS #-}Parser (Snowflake Emoji) r where
-  parse = parseMP (name @(Snowflake Emoji)) (try emoji <|> snowflake)
+  parse = parseMP (parserName @(Snowflake Emoji)) (try emoji <|> snowflake)
 
 -- mapParserMaybe :: Stream s => ParsecT SpannedError s m a -> Text -> (a -> Maybe b) -> ParsecT SpannedError s m b
 -- mapParserMaybe m e f = do
@@ -158,14 +160,14 @@ mapParserMaybeM m e f = do
     _       -> parseError . errFancy offs . fancy . ErrorCustom $ SpannedError e offs offe
 
 instance Parser Member r where
-  parse = parseMP (name @Member) $ mapParserMaybeM (try (ping "@") <|> snowflake)
+  parse = parseMP (parserName @Member) $ mapParserMaybeM (try (ping "@") <|> snowflake)
           "Couldn't find a Member with this id"
           (\mid -> do
               ctx <- P.ask
               pure $ ctx ^? #guild . _Just . #members . ix mid)
 
 instance P.Member CacheEff r => Parser User r where
-  parse = parseMP (name @User @r) $ mapParserMaybeM (try (ping "@") <|> snowflake)
+  parse = parseMP (parserName @User @r) $ mapParserMaybeM (try (ping "@") <|> snowflake)
           "Couldn't find a User with this id"
           getUser
 
@@ -178,7 +180,7 @@ instance (Parser a r, Parser b r) => Parser (a, b) r where
     pure (a, b)
 
 instance Parser () r where
-  parse = parseMP (name @()) space
+  parse = parseMP (parserName @()) space
 
 instance ShowErrorComponent SpannedError where
   showErrorComponent (SpannedError t _ _) = L.unpack t

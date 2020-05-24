@@ -43,14 +43,15 @@ raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise
 command'
   :: P.Member (P.Final IO) r
   => S.Text
+  -> [S.Text]
   -> (Context -> P.Sem r (Either CommandError a))
   -> ((Context, a) -> P.Sem (P.Fail ': r) ())
   -> P.Sem (DSLState r) Command
-command' name parser cb = do
+command' name params parser cb = do
   parent <- P.ask @(Maybe Group)
   checks <- P.ask @[Check]
   help' <- P.ask @(Context -> L.Text)
-  cmd <- raiseDSL $ buildCommand' name parent checks help' parser cb
+  cmd <- raiseDSL $ buildCommand' name parent checks params help' parser cb
   ltell $ LH.singleton name cmd
   pure cmd
 

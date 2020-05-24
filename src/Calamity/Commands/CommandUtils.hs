@@ -30,21 +30,20 @@ import           Data.Text.Lazy              as L
 import qualified Polysemy                    as P
 import qualified Polysemy.Error              as P
 import qualified Polysemy.Fail               as P
-import qualified Polysemy.Reader             as P
-import qualified Polysemy.State              as P
 
 buildCommand' :: P.Member (P.Final IO) r
               => S.Text
               -> Maybe Group
               -> [Check]
+              -> [S.Text]
               -> (Context -> L.Text)
               -> (Context -> P.Sem r (Either CommandError a))
               -> ((Context, a) -> P.Sem (P.Fail ': r) ())
               -> P.Sem r Command
-buildCommand' name parent checks help parser cb = do
+buildCommand' name parent checks params help parser cb = do
   cb' <- buildCallback cb
   parser' <- buildParser name parser
-  pure $ Command name parent checks help parser' cb'
+  pure $ Command name parent checks params help parser' cb'
 
 buildCommand :: forall ps a r.
              (P.Member (P.Final IO) r, TypedCommandC ps a r)
@@ -55,7 +54,7 @@ buildCommand :: forall ps a r.
              -> (Context -> CommandForParsers ps r)
              -> P.Sem r Command
 buildCommand name parent checks help command = let (parser, cb) = buildTypedCommand @ps command
-                                               in buildCommand' name parent checks help parser cb
+                                               in buildCommand' name parent checks (paramNames @ps) help parser cb
 
 buildParser :: P.Member (P.Final IO) r
             => S.Text
@@ -91,7 +90,9 @@ type TypedCommandC ps a r =
   ( ApplyTupRes a (CommandSemType r) ~ CommandForParsers ps r
   , a ~ ParserResult (ListToTup ps)
   , Parser (ListToTup ps) r
-  , ApplyTup a (CommandSemType r))
+  , ApplyTup a (CommandSemType r)
+  , ParamNamesForParsers ps
+  )
 
 buildTypedCommand
   :: forall (ps :: [Type]) a r.
@@ -99,9 +100,18 @@ buildTypedCommand
   => (Context -> CommandForParsers ps r)
   -> ( Context -> P.Sem r (Either CommandError a)
      , (Context, a) -> P.Sem (P.Fail ': r) ())
-buildTypedCommand cmd = let parser ctx = buildTypedCommandParser @ps (ctx, ctx ^. #unparsedParams)
+buildTypedCommand cmd = let parser ctx = buildTypedCommandParser @ps ctx (ctx ^. #unparsedParams)
                             consumer (ctx, r) = applyTup (cmd ctx) r
                         in (parser, consumer)
+
+class ParamNamesForParsers (ps :: [Type]) where
+  paramNames :: [S.Text]
+
+instance ParamNamesForParsers '[] where
+  paramNames = []
+
+instance (Parser x r, ParamNamesForParsers xs) => ParamNamesForParsers (x : xs) where
+  paramNames = (parserName @x @r : paramNames @xs)
 
 class ApplyTup a b where
   type ApplyTupRes a b
@@ -118,8 +128,8 @@ instance ApplyTup () b where
 
   applyTup r () = r
 
-buildTypedCommandParser :: forall (ps :: [Type]) r. Parser (ListToTup ps) r => (Context, L.Text) -> P.Sem r (Either CommandError (ParserResult (ListToTup ps)))
-buildTypedCommandParser (ctx, t) = (P.runReader ctx . P.runError . P.evalState (ParserState 0 t) $ parse @(ListToTup ps)) <&> \case
+buildTypedCommandParser :: forall (ps :: [Type]) r. Parser (ListToTup ps) r => Context -> L.Text -> P.Sem r (Either CommandError (ParserResult (ListToTup ps)))
+buildTypedCommandParser ctx t = (runCommandParser ctx t $ parse @(ListToTup ps)) <&> \case
   Right r -> Right r
   Left (n, e)  -> Left $ ParseError n e
 
