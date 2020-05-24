@@ -45,8 +45,8 @@ buildCommand' name parent checks params help parser cb = do
   parser' <- buildParser name parser
   pure $ Command name parent checks params help parser' cb'
 
-buildCommand :: forall ps a r.
-             (P.Member (P.Final IO) r, TypedCommandC ps a r)
+buildCommand :: forall ps r.
+             (P.Member (P.Final IO) r, TypedCommandC ps r)
              => S.Text
              -> Maybe Group
              -> [Check]
@@ -86,20 +86,21 @@ invokeCommand ctx cmd@Command { checks } = P.runError $ do
 
 type CommandSemType r = P.Sem (P.Fail ': r) ()
 
-type TypedCommandC ps a r =
-  ( ApplyTupRes a (CommandSemType r) ~ CommandForParsers ps r
-  , a ~ ParserResult (ListToTup ps)
+type TypedCommandC ps r =
+  ( ApplyTupRes (ParserResult (ListToTup ps)) (CommandSemType r) ~ CommandForParsers ps r
   , Parser (ListToTup ps) r
-  , ApplyTup a (CommandSemType r)
+  , ApplyTup (ParserResult (ListToTup ps)) (CommandSemType r)
   , ParamNamesForParsers ps
   )
 
 buildTypedCommand
   :: forall (ps :: [Type]) a r.
-  TypedCommandC ps a r
+  (TypedCommandC ps r, a ~ ParserResult (ListToTup ps))
   => (Context -> CommandForParsers ps r)
-  -> ( Context -> P.Sem r (Either CommandError a)
-     , (Context, a) -> P.Sem (P.Fail ': r) ())
+  -> ( Context
+         -> P.Sem r (Either CommandError a)
+     , (Context, a)
+         -> P.Sem (P.Fail ': r) ())
 buildTypedCommand cmd = let parser ctx = buildTypedCommandParser @ps ctx (ctx ^. #unparsedParams)
                             consumer (ctx, r) = applyTup (cmd ctx) r
                         in (parser, consumer)

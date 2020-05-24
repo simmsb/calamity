@@ -57,9 +57,9 @@ command' name params parser cb = do
   ltell $ LH.singleton name cmd
   pure cmd
 
-command :: forall ps a r.
+command :: forall ps r.
         ( P.Member (P.Final IO) r,
-          TypedCommandC ps a r)
+          TypedCommandC ps r)
         => S.Text
         -> (Context -> CommandForParsers ps r)
         -> P.Sem (DSLState r) Command
