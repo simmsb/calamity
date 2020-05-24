@@ -54,7 +54,7 @@ buildCommand :: forall ps r.
              -> (Context -> CommandForParsers ps r)
              -> P.Sem r Command
 buildCommand name parent checks help command = let (parser, cb) = buildTypedCommand @ps command
-                                               in buildCommand' name parent checks (paramNames @ps) help parser cb
+                                               in buildCommand' name parent checks (paramNames @ps @r) help parser cb
 
 buildParser :: P.Member (P.Final IO) r
             => S.Text
@@ -90,7 +90,7 @@ type TypedCommandC ps r =
   ( ApplyTupRes (ParserResult (ListToTup ps)) (CommandSemType r) ~ CommandForParsers ps r
   , Parser (ListToTup ps) r
   , ApplyTup (ParserResult (ListToTup ps)) (CommandSemType r)
-  , ParamNamesForParsers ps
+  , ParamNamesForParsers ps r
   )
 
 buildTypedCommand
@@ -105,14 +105,14 @@ buildTypedCommand cmd = let parser ctx = buildTypedCommandParser @ps ctx (ctx ^.
                             consumer (ctx, r) = applyTup (cmd ctx) r
                         in (parser, consumer)
 
-class ParamNamesForParsers (ps :: [Type]) where
+class ParamNamesForParsers (ps :: [Type]) r where
   paramNames :: [S.Text]
 
-instance ParamNamesForParsers '[] where
+instance ParamNamesForParsers '[] r where
   paramNames = []
 
-instance (Parser x r, ParamNamesForParsers xs) => ParamNamesForParsers (x : xs) where
-  paramNames = (parserName @x @r : paramNames @xs)
+instance (Parser x r, ParamNamesForParsers xs r) => ParamNamesForParsers (x : xs) r where
+  paramNames = (parserName @x @r : paramNames @xs @r)
 
 class ApplyTup a b where
   type ApplyTupRes a b
@@ -130,7 +130,7 @@ instance ApplyTup () b where
   applyTup r () = r
 
 buildTypedCommandParser :: forall (ps :: [Type]) r. Parser (ListToTup ps) r => Context -> L.Text -> P.Sem r (Either CommandError (ParserResult (ListToTup ps)))
-buildTypedCommandParser ctx t = (runCommandParser ctx t $ parse @(ListToTup ps)) <&> \case
+buildTypedCommandParser ctx t = (runCommandParser ctx t $ parse @(ListToTup ps) @r) <&> \case
   Right r -> Right r
   Left (n, e)  -> Left $ ParseError n e
 
