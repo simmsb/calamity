@@ -10,10 +10,14 @@ import qualified Data.Text                 as S
 
 import           GHC.Generics
 
+import           TextShow
+import qualified TextShow.Generic          as TSG
+
 data CommandHandler = CommandHandler
   { groups   :: LH.HashMap S.Text Group
     -- ^ Top level groups
   , commands :: LH.HashMap S.Text Command
     -- ^ Top level commands
   }
-  deriving ( Generic )
+  deriving ( Show, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric CommandHandler
