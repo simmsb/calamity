@@ -102,7 +102,7 @@ instance Parser a r => Parser [a] r where
 
   parse = go []
     where go :: [ParserResult a] -> P.Sem (ParserEffs r) [ParserResult a]
-          go l = P.catch ((: []) <$> parse @a) (const $ pure []) >>= go . (l ++)
+          go l = P.catch (parse @a >>= \a -> go $ l <> [a]) (const $ pure l)
 
 instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
   type ParserResult (NonEmpty a) = NonEmpty (ParserResult a)
