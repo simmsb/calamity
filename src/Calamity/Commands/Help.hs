@@ -36,22 +36,32 @@ helpCommandHelp _ = "Show help for a command or group."
 groupPath :: Group -> [S.Text]
 groupPath grp = maybe [] groupPath (grp ^. #parent) ++ [grp ^. #name]
 
+commandParams :: Command -> L.Text
+commandParams Command { params } = L.fromStrict $ S.intercalate " " params
+
 helpForCommand :: Context -> Command -> L.Text
-helpForCommand ctx (Command { name, parent, params, help }) = "```\nCommand: " <> prefix' <> path' <> " " <> params' <> "\n\n" <> help ctx <> "\n```"
+helpForCommand ctx (cmd@Command { name, parent, help }) = "```\nUsage: " <> prefix' <> path' <> " " <> params' <> "\n\n" <> help ctx <> "\n```"
   where prefix' = ctx ^. #prefix
         path'   = L.fromStrict . S.intercalate " " $ maybe [] groupPath parent ++ [name]
-        params' = L.fromStrict $ S.intercalate " " params
+        params' = commandParams cmd
+
+fmtCommandWithParams :: Command -> L.Text
+fmtCommandWithParams cmd@Command { name } = L.fromStrict name <> " " <> commandParams cmd
 
 helpForGroup :: Context -> Group -> L.Text
-helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n\n" <> (grp ^. #help) ctx <> "\n\n" <> childGroups <> "\n\n" <> childCommands <> "\n```"
+helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n\n" <> (grp ^. #help) ctx <> "\n" <> groupsMsg <> commandsMsg <> "\n```"
   where path' = L.fromStrict . S.intercalate " " $ groupPath grp
-        childGroups = "The following child groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ grp ^. #children)
-        childCommands = "The following child commands exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ grp ^. #commands)
+        groups = LH.keys $ grp ^. #children
+        commands = LH.elems $ grp ^. #commands
+        groupsMsg = if null groups then "" else "The following child groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) $ groups)
+        commandsMsg = if null commands then "" else "\nThe following child commands exist:\n" <> (L.unlines . map ("- " <>) . map fmtCommandWithParams $ commands)
 
 rootHelp :: CommandHandler -> L.Text
-rootHelp handler = "```\n" <> groups <> "\n\n" <> commands <> "\n```"
-  where groups = "The following groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ handler ^. #groups)
-        commands = "The following commands exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ handler ^. #commands)
+rootHelp handler = "```\n" <> groupsMsg <> commandsMsg <> "\n```"
+  where groups = LH.keys $ handler ^. #groups
+        commands = LH.keys $ handler ^. #commands
+        groupsMsg = if null groups then "" else "The following groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) $ groups)
+        commandsMsg = if null commands then "" else "\nThe following commands exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) $ commands)
 
 -- TODO: process checks
 
