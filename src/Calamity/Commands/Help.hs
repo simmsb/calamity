@@ -28,7 +28,7 @@ import qualified Polysemy.Reader                as P
 
 data CommandOrGroup
   = Command' Command
-  | Group' Group
+  | Group' Group [S.Text]
 
 helpCommandHelp :: Context -> L.Text
 helpCommandHelp _ = "Show help for a command or group."
@@ -48,17 +48,27 @@ helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n\n" <> (grp ^. #help) ctx <
         childGroups = "The following child groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ grp ^. #children)
         childCommands = "The following child commands exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ grp ^. #commands)
 
+rootHelp :: CommandHandler -> L.Text
+rootHelp handler = "```\n" <> groups <> "\n\n" <> commands <> "\n```"
+  where groups = "The following groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ handler ^. #groups)
+        commands = "The following commands exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) . LH.keys $ handler ^. #commands)
+
 -- TODO: process checks
 
 helpCommandCallback :: BotC r => CommandHandler -> Context -> [S.Text] -> P.Sem (P.Fail ': r) ()
 helpCommandCallback handler ctx path = do
   case findCommandOrGroup handler path of
-    Just (Command' cmd@Command { name }) -> do
+    Just (Command' cmd@Command { name }) ->
       void $ tell @L.Text ctx $ "Help for command `" <> L.fromStrict name <> "`: \n" <> helpForCommand ctx cmd
-    Just (Group' grp@Group { name }) -> do
-      void $ tell @L.Text ctx $ "Help for group `" <> L.fromStrict name <> "`: \n" <> helpForGroup ctx grp
-    Nothing -> do
-      void $ tell @L.Text ctx $ "No command or group with the path: `" <> L.fromStrict (S.intercalate " " path) <> "` was found."
+    Just (Group' grp@Group { name } remainingPath) ->
+      let failedMsg = if null remainingPath
+            then ""
+            else "No command or group with the path: `" <> L.fromStrict (S.intercalate " " path) <> "` exists for the group: `" <> L.fromStrict name <> "`\n"
+      in void $ tell @L.Text ctx $ failedMsg <> "Help for group `" <> L.fromStrict name <> "`: \n" <> helpForGroup ctx grp
+    Nothing -> let failedMsg = if null path
+                     then ""
+                     else "No command or group with the path: `" <> L.fromStrict (S.intercalate " " path) <> "` was found.\n"
+               in void $ tell @L.Text ctx $ failedMsg <> rootHelp handler
 
 helpCommand' :: BotC r => CommandHandler -> Maybe Group -> [Check] -> P.Sem r Command
 helpCommand' handler parent checks = buildCommand @'[[S.Text]] "help" parent checks helpCommandHelp
@@ -80,6 +90,6 @@ findCommandOrGroup handler path = go (handler ^. #commands, handler ^. #groups) 
           case LH.lookup x commands of
             Just cmd -> Just (Command' cmd)
             Nothing  -> case LH.lookup x groups of
-              Just group -> go (group ^. #commands, group ^. #children) xs <|> Just (Group' group)
+              Just group -> go (group ^. #commands, group ^. #children) xs <|> Just (Group' group xs)
               Nothing    -> Nothing
         go _ [] = Nothing
