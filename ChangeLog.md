@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.9.2
+
+*2020-05-23*
+
+* Added a default help command, located in `Calamity.Commands.Help`.
+
+* Commands now have the list of parameters they take
+
 ## 0.1.9.1
 
 *2020-05-23*
