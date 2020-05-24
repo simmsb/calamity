@@ -64,7 +64,7 @@ addCommands m = do
   pure (remove, handler, res)
 
 
-buildCommands :: P.Member (P.Final IO) r
+buildCommands :: forall r a. P.Member (P.Final IO) r
               => P.Sem (DSLState r) a
               -> P.Sem r (CommandHandler, a)
 buildCommands m = P.fixpointToFinal $ mdo
@@ -72,7 +72,8 @@ buildCommands m = P.fixpointToFinal $ mdo
   let handler = CommandHandler groups cmds
   pure (handler, a)
 
-  where inner h =
+  where inner :: CommandHandler -> P.Sem (DSLState r) a -> P.Sem (P.Fixpoint ': r) (LH.HashMap S.Text Group, (LH.HashMap S.Text Command, a))
+        inner h =
           P.runReader h .
           P.runReader [] .
           P.runReader (const "This command or group has no help.") .
