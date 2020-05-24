@@ -59,9 +59,9 @@ helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n\n" <> (grp ^. #help) ctx <
 rootHelp :: CommandHandler -> L.Text
 rootHelp handler = "```\n" <> groupsMsg <> commandsMsg <> "\n```"
   where groups = LH.keys $ handler ^. #groups
-        commands = LH.keys $ handler ^. #commands
+        commands = LH.elems $ handler ^. #commands
         groupsMsg = if null groups then "" else "The following groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) $ groups)
-        commandsMsg = if null commands then "" else "\nThe following commands exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) $ commands)
+        commandsMsg = if null commands then "" else "\nThe following commands exist:\n" <> (L.unlines . map ("- " <>) . map fmtCommandWithParams $ commands)
 
 -- TODO: process checks
 
