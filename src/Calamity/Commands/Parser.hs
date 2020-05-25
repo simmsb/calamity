@@ -64,7 +64,7 @@ class Typeable a => Parser (a :: Type) r where
 
   parse :: P.Sem (ParserEffs r) (ParserResult a)
 
-data Named (s :: Symbol) a
+data Named (s :: Symbol) (a :: Type)
 
 instance (KnownSymbol s, Parser a r) => Parser (Named s a) r where
   type ParserResult (Named s a) = ParserResult a
@@ -114,7 +114,7 @@ instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
     as <- parse @[a]
     pure $ a :| as
 
-data KleeneConcat a
+data KleeneConcat (a :: Type)
 
 instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneConcat a) r where
   type ParserResult (KleeneConcat a) = ParserResult a

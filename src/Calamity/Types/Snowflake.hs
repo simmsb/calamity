@@ -16,6 +16,7 @@ import           Data.Aeson
 import           Data.Data
 import           Data.Generics.Product.Fields
 import           Data.Hashable
+import           Data.Kind
 import           Data.Text.Read
 import qualified Data.Vector.Generic.Base     as V
 import qualified Data.Vector.Generic.Mutable  as MV
@@ -25,11 +26,11 @@ import           Data.Word
 import           GHC.Generics
 
 import           TextShow
-import qualified TextShow.Generic as TSG
+import qualified TextShow.Generic             as TSG
 
 -- Thanks sbrg
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L78
-newtype Snowflake t = Snowflake
+newtype Snowflake (t :: Type) = Snowflake
   { fromSnowflake :: Word64
   }
   deriving ( Generic, Show, Eq, Ord, Data )
