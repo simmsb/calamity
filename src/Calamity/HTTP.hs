@@ -10,7 +10,10 @@ module Calamity.HTTP
     , module Calamity.HTTP.User
     , module Calamity.HTTP.Reason
     , module Calamity.HTTP.Internal.Types
-    , module Calamity.HTTP.Webhook ) where
+    , module Calamity.HTTP.Webhook
+    -- * HTTP
+    -- $httpDocs
+    ) where
 
 import           Calamity.HTTP.AuditLog
 import           Calamity.HTTP.Channel
@@ -23,3 +26,29 @@ import           Calamity.HTTP.MiscRoutes
 import           Calamity.HTTP.Reason
 import           Calamity.HTTP.User
 import           Calamity.HTTP.Webhook
+
+-- $httpDocs
+--
+-- This module contains all the http related things
+--
+--
+-- ==== Registered Metrics
+--
+--     1. Gauge: @"inflight_requests" [route]@
+--
+--         Keeps track of how many requests are currently in-flight, the @route@
+--         parameter will be the route that is currently active.
+--
+--     2. Counter: @"total_requests" [route]@
+--
+--         Incremented on every request, the @route@ parameter is the route that
+--         the request was made on.
+--
+--
+-- ==== Examples
+--
+-- Editing a message:
+--
+-- @
+-- 'invoke' $ 'EditMessage' someChannel someMessage ('Just' "new content") 'Nothing'
+-- @

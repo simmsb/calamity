@@ -67,9 +67,9 @@ addCommands m = do
       Left (NF path)   -> fire $ customEvt @"command-not-found" path
       Left _           -> pure () -- ignore if no prefix or if context couldn't be built
       Right ctx        -> do
-        cmdInvoke <- registerCounter "command_invoked" [("name", S.unwords $ commandPath (ctx ^. #command))]
+        cmdInvoke <- registerCounter "commands_invoked" [("name", S.unwords $ commandPath (ctx ^. #command))]
         void $ addCounter 1 cmdInvoke
-        fire $ customEvt @"command-run" ctx
+        fire $ customEvt @"command-invoked" ctx
   pure (remove, handler, res)
 
 

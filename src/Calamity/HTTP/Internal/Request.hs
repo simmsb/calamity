@@ -81,10 +81,6 @@ class Request a where
       void $ modifyGauge succ inFlightRequests
       void $ addCounter 1 totalRequests
 
-      whenJust (route' ^. #guildID) $ \guildID -> do
-        totalRequestsGuild <- registerCounter "total_requests" [("guild", showt guildID)]
-        void $ addCounter 1 totalRequestsGuild
-
       resp <- attr "route" (route' ^. #path) $ doRequest rlState' route'
         (action a (requestOptions token') (route' ^. #path . unpacked))
 
