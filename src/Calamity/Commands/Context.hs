@@ -16,14 +16,22 @@ import           GHC.Generics
 import           TextShow
 import qualified TextShow.Generic             as TSG
 
+-- | Invokation context for commands
 data Context = Context
   { message        :: Message
+    -- ^ The message that the command was invoked from
   , guild          :: Maybe Guild
+    -- ^ If the command was sent in a guild, this will be present
   , member         :: Maybe Member
+    -- ^ The member that invoked the command, if in a guild
   , channel        :: Channel
+    -- ^ The channel the command was invoked from
   , user           :: User
+    -- ^ The user that invoked the command
   , command        :: Command
+    -- ^ The command that was invoked
   , prefix         :: L.Text
+    -- ^ The prefix that was used to invoke the command
   , unparsedParams :: L.Text
     -- ^ The message remaining after consuming the prefix
   }

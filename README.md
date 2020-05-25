@@ -110,6 +110,11 @@ main = do
   void . P.runFinal . P.embedToFinal . runCounterAtomic . runCacheInMemory . runMetricsPrometheusIO . useConstantPrefix "!"
     $ runBotIO (BotToken token) $ do
     addCommands $ do
+      helpCommand
+      command @'[User] "utest" $ \ctx u -> do
+        void $ tellt ctx $ "got user: " <> showtl u
+      command @'[Named "u" User, Named "u1" User] "utest2" $ \ctx u u1 -> do
+        void $ tellt ctx $ "got user: " <> showtl u <> "\nand: " <> showtl u1
       command @'[L.Text, Snowflake User] "test" $ \ctx something aUser -> do
         info $ "something = " <> showt something <> ", aUser = " <> showt aUser
       command @'[] "hello" $ \ctx -> do
@@ -123,10 +128,6 @@ main = do
         group "say" $ do
           command @'[KleeneConcat L.Text] "this" $ \ctx msg -> do
             void $ tellt ctx msg
-      command @'[User] "utest" $ \ctx u -> do
-        void $ tellt ctx $ "got user: " <> showtl u
-      command @'[Named "u" User, Named "u1" User] "utest2" $ \ctx u u1 -> do
-        void $ tellt ctx $ "got user: " <> showtl u <> "\nand: " <> showtl u1
       command @'[Snowflake Emoji] "etest" $ \ctx e -> do
         void $ tellt ctx $ "got emoji: " <> showtl e
       command @'[] "explode" $ \ctx -> do

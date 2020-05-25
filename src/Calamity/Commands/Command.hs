@@ -17,14 +17,23 @@ import           GHC.Generics
 import           TextShow
 import qualified TextShow.Generic          as TSG
 
+-- | A command
 data Command = forall a. Command
   { name     :: S.Text
   , parent   :: Maybe Group
-  , checks   :: [Check]
+  , checks   :: [Check] -- TODO check checks on default help
+    -- ^ A list of checks that must pass for this command to be invoked
   , params   :: [S.Text]
+    -- ^ A list of the parameters the command takes, only used for constructing
+    -- help messages.
   , help     :: Context -> L.Text
+    -- ^ A function producing the \'help\' for the command.
   , parser   :: Context -> IO (Either CommandError a)
+    -- ^ A function that parses the context for the command, producing the input
+    -- @a@ for the command.
   , callback :: (Context, a) -> IO (Maybe L.Text)
+    -- ^ A function that given the context and the input (@a@) of the command,
+    -- performs the action of the command.
   }
 
 data CommandS = CommandS

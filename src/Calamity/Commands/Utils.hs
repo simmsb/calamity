@@ -33,6 +33,7 @@ import qualified Data.Text.Lazy                 as L
 import qualified Polysemy                       as P
 import qualified Polysemy.Error                 as P
 import qualified Polysemy.Fail                  as P
+import qualified Polysemy.Tagged                as P
 import qualified Polysemy.Fixpoint              as P
 import qualified Polysemy.Reader                as P
 
@@ -46,6 +47,10 @@ data FailReason
   | NF [L.Text]
   | ERR Context CommandError
 
+-- | Construct commands and groups from a command DSL, then registers an event
+-- handler on the bot that manages running those commands.
+--
+-- Returns an action to remove the event handler, and the 'CommandHandler' that was constructed
 addCommands :: (BotC r, P.Member ParsePrefix r) => P.Sem (DSLState r) a -> P.Sem r (P.Sem r (), CommandHandler, a)
 addCommands m = do
   (handler, res) <- buildCommands m
@@ -64,6 +69,7 @@ addCommands m = do
   pure (remove, handler, res)
 
 
+-- | Run a command DSL, returning the constructed 'CommandHandler'
 buildCommands :: forall r a. P.Member (P.Final IO) r
               => P.Sem (DSLState r) a
               -> P.Sem r (CommandHandler, a)
@@ -76,12 +82,15 @@ buildCommands m = P.fixpointToFinal $ mdo
         inner h =
           P.runReader h .
           P.runReader [] .
-          P.runReader (const "This command or group has no help.") .
+          P.runReader defaultHelp . P.untag @"original-help" .
+          P.runReader defaultHelp .
           P.runReader Nothing .
           runLocalWriter @(LH.HashMap S.Text Group) .
           runLocalWriter @(LH.HashMap S.Text Command)
+        defaultHelp = (const "This command or group has no help.")
 
 
+-- | Attempt to build the context for a command
 buildContext :: BotC r => Message -> L.Text -> Command -> L.Text -> P.Sem r (Maybe Context)
 buildContext msg prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)

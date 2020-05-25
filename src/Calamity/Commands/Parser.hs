@@ -64,6 +64,8 @@ class Typeable a => Parser (a :: Type) r where
 
   parse :: P.Sem (ParserEffs r) (ParserResult a)
 
+-- | A named parameter, used to attach the name @s@ to a type in the command's
+-- help output
 data Named (s :: Symbol) (a :: Type)
 
 instance (KnownSymbol s, Parser a r) => Parser (Named s a) r where
@@ -114,6 +116,9 @@ instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
     as <- parse @[a]
     pure $ a :| as
 
+-- | A parser that consumes zero or more of @a@ then concatenates them together.
+--
+-- @'KleeneConcat' 'L.Text'@ Is therefore consumes all remaining input.
 data KleeneConcat (a :: Type)
 
 instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneConcat a) r where

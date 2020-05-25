@@ -17,13 +17,18 @@ import           GHC.Generics
 import           TextShow
 import qualified TextShow.Generic          as TSG
 
+-- | A group of commands
 data Group = Group
   { name     :: S.Text
   , parent   :: Maybe Group
   , commands :: LH.HashMap S.Text Command
+    -- ^ Any child commands of this group
   , children :: LH.HashMap S.Text Group
+    -- ^ Any child groups of this group
   , help     :: Context -> L.Text
+    -- ^ A function producing the \'help' for the group
   , checks   :: [Check]
+    -- -- ^ A list of checks that must pass
   }
   deriving ( Generic )
 

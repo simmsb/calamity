@@ -80,10 +80,15 @@ helpCommandCallback handler ctx path = do
                      else "No command or group with the path: `" <> L.fromStrict (S.intercalate " " path) <> "` was found.\n"
                in void $ tell @L.Text ctx $ failedMsg <> rootHelp handler
 
+-- | Given a 'CommandHandler', optionally a parent 'Group', and a list of 'Check's,
+-- construct a help command that will provide help for all the commands and
+-- groups in the passed 'CommandHandler'.
 helpCommand' :: BotC r => CommandHandler -> Maybe Group -> [Check] -> P.Sem r Command
 helpCommand' handler parent checks = buildCommand @'[[S.Text]] "help" parent checks helpCommandHelp
   (helpCommandCallback handler)
 
+-- | Create and register the default help command for all the commands
+-- registered in the commands DSL this is used in.
 helpCommand :: BotC r => P.Sem (DSLState r) Command
 helpCommand = do
   handler <- P.ask @CommandHandler

@@ -119,7 +119,7 @@ runBotIO token setup = do
 --
 -- @
 -- 'react' @(\''CustomEvt' "my-event" ('Data.Text.Text', 'Message')) $ \(s, m) ->
---    'void' $ 'Calamity.Tellable.tell' @'Data.Text.Text' m ("Somebody told me to tell you about: " '<>' s)
+--    'void' $ 'Calamity.Types.Tellable.tell' @'Data.Text.Text' m ("Somebody told me to tell you about: " '<>' s)
 -- @
 --
 -- ==== Notes
