@@ -2,6 +2,7 @@
 module Calamity.Gateway.DispatchEvents where
 
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.ConstructorName
 import           Calamity.Internal.Utils                     ()
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Channel.Message
@@ -26,8 +27,12 @@ import           Data.Vector.Unboxed                         ( Vector )
 import           GHC.Generics
 
 data CalamityEvent
-  = Dispatch DispatchData
-  | Custom TypeRep Dynamic
+  = Dispatch
+    Int -- ^ The shard that pushed this event
+    DispatchData -- ^ The attached data
+  | Custom
+    TypeRep -- ^ The name of the custom event
+    Dynamic -- ^ The data sent to the custom event
   | ShutDown
   deriving ( Show, Generic )
 
@@ -65,7 +70,7 @@ data DispatchData
   | VoiceStateUpdate VoiceStateUpdateData
   | VoiceServerUpdate VoiceServerUpdateData
   | WebhooksUpdate WebhooksUpdateData
-  deriving ( Show, Generic )
+  deriving ( Show, Generic, CtorName )
 
 data ReadyData = ReadyData
   { v         :: Integer

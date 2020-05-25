@@ -48,8 +48,6 @@ import qualified Polysemy.Resource               as P
 
 import           Prelude                         hiding ( error )
 
-import           TextShow
-
 import           Wuss
 
 data Websocket m a where
@@ -223,8 +221,6 @@ shardLoop = do
                   , presence = Nothing
                   })
 
-    receivedMessages <- registerCounter "received_messages" [("shard", showt $ shard ^. #shardID)]
-
     result <- P.resourceToIOFinal $ P.bracket (P.embed $ newTBMQueueIO 1)
       (P.embed . atomically . closeTBMQueue)
       (\q -> do
@@ -233,7 +229,6 @@ shardLoop = do
         _discordThread <- P.async $ discordStream ws q
         (fromEitherVoid <$>) . P.raise . P.runError . forever $ do
           -- only we close the queue
-          void $ addCounter 1 receivedMessages
           msg <- P.embed . atomically $ readTBMQueue q
           handleMsg $ fromJust msg)
 
@@ -257,7 +252,7 @@ shardLoop = do
         _ -> pure ()
 
       shard <- P.atomicGets (^. #shardS)
-      P.embed $ UC.writeChan (shard ^. #evtIn) (Dispatch data')
+      P.embed $ UC.writeChan (shard ^. #evtIn) (Dispatch (shard ^. #shardID) data')
 
     HeartBeatReq -> do
       debug "Received heartbeat request"

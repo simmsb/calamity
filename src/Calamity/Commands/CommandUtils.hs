@@ -7,7 +7,10 @@ module Calamity.Commands.CommandUtils
     , buildParser
     , buildCallback
     , runCommand
-    , invokeCommand ) where
+    , invokeCommand
+    , groupPath
+    , commandPath
+    , commandParams ) where
 
 import           Calamity.Commands.Check
 import           Calamity.Commands.Command
@@ -30,6 +33,15 @@ import           Data.Text.Lazy              as L
 import qualified Polysemy                    as P
 import qualified Polysemy.Error              as P
 import qualified Polysemy.Fail               as P
+
+groupPath :: Group -> [S.Text]
+groupPath grp = maybe [] groupPath (grp ^. #parent) ++ [grp ^. #name]
+
+commandPath :: Command -> [S.Text]
+commandPath Command { name, parent } = maybe [] groupPath parent ++ [name]
+
+commandParams :: Command -> L.Text
+commandParams Command { params } = L.fromStrict $ S.intercalate " " params
 
 -- | Given the properties of a 'Command' with the @parser@ and @callback@ in the
 -- 'P.Sem' monad, build a command by transforming the Polysemy actions into IO

@@ -33,16 +33,10 @@ data CommandOrGroup
 helpCommandHelp :: Context -> L.Text
 helpCommandHelp _ = "Show help for a command or group."
 
-groupPath :: Group -> [S.Text]
-groupPath grp = maybe [] groupPath (grp ^. #parent) ++ [grp ^. #name]
-
-commandParams :: Command -> L.Text
-commandParams Command { params } = L.fromStrict $ S.intercalate " " params
-
 helpForCommand :: Context -> Command -> L.Text
-helpForCommand ctx (cmd@Command { name, parent, help }) = "```\nUsage: " <> prefix' <> path' <> " " <> params' <> "\n\n" <> help ctx <> "\n```"
+helpForCommand ctx (cmd@Command { help }) = "```\nUsage: " <> prefix' <> path' <> " " <> params' <> "\n\n" <> help ctx <> "\n```"
   where prefix' = ctx ^. #prefix
-        path'   = L.fromStrict . S.intercalate " " $ maybe [] groupPath parent ++ [name]
+        path'   = L.fromStrict . S.intercalate " " $ commandPath cmd
         params' = commandParams cmd
 
 fmtCommandWithParams :: Command -> L.Text

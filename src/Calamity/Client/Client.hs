@@ -19,23 +19,24 @@ import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
 import           Calamity.HTTP.Internal.Ratelimit
+import           Calamity.Internal.ConstructorName
 import           Calamity.Internal.GenericCurry
 import           Calamity.Internal.RunIntoIO
-import qualified Calamity.Internal.SnowflakeMap   as SM
+import qualified Calamity.Internal.SnowflakeMap    as SM
 import           Calamity.Internal.Updateable
 import           Calamity.Internal.Utils
 import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
-import           Calamity.Types.Model.Presence    ( Presence(..) )
+import           Calamity.Types.Model.Presence     ( Presence(..) )
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
 
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
 import           Control.Concurrent.STM
-import           Control.Exception                ( SomeException )
-import           Control.Lens                     hiding ( (<.>) )
+import           Control.Exception                 ( SomeException )
+import           Control.Lens                      hiding ( (<.>) )
 import           Control.Monad
 
 import           Data.Default.Class
@@ -44,20 +45,23 @@ import           Data.Foldable
 import           Data.IORef
 import           Data.Maybe
 import           Data.Proxy
+import qualified Data.Text                         as S
 import           Data.Time.Clock.POSIX
 import           Data.Traversable
 import           Data.Typeable
 
-import qualified DiPolysemy                       as Di
+import qualified DiPolysemy                        as Di
 
 import           Fmt
 
-import qualified Polysemy                         as P
-import qualified Polysemy.Async                   as P
-import qualified Polysemy.AtomicState             as P
-import qualified Polysemy.Error                   as P
-import qualified Polysemy.Fail                    as P
-import qualified Polysemy.Reader                  as P
+import qualified Polysemy                          as P
+import qualified Polysemy.Async                    as P
+import qualified Polysemy.AtomicState              as P
+import qualified Polysemy.Error                    as P
+import qualified Polysemy.Fail                     as P
+import qualified Polysemy.Reader                   as P
+
+import           TextShow                          ( TextShow(showt) )
 
 timeA :: P.Member (P.Embed IO) r => P.Sem r a -> P.Sem r (Double, a)
 timeA m = do
@@ -294,7 +298,7 @@ clientLoop = do
     evt' <- P.embed $ readChan outc
     case evt' of
       -- NOTE: these raise's are needed to raise into the Error effect
-      Dispatch evt -> P.raise $ handleEvent evt
+      Dispatch sid evt -> P.raise $ handleEvent sid evt
       Custom s d   -> P.raise $ handleCustomEvent s d
       ShutDown     -> P.throw ()
   debug "leaving client loop"
@@ -315,11 +319,13 @@ catchAllLogging m = do
     Right _ -> pure ()
     Left e -> debug $ "got exception: " +|| e ||+ ""
 
-handleEvent :: BotC r => DispatchData -> P.Sem r ()
-handleEvent data' = do
+handleEvent :: BotC r => Int -> DispatchData -> P.Sem r ()
+handleEvent shardID data' = do
   debug "handling an event"
   eventHandlers <- P.atomicGet
   actions <- P.runFail $ do
+    evtCounter <- registerCounter "events_received" [("type", S.pack $ ctorName data'), ("shard", showt shardID)]
+    void $ addCounter 1 evtCounter
     cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20..100]
     (time, res) <- timeA $ Di.reset $ handleEvent' eventHandlers data'
     void $ observeHistogram time cacheUpdateHisto
@@ -470,8 +476,6 @@ handleEvent' eh evt@(GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) = 
   pure $ map (\f -> f guild role) (getEventHandlers @'GuildRoleDeleteEvt eh)
 
 handleEvent' eh evt@(MessageCreate msg) = do
-  messagesReceived <- registerCounter "messages_received" mempty
-  void $ addCounter 1 messagesReceived
   updateCache evt
   pure $ map ($ msg) (getEventHandlers @'MessageCreateEvt eh)
 

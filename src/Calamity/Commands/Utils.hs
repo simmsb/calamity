@@ -6,6 +6,7 @@ module Calamity.Commands.Utils
     , buildContext ) where
 
 import           Calamity.Cache.Eff
+import           Calamity.Metrics.Eff
 import           Calamity.Client.Client
 import           Calamity.Client.Types
 import           Calamity.Commands.Command
@@ -64,8 +65,11 @@ addCommands m = do
     case err of
       Left (ERR ctx e) -> fire $ customEvt @"command-error" (ctx, e)
       Left (NF path)   -> fire $ customEvt @"command-not-found" path
-      Left _           -> pure () -- "ignore if no prefix or if context couldn't be built"
-      Right ctx        -> fire $ customEvt @"command-run" ctx
+      Left _           -> pure () -- ignore if no prefix or if context couldn't be built
+      Right ctx        -> do
+        cmdInvoke <- registerCounter "command_invoked" [("name", S.unwords $ commandPath (ctx ^. #command))]
+        void $ addCounter 1 cmdInvoke
+        fire $ customEvt @"command-run" ctx
   pure (remove, handler, res)
 
 
