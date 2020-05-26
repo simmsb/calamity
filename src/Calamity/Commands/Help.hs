@@ -36,7 +36,7 @@ helpCommandHelp _ = "Show help for a command or group."
 helpForCommand :: Context -> Command -> L.Text
 helpForCommand ctx (cmd@Command { help }) = "```\nUsage: " <> prefix' <> path' <> " " <> params' <> "\n\n" <> help ctx <> "\n```"
   where prefix' = ctx ^. #prefix
-        path'   = L.fromStrict . S.intercalate " " $ commandPath cmd
+        path'   = L.fromStrict . S.unwords $ commandPath cmd
         params' = commandParams cmd
 
 fmtCommandWithParams :: Command -> L.Text
@@ -44,7 +44,7 @@ fmtCommandWithParams cmd@Command { name } = L.fromStrict name <> " " <> commandP
 
 helpForGroup :: Context -> Group -> L.Text
 helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n\n" <> (grp ^. #help) ctx <> "\n" <> groupsMsg <> commandsMsg <> "\n```"
-  where path' = L.fromStrict . S.intercalate " " $ groupPath grp
+  where path' = L.fromStrict . S.unwords $ groupPath grp
         groups = LH.keys $ grp ^. #children
         commands = LH.elems $ grp ^. #commands
         groupsMsg = if null groups then "" else "The following child groups exist:\n" <> L.fromStrict (S.unlines . map ("- " <>) $ groups)
@@ -67,11 +67,11 @@ helpCommandCallback handler ctx path = do
     Just (Group' grp@Group { name } remainingPath) ->
       let failedMsg = if null remainingPath
             then ""
-            else "No command or group with the path: `" <> L.fromStrict (S.intercalate " " path) <> "` exists for the group: `" <> L.fromStrict name <> "`\n"
+            else "No command or group with the path: `" <> L.fromStrict (S.unwords path) <> "` exists for the group: `" <> L.fromStrict name <> "`\n"
       in void $ tell @L.Text ctx $ failedMsg <> "Help for group `" <> L.fromStrict name <> "`: \n" <> helpForGroup ctx grp
     Nothing -> let failedMsg = if null path
                      then ""
-                     else "No command or group with the path: `" <> L.fromStrict (S.intercalate " " path) <> "` was found.\n"
+                     else "No command or group with the path: `" <> L.fromStrict (S.unwords path) <> "` was found.\n"
                in void $ tell @L.Text ctx $ failedMsg <> rootHelp handler
 
 -- | Given a 'CommandHandler', optionally a parent 'Group', and a list of 'Check's,

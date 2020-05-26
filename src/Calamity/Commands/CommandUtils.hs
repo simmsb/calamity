@@ -41,7 +41,7 @@ commandPath :: Command -> [S.Text]
 commandPath Command { name, parent } = maybe [] groupPath parent ++ [name]
 
 commandParams :: Command -> L.Text
-commandParams Command { params } = L.fromStrict $ S.intercalate " " params
+commandParams Command { params } = L.fromStrict $ S.unwords params
 
 -- | Given the properties of a 'Command' with the @parser@ and @callback@ in the
 -- 'P.Sem' monad, build a command by transforming the Polysemy actions into IO
