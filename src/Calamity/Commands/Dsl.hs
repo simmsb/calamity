@@ -73,7 +73,7 @@ command' name params parser cb = do
 --
 -- @
 -- 'command' \@\'['Calamity.Commands.Parser.Named' "user" ('Calamity.Types.Snowflake' 'Calamity.Types.Model.User'),
---                'Calamity.Commands.Parser.Named' "reason" ('Calamity.Commands.Parser.KleeneConcat' 'S.Text')]
+--                'Calamity.Commands.Parser.Named' "reason" ('Calamity.Commands.Parser.KleeneStarConcat' 'S.Text')]
 --    "ban" $ \ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
 --      'Just' guild -> do
 --        'Control.Monad.void' . 'Calamity.HTTP.invoke' . 'Calamity.HTTP.reason' r $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid

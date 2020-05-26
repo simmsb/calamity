@@ -2,7 +2,8 @@
 module Calamity.Commands.Parser
     ( Parser(..)
     , Named
-    , KleeneConcat
+    , KleeneStarConcat
+    , KleenePlusConcat
     , runCommandParser ) where
 
 import           Calamity.Cache.Eff
@@ -19,6 +20,7 @@ import           Control.Monad.Trans           ( lift )
 import           Data.Char                     ( isSpace )
 import           Data.Kind
 import           Data.List.NonEmpty            ( NonEmpty(..) )
+import           Data.Semigroup
 import qualified Data.Text                     as S
 import qualified Data.Text.Lazy                as L
 import           Data.Typeable
@@ -118,25 +120,47 @@ instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
 
 -- | A parser that consumes zero or more of @a@ then concatenates them together.
 --
--- @'KleeneConcat' 'L.Text'@ Is therefore consumes all remaining input.
-data KleeneConcat (a :: Type)
+-- @'KleeneStarConcat' 'L.Text'@ Is therefore consumes all remaining input.
+data KleeneStarConcat (a :: Type)
 
-instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneConcat a) r where
-  type ParserResult (KleeneConcat a) = ParserResult a
+instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneStarConcat a) r where
+  type ParserResult (KleeneStarConcat a) = ParserResult a
 
   parse = mconcat <$> parse @[a]
 
-instance {-# OVERLAPS #-}Parser (KleeneConcat L.Text) r where
-  type ParserResult (KleeneConcat L.Text) = ParserResult L.Text
+instance {-# OVERLAPS #-}Parser (KleeneStarConcat L.Text) r where
+  type ParserResult (KleeneStarConcat L.Text) = ParserResult L.Text
 
   -- consume rest on text just takes everything remaining
-  parse = parseMP (parserName @(KleeneConcat L.Text)) someSingle
+  parse = parseMP (parserName @(KleeneStarConcat L.Text)) manySingle
 
-instance {-# OVERLAPS #-}Parser (KleeneConcat S.Text) r where
-  type ParserResult (KleeneConcat S.Text) = ParserResult S.Text
+instance {-# OVERLAPS #-}Parser (KleeneStarConcat S.Text) r where
+  type ParserResult (KleeneStarConcat S.Text) = ParserResult S.Text
 
   -- consume rest on text just takes everything remaining
-  parse = parseMP (parserName @(KleeneConcat S.Text)) (L.toStrict <$> someSingle)
+  parse = parseMP (parserName @(KleeneStarConcat S.Text)) (L.toStrict <$> manySingle)
+
+-- | A parser that consumes one or more of @a@ then concatenates them together.
+--
+-- @'KleenePlusConcat' 'L.Text'@ Is therefore consumes all remaining input.
+data KleenePlusConcat (a :: Type)
+
+instance (Monoid (ParserResult a), Parser a r) => Parser (KleenePlusConcat a) r where
+  type ParserResult (KleenePlusConcat a) = ParserResult a
+
+  parse = sconcat <$> parse @(NonEmpty a)
+
+instance {-# OVERLAPS #-}Parser (KleenePlusConcat L.Text) r where
+  type ParserResult (KleenePlusConcat L.Text) = ParserResult L.Text
+
+  -- consume rest on text just takes everything remaining
+  parse = parseMP (parserName @(KleenePlusConcat L.Text)) someSingle
+
+instance {-# OVERLAPS #-}Parser (KleenePlusConcat S.Text) r where
+  type ParserResult (KleenePlusConcat S.Text) = ParserResult S.Text
+
+  -- consume rest on text just takes everything remaining
+  parse = parseMP (parserName @(KleenePlusConcat S.Text)) (L.toStrict <$> someSingle)
 
 instance Typeable (Snowflake a) => Parser (Snowflake a) r where
   parse = parseMP (parserName @(Snowflake a)) snowflake
@@ -226,8 +250,8 @@ trackOffsets m = do
 item :: MonadParsec e L.Text m => m L.Text
 item = try quotedString <|> someNonWS
 
--- manySingle :: MonadParsec e s m => m (Tokens s)
--- manySingle = takeWhileP (Just "Any character") (const True)
+manySingle :: MonadParsec e s m => m (Tokens s)
+manySingle = takeWhileP (Just "Any character") (const True)
 
 someSingle :: MonadParsec e s m => m (Tokens s)
 someSingle = takeWhile1P (Just "any character") (const True)

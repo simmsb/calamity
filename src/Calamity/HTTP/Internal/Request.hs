@@ -15,7 +15,6 @@ import           Calamity.Client.Types
 import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.HTTP.Internal.Route
 import           Calamity.HTTP.Internal.Types
-import           Calamity.Internal.Utils
 import           Calamity.Metrics.Eff
 import           Calamity.Types.Token
 
@@ -38,8 +37,6 @@ import           Polysemy                         ( Sem )
 import qualified Polysemy                         as P
 import qualified Polysemy.Error                   as P
 import qualified Polysemy.Reader                  as P
-
-import           TextShow
 
 fromResult :: P.Member (P.Error RestError) r => Data.Aeson.Result a -> Sem r a
 fromResult (Success a) = pure a

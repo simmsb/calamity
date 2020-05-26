@@ -14,6 +14,8 @@ import           Calamity.Types.Snowflake
 import           Control.Lens
 import           Control.Monad.State.Strict
 
+import qualified Data.HashMap.Lazy as LH
+
 import           Data.Default.Class
 import           Data.Foldable
 import qualified Data.HashSet                   as LS
@@ -28,7 +30,7 @@ data Cache = Cache
   { user              :: Maybe User
   , guilds            :: SM.SnowflakeMap Guild
   , dms               :: SM.SnowflakeMap DMChannel
-  , channels          :: SM.SnowflakeMap GuildChannel
+  , guildChannels     :: LH.HashMap (Snowflake GuildChannel) Guild
   , users             :: SM.SnowflakeMap User
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
   , messages          :: BoundedStore Message
@@ -36,7 +38,7 @@ data Cache = Cache
   deriving ( Generic, Show )
 
 emptyCache :: Cache
-emptyCache = Cache Nothing SM.empty SM.empty SM.empty SM.empty LS.empty def
+emptyCache = Cache Nothing SM.empty SM.empty LH.empty SM.empty LS.empty def
 
 runCacheInMemory :: P.Member (P.Embed IO) r => P.Sem (CacheEff ': r) a -> P.Sem r a
 runCacheInMemory m = do
@@ -51,10 +53,16 @@ runCache :: CacheEff m a -> State Cache a
 runCache (SetBotUser u) = #user ?= u
 runCache GetBotUser     = use #user
 
-runCache (SetGuild g)   = #guilds %= SM.insert g
+runCache (SetGuild g)   = do
+  #guilds %= SM.insert g
+  #guildChannels %= LH.filter (\v -> getID @Guild v /= getID @Guild g)
+  #guildChannels %= LH.union (LH.fromList $ map (,g) (SM.keys (g ^. #channels)))
 runCache (GetGuild gid) = use (#guilds . at gid)
+runCache (GetGuildChannel cid) = use (#guildChannels . at cid) <&> (>>= (^. #channels . at cid))
 runCache GetGuilds      = SM.elems <$> use #guilds
-runCache (DelGuild gid) = #guilds %= sans gid
+runCache (DelGuild gid) = do
+  #guilds %= sans gid
+  #guildChannels %= LH.filter (\v -> getID @Guild v /= gid)
 
 runCache (SetDM dm)  = #dms %= SM.insert dm
 runCache (GetDM did) = use (#dms . at did)

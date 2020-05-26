@@ -126,7 +126,7 @@ main = do
           val <- getCounter
           void $ tellt ctx ("The value is: " <> showtl val)
         group "say" $ do
-          command @'[KleeneConcat L.Text] "this" $ \ctx msg -> do
+          command @'[KleenePlusConcat L.Text] "this" $ \ctx msg -> do
             void $ tellt ctx msg
       command @'[Snowflake Emoji] "etest" $ \ctx e -> do
         void $ tellt ctx $ "got emoji: " <> showtl e

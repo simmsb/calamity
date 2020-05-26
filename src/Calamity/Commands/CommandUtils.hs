@@ -69,7 +69,7 @@ buildCommand' name parent checks params help parser cb = do
 -- Building a command that bans a user by id.
 --
 -- @
--- 'buildCommand' @\'['Named' "user" ('Snowflake' 'User'), 'Named' "reason" ('KleeneConcat' 'S.Text')]
+-- 'buildCommand' @\'['Named' "user" ('Snowflake' 'User'), 'Named' "reason" ('KleeneStarConcat' 'S.Text')]
 --    "ban" 'Nothing' [] ('const' "Ban a user") $ \ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
 --      'Just' guild -> do
 --        'void' . 'Calamity.HTTP.invoke' . 'Calamity.HTTP.reason' r $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid

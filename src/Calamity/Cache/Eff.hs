@@ -9,6 +9,7 @@ module Calamity.Cache.Eff
     , setGuild
     , updateGuild
     , getGuild
+    , getGuildChannel
     , getGuilds
     , delGuild
     , setDM
@@ -53,6 +54,8 @@ data CacheEff m a where
   SetGuild :: Guild -> CacheEff m ()
   -- | Get a 'Guild' from the cache
   GetGuild :: Snowflake Guild -> CacheEff m (Maybe Guild)
+  -- | Get a 'GuildChannel' from the cache
+  GetGuildChannel :: Snowflake GuildChannel -> CacheEff m (Maybe GuildChannel)
   -- | Get all 'Guild's from the cache
   GetGuilds :: CacheEff m [Guild]
   -- | Delete a 'Guild' from the cache

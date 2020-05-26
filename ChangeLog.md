@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.10.0
+
+* Renamed `Calamity.Commands.Parser.KleeneConcat` to
+  `Calamity.Commands.Parser.KleeneStarConcat` and added
+  `Calamity.Commands.Parser.KleenePlusConcat`
+  
+* Added `Calamity.Types.Upgradeable`
+
 ## 0.1.9.2
 
 *2020-05-23*
