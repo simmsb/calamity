@@ -107,7 +107,7 @@ tellt t m = tell t $ L.toStrict m
 main :: IO ()
 main = do
   token <- view packed <$> getEnv "BOT_TOKEN"
-  void . P.runFinal . P.embedToFinal . runCounterAtomic . runCacheInMemory . runMetricsPrometheusIO . useConstantPrefix "!"
+  void . P.runFinal . P.embedToFinal . runCounterAtomic . runCacheInMemory . runMetricsNoop . useConstantPrefix "!"
     $ runBotIO (BotToken token) $ do
     addCommands $ do
       helpCommand
