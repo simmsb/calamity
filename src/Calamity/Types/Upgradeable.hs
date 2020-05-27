@@ -4,31 +4,30 @@ module Calamity.Types.Upgradeable
 
 import           Calamity.Cache.Eff
 import           Calamity.Client.Types
-import           Calamity.HTTP             as H
+import           Calamity.HTTP                  as H
 import           Calamity.Internal.Utils
-import           Calamity.Types.Model.User
-import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Guild
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
 import           Control.Applicative
+import           Control.Lens
 
-import qualified Polysemy                  as P
-import qualified Polysemy.Fail             as P
-import qualified Polysemy.NonDet           as P
-import Data.Generics.Sum.Constructors
-import Control.Lens
+import           Data.Generics.Sum.Constructors
 
-class Upgradeable a where
-  type SourceIDS a
-  type SourceIDS a = Snowflake a
-  upgrade :: BotC r => SourceIDS a -> P.Sem r (Maybe a)
+import qualified Polysemy                       as P
+import qualified Polysemy.Fail                  as P
+import qualified Polysemy.NonDet                as P
+
+class Upgradeable a ids | a -> ids, ids -> a where
+  upgrade :: BotC r => ids -> P.Sem r (Maybe a)
 
 maybeToAlt :: Alternative f => Maybe a -> f a
 maybeToAlt (Just x) = pure x
 maybeToAlt Nothing = empty
 
-instance Upgradeable User where
+instance Upgradeable User (Snowflake User) where
   upgrade uid = P.runNonDetMaybe ((getUser uid >>= maybeToAlt) <|> gethttp)
     where
       gethttp = P.failToNonDet $ do
@@ -36,9 +35,7 @@ instance Upgradeable User where
         setUser u
         pure u
 
-instance Upgradeable Member where
-  type SourceIDS Member = (Snowflake Guild, Snowflake Member)
-
+instance Upgradeable Member (Snowflake Guild, Snowflake Member) where
   upgrade (gid, mid) = P.runNonDetMaybe (getcache <|> gethttp)
     where
       getcache = P.failToNonDet $ do
@@ -51,7 +48,7 @@ instance Upgradeable Member where
         updateGuild gid (#members . at mid ?~ m)
         pure m
 
-instance Upgradeable Guild where
+instance Upgradeable Guild (Snowflake Guild) where
   upgrade gid = P.runNonDetMaybe ((getGuild gid >>= maybeToAlt) <|> gethttp)
     where
       gethttp = P.failToNonDet $ do
@@ -64,7 +61,7 @@ insertChannel (GuildChannel' ch) =
   updateGuild (getID ch) (#channels . at (getID @GuildChannel ch) ?~ ch)
 insertChannel _ = pure ()
 
-instance Upgradeable Channel where
+instance Upgradeable Channel (Snowflake Channel) where
   upgrade cid = P.runNonDetMaybe (getcacheDM <|> getcacheGuild <|> gethttp)
     where
       getcacheDM = DMChannel' <<$>> getDM (coerceSnowflake cid) >>= maybeToAlt
@@ -74,7 +71,7 @@ instance Upgradeable Channel where
         insertChannel c
         pure c
 
-instance Upgradeable GuildChannel where
+instance Upgradeable GuildChannel (Snowflake GuildChannel) where
   upgrade cid = P.runNonDetMaybe (getcache <|> gethttp)
     where
       getcache = getGuildChannel (coerceSnowflake cid) >>= maybeToAlt
@@ -83,9 +80,7 @@ instance Upgradeable GuildChannel where
         insertChannel c
         maybeToAlt (c ^? _Ctor @"GuildChannel'")
 
-instance Upgradeable Emoji where
-  type SourceIDS Emoji = (Snowflake Guild, Snowflake Emoji)
-
+instance Upgradeable Emoji (Snowflake Guild, Snowflake Emoji) where
   upgrade (gid, eid) = P.runNonDetMaybe (getcache <|> gethttp)
     where
       getcache = P.failToNonDet $ do
