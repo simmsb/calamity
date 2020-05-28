@@ -74,8 +74,6 @@ instance FromJSON Guild where
   parseJSON = withObject "Guild" $ \v -> do
     id <- v .: "id"
 
-    -- TODO: clean this up
-
     members' <- do
       members' <- v .: "members"
       SM.fromList <$> traverse (\m -> parseJSON $ Object (m <> "guild_id" .= id)) members'

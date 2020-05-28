@@ -2,6 +2,8 @@
 
 ## 0.1.10.0
 
+*2020-05-27*
+
 * Renamed `Calamity.Commands.Parser.KleeneConcat` to
   `Calamity.Commands.Parser.KleeneStarConcat` and added
   `Calamity.Commands.Parser.KleenePlusConcat`
