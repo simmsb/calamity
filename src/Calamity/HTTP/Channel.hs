@@ -33,13 +33,34 @@ import           Network.Wreq
 import           TextShow
 
 data CreateMessageOptions = CreateMessageOptions
-  { content :: Maybe Text
-  , nonce   :: Maybe Text
-  , tts     :: Maybe Bool
-  , file    :: Maybe ByteString
-  , embed   :: Maybe Embed
+  { content         :: Maybe Text
+  , nonce           :: Maybe Text
+  , tts             :: Maybe Bool
+  , file            :: Maybe ByteString
+  , embed           :: Maybe Embed
+  , allowedMentions :: Maybe AllowedMentions
   }
   deriving ( Show, Generic, Default )
+
+data AllowedMentionType
+  = AllowedMentionRoles
+  | AllowedMentionUsers
+  | AllowedMentionEveryone
+  deriving ( Show, Generic )
+
+instance ToJSON AllowedMentionType where
+  toJSON AllowedMentionRoles = String "roles"
+  toJSON AllowedMentionUsers = String "users"
+  toJSON AllowedMentionEveryone = String "everyone"
+
+data AllowedMentions = AllowedMentions
+  { parse :: [AllowedMentionType]
+  , roles :: [Snowflake Role]
+  , users :: [Snowflake User]
+  }
+  deriving ( Show, Generic, Default )
+  deriving ( ToJSON ) via CalamityJSON AllowedMentions
+
 
 data CreateMessageJson = CreateMessageJson
   { content :: Maybe Text
