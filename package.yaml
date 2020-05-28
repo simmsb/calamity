@@ -59,7 +59,7 @@ dependencies:
 - polysemy >= 1.3 && < 2
 - polysemy-plugin >= 0.2 && < 0.3
 - di-polysemy >= 0.1.3 && < 0.2
-- df1 >= 0.3 && < 0.4
+- df1 >= 0.3 && < 0.5
 - generic-override >= 0.0.0.0 && < 0.0.1
 - generic-override-aeson >= 0.0.0.0 && < 0.0.1
 - deepseq >= 1.4.4.0 && < 2

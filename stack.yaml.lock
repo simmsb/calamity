@@ -5,19 +5,19 @@
 
 packages:
 - completed:
-    hackage: df1-0.3.2@sha256:2096eb43c090a80a8414aad692708ab7cfbdd9dc839d15379c20ce8a5549c0f6,1106
+    hackage: df1-0.4@sha256:b430ee7e0abda6ce9ef03b9fbe532a7384e6de1b4873357cc116db9f614ce398,1104
     pantry-tree:
       size: 531
-      sha256: ce6efb7aaffdabf984509241a7cae43ec861e8b0e1f3fe0e590321b853d71b17
+      sha256: 1685f225d30b6291d67d96467d374b2e727d7c0877d7ea7724fd80d331130485
   original:
-    hackage: df1-0.3.2@sha256:2096eb43c090a80a8414aad692708ab7cfbdd9dc839d15379c20ce8a5549c0f6,1106
+    hackage: df1-0.4
 - completed:
-    hackage: di-df1-1.2@sha256:0764003cd635d3dace95ab935323976faa6443441be8e5341194436c12a574f7,997
+    hackage: di-df1-1.2.1@sha256:6be994f4d6acc4e9b498af00367d09e71fe6da42c6c2eb947ab49e19a6ba6e15,999
     pantry-tree:
       size: 424
-      sha256: 5cd4714eb11434cb17223f3b73f151a0237f10be42acef260d412d392f52a359
+      sha256: 5fd50fb50650ea9cda045ae0ae24f7de40b4cfccb9a91e5943dd5adf222991aa
   original:
-    hackage: di-df1-1.2@sha256:0764003cd635d3dace95ab935323976faa6443441be8e5341194436c12a574f7,997
+    hackage: di-df1-1.2.1
 - completed:
     hackage: di-handle-1.0.1@sha256:642ce26cc3b166e14782fb3d3acc4a15533e1021bcd6712704531f71c9483d24,720
     pantry-tree:
@@ -75,12 +75,12 @@ packages:
   original:
     hackage: ghc-tcplugins-extra-0.3.2@sha256:1bbfd4449c3669a31618ea0ebc5d00d980a53988daad3b6218bab5c8cdff268d,1687
 - completed:
-    hackage: di-polysemy-0.1.3.0@sha256:5513d04b5ccbde697bfa784b356bf3aec46a1077e2891bde09d27ea1d3906f7f,2160
+    hackage: di-polysemy-0.1.3.1@sha256:f570cf6cdb0a0ef9dc903a3a7699a4c3246778e717e5f533bb96e18a8c9d1555,2160
     pantry-tree:
       size: 320
-      sha256: 74efdcd2506c4413e163713d76089f0da9cb75ce86c1ce599fe7fe5baa5276fb
+      sha256: 201f2aea9391f7419f53a9afb373ee02d3e7d8b64ad6b0b92c3d2c1ae1ae598a
   original:
-    hackage: di-polysemy-0.1.3.0
+    hackage: di-polysemy-0.1.3.1
 - completed:
     hackage: wreq-patchable-1.0.0.0@sha256:83fbdcc7c6bf30454fb71816dbc20442268b762f53899be5afb96c0c82ece45b,4818
     pantry-tree:
