@@ -88,6 +88,13 @@ packages:
       sha256: 42d4a01b115fbf4f3a88dca62e3b36002542972b2b11ddaf1328b31e9e428747
   original:
     hackage: wreq-patchable-1.0.0.0
+- completed:
+    hackage: data-flags-0.0.3.4@sha256:a133f2912e0e22f03419dc89a04b1e117ff6290f1777f5b7f037f683b80ed2cf,1097
+    pantry-tree:
+      size: 383
+      sha256: fabce261d22601659cc3aeab1d5bb8f918dd3f8a8b01a8b9c483a08113a2535a
+  original:
+    hackage: data-flags-0.0.3.4
 snapshots:
 - completed:
     size: 493124

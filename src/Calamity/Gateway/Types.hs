@@ -16,6 +16,7 @@ module Calamity.Gateway.Types
     , ShardState(..) ) where
 
 import           Calamity.Gateway.DispatchEvents
+import           Calamity.Gateway.Intents
 import           Calamity.Internal.AesonThings
 import           Calamity.Metrics.Eff
 import           Calamity.Types.LogEff
@@ -201,6 +202,7 @@ data IdentifyData = IdentifyData
   , largeThreshold :: Int
   , shard          :: (Int, Int)
   , presence       :: Maybe StatusUpdateData
+  , intents        :: Maybe Intents
   }
   deriving ( Show, Generic )
   deriving ToJSON via CalamityJSON IdentifyData
@@ -254,13 +256,15 @@ data ShardFlowControl
   deriving ( Show )
 
 data Shard = Shard
-  { shardID     :: Int
-  , shardCount  :: Int
-  , gateway     :: Text
-  , evtIn       :: InChan CalamityEvent
-  , cmdOut      :: OutChan ControlMessage
-  , shardState  :: IORef ShardState
-  , token       :: Text
+  { shardID       :: Int
+  , shardCount    :: Int
+  , gateway       :: Text
+  , evtIn         :: InChan CalamityEvent
+  , cmdOut        :: OutChan ControlMessage
+  , shardState    :: IORef ShardState
+  , token         :: Text
+  , initialStatus :: Maybe StatusUpdateData
+  , intents       :: Maybe Intents
   }
   deriving ( Generic )
 

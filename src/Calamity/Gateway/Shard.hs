@@ -7,6 +7,7 @@ module Calamity.Gateway.Shard
     , newShard ) where
 
 import           Calamity.Gateway.DispatchEvents
+import           Calamity.Gateway.Intents
 import           Calamity.Gateway.Types
 import           Calamity.Internal.Utils
 import           Calamity.Metrics.Eff
@@ -81,13 +82,15 @@ newShard :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r
          -> Int
          -> Int
          -> Token
+         -> Maybe StatusUpdateData
+         -> Maybe Intents
          -> UC.InChan CalamityEvent
          -> Sem r (UC.InChan ControlMessage, Async (Maybe ()))
-newShard gateway id count token evtIn = do
+newShard gateway id count token presence intents evtIn = do
   (cmdIn, stateVar) <- P.embed $ mdo
     (cmdIn, cmdOut) <- UC.newChan
     stateVar <- newIORef $ newShardState shard
-    let shard = Shard id count gateway evtIn cmdOut stateVar (rawToken token)
+    let shard = Shard id count gateway evtIn cmdOut stateVar (rawToken token) presence intents
     pure (cmdIn, stateVar)
 
   let runShard = P.runAtomicStateIORef stateVar shardLoop
@@ -218,7 +221,8 @@ shardLoop = do
                   , largeThreshold = 250
                   , shard = (shard ^. #shardID,
                              shard ^. #shardCount)
-                  , presence = Nothing
+                  , presence = shard ^. #initialStatus
+                  , intents = shard ^. #intents
                   })
 
     result <- P.resourceToIOFinal $ P.bracket (P.embed $ newTBMQueueIO 1)

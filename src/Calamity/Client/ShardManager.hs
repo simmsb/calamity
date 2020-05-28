@@ -26,8 +26,8 @@ mapLeft f (Left a) = Left $ f a
 mapLeft _ (Right b) = Right b
 
 -- | Connects the bot to the gateway over n shards
-shardBot :: BotC r => Sem r (Either StartupError ())
-shardBot = (mapLeft StartupError <$>) . P.runFail $ do
+shardBot :: BotC r => Maybe StatusUpdateData -> Maybe Intents -> Sem r (Either StartupError ())
+shardBot initialStatus intents = (mapLeft StartupError <$>) . P.runFail $ do
   numShardsVar <- P.asks numShards
   shardsVar <- P.asks shards
 
@@ -46,7 +46,7 @@ shardBot = (mapLeft StartupError <$>) . P.runFail $ do
   info $ "Number of shards: " +| numShards' |+ ""
 
   shards <- for [0 .. numShards' - 1] $ \id ->
-    newShard host id numShards' token inc
+    newShard host id numShards' token initialStatus intents inc
 
   P.embed . atomically $ writeTVar shardsVar shards
 

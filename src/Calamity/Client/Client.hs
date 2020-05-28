@@ -4,6 +4,7 @@
 module Calamity.Client.Client
     ( react
     , runBotIO
+    , runBotIO'
     , stopBot
     , sendPresence
     , events
@@ -18,6 +19,7 @@ import           Calamity.Client.ShardManager
 import           Calamity.Client.Types
 import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Types
+import           Calamity.Gateway.Intents
 import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.Internal.ConstructorName
 import           Calamity.Internal.GenericCurry
@@ -89,15 +91,31 @@ newClient token = do
                 ehidCounter
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
-runBotIO :: forall r a. (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r)) => Token -> P.Sem (SetupEff r) a -> P.Sem r (Maybe StartupError)
-runBotIO token setup = do
+runBotIO :: forall r a.
+         (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r))
+         => Token
+         -> P.Sem (SetupEff r) a
+         -> P.Sem r (Maybe StartupError)
+runBotIO token setup = runBotIO' token Nothing Nothing setup
+
+-- | Create a bot, run your setup action, and then loop until the bot closes.
+--
+-- This version allows you to specify the initial status and intents.
+runBotIO' :: forall r a.
+          (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r))
+          => Token
+          -> Maybe StatusUpdateData
+          -> Maybe Intents
+          -> P.Sem (SetupEff r) a
+          -> P.Sem r (Maybe StartupError)
+runBotIO' token status intents setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
   P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup
-    r <- shardBot
+    r <- shardBot status intents
     case r of
-      Left e -> pure (Just e)
+      Left e  -> pure (Just e)
       Right _ -> do
         Di.push "calamity-loop" clientLoop
         Di.push "calamity-stop" finishUp

@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: eb16961d3139ed8d839b6b8ba57112c05622cdfd6717d2b46af939f9cd12268e
+-- hash: 37ab4b061cc4bd797f758a2d640867b865026cbdacb7266f5e2ef7408e32d47f
 
 name:           calamity
 version:        0.1.11
@@ -55,6 +55,7 @@ library
       Calamity.Commands.Utils
       Calamity.Gateway
       Calamity.Gateway.DispatchEvents
+      Calamity.Gateway.Intents
       Calamity.Gateway.Shard
       Calamity.Gateway.Types
       Calamity.HTTP
@@ -136,6 +137,7 @@ library
     , concurrent-extra >=0.7 && <0.8
     , containers >=0.6 && <0.7
     , data-default-class >=0.1 && <0.2
+    , data-flags >=0.0.3 && <0.1.0
     , deepseq >=1.4.4.0 && <2
     , deque >=0.4 && <0.5
     , df1 >=0.3 && <0.5
