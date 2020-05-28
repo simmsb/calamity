@@ -103,6 +103,8 @@ parseDispatchData GUILD_MEMBERS_CHUNK data'         = GuildMembersChunk <$> pars
 parseDispatchData GUILD_ROLE_CREATE data'           = GuildRoleCreate <$> parseJSON data'
 parseDispatchData GUILD_ROLE_UPDATE data'           = GuildRoleUpdate <$> parseJSON data'
 parseDispatchData GUILD_ROLE_DELETE data'           = GuildRoleDelete <$> parseJSON data'
+parseDispatchData INVITE_CREATE data'               = InviteCreate <$> parseJSON data'
+parseDispatchData INVITE_DELETE data'               = InviteDelete <$> parseJSON data'
 parseDispatchData MESSAGE_CREATE data'              = MessageCreate <$> parseJSON data'
 parseDispatchData MESSAGE_UPDATE data'              = MessageUpdate <$> parseJSON data'
 parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'
@@ -174,6 +176,8 @@ data DispatchType
   | GUILD_ROLE_CREATE
   | GUILD_ROLE_UPDATE
   | GUILD_ROLE_DELETE
+  | INVITE_CREATE
+  | INVITE_DELETE
   | MESSAGE_CREATE
   | MESSAGE_UPDATE
   | MESSAGE_DELETE
@@ -226,8 +230,8 @@ data RequestGuildMembersData = RequestGuildMembersData
   deriving ( Show, Generic )
 
 instance ToJSON RequestGuildMembersData where
-  toEncoding RequestGuildMembersData { guildID, query, limit } = pairs
-    ("guild_id" .= guildID <> "query" .= fromMaybe "" query <> "limit" .= fromMaybe 0 limit)
+  toJSON RequestGuildMembersData { guildID, query, limit } =
+    object ["guild_id" .= guildID, "query" .= fromMaybe "" query, "limit" .= fromMaybe 0 limit]
 
 data IdentifyProps = IdentifyProps
   { browser :: Text
@@ -236,7 +240,7 @@ data IdentifyProps = IdentifyProps
   deriving ( Show, Generic )
 
 instance ToJSON IdentifyProps where
-  toEncoding IdentifyProps { browser, device } = pairs ("$browser" .= browser <> "$device" .= device)
+  toJSON IdentifyProps { browser, device } = object ["$browser" .= browser, "$device" .= device]
 
 data ControlMessage
   = RestartShard

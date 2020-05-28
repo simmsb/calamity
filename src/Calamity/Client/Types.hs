@@ -16,7 +16,7 @@ module Calamity.Client.Types
     , getCustomEventHandlers ) where
 
 import           Calamity.Cache.Eff
-import           Calamity.Gateway.DispatchEvents ( CalamityEvent(..), ReadyData )
+import           Calamity.Gateway.DispatchEvents ( CalamityEvent(..), InviteCreateData, InviteDeleteData, ReadyData )
 import           Calamity.Gateway.Types          ( ControlMessage )
 import           Calamity.HTTP.Internal.Types
 import           Calamity.Internal.GenericCurry
@@ -135,6 +135,8 @@ data EventType
   | GuildRoleCreateEvt
   | GuildRoleUpdateEvt
   | GuildRoleDeleteEvt
+  | InviteCreateEvt
+  | InviteDeleteEvt
   | MessageCreateEvt
   | MessageUpdateEvt
   | MessageDeleteEvt
@@ -169,6 +171,8 @@ type family EHType (d :: EventType) m r where
   EHType 'GuildRoleCreateEvt          m r = Guild     -> Role                           -> m r
   EHType 'GuildRoleUpdateEvt          m r = Guild     -> Role          -> Role          -> m r
   EHType 'GuildRoleDeleteEvt          m r = Guild     -> Role                           -> m r
+  EHType 'InviteCreateEvt             m r = InviteCreateData                            -> m r
+  EHType 'InviteDeleteEvt             m r = InviteDeleteData                            -> m r
   EHType 'MessageCreateEvt            m r = Message                                     -> m r
   EHType 'MessageUpdateEvt            m r = Message   -> Message                        -> m r
   EHType 'MessageDeleteEvt            m r = Message                                     -> m r

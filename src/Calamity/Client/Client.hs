@@ -475,6 +475,12 @@ handleEvent' eh evt@(GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) = 
   updateCache evt
   pure $ map (\f -> f guild role) (getEventHandlers @'GuildRoleDeleteEvt eh)
 
+handleEvent' eh (InviteCreate d) = do
+  pure $ map (\f -> f d) (getEventHandlers @'InviteCreateEvt eh)
+
+handleEvent' eh (InviteDelete d) = do
+  pure $ map (\f -> f d) (getEventHandlers @'InviteDeleteEvt eh)
+
 handleEvent' eh evt@(MessageCreate msg) = do
   updateCache evt
   pure $ map ($ msg) (getEventHandlers @'MessageCreateEvt eh)
@@ -640,6 +646,8 @@ updateCache (GuildIntegrationsUpdate _) = pure ()
 updateCache (TypingStart _) = pure ()
 updateCache (ChannelPinsUpdate _) = pure ()
 updateCache (WebhooksUpdate _) = pure ()
+updateCache (InviteCreate _) = pure ()
+updateCache (InviteDelete _) = pure ()
 
 -- we don't handle voice state currently
 updateCache (VoiceStateUpdate _) = pure ()

@@ -57,6 +57,8 @@ data DispatchData
   | GuildRoleCreate GuildRoleData
   | GuildRoleUpdate GuildRoleData
   | GuildRoleDelete GuildRoleDeleteData
+  | InviteCreate InviteCreateData
+  | InviteDelete InviteDeleteData
   | MessageCreate Message
   | MessageUpdate UpdatedMessage
   | MessageDelete MessageDeleteData
@@ -146,6 +148,32 @@ data GuildRoleDeleteData = GuildRoleDeleteData
   }
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON GuildRoleDeleteData
+
+data InviteCreateData = InviteCreateData
+  { channelID      :: Snowflake Channel
+  , code           :: Text
+  , createdAt      :: UnixTimestamp
+  , guildID        :: Maybe (Snowflake Guild)
+  , inviter        :: Maybe (Snowflake User)
+  , maxAge         :: Int
+  , maxUses        :: Int
+  , targetUser     :: Maybe (Snowflake User)
+  , targetUserType :: Maybe Integer
+  , temporary      :: Bool
+  , uses           :: Integer
+  }
+  deriving ( Show, Generic )
+  deriving ( FromJSON ) via WithSpecialCases
+      '["inviter" `ExtractField` "id", "targetUser" `ExtractField` "id"]
+      InviteCreateData
+
+data InviteDeleteData = InviteDeleteData
+  { channelID :: Snowflake Channel
+  , guildID   :: Maybe (Snowflake Guild)
+  , code      :: Text
+  }
+  deriving ( Show, Generic )
+  deriving ( FromJSON ) via CalamityJSON InviteDeleteData
 
 data MessageDeleteData = MessageDeleteData
   { id        :: Snowflake Message
