@@ -3,22 +3,22 @@ module Calamity.Types.Model.Guild.Overwrite
     ( Overwrite(..) ) where
 
 import           Calamity.Internal.AesonThings
+import           Calamity.Types.Model.Guild.Permissions
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
-import           Data.Text.Lazy                ( Text )
-import           Data.Word
+import           Data.Text.Lazy                         ( Text )
 
 import           GHC.Generics
 
 import           TextShow
-import qualified TextShow.Generic              as TSG
+import qualified TextShow.Generic                       as TSG
 
 data Overwrite = Overwrite
   { id    :: Snowflake Overwrite
   , type_ :: Text
-  , allow :: Word64
-  , deny  :: Word64
+  , allow :: Permissions
+  , deny  :: Permissions
   }
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Overwrite

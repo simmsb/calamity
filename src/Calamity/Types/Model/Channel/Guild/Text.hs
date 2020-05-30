@@ -3,6 +3,7 @@ module Calamity.Types.Model.Channel.Guild.Text
     ( TextChannel(..) ) where
 
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.SnowflakeMap              ( SnowflakeMap )
 import           Calamity.Internal.Utils                     ()
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild.Category
@@ -24,7 +25,7 @@ data TextChannel = TextChannel
   { id                   :: Snowflake TextChannel
   , guildID              :: Snowflake Guild
   , position             :: Int
-  , permissionOverwrites :: [Overwrite]
+  , permissionOverwrites :: SnowflakeMap Overwrite
   , name                 :: Text
   , topic                :: Maybe Text
   , nsfw                 :: Bool

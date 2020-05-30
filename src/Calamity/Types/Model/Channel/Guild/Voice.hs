@@ -3,6 +3,7 @@ module Calamity.Types.Model.Channel.Guild.Voice
     ( VoiceChannel(..) ) where
 
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.SnowflakeMap              ( SnowflakeMap )
 import           Calamity.Internal.Utils                     ()
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild.Category
@@ -22,7 +23,7 @@ data VoiceChannel = VoiceChannel
   { id                   :: Snowflake VoiceChannel
   , guildID              :: Snowflake Guild
   , position             :: Int
-  , permissionOverwrites :: [Overwrite]
+  , permissionOverwrites :: SnowflakeMap Overwrite
   , name                 :: Text
   , bitrate              :: Int
   , userLimit            :: Int

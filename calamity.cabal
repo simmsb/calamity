@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b31cc8d9d36cddc578f2c6328d8aa5a586ee2ddde7b8d360f101e6d3621fdeaf
+-- hash: 0c38477e9bd69b51dcb55bff069fc75ae7158455e6f2432414b28f7815ddba4c
 
 name:           calamity
 version:        0.1.10.1
@@ -108,6 +108,7 @@ library
       Calamity.Types.Model.Guild.Invite
       Calamity.Types.Model.Guild.Member
       Calamity.Types.Model.Guild.Overwrite
+      Calamity.Types.Model.Guild.Permissions
       Calamity.Types.Model.Guild.Role
       Calamity.Types.Model.Guild.UnavailableGuild
       Calamity.Types.Model.Presence
@@ -123,6 +124,8 @@ library
       Calamity.Types.Token
       Calamity.Types.UnixTimestamp
       Calamity.Types.Upgradeable
+      Calamity.Utils
+      Calamity.Utils.Permissions
   other-modules:
       Paths_calamity
   hs-source-dirs:

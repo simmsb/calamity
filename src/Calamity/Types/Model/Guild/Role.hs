@@ -4,6 +4,7 @@ module Calamity.Types.Model.Guild.Role
 
 import           Calamity.Internal.AesonThings
 import           Calamity.Types.Snowflake
+import           Calamity.Types.Model.Guild.Permissions
 
 import           Data.Aeson
 import           Data.Text.Lazy                ( Text )
@@ -20,7 +21,7 @@ data Role = Role
   , color       :: Word64
   , hoist       :: Bool
   , position    :: Int
-  , permissions :: Word64
+  , permissions :: Permissions
   , managed     :: Bool
   , mentionable :: Bool
   }
