@@ -49,16 +49,19 @@ emptyCacheNoMsg = Cache Nothing SM.empty SM.empty LH.empty SM.empty LS.empty (Co
 emptyCache' :: Int -> CacheWithMsg
 emptyCache' msgLimit = Cache Nothing SM.empty SM.empty LH.empty SM.empty LS.empty (Identity $ BS.empty msgLimit)
 
+-- | Run the cache in memory with a default message cache size of 1000
 runCacheInMemory :: P.Member (P.Embed IO) r => P.Sem (CacheEff ': r) a -> P.Sem r a
 runCacheInMemory m = do
   var <- P.embed $ newIORef emptyCache
   P.runAtomicStateIORef var $ P.reinterpret runCache' m
 
+-- | Run the cache in memory with no messages being cached
 runCacheInMemoryNoMsg :: P.Member (P.Embed IO) r => P.Sem (CacheEff ': r) a -> P.Sem r a
 runCacheInMemoryNoMsg m = do
   var <- P.embed $ newIORef emptyCacheNoMsg
   P.runAtomicStateIORef var $ P.reinterpret runCache' m
 
+-- | Run the cache in memory with a configurable message cache limit
 runCacheInMemory' :: P.Member (P.Embed IO) r => Int -> P.Sem (CacheEff ': r) a -> P.Sem r a
 runCacheInMemory' msgLimit m = do
   var <- P.embed $ newIORef (emptyCache' msgLimit)
