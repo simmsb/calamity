@@ -1,9 +1,11 @@
 -- | A 'Cache' handler that operates in memory
 module Calamity.Cache.InMemory
-    ( runCacheInMemory ) where
+    ( runCacheInMemory
+    , runCacheInMemory'
+    , runCacheInMemoryNoMsg ) where
 
 import           Calamity.Cache.Eff
-import           Calamity.Internal.BoundedStore
+import qualified Calamity.Internal.BoundedStore as BS
 import qualified Calamity.Internal.SnowflakeMap as SM
 import           Calamity.Internal.Utils
 import           Calamity.Types.Model.Channel
@@ -14,10 +16,8 @@ import           Calamity.Types.Snowflake
 import           Control.Lens
 import           Control.Monad.State.Strict
 
-import qualified Data.HashMap.Lazy as LH
-
-import           Data.Default.Class
 import           Data.Foldable
+import qualified Data.HashMap.Lazy              as LH
 import qualified Data.HashSet                   as LS
 import           Data.IORef
 
@@ -26,29 +26,66 @@ import           GHC.Generics
 import qualified Polysemy                       as P
 import qualified Polysemy.AtomicState           as P
 
-data Cache = Cache
+data Cache f = Cache
   { user              :: Maybe User
   , guilds            :: SM.SnowflakeMap Guild
   , dms               :: SM.SnowflakeMap DMChannel
   , guildChannels     :: LH.HashMap (Snowflake GuildChannel) Guild
   , users             :: SM.SnowflakeMap User
   , unavailableGuilds :: LS.HashSet (Snowflake Guild)
-  , messages          :: BoundedStore Message
+  , messages          :: f (BS.BoundedStore Message)
   }
-  deriving ( Generic, Show )
+  deriving ( Generic )
 
-emptyCache :: Cache
-emptyCache = Cache Nothing SM.empty SM.empty LH.empty SM.empty LS.empty def
+type CacheWithMsg = Cache Identity
+type CacheNoMsg = Cache (Const ())
+
+emptyCache :: CacheWithMsg
+emptyCache = Cache Nothing SM.empty SM.empty LH.empty SM.empty LS.empty (Identity $ BS.empty 1000)
+
+emptyCacheNoMsg :: CacheNoMsg
+emptyCacheNoMsg = Cache Nothing SM.empty SM.empty LH.empty SM.empty LS.empty (Const ())
+
+emptyCache' :: Int -> CacheWithMsg
+emptyCache' msgLimit = Cache Nothing SM.empty SM.empty LH.empty SM.empty LS.empty (Identity $ BS.empty msgLimit)
 
 runCacheInMemory :: P.Member (P.Embed IO) r => P.Sem (CacheEff ': r) a -> P.Sem r a
 runCacheInMemory m = do
   var <- P.embed $ newIORef emptyCache
   P.runAtomicStateIORef var $ P.reinterpret runCache' m
 
-runCache' :: P.Member (P.AtomicState Cache) r => CacheEff m a -> P.Sem r a
+runCacheInMemoryNoMsg :: P.Member (P.Embed IO) r => P.Sem (CacheEff ': r) a -> P.Sem r a
+runCacheInMemoryNoMsg m = do
+  var <- P.embed $ newIORef emptyCacheNoMsg
+  P.runAtomicStateIORef var $ P.reinterpret runCache' m
+
+runCacheInMemory' :: P.Member (P.Embed IO) r => Int -> P.Sem (CacheEff ': r) a -> P.Sem r a
+runCacheInMemory' msgLimit m = do
+  var <- P.embed $ newIORef (emptyCache' msgLimit)
+  P.runAtomicStateIORef var $ P.reinterpret runCache' m
+
+runCache' :: (MessageMod (Cache t), P.Member (P.AtomicState (Cache t)) r) => CacheEff m a -> P.Sem r a
 runCache' act = P.atomicState' ((swap .) . runState $ runCache act)
 
-runCache :: CacheEff m a -> State Cache a
+class MessageMod t where
+  setMessage' :: Message -> State t ()
+  getMessage' :: Snowflake Message -> State t (Maybe Message)
+  getMessages' :: State t [Message]
+  delMessage' :: Snowflake Message -> State t ()
+
+instance MessageMod CacheWithMsg where
+  setMessage' m = #messages . _Wrapped %= BS.addItem m
+  getMessage' mid = use (#messages . _Wrapped . at mid)
+  getMessages' = toList <$> use (#messages . _Wrapped)
+  delMessage' mid = #messages . _Wrapped %= sans mid
+
+instance MessageMod CacheNoMsg where
+  setMessage' _ = pure ()
+  getMessage' _ = pure Nothing
+  getMessages' = pure []
+  delMessage' _ = pure ()
+
+runCache :: MessageMod (Cache t) => CacheEff m a -> State (Cache t) a
 
 runCache (SetBotUser u) = #user ?= u
 runCache GetBotUser     = use #user
@@ -79,7 +116,7 @@ runCache (IsUnavailableGuild gid)  = use (#unavailableGuilds . contains gid)
 runCache GetUnavailableGuilds      = LS.toList <$> use #unavailableGuilds
 runCache (DelUnavailableGuild gid) = #unavailableGuilds %= sans gid
 
-runCache (SetMessage m)   = #messages %= addItem m
-runCache (GetMessage mid) = use (#messages . at mid)
-runCache GetMessages      = toList <$> use #messages
-runCache (DelMessage mid) = #messages %= sans mid
+runCache (SetMessage m)   = setMessage' m
+runCache (GetMessage mid) = getMessage' mid
+runCache GetMessages      = getMessages'
+runCache (DelMessage mid) = delMessage' mid

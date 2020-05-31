@@ -1,6 +1,7 @@
 -- | A thing for storing the last N things with IDs
 module Calamity.Internal.BoundedStore
-    ( BoundedStore(..)
+    ( BoundedStore
+    , empty
     , addItem
     , getItem
     , dropItem ) where
@@ -33,7 +34,10 @@ instance Foldable BoundedStore where
   foldr f i = foldr f i . H.elems . items
 
 instance Default (BoundedStore a) where
-  def = BoundedStore mempty H.empty 1000 0
+  def = BoundedStore mempty mempty 1000 0
+
+empty :: Int -> BoundedStore a
+empty limit = BoundedStore mempty mempty limit 0
 
 type instance (Index (BoundedStore a)) = Snowflake a
 
