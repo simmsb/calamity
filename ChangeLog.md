@@ -1,5 +1,18 @@
 # Changelog for Calamity
 
+## 0.1.10.1
+
+*2020-05-31*
+
+* Add command parameter parsers for channel/guild/emoji
+* Support allowed mentions
+* Support invite events
+* Support setting gateway intents
+* Add `Calamity.Types.Model.Guild.Permission` and `Calamity.Utils.Permissions`
+  and change permissions fields from `Word64` to `Permissions`
+* Add `Calamity.Utils.Colour` and change color fields from `Word64` to
+  `Data.Color.Color Double`
+
 ## 0.1.10.0
 
 *2020-05-27*
