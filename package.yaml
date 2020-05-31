@@ -68,7 +68,8 @@ dependencies:
 - safe-exceptions >= 0.1 && < 2
 - unagi-chan >= 0.4 && < 0.5
 - megaparsec >= 8 && < 9
-- data-flags >= 0.0.3 && < 0.1.0
+- data-flags >= 0.0.3 && < 0.1
+- colour >= 2.3.5 && < 2.4
 
 # executables:
 #   test-calamity-exe:

@@ -1,6 +1,7 @@
 -- | Useful things
 module Calamity.Utils
     ( module Calamity.Utils.Permissions
-     ) where
+    , module Calamity.Utils.Colour ) where
 
-import Calamity.Utils.Permissions
+import           Calamity.Utils.Colour
+import           Calamity.Utils.Permissions

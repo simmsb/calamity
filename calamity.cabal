@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0c38477e9bd69b51dcb55bff069fc75ae7158455e6f2432414b28f7815ddba4c
+-- hash: f39d1fc0a8ea4e5b188911539c4b0bfdbc8887c9a631ff56d56547749cdc3cf8
 
 name:           calamity
 version:        0.1.10.1
@@ -76,6 +76,7 @@ library
       Calamity.Internal.BoundedStore
       Calamity.Internal.ConstructorName
       Calamity.Internal.GenericCurry
+      Calamity.Internal.IntColour
       Calamity.Internal.LocalWriter
       Calamity.Internal.RunIntoIO
       Calamity.Internal.SnowflakeMap
@@ -125,6 +126,7 @@ library
       Calamity.Types.UnixTimestamp
       Calamity.Types.Upgradeable
       Calamity.Utils
+      Calamity.Utils.Colour
       Calamity.Utils.Permissions
   other-modules:
       Paths_calamity
@@ -137,10 +139,11 @@ library
     , async >=2.2 && <3
     , base >=4.12 && <5
     , bytestring >=0.10 && <0.11
+    , colour >=2.3.5 && <2.4
     , concurrent-extra >=0.7 && <0.8
     , containers >=0.6 && <0.7
     , data-default-class >=0.1 && <0.2
-    , data-flags >=0.0.3 && <0.1.0
+    , data-flags >=0.0.3 && <0.1
     , deepseq >=1.4.4.0 && <2
     , deque >=0.4 && <0.5
     , df1 >=0.3 && <0.5

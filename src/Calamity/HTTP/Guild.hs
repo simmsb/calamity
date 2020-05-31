@@ -15,6 +15,8 @@ module Calamity.HTTP.Guild
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.IntColour    ()
+import           Calamity.Internal.Utils        ()
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
@@ -25,6 +27,7 @@ import           Control.Arrow
 import           Control.Lens                   hiding ( (.=) )
 
 import           Data.Aeson
+import           Data.Colour                    ( Colour )
 import           Data.Default.Class
 import           Data.Maybe
 import           Data.Text                      ( Text )
@@ -121,8 +124,8 @@ data CreateGuildBanData = CreateGuildBanData
 
 data ModifyGuildRoleData = ModifyGuildRoleData
   { name        :: Maybe Text
-  , permissions :: Maybe Integer
-  , color       :: Maybe Integer
+  , permissions :: Maybe Permissions
+  , color       :: Maybe (Colour Double)
   , hoist       :: Maybe Bool
   , mentionable :: Maybe Bool
   }

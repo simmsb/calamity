@@ -10,11 +10,13 @@ module Calamity.Types.Model.Channel.Embed
     , EmbedField(..) ) where
 
 import           Calamity.Internal.AesonThings
+import           Calamity.Internal.IntColour   ()
 import           Calamity.Internal.Utils       ()
 
 import           Control.Lens
 
 import           Data.Aeson
+import           Data.Colour                   ( Colour )
 import           Data.Default.Class
 import           Data.Generics.Labels          ()
 import           Data.Semigroup
@@ -33,7 +35,7 @@ data Embed = Embed
   , description :: Maybe Text
   , url         :: Maybe Text
   , timestamp   :: Maybe UTCTime
-  , color       :: Maybe Word64
+  , color       :: Maybe (Colour Double)
   , footer      :: Maybe EmbedFooter
   , image       :: Maybe EmbedImage
   , thumbnail   :: Maybe EmbedThumbnail
@@ -44,8 +46,7 @@ data Embed = Embed
   }
   deriving ( Eq, Show, Generic, Default )
   deriving ( TextShow ) via TSG.FromGeneric Embed
-  deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "fields" DefaultToEmptyArray]
-      Embed
+  deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "fields" DefaultToEmptyArray] Embed
   deriving ( ToJSON ) via CalamityJSON Embed
 
 instance Semigroup Embed where

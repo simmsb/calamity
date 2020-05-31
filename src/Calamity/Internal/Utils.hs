@@ -35,6 +35,7 @@ import qualified DiPolysemy            as Di
 import qualified Polysemy              as P
 
 import           TextShow
+import Data.Colour (Colour)
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
@@ -99,6 +100,9 @@ instance (Show k, Show v) => TextShow (LH.HashMap k v) where
   showb = fromString . show
 
 instance (Show k, Show v) => TextShow (M.Map k v) where
+  showb = fromString . show
+
+instance (Show a, Fractional a) => TextShow (Colour a) where
   showb = fromString . show
 
 instance Default (M.Map k v) where
