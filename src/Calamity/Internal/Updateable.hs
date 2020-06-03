@@ -4,7 +4,7 @@ module Calamity.Internal.Updateable
 
 import           Calamity.Internal.Utils
 import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Channel.Message
+import           Calamity.Types.Model.Channel.UpdatedMessage
 import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.User
 

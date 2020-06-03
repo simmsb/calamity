@@ -1,7 +1,6 @@
 -- | A message from a channel
 module Calamity.Types.Model.Channel.Message
     ( Message(..)
-    , UpdatedMessage(..)
     , MessageType(..) ) where
 
 import           Calamity.Internal.AesonThings
@@ -54,28 +53,6 @@ data Message = Message
   deriving ( HasID Message ) via HasIDField "id" Message
   deriving ( HasID Channel ) via HasIDField "channelID" Message
   deriving ( HasID User ) via HasIDField "author" Message
-
-data UpdatedMessage = UpdatedMessage
-  { id              :: Snowflake Message
-  , channelID       :: Snowflake Channel
-  , content         :: Maybe Text
-  , editedTimestamp :: Maybe UTCTime
-  , tts             :: Maybe Bool
-  , mentionEveryone :: Maybe Bool
-  , mentions        :: Maybe (UV.Vector (Snowflake User))
-  , mentionRoles    :: Maybe (UV.Vector (Snowflake Role))
-  , attachments     :: Maybe [Attachment]
-  , embeds          :: Maybe [Embed]
-  , reactions       :: Maybe [Reaction]
-  , pinned          :: Maybe Bool
-  }
-  deriving ( Eq, Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric UpdatedMessage
-  deriving ( FromJSON ) via WithSpecialCases
-      '["author" `ExtractField` "id", "mentions" `ExtractFields` "id"]
-      UpdatedMessage
-  deriving ( HasID Message ) via HasIDField "id" UpdatedMessage
-  deriving ( HasID Channel ) via HasIDField "channelID" UpdatedMessage
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
 data MessageType

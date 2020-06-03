@@ -5,7 +5,7 @@ import           Calamity.Internal.AesonThings
 import           Calamity.Internal.ConstructorName
 import           Calamity.Internal.Utils                     ()
 import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Channel.Message
+import           Calamity.Types.Model.Channel.UpdatedMessage
 import           Calamity.Types.Model.Guild.Ban
 import           Calamity.Types.Model.Guild.Emoji
 import           Calamity.Types.Model.Guild.Guild

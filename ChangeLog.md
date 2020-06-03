@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.11.2
+
+*2020-06-03*
+
+* Moved the internal `UpdatedMessage` from
+  `Calamity.Types.Model.Channel.Message` into
+  `Calamity.Types.Model.Channel.UpdatedMessage`.
+
 ## 0.1.11.0
 
 *2020-05-31*
