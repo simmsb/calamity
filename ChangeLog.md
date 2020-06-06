@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.12.0
+
+*2020-06-06*
+
+* Changed some events to take enums instead of booleans: `GuildCreateEvt` and
+  `GuildDeleteEvt`.
+
 ## 0.1.11.2
 
 *2020-06-03*

@@ -409,10 +409,11 @@ handleEvent' eh evt@(ChannelDelete (DMChannel' chan)) = do
 --   pure $ map (\f -> f chan lastPinTimestamp) (getEventHandlers @"channelpinsupdate" eh)
 
 handleEvent' eh evt@(GuildCreate guild) = do
-  isNew <- isUnavailableGuild (getID guild)
+  isNew <- not <$> isUnavailableGuild (getID guild)
   updateCache evt
   Just guild <- getGuild (getID guild)
-  pure $ map (\f -> f guild isNew) (getEventHandlers @'GuildCreateEvt eh)
+  pure $ map (\f -> f guild (if isNew then GuildCreateNew else GuildCreateAvailable))
+    (getEventHandlers @'GuildCreateEvt eh)
 
 handleEvent' eh evt@(GuildUpdate guild) = do
   Just oldGuild <- getGuild (getID guild)
@@ -424,7 +425,8 @@ handleEvent' eh evt@(GuildUpdate guild) = do
 handleEvent' eh evt@(GuildDelete UnavailableGuild { id, unavailable }) = do
   Just oldGuild <- getGuild id
   updateCache evt
-  pure $ map (\f -> f oldGuild unavailable) (getEventHandlers @'GuildDeleteEvt eh)
+  pure $ map (\f -> f oldGuild (if unavailable then GuildDeleteUnavailable else GuildDeleteRemoved))
+    (getEventHandlers @'GuildDeleteEvt eh)
 
 handleEvent' eh evt@(GuildBanAdd BanData { guildID, user }) = do
   Just guild <- getGuild guildID
@@ -549,12 +551,11 @@ handleEvent' eh (TypingStart TypingStartData { channelID, guildID, userID, times
   case guildID of
     Just gid -> do
       Just guild <- getGuild gid
-      Just member <- pure $ guild ^. #members . at (coerceSnowflake userID)
       Just chan <- pure $ GuildChannel' <$> guild ^. #channels . at (coerceSnowflake channelID)
-      pure $ map (\f -> f chan (Just member) timestamp) (getEventHandlers @'TypingStartEvt eh)
+      pure $ map (\f -> f chan userID timestamp) (getEventHandlers @'TypingStartEvt eh)
     Nothing -> do
       Just chan <- DMChannel' <<$>> getDM (coerceSnowflake channelID)
-      pure $ map (\f -> f chan Nothing timestamp) (getEventHandlers @'TypingStartEvt eh)
+      pure $ map (\f -> f chan userID timestamp) (getEventHandlers @'TypingStartEvt eh)
 
 handleEvent' eh evt@(UserUpdate _) = do
   Just oldUser <- getBotUser
@@ -598,8 +599,10 @@ updateCache (GuildCreate guild) = do
 updateCache (GuildUpdate guild) =
   updateGuild (getID guild) (update guild)
 
-updateCache (GuildDelete guild) =
-  delGuild (getID guild)
+updateCache (GuildDelete UnavailableGuild { id, unavailable }) =
+  if unavailable
+  then setUnavailableGuild id
+  else delGuild id
 
 updateCache (GuildEmojisUpdate GuildEmojisUpdateData { guildID, emojis }) =
   updateGuild guildID (#emojis .~ SM.fromList emojis)

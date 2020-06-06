@@ -3,6 +3,8 @@ module Calamity.Client.Types
     ( Client(..)
     , StartupError(..)
     , EventType(..)
+    , GuildCreateStatus(..)
+    , GuildDeleteStatus(..)
     , EHType
     , BotC
     , SetupEff
@@ -27,6 +29,7 @@ import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Token
 import           Calamity.Types.UnixTimestamp
+import           Calamity.Types.Snowflake
 
 import           Control.Concurrent.Async
 import           Control.Concurrent.Chan.Unagi
@@ -51,6 +54,9 @@ import qualified Polysemy                        as P
 import qualified Polysemy.Async                  as P
 import qualified Polysemy.AtomicState            as P
 import qualified Polysemy.Reader                 as P
+
+import qualified TextShow.Generic                as TSG
+import TextShow
 
 data Client = Client
   { shards              :: TVar [(InChan ControlMessage, Async (Maybe ()))]
@@ -149,6 +155,18 @@ data EventType
   | forall s a. CustomEvt s a
   -- ^ A custom event, @s@ is the name and @a@ is the data sent to the handler
 
+data GuildCreateStatus
+  = GuildCreateNew -- ^ The guild was just joined
+  | GuildCreateAvailable -- ^ The guild is becoming available
+  deriving ( Generic, Show )
+  deriving ( TextShow ) via TSG.FromGeneric GuildCreateStatus
+
+data GuildDeleteStatus
+  = GuildDeleteUnavailable -- ^ The guild became unavailable
+  | GuildDeleteRemoved -- ^ The bot was removed from the guild
+  deriving ( Generic, Show )
+  deriving ( TextShow ) via TSG.FromGeneric GuildDeleteStatus
+
 -- | A type family to decide what the parameters for an event handler should be
 -- determined by the type of event it is handling.
 type family EHType (d :: EventType) m r where
@@ -157,9 +175,9 @@ type family EHType (d :: EventType) m r where
   EHType 'ChannelUpdateEvt            m r = Channel   -> Channel                        -> m r
   EHType 'ChannelDeleteEvt            m r = Channel                                     -> m r
   EHType 'ChannelpinsUpdateEvt        m r = Channel   -> Maybe UTCTime                  -> m r
-  EHType 'GuildCreateEvt              m r = Guild     -> Bool                           -> m r
+  EHType 'GuildCreateEvt              m r = Guild     -> GuildCreateStatus              -> m r
   EHType 'GuildUpdateEvt              m r = Guild     -> Guild                          -> m r
-  EHType 'GuildDeleteEvt              m r = Guild     -> Bool                           -> m r
+  EHType 'GuildDeleteEvt              m r = Guild     -> GuildDeleteStatus              -> m r
   EHType 'GuildBanAddEvt              m r = Guild     -> User                           -> m r
   EHType 'GuildBanRemoveEvt           m r = Guild     -> User                           -> m r
   EHType 'GuildEmojisUpdateEvt        m r = Guild     -> [Emoji]                        -> m r
@@ -180,7 +198,7 @@ type family EHType (d :: EventType) m r where
   EHType 'MessageReactionAddEvt       m r = Message   -> Reaction                       -> m r
   EHType 'MessageReactionRemoveEvt    m r = Message   -> Reaction                       -> m r
   EHType 'MessageReactionRemoveAllEvt m r = Message                                     -> m r
-  EHType 'TypingStartEvt              m r = Channel   -> Maybe Member  -> UnixTimestamp -> m r
+  EHType 'TypingStartEvt              m r = Channel  -> Snowflake User -> UnixTimestamp -> m r
   EHType 'UserUpdateEvt               m r = User      -> User                           -> m r
   EHType ('CustomEvt s a)             m r = a                                           -> m r
 
