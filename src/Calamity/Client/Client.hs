@@ -22,7 +22,6 @@ import           Calamity.Gateway.Types
 import           Calamity.Gateway.Intents
 import           Calamity.HTTP.Internal.Ratelimit
 import           Calamity.Internal.ConstructorName
-import           Calamity.Internal.GenericCurry
 import           Calamity.Internal.RunIntoIO
 import qualified Calamity.Internal.SnowflakeMap    as SM
 import           Calamity.Internal.Updateable
@@ -149,15 +148,15 @@ runBotIO' token status intents setup = do
 -- This function is pretty bad for giving nasty type errors,
 -- since if something doesn't match then 'EHType' might not get substituted,
 -- which will result in errors about parameter counts mismatching.
-react :: forall (s :: EventType) r t eh ehIO.
-      (BotC r, ReactConstraints r s eh ehIO t)
-      => EHType s (P.Sem r) ()
+react :: forall (s :: EventType) r.
+      (BotC r, ReactConstraints s)
+      => (EHType s -> (P.Sem r) ())
       -> P.Sem r (P.Sem r ())
 react handler = do
-  handler' <- bindSemToIO $ uncurryG handler
+  handler' <- bindSemToIO handler
   ehidC <- P.asks (^. #ehidCounter)
   id' <- P.embed $ atomicModifyIORef ehidC (\i -> (succ i, i))
-  let handlers = makeEventHandlers (Proxy @s) id' (const () <.> curryG handler')
+  let handlers = makeEventHandlers (Proxy @s) id' (const () <.> handler')
   P.atomicModify (handlers <>)
   pure $ removeHandler @s id'
 
@@ -215,7 +214,7 @@ events = do
 -- And for @s ~ \''MessageUpdateEvt'@:
 --
 -- @
--- 'waitUntil' :: ('Message' -> 'Message' -> 'Bool') -> 'P.Sem' r ('Message', 'Message')
+-- 'waitUntil' :: (('Message', 'Message') -> 'Bool') -> 'P.Sem' r ('Message', 'Message')
 -- @
 --
 -- ==== Examples
@@ -227,20 +226,20 @@ events = do
 --        print $ msg ^. #content
 -- @
 waitUntil
-  :: forall (s :: EventType) r t eh check.
-  ( BotC r, WaitUntilConstraints r s eh check t)
-  => check
-  -> P.Sem r t
+  :: forall (s :: EventType) r.
+  ( BotC r, ReactConstraints s)
+  => (EHType s -> Bool)
+  -> P.Sem r (EHType s)
 waitUntil f = do
   result <- P.embed newEmptyMVar
-  remove <- react @s (curryG $ checker result)
+  remove <- react @s (checker result)
   res <- P.embed $ takeMVar result
   remove
   pure res
   where
-    checker :: MVar t -> t -> P.Sem r ()
+    checker :: MVar (EHType s) -> EHType s -> P.Sem r ()
     checker result args = do
-      when (uncurryG f args) $ do
+      when (f args) $ do
         P.embed $ putMVar result args
 
 -- | Wait until an event satisfying a condition happens, then returns it's
@@ -255,7 +254,7 @@ waitUntil f = do
 -- And for @s ~ \''MessageUpdateEvt'@:
 --
 -- @
--- 'waitUntilM' :: ('Message' -> 'Message' -> 'P.Sem' r 'Bool') -> 'P.Sem' r ('Message', 'Message')
+-- 'waitUntilM' :: (('Message', 'Message') -> 'P.Sem' r 'Bool') -> 'P.Sem' r ('Message', 'Message')
 -- @
 --
 -- ==== Examples
@@ -267,20 +266,20 @@ waitUntil f = do
 --        print $ msg ^. #content
 -- @
 waitUntilM
-  :: forall (s :: EventType) r t eh ehB.
-  ( BotC r, WaitUntilMConstraints r s eh ehB t)
-  => ehB
-  -> P.Sem r t
+  :: forall (s :: EventType) r.
+  ( BotC r, ReactConstraints s)
+  => (EHType s -> P.Sem r Bool)
+  -> P.Sem r (EHType s)
 waitUntilM f = do
   result <- P.embed newEmptyMVar
-  remove <- react @s (curryG $ checker result)
+  remove <- react @s (checker result)
   res <- P.embed $ takeMVar result
   remove
   pure res
   where
-    checker :: MVar t -> t -> P.Sem r ()
+    checker :: MVar (EHType s) -> EHType s -> P.Sem r ()
     checker result args = do
-      res <- uncurryG f args
+      res <- f args
       when res $ do
         P.embed $ putMVar result args
 
@@ -382,7 +381,7 @@ handleEvent' eh evt@(ChannelUpdate (DMChannel' chan)) = do
   Just oldChan <- DMChannel' <<$>> getDM (getID chan)
   updateCache evt
   Just newChan <- DMChannel' <<$>> getDM (getID chan)
-  pure $ map (\f -> f oldChan newChan) (getEventHandlers @'ChannelUpdateEvt eh)
+  pure $ map ($ (oldChan, newChan)) (getEventHandlers @'ChannelUpdateEvt eh)
 
 handleEvent' eh evt@(ChannelUpdate (GuildChannel' chan)) = do
   Just oldGuild <- getGuild (getID chan)
@@ -390,18 +389,18 @@ handleEvent' eh evt@(ChannelUpdate (GuildChannel' chan)) = do
   updateCache evt
   Just newGuild <- getGuild (getID chan)
   Just newChan <- pure $ GuildChannel' <$> newGuild ^. #channels . at (getID chan)
-  pure $ map (\f -> f oldChan newChan) (getEventHandlers @'ChannelUpdateEvt eh)
+  pure $ map ($ (oldChan, newChan)) (getEventHandlers @'ChannelUpdateEvt eh)
 
 handleEvent' eh evt@(ChannelDelete (GuildChannel' chan)) = do
   Just oldGuild <- getGuild (getID chan)
   Just oldChan <- pure $ GuildChannel' <$> oldGuild ^. #channels . at (getID chan)
   updateCache evt
-  pure $ map (\f -> f oldChan) (getEventHandlers @'ChannelDeleteEvt eh)
+  pure $ map ($ oldChan) (getEventHandlers @'ChannelDeleteEvt eh)
 
 handleEvent' eh evt@(ChannelDelete (DMChannel' chan)) = do
   Just oldChan <- DMChannel' <<$>> getDM (getID chan)
   updateCache evt
-  pure $ map (\f -> f oldChan) (getEventHandlers @'ChannelDeleteEvt eh)
+  pure $ map ($ oldChan) (getEventHandlers @'ChannelDeleteEvt eh)
 
 -- handleEvent' eh evt@(ChannelPinsUpdate ChannelPinsUpdateData { channelID, lastPinTimestamp }) = do
 --   chan <- (GuildChannel' <$> os ^? #channels . at (coerceSnowflake channelID) . _Just)
@@ -412,37 +411,37 @@ handleEvent' eh evt@(GuildCreate guild) = do
   isNew <- not <$> isUnavailableGuild (getID guild)
   updateCache evt
   Just guild <- getGuild (getID guild)
-  pure $ map (\f -> f guild (if isNew then GuildCreateNew else GuildCreateAvailable))
+  pure $ map ($ (guild, (if isNew then GuildCreateNew else GuildCreateAvailable)))
     (getEventHandlers @'GuildCreateEvt eh)
 
 handleEvent' eh evt@(GuildUpdate guild) = do
   Just oldGuild <- getGuild (getID guild)
   updateCache evt
   Just newGuild <- getGuild (getID guild)
-  pure $ map (\f -> f oldGuild newGuild) (getEventHandlers @'GuildUpdateEvt eh)
+  pure $ map ($ (oldGuild, newGuild)) (getEventHandlers @'GuildUpdateEvt eh)
 
 -- NOTE: Guild will be deleted in the new cache if unavailable was false
 handleEvent' eh evt@(GuildDelete UnavailableGuild { id, unavailable }) = do
   Just oldGuild <- getGuild id
   updateCache evt
-  pure $ map (\f -> f oldGuild (if unavailable then GuildDeleteUnavailable else GuildDeleteRemoved))
+  pure $ map ($ (oldGuild, (if unavailable then GuildDeleteUnavailable else GuildDeleteRemoved)))
     (getEventHandlers @'GuildDeleteEvt eh)
 
 handleEvent' eh evt@(GuildBanAdd BanData { guildID, user }) = do
   Just guild <- getGuild guildID
   updateCache evt
-  pure $ map (\f -> f guild user) (getEventHandlers @'GuildBanAddEvt eh)
+  pure $ map ($ (guild, user)) (getEventHandlers @'GuildBanAddEvt eh)
 
 handleEvent' eh evt@(GuildBanRemove BanData { guildID, user }) = do
   Just guild <- getGuild guildID
   updateCache evt
-  pure $ map (\f -> f guild user) (getEventHandlers @'GuildBanRemoveEvt eh)
+  pure $ map ($ (guild, user)) (getEventHandlers @'GuildBanRemoveEvt eh)
 
 -- NOTE: we fire this event using the guild data with old emojis
 handleEvent' eh evt@(GuildEmojisUpdate GuildEmojisUpdateData { guildID, emojis }) = do
   Just guild <- getGuild guildID
   updateCache evt
-  pure $ map (\f -> f guild emojis) (getEventHandlers @'GuildEmojisUpdateEvt eh)
+  pure $ map ($ (guild, emojis)) (getEventHandlers @'GuildEmojisUpdateEvt eh)
 
 handleEvent' eh evt@(GuildIntegrationsUpdate GuildIntegrationsUpdateData { guildID }) = do
   updateCache evt
@@ -467,19 +466,19 @@ handleEvent' eh evt@(GuildMemberUpdate GuildMemberUpdateData { user, guildID }) 
   updateCache evt
   Just newGuild <- getGuild guildID
   Just newMember <- pure $ newGuild ^. #members . at (getID user)
-  pure $ map (\f -> f oldMember newMember) (getEventHandlers @'GuildMemberUpdateEvt eh)
+  pure $ map ($ (oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
 
 handleEvent' eh evt@(GuildMembersChunk GuildMembersChunkData { members, guildID }) = do
   updateCache evt
   Just guild <- getGuild guildID
   let members' = guild ^.. #members . foldMap (at . getID) members . _Just
-  pure $ map (\f -> f guild members') (getEventHandlers @'GuildMembersChunkEvt eh)
+  pure $ map ($ (guild, members')) (getEventHandlers @'GuildMembersChunkEvt eh)
 
 handleEvent' eh evt@(GuildRoleCreate GuildRoleData { guildID, role }) = do
   updateCache evt
   Just guild <- getGuild guildID
   Just role' <- pure $ guild ^. #roles . at (getID role)
-  pure $ map (\f -> f guild role') (getEventHandlers @'GuildRoleCreateEvt eh)
+  pure $ map ($ (guild, role')) (getEventHandlers @'GuildRoleCreateEvt eh)
 
 handleEvent' eh evt@(GuildRoleUpdate GuildRoleData { guildID, role }) = do
   Just oldGuild <- getGuild guildID
@@ -487,19 +486,19 @@ handleEvent' eh evt@(GuildRoleUpdate GuildRoleData { guildID, role }) = do
   updateCache evt
   Just newGuild <- getGuild guildID
   Just newRole <- pure $ newGuild ^. #roles . at (getID role)
-  pure $ map (\f -> f newGuild oldRole newRole) (getEventHandlers @'GuildRoleUpdateEvt eh)
+  pure $ map ($ (newGuild, oldRole, newRole)) (getEventHandlers @'GuildRoleUpdateEvt eh)
 
 handleEvent' eh evt@(GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) = do
   Just guild <- getGuild guildID
   Just role <- pure $ guild ^. #roles . at roleID
   updateCache evt
-  pure $ map (\f -> f guild role) (getEventHandlers @'GuildRoleDeleteEvt eh)
+  pure $ map ($ (guild, role)) (getEventHandlers @'GuildRoleDeleteEvt eh)
 
 handleEvent' eh (InviteCreate d) = do
-  pure $ map (\f -> f d) (getEventHandlers @'InviteCreateEvt eh)
+  pure $ map ($ d) (getEventHandlers @'InviteCreateEvt eh)
 
 handleEvent' eh (InviteDelete d) = do
-  pure $ map (\f -> f d) (getEventHandlers @'InviteDeleteEvt eh)
+  pure $ map ($ d) (getEventHandlers @'InviteDeleteEvt eh)
 
 handleEvent' eh evt@(MessageCreate msg) = do
   updateCache evt
@@ -509,7 +508,7 @@ handleEvent' eh evt@(MessageUpdate msg) = do
   Just oldMsg <- getMessage (getID msg)
   updateCache evt
   Just newMsg <- getMessage (getID msg)
-  pure $ map (\f -> f oldMsg newMsg) (getEventHandlers @'MessageUpdateEvt eh)
+  pure $ map ($ (oldMsg, newMsg)) (getEventHandlers @'MessageUpdateEvt eh)
 
 handleEvent' eh evt@(MessageDelete MessageDeleteData { id }) = do
   Just oldMsg <- getMessage id
@@ -524,12 +523,12 @@ handleEvent' eh evt@(MessageDeleteBulk MessageDeleteBulkData { ids }) = do
 handleEvent' eh evt@(MessageReactionAdd reaction) = do
   updateCache evt
   Just msg <- getMessage (getID reaction)
-  pure $ map (\f -> f msg reaction) (getEventHandlers @'MessageReactionAddEvt eh)
+  pure $ map ($ (msg, reaction)) (getEventHandlers @'MessageReactionAddEvt eh)
 
 handleEvent' eh evt@(MessageReactionRemove reaction) = do
   Just msg <- getMessage (getID reaction)
   updateCache evt
-  pure $ map (\f -> f msg reaction) (getEventHandlers @'MessageReactionRemoveEvt eh)
+  pure $ map ($ (msg, reaction)) (getEventHandlers @'MessageReactionRemoveEvt eh)
 
 handleEvent' eh evt@(MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) = do
   Just msg <- getMessage messageID
@@ -543,25 +542,25 @@ handleEvent' eh evt@(PresenceUpdate PresenceUpdateData { userID, presence = Pres
   Just newGuild <- getGuild guildID
   Just newMember <- pure $ newGuild ^. #members . at (coerceSnowflake userID)
   let userUpdates = if oldMember ^. #user /= newMember ^. #user
-                    then map (\f -> f (oldMember ^. #user) (newMember ^. #user)) (getEventHandlers @'UserUpdateEvt eh)
+                    then map ($ ((oldMember ^. #user), (newMember ^. #user))) (getEventHandlers @'UserUpdateEvt eh)
                     else mempty
-  pure $ userUpdates <> map (\f -> f oldMember newMember) (getEventHandlers @'GuildMemberUpdateEvt eh)
+  pure $ userUpdates <> map ($ (oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
 
 handleEvent' eh (TypingStart TypingStartData { channelID, guildID, userID, timestamp }) =
   case guildID of
     Just gid -> do
       Just guild <- getGuild gid
       Just chan <- pure $ GuildChannel' <$> guild ^. #channels . at (coerceSnowflake channelID)
-      pure $ map (\f -> f chan userID timestamp) (getEventHandlers @'TypingStartEvt eh)
+      pure $ map ($ (chan, userID, timestamp)) (getEventHandlers @'TypingStartEvt eh)
     Nothing -> do
       Just chan <- DMChannel' <<$>> getDM (coerceSnowflake channelID)
-      pure $ map (\f -> f chan userID timestamp) (getEventHandlers @'TypingStartEvt eh)
+      pure $ map ($ (chan, userID, timestamp)) (getEventHandlers @'TypingStartEvt eh)
 
 handleEvent' eh evt@(UserUpdate _) = do
   Just oldUser <- getBotUser
   updateCache evt
   Just newUser <- getBotUser
-  pure $ map (\f -> f oldUser newUser) (getEventHandlers @'UserUpdateEvt eh)
+  pure $ map ($ (oldUser, newUser)) (getEventHandlers @'UserUpdateEvt eh)
 
 handleEvent' _ e = fail $ "Unhandled event: " <> show e
 

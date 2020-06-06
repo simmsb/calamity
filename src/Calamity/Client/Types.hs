@@ -9,8 +9,6 @@ module Calamity.Client.Types
     , BotC
     , SetupEff
     , ReactConstraints
-    , WaitUntilConstraints
-    , WaitUntilMConstraints
     , EventHandlers(..)
     , InsertEventHandler(..)
     , RemoveEventHandler(..)
@@ -21,7 +19,6 @@ import           Calamity.Cache.Eff
 import           Calamity.Gateway.DispatchEvents ( CalamityEvent(..), InviteCreateData, InviteDeleteData, ReadyData )
 import           Calamity.Gateway.Types          ( ControlMessage )
 import           Calamity.HTTP.Internal.Types
-import           Calamity.Internal.GenericCurry
 import           Calamity.Metrics.Eff
 import           Calamity.Types.LogEff
 import           Calamity.Types.Model.Channel
@@ -79,42 +76,9 @@ type SetupEff r = (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P
 
 -- | Some constraints that 'Calamity.Client.Client.react' needs to work. Don't
 -- worry about these since they are satisfied for any type @s@ can be
-type ReactConstraints r s eh ehIO t =
+type ReactConstraints s =
   ( InsertEventHandler s
   , RemoveEventHandler s
-  , eh ~ EHType s (P.Sem r) ()
-  , ehIO ~ EHType s IO ()
-  , Uncurry eh
-  , Uncurried eh ~ (t -> P.Sem r ())
-  , Curry (t -> IO ())
-  , ehIO ~ Curried (t -> IO ()))
-
--- | Some constraints that 'Calamity.Client.Client.waitUntil' needs to work. Don't
--- worry about these since they are satisfied for any type @s@ can be
-type WaitUntilConstraints r s eh check t =
-  ( InsertEventHandler s
-  , RemoveEventHandler s
-  , Uncurry eh
-  , eh ~ EHType s (P.Sem r) ()
-  , eh ~ Curried (t -> P.Sem r ())
-  , Uncurry check
-  , Uncurried check ~ (t -> Bool)
-  , Curry (t -> IO ())
-  , Curried (t -> IO ()) ~ EHType s IO ()
-  )
-
--- | Some constraints that 'Calamity.Client.Client.waitUntilM' needs to work. Don't
--- worry about these since they are satisfied for any type @s@ can be
-type WaitUntilMConstraints r s eh ehB t =
-  ( InsertEventHandler s
-  , RemoveEventHandler s
-  , Uncurry eh
-  , eh ~ EHType s (P.Sem r) ()
-  , eh ~ Curried (t -> P.Sem r ())
-  , Uncurry ehB
-  , Uncurried ehB ~ (t -> P.Sem r Bool)
-  , Curry (t -> IO ())
-  , Curried (t -> IO ()) ~ EHType s IO ()
   )
 
 newtype StartupError = StartupError String
@@ -169,40 +133,40 @@ data GuildDeleteStatus
 
 -- | A type family to decide what the parameters for an event handler should be
 -- determined by the type of event it is handling.
-type family EHType (d :: EventType) m r where
-  EHType 'ReadyEvt                    m r = ReadyData                                   -> m r
-  EHType 'ChannelCreateEvt            m r = Channel                                     -> m r
-  EHType 'ChannelUpdateEvt            m r = Channel   -> Channel                        -> m r
-  EHType 'ChannelDeleteEvt            m r = Channel                                     -> m r
-  EHType 'ChannelpinsUpdateEvt        m r = Channel   -> Maybe UTCTime                  -> m r
-  EHType 'GuildCreateEvt              m r = Guild     -> GuildCreateStatus              -> m r
-  EHType 'GuildUpdateEvt              m r = Guild     -> Guild                          -> m r
-  EHType 'GuildDeleteEvt              m r = Guild     -> GuildDeleteStatus              -> m r
-  EHType 'GuildBanAddEvt              m r = Guild     -> User                           -> m r
-  EHType 'GuildBanRemoveEvt           m r = Guild     -> User                           -> m r
-  EHType 'GuildEmojisUpdateEvt        m r = Guild     -> [Emoji]                        -> m r
-  EHType 'GuildIntegrationsUpdateEvt  m r = Guild                                       -> m r
-  EHType 'GuildMemberAddEvt           m r = Member                                      -> m r
-  EHType 'GuildMemberRemoveEvt        m r = Member                                      -> m r
-  EHType 'GuildMemberUpdateEvt        m r = Member    -> Member                         -> m r
-  EHType 'GuildMembersChunkEvt        m r = Guild     -> [Member]                       -> m r
-  EHType 'GuildRoleCreateEvt          m r = Guild     -> Role                           -> m r
-  EHType 'GuildRoleUpdateEvt          m r = Guild     -> Role          -> Role          -> m r
-  EHType 'GuildRoleDeleteEvt          m r = Guild     -> Role                           -> m r
-  EHType 'InviteCreateEvt             m r = InviteCreateData                            -> m r
-  EHType 'InviteDeleteEvt             m r = InviteDeleteData                            -> m r
-  EHType 'MessageCreateEvt            m r = Message                                     -> m r
-  EHType 'MessageUpdateEvt            m r = Message   -> Message                        -> m r
-  EHType 'MessageDeleteEvt            m r = Message                                     -> m r
-  EHType 'MessageDeleteBulkEvt        m r = [Message]                                   -> m r
-  EHType 'MessageReactionAddEvt       m r = Message   -> Reaction                       -> m r
-  EHType 'MessageReactionRemoveEvt    m r = Message   -> Reaction                       -> m r
-  EHType 'MessageReactionRemoveAllEvt m r = Message                                     -> m r
-  EHType 'TypingStartEvt              m r = Channel  -> Snowflake User -> UnixTimestamp -> m r
-  EHType 'UserUpdateEvt               m r = User      -> User                           -> m r
-  EHType ('CustomEvt s a)             m r = a                                           -> m r
+type family EHType (d :: EventType) where
+  EHType 'ReadyEvt                    = ReadyData
+  EHType 'ChannelCreateEvt            = Channel
+  EHType 'ChannelUpdateEvt            = (Channel, Channel)
+  EHType 'ChannelDeleteEvt            = Channel
+  EHType 'ChannelpinsUpdateEvt        = (Channel, Maybe UTCTime)
+  EHType 'GuildCreateEvt              = (Guild, GuildCreateStatus)
+  EHType 'GuildUpdateEvt              = (Guild, Guild)
+  EHType 'GuildDeleteEvt              = (Guild, GuildDeleteStatus)
+  EHType 'GuildBanAddEvt              = (Guild, User)
+  EHType 'GuildBanRemoveEvt           = (Guild, User)
+  EHType 'GuildEmojisUpdateEvt        = (Guild, [Emoji])
+  EHType 'GuildIntegrationsUpdateEvt  = Guild
+  EHType 'GuildMemberAddEvt           = Member
+  EHType 'GuildMemberRemoveEvt        = Member
+  EHType 'GuildMemberUpdateEvt        = (Member, Member)
+  EHType 'GuildMembersChunkEvt        = (Guild, [Member])
+  EHType 'GuildRoleCreateEvt          = (Guild, Role)
+  EHType 'GuildRoleUpdateEvt          = (Guild, Role, Role)
+  EHType 'GuildRoleDeleteEvt          = (Guild, Role)
+  EHType 'InviteCreateEvt             = InviteCreateData
+  EHType 'InviteDeleteEvt             = InviteDeleteData
+  EHType 'MessageCreateEvt            = Message
+  EHType 'MessageUpdateEvt            = (Message, Message)
+  EHType 'MessageDeleteEvt            = Message
+  EHType 'MessageDeleteBulkEvt        = [Message]
+  EHType 'MessageReactionAddEvt       = (Message, Reaction)
+  EHType 'MessageReactionRemoveEvt    = (Message, Reaction)
+  EHType 'MessageReactionRemoveAllEvt = Message
+  EHType 'TypingStartEvt              = (Channel, Snowflake User, UnixTimestamp)
+  EHType 'UserUpdateEvt               = (User, User)
+  EHType ('CustomEvt s a)             = a
 
-type StoredEHType t = EHType t IO ()
+type StoredEHType t = EHType t -> IO ()
 
 newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
@@ -290,7 +254,7 @@ class InsertEventHandler' (flag :: Bool) a where
 intoDynFn :: forall a. Typeable a => (a -> IO ()) -> (Dynamic -> IO ())
 intoDynFn fn = \d -> fn $ fromDynamicJust d
 
-instance (Typeable a, Typeable s, Typeable (StoredEHType ('CustomEvt s a)), EHType ('CustomEvt s a) IO () ~ (a -> IO ()))
+instance (Typeable a, Typeable s, Typeable (StoredEHType ('CustomEvt s a)), (EHType ('CustomEvt s a) -> IO ()) ~ (a -> IO ()))
   => InsertEventHandler' 'True ('CustomEvt s a) where
   makeEventHandlers' _ _ id' handler = EventHandlers . TM.one $ EH @('CustomEvt Void Dynamic)
     (LH.singleton (typeRep $ Proxy @s) (LH.singleton (typeRep $ Proxy @a) [EventHandlerWithID id' (intoDynFn handler)]))

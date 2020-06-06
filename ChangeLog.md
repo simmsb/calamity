@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.13.0
+
+*2020-06-06*
+
+* Changed event handlers to take tuples instead of being higher arity when there
+  is more than one parameter to the callback.
+
 ## 0.1.12.0
 
 *2020-06-06*
