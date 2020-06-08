@@ -9,10 +9,8 @@ import           Calamity.Types.Model.Guild.Role
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
-import           Control.Lens
 
 import           Data.Aeson
-import           Data.Generics.Product.Fields
 import           Data.Text.Lazy                   ( Text )
 import           Data.Time
 import           Data.Vector.Unboxed              ( Vector )
@@ -21,23 +19,32 @@ import           GHC.Generics
 
 import           TextShow
 import qualified TextShow.Generic                 as TSG
+import Data.Word (Word64)
 
 data Member = Member
-  { user     :: User
-  , guildID  :: Snowflake Guild
-  , nick     :: Maybe Text
-  , roles    :: Vector (Snowflake Role)
-  , joinedAt :: UTCTime
-  , deaf     :: Bool
-  , mute     :: Bool
+  { id            :: Snowflake User
+  , username      :: Text
+  , discriminator :: Text
+  , bot           :: Maybe Bool
+  , avatar        :: Maybe Text
+  , mfaEnabled    :: Maybe Bool
+  , verified      :: Maybe Bool
+  , email         :: Maybe Text
+  , flags         :: Maybe Word64
+  , premiumType   :: Maybe Word64
+  , guildID       :: Snowflake Guild
+  , nick          :: Maybe Text
+  , roles         :: Vector (Snowflake Role)
+  , joinedAt      :: UTCTime
+  , deaf          :: Bool
+  , mute          :: Bool
   }
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Member
-  deriving ( ToJSON, FromJSON ) via CalamityJSON Member
+  deriving ( FromJSON ) via WithSpecialCases '[
+    "user" `ExtractFields` ["id", "username", "discriminator",
+                            "bot", "avatar", "mfa_enabled",
+                            "verified", "email", "flags", "premium_type"]] Member
   deriving ( HasID Guild ) via HasIDField "guildID" Member
-
-instance HasID User Member where
-  getID = getID . (^. field @"user")
-
-instance HasID Member Member where
-  getID = coerceSnowflake . getID @User
+  deriving ( HasID Member ) via HasIDFieldCoerce "id" Member User
+  deriving ( HasID User ) via HasIDField "id" Member

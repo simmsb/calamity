@@ -30,6 +30,7 @@ import           Calamity.Metrics.Eff
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.Presence     ( Presence(..) )
+import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
 
@@ -43,6 +44,7 @@ import           Control.Monad
 import           Data.Default.Class
 import           Data.Dynamic
 import           Data.Foldable
+import           Data.Generics.Product.Subtype
 import           Data.IORef
 import           Data.Maybe
 import           Data.Proxy
@@ -541,8 +543,10 @@ handleEvent' eh evt@(PresenceUpdate PresenceUpdateData { userID, presence = Pres
   updateCache evt
   Just newGuild <- getGuild guildID
   Just newMember <- pure $ newGuild ^. #members . at (coerceSnowflake userID)
-  let userUpdates = if oldMember ^. #user /= newMember ^. #user
-                    then map ($ ((oldMember ^. #user), (newMember ^. #user))) (getEventHandlers @'UserUpdateEvt eh)
+  let oldUser :: User = upcast oldMember
+      newUser :: User = upcast newMember
+      userUpdates = if oldUser /= newUser
+                    then map ($ (oldUser, newUser)) (getEventHandlers @'UserUpdateEvt eh)
                     else mempty
   pure $ userUpdates <> map ($ (oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
 
@@ -593,7 +597,7 @@ updateCache (GuildCreate guild) = do
   isNew <- isUnavailableGuild (getID guild)
   when isNew $ delUnavailableGuild (getID guild)
   setGuild guild
-  for_ (SM.fromList (guild ^.. #members . traverse . #user)) setUser
+  for_ (SM.fromList (guild ^.. #members . traverse . super)) setUser
 
 updateCache (GuildUpdate guild) =
   updateGuild (getID guild) (update guild)
@@ -607,7 +611,7 @@ updateCache (GuildEmojisUpdate GuildEmojisUpdateData { guildID, emojis }) =
   updateGuild guildID (#emojis .~ SM.fromList emojis)
 
 updateCache (GuildMemberAdd member) = do
-  setUser (member ^. #user)
+  setUser (member ^. super)
   updateGuild (getID member) (#members . at (getID member) ?~ member)
 
 updateCache (GuildMemberRemove GuildMemberRemoveData { guildID, user }) =

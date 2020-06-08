@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 81cfbc5822a563275b09910155612968095794467d65ba95f1eaa54d90312085
+-- hash: c06c87612e42d8547cd3031d0cc12f712bd1743e4afb2a05c03027c00b58e297
 
 name:           calamity
 version:        0.1.13.0
@@ -127,6 +127,7 @@ library
       Calamity.Types.Upgradeable
       Calamity.Utils
       Calamity.Utils.Colour
+      Calamity.Utils.Message
       Calamity.Utils.Permissions
   other-modules:
       Paths_calamity

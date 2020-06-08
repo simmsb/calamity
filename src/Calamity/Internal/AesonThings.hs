@@ -4,6 +4,7 @@ module Calamity.Internal.AesonThings
     , type IfNoneThen
     , type ExtractField
     , type ExtractFields
+    , type ExtractArrayField
     , type InjectID
     , SpecialRule
     , DefaultToEmptyArray
@@ -27,6 +28,7 @@ import           Data.Typeable
 import           GHC.Generics
 import qualified GHC.TypeLits          as TL
 import           GHC.TypeLits          ( KnownSymbol, Symbol, symbolVal )
+import Control.Monad ((>=>))
 
 textSymbolVal :: forall n. KnownSymbol n => Proxy n -> Text
 textSymbolVal _ = symbolVal @n Proxy ^. packed
@@ -40,7 +42,8 @@ data SpecialRule (label :: Symbol) (action :: SpecialRuleAction)
 data SpecialRuleAction
   = forall d. IfNoneThen d
   | forall field. ExtractField field
-  | forall field. ExtractFields field
+  | forall fields. ExtractFields fields
+  | forall field. ExtractArrayField field
   | forall mn idn. InjectID idn mn
 
 type IfNoneThen label d =
@@ -49,8 +52,11 @@ type IfNoneThen label d =
 type ExtractField label field =
   SpecialRule label ('ExtractField field)
 
-type ExtractFields label field =
-  SpecialRule label ('ExtractFields field)
+type ExtractFields label fields =
+  SpecialRule label ('ExtractFields fields)
+
+type ExtractArrayField label field =
+  SpecialRule label ('ExtractArrayField field)
 
 type InjectID label mn idn =
   SpecialRule label ('InjectID mn idn)
@@ -67,7 +73,13 @@ instance (KnownSymbol field) => PerformAction ('ExtractField field) where
   runAction _ o = withObject (("extracting field " <> textSymbolVal @field Proxy) ^. unpacked)
     (.: textSymbolVal @field Proxy) o
 
-instance (KnownSymbol field) => PerformAction ('ExtractFields field) where
+instance PerformAction ('ExtractFields '[]) where
+  runAction _ = pure
+
+instance (KnownSymbol field, PerformAction ('ExtractFields fields)) => PerformAction ('ExtractFields (field : fields)) where
+  runAction _ = runAction (Proxy @('ExtractField field)) >=> runAction (Proxy @('ExtractFields fields))
+
+instance KnownSymbol field => PerformAction ('ExtractArrayField field) where
   runAction _ Null = pure Null
   runAction _ o = withArray (("extracting fields " <> textSymbolVal @field Proxy) ^. unpacked)
     ((Array <$>) . traverse (withObject "extracting field" (.: textSymbolVal @field Proxy))) o
