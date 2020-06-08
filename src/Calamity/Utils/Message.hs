@@ -6,13 +6,14 @@ module Calamity.Utils.Message
     escapeCodeblocks,
     escapeCodelines,
     zws,
+    fmtEmoji,
     displayUser,
     Mentionable (..),
   )
 where
 
 import Calamity.Types.Model.Channel (Category, Channel, DMChannel, GuildChannel, TextChannel, VoiceChannel)
-import Calamity.Types.Model.Guild (Member, Role)
+import Calamity.Types.Model.Guild (Emoji(..), Member, Role)
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
 import Control.Lens
@@ -61,6 +62,10 @@ codeblock' lang content = "```" <> fromMaybe "" lang <> "\n" <>
 -- Any code lines in the content are escaped
 codeline :: L.Text -> L.Text
 codeline content = "``" <> escapeCodelines content <> "``"
+
+fmtEmoji :: Emoji -> L.Text
+fmtEmoji Emoji { id, name, animated } = "<" <> ifanim <> ":" <> name <> ":" <> showtl id <> ">"
+  where ifanim = if animated then "a" else ""
 
 -- | Format a 'User' or 'Member' into the format of @username#discriminator@
 displayUser :: (HasField' "username" a L.Text, HasField' "discriminator" a L.Text) => a -> L.Text
