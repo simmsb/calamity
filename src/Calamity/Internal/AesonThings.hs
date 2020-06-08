@@ -44,7 +44,7 @@ instance (Reifies d Value, KnownSymbol label) => PerformAction (IfNoneThen label
 instance (KnownSymbol label, KnownSymbol field) => PerformAction (ExtractField label field) where
   runAction _ o = do
     o' <- o .: textSymbolVal @label
-    v  <- o' .: textSymbolVal @field
+    v  <- o' .:? textSymbolVal @field .!= Null
     pure $ o & at (textSymbolVal @field) ?~ v
 
 instance PerformAction (ExtractFields label '[]) where
