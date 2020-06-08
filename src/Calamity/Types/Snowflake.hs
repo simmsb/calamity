@@ -26,15 +26,14 @@ import           Data.Word
 import           GHC.Generics
 
 import           TextShow
-import qualified TextShow.Generic             as TSG
 
 -- Thanks sbrg
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L78
 newtype Snowflake (t :: Type) = Snowflake
   { fromSnowflake :: Word64
   }
-  deriving ( Generic, Show, Eq, Ord, Data )
-  deriving ( TextShow ) via TSG.FromGeneric (Snowflake t)
+  deriving ( Generic, Eq, Ord, Data )
+  deriving ( Show, TextShow ) via Word64
   deriving newtype ( NFData, ToJSONKey, Hashable )
 
 instance ToJSON (Snowflake t) where
