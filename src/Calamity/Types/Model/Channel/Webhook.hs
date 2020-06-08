@@ -28,5 +28,5 @@ data Webhook = Webhook
   }
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Webhook
-  deriving ( FromJSON ) via WithSpecialCases '["user" `ExtractField` "id"] Webhook
+  deriving ( FromJSON ) via WithSpecialCases '["user" `ExtractFieldFrom` "id"] Webhook
   deriving ( HasID Webhook ) via HasIDField "id" Webhook

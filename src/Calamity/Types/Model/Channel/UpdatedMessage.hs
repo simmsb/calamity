@@ -37,7 +37,7 @@ data UpdatedMessage = UpdatedMessage
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric UpdatedMessage
   deriving ( FromJSON ) via WithSpecialCases
-      '["author" `ExtractField` "id", "mentions" `ExtractArrayField` "id"]
+      '["author" `ExtractFieldFrom` "id", "mentions" `ExtractArrayField` "id"]
       UpdatedMessage
   deriving ( HasID Message ) via HasIDField "id" UpdatedMessage
   deriving ( HasID Channel ) via HasIDField "channelID" UpdatedMessage

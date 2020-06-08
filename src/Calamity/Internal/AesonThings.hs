@@ -1,7 +1,8 @@
 module Calamity.Internal.AesonThings
     ( WithSpecialCases(..)
     , IfNoneThen
-    , ExtractField
+    , ExtractFieldFrom
+    , ExtractFieldInto
     , ExtractFields
     , ExtractArrayField
     , DefaultToEmptyArray
@@ -30,7 +31,8 @@ textSymbolVal :: forall n. KnownSymbol n => Text
 textSymbolVal = symbolVal @n Proxy ^. packed
 
 data IfNoneThen label def
-data ExtractField label field
+data ExtractFieldInto label field target
+type ExtractFieldFrom label field = ExtractFieldInto label field label
 data ExtractFields label fields
 data ExtractArrayField label field
 
@@ -42,19 +44,19 @@ instance (Reifies d Value, KnownSymbol label) => PerformAction (IfNoneThen label
     v <- o .:? textSymbolVal @label .!= reflect @d Proxy
     pure $ o & at (textSymbolVal @label) ?~ v
 
-instance (KnownSymbol label, KnownSymbol field) => PerformAction (ExtractField label field) where
+instance (KnownSymbol label, KnownSymbol field, KnownSymbol target) => PerformAction (ExtractFieldInto label field target) where
   runAction _ o =
     let v :: Maybe Value = o ^? ix (textSymbolVal @label) . _Object . ix (textSymbolVal @field)
-    in pure $ o & at (textSymbolVal @field) .~ v
+    in pure $ o & at (textSymbolVal @target) .~ v
 
 instance PerformAction (ExtractFields label '[]) where
   runAction _ = pure
 
 instance (KnownSymbol field,
-          PerformAction (ExtractField label field),
+          PerformAction (ExtractFieldInto label field field),
           PerformAction (ExtractFields label fields)) =>
          PerformAction (ExtractFields label (field : fields)) where
-  runAction _ = runAction (Proxy @(ExtractField label field)) >=> runAction (Proxy @(ExtractFields label fields))
+  runAction _ = runAction (Proxy @(ExtractFieldInto label field field)) >=> runAction (Proxy @(ExtractFields label fields))
 
 instance (KnownSymbol label, KnownSymbol field) => PerformAction (ExtractArrayField label field) where
   runAction _ o = do

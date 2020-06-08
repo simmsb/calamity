@@ -47,7 +47,7 @@ data Message = Message
   deriving ( TextShow ) via TSG.FromGeneric Message
   deriving ( ToJSON ) via CalamityJSON Message
   deriving ( FromJSON ) via WithSpecialCases
-      '["author" `ExtractField` "id", "mentions" `ExtractArrayField` "id",
+      '["author" `ExtractFieldFrom` "id", "mentions" `ExtractArrayField` "id",
         "reactions" `IfNoneThen` DefaultToEmptyArray]
       Message
   deriving ( HasID Message ) via HasIDField "id" Message

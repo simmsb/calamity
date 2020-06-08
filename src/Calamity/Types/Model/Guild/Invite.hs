@@ -28,4 +28,4 @@ data Invite = Invite
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Invite
   deriving ( ToJSON ) via CalamityJSON Invite
-  deriving ( FromJSON ) via WithSpecialCases '["targetUser" `ExtractField` "id"] Invite
+  deriving ( FromJSON ) via WithSpecialCases '["targetUser" `ExtractFieldFrom` "id"] Invite

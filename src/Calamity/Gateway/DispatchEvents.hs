@@ -164,7 +164,7 @@ data InviteCreateData = InviteCreateData
   }
   deriving ( Show, Generic )
   deriving ( FromJSON ) via WithSpecialCases
-      '["inviter" `ExtractField` "id", "targetUser" `ExtractField` "id"]
+      '["inviter" `ExtractFieldFrom` "id", "targetUser" `ExtractFieldFrom` "id"]
       InviteCreateData
 
 data InviteDeleteData = InviteDeleteData

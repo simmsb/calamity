@@ -31,7 +31,7 @@ data Emoji = Emoji
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Emoji
   deriving ( ToJSON ) via CalamityJSON Emoji
-  deriving ( FromJSON ) via WithSpecialCases '["user" `ExtractField` "id"] Emoji
+  deriving ( FromJSON ) via WithSpecialCases '["user" `ExtractFieldFrom` "id"] Emoji
   deriving ( HasID Emoji ) via HasIDField "id" Emoji
 
 data instance Partial Emoji = PartialEmoji
