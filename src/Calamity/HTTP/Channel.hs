@@ -3,6 +3,8 @@ module Calamity.HTTP.Channel
     ( ChannelRequest(..)
     , CreateMessageOptions(..)
     , ChannelUpdate(..)
+    , AllowedMentionType(..)
+    , AllowedMentions(..)
     , ChannelMessagesQuery(..)
     , GetReactionsOptions(..)
     , CreateChannelInviteOptions(..)
@@ -61,6 +63,12 @@ data AllowedMentions = AllowedMentions
   deriving ( Show, Generic, Default )
   deriving ( ToJSON ) via CalamityJSON AllowedMentions
 
+instance Semigroup AllowedMentions where
+  AllowedMentions p0 r0 u0 <> AllowedMentions p1 r1 u1 =
+    AllowedMentions (p0 <> p1) (r0 <> r1) (u0 <> u1)
+
+instance Monoid AllowedMentions where
+  mempty = def
 
 data CreateMessageJson = CreateMessageJson
   { content :: Maybe Text

@@ -3,6 +3,7 @@ module Calamity.Types.Tellable
     ( ToMessage(..)
     , Tellable(..)
     , TFile(..)
+    , TMention(..)
     , tell ) where
 
 import           Calamity.Client.Types
@@ -27,6 +28,10 @@ import qualified Polysemy.Error               as P
 
 -- | A wrapper type for sending files
 newtype TFile = TFile ByteString
+  deriving ( Show, Generic )
+
+-- | A wrapper type for allowing mentions
+newtype TMention a = TMention (Snowflake a)
   deriving ( Show, Generic )
 
 -- | Things that can be used to send a message
@@ -59,6 +64,22 @@ instance ToMessage Embed where
 -- | Message file, '(<>)' keeps the last added file
 instance ToMessage TFile where
   intoMsg (TFile f) = Endo (#file %~ getLast . (<> Last (Just f)) . Last)
+
+-- | Allowed mentions, '(<>)' combines allowed mentions
+instance ToMessage AllowedMentions where
+  intoMsg m = Endo (#allowedMentions %~ (<> Just m))
+
+-- | Add a 'User' id to the list of allowed user mentions
+instance ToMessage (TMention User) where
+  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #users <>~ [s])
+
+-- | Add a 'Member' id to the list of allowed user mentions
+instance ToMessage (TMention Member) where
+  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #users <>~ [coerceSnowflake s])
+
+-- | Add a 'Role' id to the list of allowed role mentions
+instance ToMessage (TMention Role) where
+  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #roles <>~ [s])
 
 instance ToMessage (Endo CreateMessageOptions) where
   intoMsg = Prelude.id
