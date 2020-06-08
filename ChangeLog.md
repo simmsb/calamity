@@ -1,5 +1,19 @@
 # Changelog for Calamity
 
+## 0.1.14.0
+
+*2020-06-08*
+
+* Unpacked the `user` field of `Member` into itself.
+
+* Add message formatting utilities (`Calamity.Utils.Message`).
+
+* Add support for allowed mentions in `Tellable`.
+
+* Change Snowflake's show instance to just show the numberic id.
+
+* Added parsers for RawEmoji and Either.
+
 ## 0.1.13.0
 
 *2020-06-06*
