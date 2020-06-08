@@ -25,7 +25,7 @@ import           Data.Typeable
 
 import           GHC.Generics
 import           GHC.TypeLits          ( KnownSymbol, symbolVal )
-import Control.Monad ((>=>))
+import           Control.Monad ((>=>))
 
 textSymbolVal :: forall n. KnownSymbol n => Text
 textSymbolVal = symbolVal @n Proxy ^. packed

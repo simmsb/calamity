@@ -1,5 +1,11 @@
 # Changelog for Calamity
 
+## 0.1.14.1
+
+*2020-06-08*
+
+* Fix broken json decoding for member's
+
 ## 0.1.14.0
 
 *2020-06-08*
