@@ -9,9 +9,10 @@ module Calamity.Commands.Parser
 import           Calamity.Cache.Eff
 import           Calamity.Commands.Context
 import           Calamity.Types.Model.Channel  ( Channel, GuildChannel )
-import           Calamity.Types.Model.Guild    ( Emoji, Guild, Member, Role )
+import           Calamity.Types.Model.Guild    ( Emoji, RawEmoji(..), Partial(PartialEmoji), Guild, Member, Role )
 import           Calamity.Types.Model.User     ( User )
 import           Calamity.Types.Snowflake
+import           Calamity.Types.Partial
 
 import           Control.Lens                  hiding ( Context )
 import           Control.Monad
@@ -100,6 +101,17 @@ instance Parser a r => Parser (Maybe a) r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
 
   parse = P.catch (Just <$> parse @a) (const $ pure Nothing)
+
+
+instance (Parser a r, Parser b r) => Parser (Either a b) r where
+  type ParserResult (Either a b) = Either (ParserResult a) (ParserResult b)
+
+  parse = do
+    l <- parse @(Maybe a) @r
+    case l of
+      Just l' -> pure (Left l')
+      Nothing ->
+        Right <$> parse @b @r
 
 instance Parser a r => Parser [a] r where
   type ParserResult [a] = [ParserResult a]
@@ -244,6 +256,10 @@ instance Parser Emoji r where
               ctx <- P.ask
               pure $ ctx ^? #guild . _Just . #emojis . ix eid)
 
+instance Parser RawEmoji r where
+  parse = parseMP (parserName @RawEmoji) (try parseCustomEmoji <|> (UnicodeEmoji <$> takeP (Just "A unicode emoji") 1))
+    where parseCustomEmoji = CustomEmoji <$> partialEmoji
+
 instance (Parser a r, Parser b r) => Parser (a, b) r where
   type ParserResult (a, b) = (ParserResult a, ParserResult b)
 
@@ -270,6 +286,14 @@ ping' m = chunk "<" *> m *> snowflake <* chunk ">"
 
 snowflake :: MonadParsec e L.Text m => m (Snowflake a)
 snowflake = (Snowflake . read) <$> some digitChar
+
+partialEmoji :: MonadParsec e L.Text m => m (Partial Emoji)
+partialEmoji = do
+  void (chunk "<" *> optional (chunk "a"))
+  name <-  between (chunk ":") (chunk ":") (takeWhileP (Just "Emoji name") $ not . (== ':'))
+  id <- snowflake
+  void $ chunk ">"
+  pure (PartialEmoji id name)
 
 emoji :: MonadParsec e L.Text m => m (Snowflake a)
 emoji = ping' (optional (chunk "a") *> between (chunk ":") (chunk ":") (void $ takeWhileP Nothing $ not . (== ':')))
