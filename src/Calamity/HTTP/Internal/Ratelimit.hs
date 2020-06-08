@@ -72,7 +72,7 @@ doDiscordRequest r = do
         Nothing -> pure $ ClientError (status ^. statusCode) "429 with invalid json???"
     | statusIsClientError status -> do
       let err = r' ^. responseBody
-      error $ "You fucked up: " +|| err ||+ " response: " +|| r' ||+ ""
+      error $ "Something went wrong: " +|| err ||+ " response: " +|| r' ||+ ""
       pure $ ClientError (status ^. statusCode) err
     | otherwise -> do
       debug $ "Got server error from discord: " +| status ^. statusCode |+ ""
