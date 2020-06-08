@@ -5,6 +5,17 @@ module Calamity.Utils.Message
     codeline,
     escapeCodeblocks,
     escapeCodelines,
+    escapeBold,
+    escapeStrike,
+    escapeUnderline,
+    escapeSpoilers,
+    escapeFormatting,
+    bold,
+    strike,
+    underline,
+    quote,
+    quoteAll,
+    spoiler,
     zws,
     fmtEmoji,
     displayUser,
@@ -26,13 +37,33 @@ import TextShow (TextShow (showtl))
 zws :: IsString s => s
 zws = fromString "\x200b"
 
--- | Replaces all occurences of @```@ with @`<zws>`<zws>`@
+-- | Replaces all occurences of @\`\`\`@ with @\`\<zws\>\`\<zws\>\`@
 escapeCodeblocks :: L.Text -> L.Text
 escapeCodeblocks = L.replace "```" (L.intercalate zws $ replicate 3 "`")
 
--- | Replaces all occurences of @``@ with @`<zws>`@
+-- | Replaces all occurences of @\`\`@ with @\`\<zws\>\`@
 escapeCodelines :: L.Text -> L.Text
 escapeCodelines = L.replace "``" (L.intercalate zws $ replicate 2 "`")
+
+-- | Replaces all occurences of @\*\*@ with @\*\<zws\>\*@
+escapeBold :: L.Text -> L.Text
+escapeBold = L.replace "**" (L.intercalate zws $ replicate 2 "*")
+
+-- | Replaces all occurences of @\~\~@ with @\~\<zws\>\~@
+escapeStrike :: L.Text -> L.Text
+escapeStrike = L.replace "~~" (L.intercalate zws $ replicate 2 "~")
+
+-- | Replaces all occurences of @\_\_@ with @\_\<zws\>\_@
+escapeUnderline :: L.Text -> L.Text
+escapeUnderline = L.replace "__" (L.intercalate zws $ replicate 2 "_")
+
+-- | Replaces all occurences of @\|\|@ with @\|\<zws\>\|@
+escapeSpoilers :: L.Text -> L.Text
+escapeSpoilers = L.replace "||" (L.intercalate zws $ replicate 2 "|")
+
+-- | Escape all discord formatting
+escapeFormatting :: L.Text -> L.Text
+escapeFormatting = foldl (.) Prelude.id [escapeCodelines, escapeCodeblocks, escapeBold, escapeStrike, escapeUnderline, escapeSpoilers, escapeFormatting]
 
 -- | Formats a lang and content into a codeblock
 --
@@ -62,6 +93,38 @@ codeblock' lang content = "```" <> fromMaybe "" lang <> "\n" <>
 -- Any code lines in the content are escaped
 codeline :: L.Text -> L.Text
 codeline content = "``" <> escapeCodelines content <> "``"
+
+-- | Formats some text into it's bolded form
+--
+-- Any existing bolded text is escaped
+bold :: L.Text -> L.Text
+bold content = "**" <> escapeBold content <> "**"
+
+-- | Formats some text into it's striked form
+--
+-- Any existing striked text is escaped
+strike :: L.Text -> L.Text
+strike content = "~~" <> escapeStrike content <> "~~"
+
+-- | Formats some text into it's underlined form
+--
+-- Any existing underlined text is escaped
+underline :: L.Text -> L.Text
+underline content = "__" <> escapeUnderline content <> "__"
+
+-- | Quotes a section of text
+quote :: L.Text -> L.Text
+quote = ("> " <>)
+
+-- | Quotes all remaining text
+quoteAll :: L.Text -> L.Text
+quoteAll = (">> " <>)
+
+-- | Formats some text into it's spoilered form
+--
+-- Any existing spoilers are escaped
+spoiler :: L.Text -> L.Text
+spoiler content = "||" <> escapeSpoilers content <> "||"
 
 fmtEmoji :: Emoji -> L.Text
 fmtEmoji Emoji { id, name, animated } = "<" <> ifanim <> ":" <> name <> ":" <> showtl id <> ">"
