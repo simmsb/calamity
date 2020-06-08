@@ -14,6 +14,7 @@ module Calamity.Internal.AesonThings
 import           Control.Lens
 
 import           Data.Aeson
+import           Data.Aeson.Lens
 import           Data.Aeson.Types      ( Parser )
 import           Data.Kind
 import           Data.Reflection       ( Reifies(..) )
@@ -42,10 +43,9 @@ instance (Reifies d Value, KnownSymbol label) => PerformAction (IfNoneThen label
     pure $ o & at (textSymbolVal @label) ?~ v
 
 instance (KnownSymbol label, KnownSymbol field) => PerformAction (ExtractField label field) where
-  runAction _ o = do
-    o' <- o .: textSymbolVal @label
-    v  <- o' .:? textSymbolVal @field .!= Null
-    pure $ o & at (textSymbolVal @field) ?~ v
+  runAction _ o =
+    let v :: Maybe Value = o ^? ix (textSymbolVal @label) . _Object . ix (textSymbolVal @field)
+    in pure $ o & at (textSymbolVal @field) .~ v
 
 instance PerformAction (ExtractFields label '[]) where
   runAction _ = pure
