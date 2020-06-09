@@ -60,9 +60,12 @@ instance (KnownSymbol field,
 
 instance (KnownSymbol label, KnownSymbol field) => PerformAction (ExtractArrayField label field) where
   runAction _ o = do
-    a :: Array <- o .: textSymbolVal @label
-    a' <- Array <$> traverse (withObject "extracting field" (.: textSymbolVal @field)) a
-    pure $ o & at (textSymbolVal @label) ?~ a'
+    a :: Maybe Array <- o .:? textSymbolVal @label
+    case a of
+      Just a' -> do
+        a'' <- Array <$> traverse (withObject "extracting field" (.: textSymbolVal @field)) a'
+        pure $ o & at (textSymbolVal @label) ?~ a''
+      Nothing -> pure o
 
 newtype WithSpecialCases (rules :: [Type]) a = WithSpecialCases a
 
