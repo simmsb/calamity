@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.14.2
+
+*2020-06-09*
+
+* Fix broken json decoding for DMs
+
+* Add `mentionChannels` to `Message`
+
 ## 0.1.14.1
 
 *2020-06-08*
