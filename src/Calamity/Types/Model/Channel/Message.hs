@@ -35,7 +35,7 @@ data Message = Message
   , mentionEveryone :: Bool
   , mentions        :: UV.Vector (Snowflake User)
   , mentionRoles    :: UV.Vector (Snowflake Role)
-  , mentionChannels :: UV.Vector (Snowflake Channel)
+  , mentionChannels :: Maybe (UV.Vector (Snowflake Channel))
   , attachments     :: [Attachment]
   , embeds          :: [Embed]
   , reactions       :: [Reaction]
