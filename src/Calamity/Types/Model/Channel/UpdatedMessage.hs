@@ -29,6 +29,7 @@ data UpdatedMessage = UpdatedMessage
   , mentionEveryone :: Maybe Bool
   , mentions        :: Maybe (UV.Vector (Snowflake User))
   , mentionRoles    :: Maybe (UV.Vector (Snowflake Role))
+  , mentionChannels :: Maybe (UV.Vector (Snowflake Channel))
   , attachments     :: Maybe [Attachment]
   , embeds          :: Maybe [Embed]
   , reactions       :: Maybe [Reaction]
@@ -37,7 +38,8 @@ data UpdatedMessage = UpdatedMessage
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric UpdatedMessage
   deriving ( FromJSON ) via WithSpecialCases
-      '["author" `ExtractFieldFrom` "id", "mentions" `ExtractArrayField` "id"]
+      '["author" `ExtractFieldFrom` "id", "mentions" `ExtractArrayField` "id",
+        "mention_channels" `ExtractArrayField` "id"]
       UpdatedMessage
   deriving ( HasID Message ) via HasIDField "id" UpdatedMessage
   deriving ( HasID Channel ) via HasIDField "channelID" UpdatedMessage

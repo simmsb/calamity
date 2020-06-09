@@ -35,6 +35,7 @@ data Message = Message
   , mentionEveryone :: Bool
   , mentions        :: UV.Vector (Snowflake User)
   , mentionRoles    :: UV.Vector (Snowflake Role)
+  , mentionChannels :: UV.Vector (Snowflake Channel)
   , attachments     :: [Attachment]
   , embeds          :: [Embed]
   , reactions       :: [Reaction]
@@ -45,9 +46,9 @@ data Message = Message
   }
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Message
-  deriving ( ToJSON ) via CalamityJSON Message
   deriving ( FromJSON ) via WithSpecialCases
       '["author" `ExtractFieldFrom` "id", "mentions" `ExtractArrayField` "id",
+        "mention_channels" `ExtractArrayField` "id",
         "reactions" `IfNoneThen` DefaultToEmptyArray]
       Message
   deriving ( HasID Message ) via HasIDField "id" Message
@@ -66,9 +67,6 @@ data MessageType
   | GuildMemberJoin
   deriving ( Eq, Show, Enum, Generic )
   deriving ( TextShow ) via TSG.FromGeneric MessageType
-
-instance ToJSON MessageType where
-  toJSON t = Number $ fromIntegral (fromEnum t)
 
 instance FromJSON MessageType where
   parseJSON = withScientific "MessageType" $ \n -> case toBoundedInteger n of

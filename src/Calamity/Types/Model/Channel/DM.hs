@@ -26,6 +26,7 @@ data DMChannel = DMChannel
   }
   deriving ( Show, Eq, Generic )
   deriving ( TextShow ) via TSG.FromGeneric DMChannel
-  deriving ( FromJSON, ToJSON ) via CalamityJSON DMChannel
+  deriving ( FromJSON ) via WithSpecialCases
+      '["recipients" `ExtractArrayField` "id"] DMChannel
   deriving ( HasID DMChannel ) via HasIDField "id" DMChannel
   deriving ( HasID Channel ) via HasIDFieldCoerce' "id" DMChannel

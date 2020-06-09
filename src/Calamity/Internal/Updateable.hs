@@ -43,6 +43,7 @@ instance Updateable Message where
     & mergeF @"mentionEveryone" o n
     & mergeF @"mentions" o n
     & mergeF @"mentionRoles" o n
+    & mergeF @"mentionChannels" o n
     & mergeF @"attachments" o n
     & mergeF @"embeds" o n
     & mergeF @"reactions" o n
