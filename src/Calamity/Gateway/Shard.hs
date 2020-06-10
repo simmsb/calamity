@@ -50,9 +50,6 @@ import qualified Polysemy.Resource               as P
 import           Prelude                         hiding ( error )
 
 import           Wuss
-import qualified DiPolysemy as Di
-import Data.Text.Lazy.Encoding (decodeUtf8)
-import TextShow (TextShow(showtl))
 
 data Websocket m a where
   RunWebsocket :: Text -> Text -> (Connection -> m a) -> Websocket m a
@@ -125,11 +122,6 @@ tryWriteTBMQueue' q v = do
     Just True  -> pure True
     Nothing    -> pure False
 
-logExceptions :: String -> IO a -> IO a
-logExceptions note m = Ex.catchAny m (\e -> do
-                                    print $ "Got exception (note: " <> note <> " ): " <> show e
-                                    Ex.throw e)
-
 -- | The loop a shard will run on
 shardLoop :: ShardC r => Sem r ()
 shardLoop = do
@@ -140,7 +132,7 @@ shardLoop = do
   debug "Shard shut down"
  where
   controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
-  controlStream shard outqueue = logExceptions "controlStream" inner
+  controlStream shard outqueue = inner
     where
       q = shard ^. #cmdOut
       inner = do
@@ -149,11 +141,13 @@ shardLoop = do
         when r inner
 
   handleWSException :: SomeException -> IO (Either ControlMessage a)
-  handleWSException e = pure $ case fromException e of
+  handleWSException e = case fromException e of
     Just (CloseRequest code _)
       | code `elem` [1000, 4004, 4010, 4011] ->
-        Left ShutDownShard
-    _ -> Left RestartShard
+        pure $ Left ShutDownShard
+    e -> do
+      print $ "Ws exception, reason: " <> show e
+      pure $ Left RestartShard
 
   discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
   discordStream ws outqueue = inner
@@ -165,7 +159,6 @@ shardLoop = do
                 P.embed . atomically $ writeTBMQueue outqueue (Control c)
 
               Right msg' -> do
-                Di.debug $ "from WS: " <> decodeUtf8 msg'
                 let decoded = A.eitherDecode msg'
                 r <- case decoded of
                   Right a ->
@@ -245,7 +238,7 @@ shardLoop = do
           msg <- P.embed . atomically $ readTBMQueue q
           handleMsg $ fromJust msg)
 
-    debug $ "Exiting inner loop of shard with result: " <> showtl result
+    debug "Exiting inner loop of shard"
 
     P.atomicModify (#wsConn .~ Nothing)
     haltHeartBeat
