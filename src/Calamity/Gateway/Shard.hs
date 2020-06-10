@@ -50,6 +50,8 @@ import qualified Polysemy.Resource               as P
 import           Prelude                         hiding ( error )
 
 import           Wuss
+import qualified DiPolysemy as Di
+import Data.Text.Lazy.Encoding (decodeUtf8)
 
 data Websocket m a where
   RunWebsocket :: Text -> Text -> (Connection -> m a) -> Websocket m a
@@ -157,6 +159,7 @@ shardLoop = do
                 P.embed . atomically $ writeTBMQueue outqueue (Control c)
 
               Right msg' -> do
+                Di.debug $ "from WS: " <> decodeUtf8 msg'
                 let decoded = A.eitherDecode msg'
                 r <- case decoded of
                   Right a ->
