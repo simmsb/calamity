@@ -216,7 +216,7 @@ data StatusUpdateData = StatusUpdateData
   , afk    :: Bool
   }
   deriving ( Show, Generic )
-  deriving ToJSON via CalamityJSON StatusUpdateData
+  deriving ToJSON via CalamityJSONKeepNothing StatusUpdateData
 
 data ResumeData = ResumeData
   { token     :: Text

@@ -9,6 +9,7 @@ module Calamity.Internal.AesonThings
     , DefaultToZero
     , DefaultToFalse
     , CalamityJSON(..)
+    , CalamityJSONKeepNothing(..)
     , jsonOptions
     , jsonOptionsKeepNothing ) where
 
@@ -113,6 +114,19 @@ instance (Typeable a, Generic a, GToJSON Zero (Rep a), GToEncoding Zero (Rep a))
 
 instance (Typeable a, Generic a, GFromJSON Zero (Rep a)) => FromJSON (CalamityJSON a) where
   parseJSON = fmap CalamityJSON . genericParseJSON jsonOptions
+
+-- | version that keeps Nothing fields
+newtype CalamityJSONKeepNothing a = CalamityJSONKeepNothing
+  { unCalamityJSONKeepNothing :: a
+  }
+
+instance (Typeable a, Generic a, GToJSON Zero (Rep a), GToEncoding Zero (Rep a)) => ToJSON (CalamityJSONKeepNothing a) where
+  toJSON = genericToJSON jsonOptionsKeepNothing . unCalamityJSONKeepNothing
+
+  toEncoding = genericToEncoding jsonOptionsKeepNothing . unCalamityJSONKeepNothing
+
+instance (Typeable a, Generic a, GFromJSON Zero (Rep a)) => FromJSON (CalamityJSONKeepNothing a) where
+  parseJSON = fmap CalamityJSONKeepNothing . genericParseJSON jsonOptionsKeepNothing
 
 jsonOptions :: Options
 jsonOptions = defaultOptions { sumEncoding        = UntaggedValue
