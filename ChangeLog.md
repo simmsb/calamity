@@ -1,5 +1,11 @@
 # Changelog for Calamity
 
+## 0.1.14.3
+
+*2020-06-10*
+
+* Fix some bugs in the gateway
+
 ## 0.1.14.2
 
 *2020-06-09*
