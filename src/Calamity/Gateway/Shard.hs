@@ -52,6 +52,7 @@ import           Prelude                         hiding ( error )
 import           Wuss
 import qualified DiPolysemy as Di
 import Data.Text.Lazy.Encoding (decodeUtf8)
+import TextShow (TextShow(showtl))
 
 data Websocket m a where
   RunWebsocket :: Text -> Text -> (Connection -> m a) -> Websocket m a
@@ -124,6 +125,11 @@ tryWriteTBMQueue' q v = do
     Just True  -> pure True
     Nothing    -> pure False
 
+logExceptions :: String -> IO a -> IO a
+logExceptions note m = Ex.catchAny m (\e -> do
+                                    print $ "Got exception (note: " <> note <> " ): " <> show e
+                                    Ex.throw e)
+
 -- | The loop a shard will run on
 shardLoop :: ShardC r => Sem r ()
 shardLoop = do
@@ -134,7 +140,7 @@ shardLoop = do
   debug "Shard shut down"
  where
   controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
-  controlStream shard outqueue = inner
+  controlStream shard outqueue = logExceptions "controlStream" inner
     where
       q = shard ^. #cmdOut
       inner = do
@@ -181,7 +187,7 @@ shardLoop = do
     info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
 
 
-    innerLoopVal <- websocketToIO $ runWebsocket host' "/?v=7&encoding=json" innerloop
+    innerLoopVal <- websocketToIO $ runWebsocket host' "/?v=6&encoding=json" innerloop
 
     case innerLoopVal of
       ShardFlowShutDown -> do
@@ -239,7 +245,7 @@ shardLoop = do
           msg <- P.embed . atomically $ readTBMQueue q
           handleMsg $ fromJust msg)
 
-    debug "Exiting inner loop of shard"
+    debug $ "Exiting inner loop of shard with result: " <> showtl result
 
     P.atomicModify (#wsConn .~ Nothing)
     haltHeartBeat
@@ -271,13 +277,13 @@ shardLoop = do
 
     InvalidSession resumable -> do
       if resumable
-      then do
+      then
+        info "Received resumable invalid session"
+      else do
         info "Received non-resumable invalid session, sleeping for 15 seconds then retrying"
         P.atomicModify (#sessionID .~ Nothing)
         P.atomicModify (#seqNum .~ Nothing)
         P.embed $ threadDelay (15 * 1000 * 1000)
-      else
-        info "Received resumable invalid session"
       P.throw ShardFlowRestart
 
     Hello interval -> do

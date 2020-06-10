@@ -41,6 +41,8 @@ import           Network.WebSockets.Connection    ( Connection )
 import qualified Polysemy                         as P
 import qualified Polysemy.Async                   as P
 import qualified Polysemy.AtomicState             as P
+import qualified TextShow.Generic as TSG
+import TextShow (TextShow)
 
 type ShardC r = (P.Members '[LogEff, P.AtomicState ShardState, P.Embed IO, P.Final IO,
   P.Async, MetricEff] r)
@@ -248,12 +250,13 @@ data ControlMessage
   = RestartShard
   | ShutDownShard
   | SendPresence StatusUpdateData
-  deriving ( Show )
+  deriving ( Show, Generic )
 
 data ShardFlowControl
   = ShardFlowRestart
   | ShardFlowShutDown
-  deriving ( Show )
+  deriving ( Show, Generic )
+  deriving ( TextShow ) via TSG.FromGeneric ShardFlowControl
 
 data Shard = Shard
   { shardID       :: Int
