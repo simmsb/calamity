@@ -50,6 +50,7 @@ import qualified Polysemy.Resource               as P
 import           Prelude                         hiding ( error )
 
 import           Wuss
+import qualified Data.Text.Lazy as L
 
 data Websocket m a where
   RunWebsocket :: Text -> Text -> (Connection -> m a) -> Websocket m a
@@ -140,14 +141,12 @@ shardLoop = do
         r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
         when r inner
 
-  handleWSException :: SomeException -> IO (Either ControlMessage a)
-  handleWSException e = case fromException e of
+  handleWSException :: SomeException -> IO (Either (ControlMessage, Maybe Text) a)
+  handleWSException e = pure $ case fromException e of
     Just (CloseRequest code _)
       | code `elem` [1000, 4004, 4010, 4011] ->
-        pure $ Left ShutDownShard
-    e -> do
-      print $ "Ws exception, reason: " <> show e
-      pure $ Left RestartShard
+        Left (ShutDownShard, Nothing)
+    e -> Left (RestartShard, Just . L.pack . show $ e)
 
   discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
   discordStream ws outqueue = inner
@@ -155,7 +154,8 @@ shardLoop = do
             msg <- P.embed $ Ex.catchAny (Right <$> receiveData ws) handleWSException
 
             case msg of
-              Left c ->
+              Left (c, reason) -> do
+                whenJust reason (\r -> error $ "Shard closed with reason: " <> r)
                 P.embed . atomically $ writeTBMQueue outqueue (Control c)
 
               Right msg' -> do
