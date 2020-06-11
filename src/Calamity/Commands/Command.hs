@@ -9,6 +9,7 @@ import           Calamity.Commands.Group
 
 import           Control.Lens              hiding ( (<.>), Context )
 
+import           Data.List.NonEmpty        ( NonEmpty )
 import           Data.Text                 as S
 import           Data.Text.Lazy            as L
 
@@ -16,10 +17,11 @@ import           GHC.Generics
 
 import           TextShow
 import qualified TextShow.Generic          as TSG
+import qualified Data.List.NonEmpty as NE
 
 -- | A command
 data Command = forall a. Command
-  { name     :: S.Text
+  { names    :: NonEmpty S.Text
   , parent   :: Maybe Group
   , checks   :: [Check] -- TODO check checks on default help
     -- ^ A list of checks that must pass for this command to be invoked
@@ -37,7 +39,7 @@ data Command = forall a. Command
   }
 
 data CommandS = CommandS
-  { name   :: S.Text
+  { names  :: NonEmpty S.Text
   , params :: [S.Text]
   , parent :: Maybe S.Text
   , checks :: [S.Text]
@@ -46,9 +48,9 @@ data CommandS = CommandS
   deriving ( TextShow ) via TSG.FromGeneric CommandS
 
 instance Show Command where
-  showsPrec d Command { name, params, parent, checks } = showsPrec d $ CommandS name params (parent ^? _Just . #name)
+  showsPrec d Command { names, params, parent, checks } = showsPrec d $ CommandS names params (NE.head <$> parent ^? _Just . #names)
     (checks ^.. traverse . #name)
 
 instance TextShow Command where
-  showbPrec d Command { name, params, parent, checks } = showbPrec d $ CommandS name params (parent ^? _Just . #name)
+  showbPrec d Command { names, params, parent, checks } = showbPrec d $ CommandS names params (NE.head <$> parent ^? _Just . #names)
     (checks ^.. traverse . #name)

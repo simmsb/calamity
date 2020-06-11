@@ -2,6 +2,7 @@
 module Calamity.Commands.Handler
     ( CommandHandler(..) ) where
 
+import           Calamity.Commands.AliasType
 import           Calamity.Commands.Command
 import           Calamity.Commands.Group
 
@@ -14,9 +15,9 @@ import           TextShow
 import qualified TextShow.Generic          as TSG
 
 data CommandHandler = CommandHandler
-  { groups   :: LH.HashMap S.Text Group
+  { groups   :: LH.HashMap S.Text (Group, AliasType)
     -- ^ Top level groups
-  , commands :: LH.HashMap S.Text Command
+  , commands :: LH.HashMap S.Text (Command, AliasType)
     -- ^ Top level commands
   }
   deriving ( Show, Generic )

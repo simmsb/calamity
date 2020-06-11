@@ -26,6 +26,8 @@ import           Control.Monad
 
 import           Data.Foldable
 import           Data.Kind
+import           Data.List.NonEmpty          ( NonEmpty(..) )
+import qualified Data.List.NonEmpty          as NE
 import           Data.Maybe
 import           Data.Text                   as S
 import           Data.Text.Lazy              as L
@@ -35,10 +37,10 @@ import qualified Polysemy.Error              as P
 import qualified Polysemy.Fail               as P
 
 groupPath :: Group -> [S.Text]
-groupPath grp = maybe [] groupPath (grp ^. #parent) ++ [grp ^. #name]
+groupPath Group { names, parent } = maybe [] groupPath parent ++ [NE.head names]
 
 commandPath :: Command -> [S.Text]
-commandPath Command { name, parent } = maybe [] groupPath parent ++ [name]
+commandPath Command { names, parent } = maybe [] groupPath parent ++ [NE.head names]
 
 commandParams :: Command -> L.Text
 commandParams Command { params } = L.fromStrict $ S.unwords params
@@ -47,7 +49,7 @@ commandParams Command { params } = L.fromStrict $ S.unwords params
 -- 'P.Sem' monad, build a command by transforming the Polysemy actions into IO
 -- actions.
 buildCommand' :: P.Member (P.Final IO) r
-              => S.Text
+              => NonEmpty S.Text
               -> Maybe Group
               -> [Check]
               -> [S.Text]
@@ -55,10 +57,10 @@ buildCommand' :: P.Member (P.Final IO) r
               -> (Context -> P.Sem r (Either CommandError a))
               -> ((Context, a) -> P.Sem (P.Fail ': r) ())
               -> P.Sem r Command
-buildCommand' name parent checks params help parser cb = do
+buildCommand' names@(name :| _) parent checks params help parser cb = do
   cb' <- buildCallback cb
   parser' <- buildParser name parser
-  pure $ Command name parent checks params help parser' cb'
+  pure $ Command names parent checks params help parser' cb'
 
 -- | Given the properties of a 'Command', a callback, and a type level list of
 -- the parameters, build a command by constructing a parser and wiring it up to
@@ -78,14 +80,15 @@ buildCommand' name parent checks params help parser cb = do
 -- @
 buildCommand :: forall ps r.
              (P.Member (P.Final IO) r, TypedCommandC ps r)
-             => S.Text
+             => NonEmpty S.Text
              -> Maybe Group
              -> [Check]
              -> (Context -> L.Text)
              -> (Context -> CommandForParsers ps r)
              -> P.Sem r Command
-buildCommand name parent checks help command = let (parser, cb) = buildTypedCommand @ps command
-                                               in buildCommand' name parent checks (paramNames @ps @r) help parser cb
+buildCommand names parent checks help command =
+  let (parser, cb) = buildTypedCommand @ps command
+  in buildCommand' names parent checks (paramNames @ps @r) help parser cb
 
 -- | Given the name of the command the parser is for and a parser function in
 -- the 'P.Sem' monad, build a parser by transforming the Polysemy action into an
@@ -112,7 +115,7 @@ buildCallback cb = do
 
 -- | Given an invokation 'Context', run a command. This does not perform the command's checks.
 runCommand :: P.Member (P.Embed IO) r => Context -> Command -> P.Sem r (Either CommandError ())
-runCommand ctx Command { name, parser, callback } = P.embed (parser ctx) >>= \case
+runCommand ctx Command { names = name :| _, parser, callback } = P.embed (parser ctx) >>= \case
   Left e   -> pure $ Left e
   Right p' -> P.embed (callback (ctx, p')) <&> justToEither . (InvokeError name <$>)
 

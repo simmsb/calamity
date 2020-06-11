@@ -2,6 +2,7 @@
 module Calamity.Commands.Group
     ( Group(..) ) where
 
+import           Calamity.Commands.AliasType
 import           Calamity.Commands.Check
 import {-# SOURCE #-} Calamity.Commands.Command
 import {-# SOURCE #-} Calamity.Commands.Context
@@ -16,14 +17,16 @@ import           GHC.Generics
 
 import           TextShow
 import qualified TextShow.Generic          as TSG
+import Data.List.NonEmpty (NonEmpty)
+import qualified Data.List.NonEmpty as NE
 
 -- | A group of commands
 data Group = Group
-  { name     :: S.Text
+  { names    :: NonEmpty S.Text
   , parent   :: Maybe Group
-  , commands :: LH.HashMap S.Text Command
+  , commands :: LH.HashMap S.Text (Command, AliasType)
     -- ^ Any child commands of this group
-  , children :: LH.HashMap S.Text Group
+  , children :: LH.HashMap S.Text (Group, AliasType)
     -- ^ Any child groups of this group
   , help     :: Context -> L.Text
     -- ^ A function producing the \'help' for the group
@@ -33,16 +36,16 @@ data Group = Group
   deriving ( Generic )
 
 data GroupS = GroupS
-  { name     :: S.Text
+  { names    :: NonEmpty S.Text
   , parent   :: Maybe S.Text
-  , commands :: LH.HashMap S.Text Command
-  , children :: LH.HashMap S.Text Group
+  , commands :: LH.HashMap S.Text (Command, AliasType)
+  , children :: LH.HashMap S.Text (Group, AliasType)
   }
   deriving ( Generic, Show )
   deriving ( TextShow ) via TSG.FromGeneric GroupS
 
 instance Show Group where
-  showsPrec d Group { name, parent, commands, children } = showsPrec d $ GroupS name (parent ^? _Just . #name) commands children
+  showsPrec d Group { names, parent, commands, children } = showsPrec d $ GroupS names (NE.head <$> parent ^? _Just . #names) commands children
 
 instance TextShow Group where
-  showbPrec d Group { name, parent, commands, children } = showbPrec d $ GroupS name (parent ^? _Just . #name) commands children
+  showbPrec d Group { names, parent, commands, children } = showbPrec d $ GroupS names (NE.head <$> parent ^? _Just . #names) commands children

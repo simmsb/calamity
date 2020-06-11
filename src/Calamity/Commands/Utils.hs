@@ -9,6 +9,7 @@ import           Calamity.Cache.Eff
 import           Calamity.Metrics.Eff
 import           Calamity.Client.Client
 import           Calamity.Client.Types
+import           Calamity.Commands.AliasType
 import           Calamity.Commands.Command
 import           Calamity.Commands.CommandUtils
 import           Calamity.Commands.Context
@@ -82,15 +83,17 @@ buildCommands m = P.fixpointToFinal $ mdo
   let handler = CommandHandler groups cmds
   pure (handler, a)
 
-  where inner :: CommandHandler -> P.Sem (DSLState r) a -> P.Sem (P.Fixpoint ': r) (LH.HashMap S.Text Group, (LH.HashMap S.Text Command, a))
+  where inner :: CommandHandler -> P.Sem (DSLState r) a
+              -> P.Sem (P.Fixpoint ': r) (LH.HashMap S.Text (Group, AliasType),
+                                          (LH.HashMap S.Text (Command, AliasType), a))
         inner h =
           P.runReader h .
           P.runReader [] .
           P.runReader defaultHelp . P.untag @"original-help" .
           P.runReader defaultHelp .
           P.runReader Nothing .
-          runLocalWriter @(LH.HashMap S.Text Group) .
-          runLocalWriter @(LH.HashMap S.Text Command)
+          runLocalWriter @(LH.HashMap S.Text (Group, AliasType)) .
+          runLocalWriter @(LH.HashMap S.Text (Command, AliasType))
         defaultHelp = (const "This command or group has no help.")
 
 
@@ -125,8 +128,8 @@ findCommand handler msg = goH $ nextWord msg
       (((, xs) <$> attachInitial (LH.lookup (L.toStrict x) (g ^. #commands)))
        <> (attachInitial (LH.lookup (L.toStrict x) (g ^. #children)) >>= goG (nextWord xs)))
 
-    attachInitial :: Maybe a -> Either [L.Text] a
-    attachInitial (Just a) = Right a
+    attachInitial :: Maybe (a, b) -> Either [L.Text] a
+    attachInitial (Just (a, _)) = Right a
     attachInitial Nothing = Left []
 
     attachSoFar :: L.Text -> Either [L.Text] a -> Either [L.Text] a
