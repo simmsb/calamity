@@ -1,6 +1,7 @@
 -- | User activities
 module Calamity.Types.Model.Presence.Activity
     ( Activity(..)
+    , activity
     , ActivityType(..)
     , ActivityTimestamps(..)
     , ActivityParty(..)
@@ -54,6 +55,24 @@ data Activity = Activity
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Activity
   deriving ( ToJSON, FromJSON ) via CalamityJSON Activity
+
+-- | Make an 'Activity' with all optional fields set to Nothing
+activity :: Text -> ActivityType -> Activity
+activity name type_ =
+  Activity
+    { name = name,
+      type_ = type_,
+      url = Nothing,
+      timestamps = Nothing,
+      applicationID = Nothing,
+      details = Nothing,
+      state = Nothing,
+      party = Nothing,
+      assets = Nothing,
+      secrets = Nothing,
+      instance_ = Nothing,
+      flags = Nothing
+    }
 
 data ActivityTimestamps = ActivityTimestamps
   { start :: Maybe UnixTimestamp
