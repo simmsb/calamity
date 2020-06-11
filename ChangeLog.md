@@ -1,5 +1,16 @@
 # Changelog for Calamity
 
+## 0.1.14.4
+
+*2020-06-11*
+
+* Added `activity` to construct Activities
+
+* Added aliases for commands and groups, with new functions to create them
+  (`commandA`, `groupA`, ...).
+
+* The built in help command now shows aliases and checks.
+
 ## 0.1.14.3
 
 *2020-06-10*
