@@ -39,14 +39,16 @@ helpCommandHelp _ = "Show help for a command or group."
 
 helpForCommand :: Context -> Command -> L.Text
 helpForCommand ctx (cmd@Command { names, checks, help }) = "```\nUsage: " <> prefix' <> path' <> " " <> params' <> "\n" <>
-                                                           "Aliases: " <> aliases <> "\n" <>
-                                                           "Checks: " <> checks' <> "\n\n" <>
+                                                           aliasesFmt <>
+                                                           checksFmt <>
                                                            help ctx <> "\n```"
   where prefix' = ctx ^. #prefix
         path'   = L.unwords . map L.fromStrict $ commandPath cmd
         params' = commandParams cmd
-        aliases = L.unwords . map L.fromStrict $ NE.tail names
-        checks' = L.unwords . map L.fromStrict . map (^. #name) $ checks
+        aliases = map L.fromStrict $ NE.tail names
+        checks' = map L.fromStrict . map (^. #name) $ checks
+        aliasesFmt = if null aliases then "" else  "Aliases: " <> L.unwords aliases <> "\n"
+        checksFmt = if null checks' then "" else "Checks: " <> L.unwords checks' <> "\n\n"
 
 fmtCommandWithParams :: Command -> L.Text
 fmtCommandWithParams cmd@Command { names } = formatWithAliases names <> " " <> commandParams cmd
@@ -65,8 +67,8 @@ onlyOriginals = mapMaybe inner
 
 helpForGroup :: Context -> Group -> L.Text
 helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n" <>
-                       "Aliases: " <> aliases <> "\n" <>
-                       "Checks: " <> checks' <> "\n\n" <>
+                       aliasesFmt <>
+                       checksFmt <>
                        (grp ^. #help) ctx <> "\n" <>
                        groupsMsg <> commandsMsg <> "\n```"
   where path' = L.fromStrict . S.unwords $ groupPath grp
@@ -75,8 +77,10 @@ helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n" <>
         groupsFmt = map formatWithAliases (groups ^.. traverse . #names)
         groupsMsg = if null groups then "" else "The following child groups exist:\n" <> (L.unlines . map ("- " <>) $ groupsFmt)
         commandsMsg = if null commands then "" else "\nThe following child commands exist:\n" <> (L.unlines . map ("- " <>) . map fmtCommandWithParams $ commands)
-        aliases = L.unwords . map L.fromStrict . NE.tail $ grp ^. #names
-        checks' = L.unwords . map L.fromStrict . map (^. #name) $ grp ^. #checks
+        aliases = map L.fromStrict . NE.tail $ grp ^. #names
+        checks' = map L.fromStrict . map (^. #name) $ grp ^. #checks
+        aliasesFmt = if null aliases then "" else  "Aliases: " <> L.unwords aliases <> "\n"
+        checksFmt = if null checks' then "" else "Checks: " <> L.unwords checks' <> "\n\n"
 
 rootHelp :: CommandHandler -> L.Text
 rootHelp handler = "```\n" <> groupsMsg <> commandsMsg <> "\n```"
