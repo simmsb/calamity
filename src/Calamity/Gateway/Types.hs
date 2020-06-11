@@ -22,6 +22,7 @@ import           Calamity.Metrics.Eff
 import           Calamity.Types.LogEff
 import           Calamity.Types.Model.Guild.Guild
 import           Calamity.Types.Model.Voice
+import           Calamity.Types.Model.Presence.Activity
 import           Calamity.Types.Snowflake
 
 import           Control.Concurrent.Async
@@ -211,7 +212,7 @@ data IdentifyData = IdentifyData
 
 data StatusUpdateData = StatusUpdateData
   { since  :: Maybe Integer
-  , game   :: Maybe Value
+  , game   :: Maybe Activity
   , status :: Text
   , afk    :: Bool
   }
