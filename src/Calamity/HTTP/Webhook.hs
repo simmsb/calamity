@@ -29,7 +29,7 @@ import           TextShow
 
 data CreateWebhookData = CreateWebhookData
   { username :: Maybe Text
-    -- | The avatar field should be in discord's image data format: https://discordapp.com/developers/docs/reference#image-data
+    -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
   , avatar   :: Maybe Text
   }
   deriving ( Show, Generic, Default )
@@ -37,7 +37,7 @@ data CreateWebhookData = CreateWebhookData
 
 data ModifyWebhookData = ModifyWebhookData
   { username  :: Maybe Text
-    -- | The avatar field should be in discord's image data format: https://discordapp.com/developers/docs/reference#image-data
+    -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
   , avatar    :: Maybe Text
   , channelID :: Maybe (Snowflake Channel)
   }
