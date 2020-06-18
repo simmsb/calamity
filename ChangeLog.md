@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.14.6
+
+*2020-06-18*
+
+* Add command parameter `Parser`s for `Int`, `Integer`, `Word`, `Natural`, and
+  `Float`.
+
 ## 0.1.14.5
 
 *2020-06-18*
