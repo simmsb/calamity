@@ -37,6 +37,8 @@ import qualified Polysemy.State                as P
 import           Text.Megaparsec               hiding ( parse )
 import           Text.Megaparsec.Char
 import           Text.Megaparsec.Error.Builder ( errFancy, fancy )
+import Text.Megaparsec.Char.Lexer (float, decimal, signed)
+import Numeric.Natural (Natural)
 
 data SpannedError = SpannedError L.Text !Int !Int
   deriving ( Show, Eq, Ord )
@@ -96,6 +98,21 @@ instance Parser L.Text r where
 
 instance Parser S.Text r where
   parse = parseMP (parserName @S.Text) (L.toStrict <$> item)
+
+instance Parser Integer r where
+  parse = parseMP (parserName @Integer) (signed mempty decimal)
+
+instance Parser Natural r where
+  parse = parseMP (parserName @Natural) decimal
+
+instance Parser Int r where
+  parse = parseMP (parserName @Int) (signed mempty decimal)
+
+instance Parser Word r where
+  parse = parseMP (parserName @Word) decimal
+
+instance Parser Float r where
+  parse = parseMP (parserName @Float) (signed mempty float)
 
 instance Parser a r => Parser (Maybe a) r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
