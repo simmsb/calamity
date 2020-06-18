@@ -21,11 +21,13 @@ import           GHC.Generics
 import qualified StmContainers.Map             as SC
 
 data RestError
+  -- | An error response from discord
   = HTTPError
       { status   :: Int
       , response :: Maybe Value
       }
-  | DecodeError Text
+  -- | Something failed while making the request (after retrying a few times)
+  | InternalClientError Text
   deriving ( Show, Generic )
 
 data RateLimitState = RateLimitState
@@ -43,6 +45,7 @@ data DiscordResponseType
       Bool -- ^ Global ratelimit
   | ServerError Int -- ^ Discord's error, we should retry (HTTP 5XX)
   | ClientError Int LB.ByteString -- ^ Our error, we should fail
+  | InternalResponseError Text -- ^ Something went wrong with the http client
 
 newtype GatewayResponse = GatewayResponse
   { url :: Text

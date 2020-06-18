@@ -23,6 +23,7 @@ import           Data.ByteString              ( ByteString )
 import qualified Data.ByteString.Lazy         as LB
 import           Data.Functor
 import           Data.Maybe
+import qualified Data.Text.Lazy               as LT
 import           Data.Time
 import           Data.Time.Clock.POSIX
 
@@ -41,6 +42,7 @@ import qualified Polysemy.Async               as P
 import           Prelude                      hiding ( error )
 
 import qualified StmContainers.Map            as SC
+import qualified Control.Exception.Safe as Ex
 
 newRateLimitState :: IO RateLimitState
 newRateLimitState = RateLimitState <$> SC.newIO <*> E.newSet
@@ -56,27 +58,33 @@ getRateLimit s h = SC.focus (lookupOrInsertDefaultM L.new) h (rateLimits s)
 
 doDiscordRequest :: BotC r => IO (Response LB.ByteString) -> Sem r DiscordResponseType
 doDiscordRequest r = do
-  r' <- P.embed r
-  let status = r' ^. responseStatus
-  if
-    | statusIsSuccessful status -> do
-      let resp = r' ^. responseBody
-      debug $ "Got good response from discord: " +|| r' ^. responseStatus ||+ ""
-      pure $ if isExhausted r'
-             then ExhaustedBucket resp $ parseRateLimitHeader r'
-             else Good resp
-    | status == status429 -> do
-      debug "Got 429 from discord, retrying."
-      case asValue r' of
-        Just rv -> pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
-        Nothing -> pure $ ClientError (status ^. statusCode) "429 with invalid json???"
-    | statusIsClientError status -> do
-      let err = r' ^. responseBody
-      error $ "Something went wrong: " +|| err ||+ " response: " +|| r' ||+ ""
-      pure $ ClientError (status ^. statusCode) err
-    | otherwise -> do
-      debug $ "Got server error from discord: " +| status ^. statusCode |+ ""
-      pure $ ServerError (status ^. statusCode)
+  r'' <- P.embed $ Ex.catchAny (Right <$> r) (pure . Left . Ex.displayException)
+  case r'' of
+    Right r' -> do
+      let status = r' ^. responseStatus
+      if
+        | statusIsSuccessful status -> do
+          let resp = r' ^. responseBody
+          debug $ "Got good response from discord: " +|| r' ^. responseStatus ||+ ""
+          pure $ if isExhausted r'
+                then ExhaustedBucket resp $ parseRateLimitHeader r'
+                else Good resp
+        | status == status429 -> do
+          debug "Got 429 from discord, retrying."
+          case asValue r' of
+            Just rv -> pure $ Ratelimited (parseRetryAfter rv) (isGlobal rv)
+            Nothing -> pure $ ClientError (status ^. statusCode) "429 with invalid json???"
+        | statusIsClientError status -> do
+          let err = r' ^. responseBody
+          error $ "Something went wrong: " +|| err ||+ " response: " +|| r' ||+ ""
+          pure $ ClientError (status ^. statusCode) err
+        | otherwise -> do
+          debug $ "Got server error from discord: " +| status ^. statusCode |+ ""
+          pure $ ServerError (status ^. statusCode)
+    Left e -> do
+      error $ "Something went wrong with the http client: " +| LT.pack e |+ ""
+      pure . InternalResponseError $ LT.pack e
+
 
 parseDiscordTime :: ByteString -> Maybe UTCTime
 parseDiscordTime s = httpDateToUTC <$> parseHTTPDate s
@@ -172,6 +180,10 @@ doSingleRequest gl l r = do
     ServerError c -> do
       debug "Server failed, retrying"
       pure $ Retry (HTTPError c Nothing)
+
+    InternalResponseError c -> do
+      debug "Internal error, retrying"
+      pure $ Retry (InternalClientError c)
 
     ClientError c v -> pure $ RFail (HTTPError c $ decode v)
 

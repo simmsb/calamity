@@ -40,11 +40,11 @@ import qualified Polysemy.Reader                  as P
 
 fromResult :: P.Member (P.Error RestError) r => Data.Aeson.Result a -> Sem r a
 fromResult (Success a) = pure a
-fromResult (Error e) = P.throw (DecodeError . TL.pack $ e)
+fromResult (Error e) = P.throw (InternalClientError . TL.pack $ e)
 
 fromJSONDecode :: P.Member (P.Error RestError) r => Either String a -> Sem r a
 fromJSONDecode (Right a) = pure a
-fromJSONDecode (Left e) = P.throw (DecodeError . TL.pack $ e)
+fromJSONDecode (Left e) = P.throw (InternalClientError . TL.pack $ e)
 
 extractRight :: P.Member (P.Error e) r => Either e a -> Sem r a
 extractRight (Left e) = P.throw e
