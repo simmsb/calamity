@@ -1,5 +1,14 @@
 # Changelog for Calamity
 
+## 0.1.14.5
+
+*2020-06-18*
+
+* The `DecodeError` variant of the `RestError` type has been renamed to
+  `InternalClientError` as all issues in the rest client now end up here.
+  
+* We're now using `discord.com` instead of `discordapp.com`
+
 ## 0.1.14.4
 
 *2020-06-11*
