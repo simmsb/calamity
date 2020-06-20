@@ -174,7 +174,7 @@ instance {-# OVERLAPS #-}Parser (KleeneStarConcat S.Text) r where
 -- @'KleenePlusConcat' 'L.Text'@ Is therefore consumes all remaining input.
 data KleenePlusConcat (a :: Type)
 
-instance (Monoid (ParserResult a), Parser a r) => Parser (KleenePlusConcat a) r where
+instance (Semigroup (ParserResult a), Parser a r) => Parser (KleenePlusConcat a) r where
   type ParserResult (KleenePlusConcat a) = ParserResult a
 
   parse = sconcat <$> parse @(NonEmpty a)
@@ -194,18 +194,23 @@ instance {-# OVERLAPS #-}Parser (KleenePlusConcat S.Text) r where
 instance Typeable (Snowflake a) => Parser (Snowflake a) r where
   parse = parseMP (parserName @(Snowflake a)) snowflake
 
+-- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake User) r where
   parse = parseMP (parserName @(Snowflake User)) (try (ping "@") <|> snowflake)
 
+-- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake Member) r where
   parse = parseMP (parserName @(Snowflake Member)) (try (ping "@") <|> snowflake)
 
+-- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake Channel) r where
   parse = parseMP (parserName @(Snowflake Channel)) (try (ping "#") <|> snowflake)
 
+-- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake Role) r where
   parse = parseMP (parserName @(Snowflake Role)) (try (ping "@&") <|> snowflake)
 
+-- | Accepts both plain IDs and uses of emoji
 instance {-# OVERLAPS #-}Parser (Snowflake Emoji) r where
   parse = parseMP (parserName @(Snowflake Emoji)) (try emoji <|> snowflake)
 
@@ -273,6 +278,7 @@ instance Parser Emoji r where
               ctx <- P.ask
               pure $ ctx ^? #guild . _Just . #emojis . ix eid)
 
+-- | Parses both discord emojis, and unicode emojis
 instance Parser RawEmoji r where
   parse = parseMP (parserName @RawEmoji) (try parseCustomEmoji <|> (UnicodeEmoji <$> takeP (Just "A unicode emoji") 1))
     where parseCustomEmoji = CustomEmoji <$> partialEmoji
