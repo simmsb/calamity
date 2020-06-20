@@ -257,8 +257,9 @@ instance Request (ChannelRequest a) where
   action DeleteOwnReaction {} = deleteWith
   action DeleteUserReaction {} = deleteWith
   action (GetReactions _ _ _ GetReactionsOptions { before, after, limit }) = getWithP
-    (param "before" .~ maybeToList (showt <$> before) >>> param "after" .~ maybeToList (showt <$> after) >>> param
-     "limit" .~ maybeToList (showt <$> limit))
+    (param "before" .~ maybeToList (showt <$> before) >>>
+     param "after" .~ maybeToList (showt <$> after) >>>
+     param "limit" .~ maybeToList (showt <$> limit))
   action (DeleteAllReactions _ _) = deleteWith
   action (EditMessage _ _ content embed) = patchWith' (object ["content" .= content, "embed" .= embed])
   action (DeleteMessage _ _) = deleteWith

@@ -5,19 +5,22 @@ module Calamity.HTTP.AuditLog
 
 import           Calamity.HTTP.Internal.Request
 import           Calamity.HTTP.Internal.Route
-import           Calamity.Internal.AesonThings
 import           Calamity.Internal.Utils        ()
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 
-import           Data.Aeson
+import           Control.Lens
+import           Control.Arrow                  ( (>>>) )
+
 import           Data.Default.Class
-import           Data.Function
+import           Data.Maybe                     ( maybeToList )
 
 import           GHC.Generics
 
 import           Network.Wreq
+
+import           TextShow                       ( showt )
 
 data GetAuditLogOptions = GetAuditLogOptions
   { userID     :: Maybe (Snowflake User)
@@ -26,16 +29,19 @@ data GetAuditLogOptions = GetAuditLogOptions
   , limit      :: Maybe Integer
   }
   deriving ( Show, Generic, Default )
-  deriving ( ToJSON ) via CalamityJSON GetAuditLogOptions
 
 data AuditLogRequest a where
-  GetAuditLog :: HasID Guild g => g -> AuditLogRequest AuditLog
+  GetAuditLog :: HasID Guild g => g -> GetAuditLogOptions -> AuditLogRequest AuditLog
 
 instance Request (AuditLogRequest a) where
   type Result (AuditLogRequest a) = a
 
-  route (GetAuditLog (getID @Guild -> gid)) = mkRouteBuilder // S "guilds" // ID @Guild // S "audit-logs"
+  route (GetAuditLog (getID @Guild -> gid) _) = mkRouteBuilder // S "guilds" // ID @Guild // S "audit-logs"
     & giveID gid
     & buildRoute
 
-  action (GetAuditLog _) = getWith
+  action (GetAuditLog _ GetAuditLogOptions { userID, actionType, before, limit }) = getWithP
+    (param "user_id" .~ maybeToList (showt <$> userID) >>>
+     param "action_type" .~ maybeToList (showt .fromEnum <$> actionType) >>>
+     param "before" .~ maybeToList (showt <$> before) >>>
+     param "limit" .~ maybeToList (showt <$> limit))
