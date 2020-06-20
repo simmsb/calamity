@@ -1,5 +1,11 @@
 # Changelog for Calamity
 
+## 0.1.14.7
+
+*2020-06-21*
+
+* Fix missing usage of GetAuditLogOptions in GetAuditLog
+
 ## 0.1.14.6
 
 *2020-06-18*
