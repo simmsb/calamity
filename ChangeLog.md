@@ -1,5 +1,11 @@
 # Changelog for Calamity
 
+## 0.1.14.8
+
+*2020-06-21*
+
+* Replace uses of withLowerToIO with interpretFinal (should be more performant)
+
 ## 0.1.14.7
 
 *2020-06-21*
