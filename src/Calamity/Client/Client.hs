@@ -112,7 +112,7 @@ runBotIO' :: forall r a.
 runBotIO' token status intents setup = do
   client <- P.embed $ newClient token
   handlers <- P.embed $ newTVarIO def
-  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIO . Di.push "calamity" $ do
+  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIOFinal . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup
     r <- shardBot status intents
     case r of

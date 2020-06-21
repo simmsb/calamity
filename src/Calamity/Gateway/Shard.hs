@@ -10,6 +10,7 @@ import           Calamity.Gateway.DispatchEvents
 import           Calamity.Gateway.Intents
 import           Calamity.Gateway.Types
 import           Calamity.Internal.Utils
+import           Calamity.Internal.RunIntoIO
 import           Calamity.Metrics.Eff
 import           Calamity.Types.LogEff
 import           Calamity.Types.Token
@@ -29,8 +30,7 @@ import qualified Data.Aeson                      as A
 import           Data.Functor
 import           Data.IORef
 import           Data.Maybe
-import           Data.Text.Lazy                  ( Text, stripPrefix )
-import           Data.Text.Lazy.Lens
+import qualified Data.Text.Lazy                  as L
 import           Data.Void
 
 import           DiPolysemy                      hiding ( debug, error, info )
@@ -50,36 +50,22 @@ import qualified Polysemy.Resource               as P
 import           Prelude                         hiding ( error )
 
 import           Wuss
-import qualified Data.Text.Lazy as L
 
-data Websocket m a where
-  RunWebsocket :: Text -> Text -> (Connection -> m a) -> Websocket m a
-
-P.makeSem ''Websocket
-
-websocketToIO :: forall r a. P.Member (P.Embed IO) r => Sem (Websocket ': r) a -> Sem r a
-websocketToIO = P.interpretH
-  (\case
-     RunWebsocket host path a -> do
-       istate <- P.getInitialStateT
-       ma <- P.bindT a
-
-       P.withLowerToIO $ \lower finish -> do
-         let done :: Sem (Websocket ': r) x -> IO x
-             done = lower . P.raise . websocketToIO
-
-         runSecureClient (host ^. unpacked) 443 (path ^. unpacked)
-           (\x -> do
-              res <- done (ma $ istate $> x)
-              finish
-              pure res))
+runWebsocket :: P.Members '[P.Final IO, P.Embed IO] r
+  => L.Text
+  -> L.Text
+  -> (Connection -> P.Sem r a)
+  -> P.Sem r (Maybe a)
+runWebsocket host path ma = do
+  inner <- bindSemToIO ma
+  P.embed $ runSecureClient (L.unpack host) 443 (L.unpack path) inner
 
 newShardState :: Shard -> ShardState
 newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Nothing
 
 -- | Creates and launches a shard
 newShard :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r
-         => Text
+         => L.Text
          -> Int
          -> Int
          -> Token
@@ -141,7 +127,7 @@ shardLoop = do
         r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
         when r inner
 
-  handleWSException :: SomeException -> IO (Either (ControlMessage, Maybe Text) a)
+  handleWSException :: SomeException -> IO (Either (ControlMessage, Maybe L.Text) a)
   handleWSException e = pure $ case fromException e of
     Just (CloseRequest code _)
       | code `elem` [1000, 4004, 4010, 4011] ->
@@ -176,20 +162,22 @@ shardLoop = do
   outerloop = P.runError . forever $ do
     shard :: Shard <- P.atomicGets (^. #shardS)
     let host = shard ^. #gateway
-    let host' =  fromMaybe host $ stripPrefix "wss://" host
+    let host' =  fromMaybe host $ L.stripPrefix "wss://" host
     info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
 
-
-    innerLoopVal <- websocketToIO $ runWebsocket host' "/?v=6&encoding=json" innerloop
+    innerLoopVal <- runWebsocket host' "/?v=6&encoding=json" innerloop
 
     case innerLoopVal of
-      ShardFlowShutDown -> do
+      Just ShardFlowShutDown -> do
         info "Shutting down shard"
         P.throw ShardFlowShutDown
 
-      ShardFlowRestart ->
+      Just ShardFlowRestart ->
         info "Restaring shard"
         -- we restart normally when we loop
+
+      Nothing -> -- won't happen unless innerloop starts using a non-deterministic effect
+        info "Restarting shard (abnormal reasons?)"
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- and then decides what to do with it
@@ -327,5 +315,5 @@ heartBeatLoop interval = void . P.runError . forever $ do
   unlessM (P.atomicGets (^. #hbResponse)) $ do
     debug "No heartbeat response, restarting shard"
     wsConn <- fromJust <$> P.atomicGets (^. #wsConn)
-    P.embed $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: Text)
+    P.embed $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: L.Text)
     P.throw ()

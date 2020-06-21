@@ -75,12 +75,12 @@ packages:
   original:
     hackage: ghc-tcplugins-extra-0.3.2@sha256:1bbfd4449c3669a31618ea0ebc5d00d980a53988daad3b6218bab5c8cdff268d,1687
 - completed:
-    hackage: di-polysemy-0.1.3.1@sha256:f570cf6cdb0a0ef9dc903a3a7699a4c3246778e717e5f533bb96e18a8c9d1555,2160
+    hackage: di-polysemy-0.1.4.0@sha256:32b907dbfdfa95cc596c62165f3d4dda63f8dfdcb1262688af9c3ca1fc1b42b8,2160
     pantry-tree:
       size: 320
-      sha256: 201f2aea9391f7419f53a9afb373ee02d3e7d8b64ad6b0b92c3d2c1ae1ae598a
+      sha256: f2d708201dc6403c5e8601b49d568a4c19667d03a7e21f310ee8a28e9f1c7b37
   original:
-    hackage: di-polysemy-0.1.3.1
+    hackage: di-polysemy-0.1.4.0
 - completed:
     hackage: wreq-patchable-1.0.0.0@sha256:83fbdcc7c6bf30454fb71816dbc20442268b762f53899be5afb96c0c82ece45b,4818
     pantry-tree:
