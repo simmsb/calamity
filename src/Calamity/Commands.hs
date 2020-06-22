@@ -40,7 +40,7 @@ import           Calamity.Commands.Context ( Context )
 --
 -- ==== Custom Events
 --
--- the event handler registered by 'addCommands' will fire the following custom events:
+-- The event handler registered by 'addCommands' will fire the following custom events:
 --
 --     1. @"command-error" ('Context', 'CommandError')@
 --
@@ -53,6 +53,13 @@ import           Calamity.Commands.Context ( Context )
 --     3. @"command-invoked" 'Context'@
 --
 --         Fired when a command is successfully invoked.
+--
+-- 'addCommands' will also register event handlers for the following events:
+--
+--     1. @"invoke-command" ('Calamity.Types.Model.Channel.Message', 'Data.Text.Lazy.Text')@
+--
+--         Given a message and a command string, manually invoke a command
+--         treating it as if it originated from the provided 'Message'.
 --
 --
 -- ==== Registered Metrics
