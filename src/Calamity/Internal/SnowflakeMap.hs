@@ -106,6 +106,8 @@ lookupDefault d k = LH.lookupDefault d k . unSnowflakeMap
 (!) m k = unSnowflakeMap m LH.! k
 {-# INLINABLE (!) #-}
 
+infixl 9 !
+
 insert :: HasID' a => a -> SnowflakeMap a -> SnowflakeMap a
 insert v = over $ LH.insert (getID v) v
 {-# INLINABLE insert #-}

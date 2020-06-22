@@ -274,13 +274,10 @@ class GetEventHandlers' (flag :: Bool) a where
 
 instance GetEventHandlers' 'True ('CustomEvt s a) where
   getEventHandlers' _ _ _ = error "use getCustomEventHandlers instead"
-    -- let handlerMap = unwrapEventHandler @('CustomEvt Void Dynamic) $ fromJust
-    --       (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Dynamic)))
-    -- in concat $ LH.lookup (typeRep $ Proxy @s) handlerMap >>= LH.lookup (typeRep $ Proxy @a) <&> map eh
 
 instance (Typeable s, Typeable (StoredEHType s), EHStorageType s ~ [EventHandlerWithID (StoredEHType s)]) => GetEventHandlers' 'False s where
   getEventHandlers' _ _ (EventHandlers handlers) =
-    let theseHandlers = unwrapEventHandler @s $ fromJust (TM.lookup handlers :: Maybe (EventHandler s))
+    let theseHandlers = unwrapEventHandler @s $ fromMaybe mempty (TM.lookup handlers :: Maybe (EventHandler s))
     in map eh theseHandlers
 
 
@@ -306,6 +303,6 @@ instance (Typeable s, Typeable (StoredEHType s), EHStorageType s ~ [EventHandler
 
 getCustomEventHandlers :: TypeRep -> TypeRep -> EventHandlers -> [Dynamic -> IO ()]
 getCustomEventHandlers s a (EventHandlers handlers) =
-    let handlerMap = unwrapEventHandler @('CustomEvt Void Dynamic) $ fromJust
+    let handlerMap = unwrapEventHandler @('CustomEvt Void Dynamic) $ fromMaybe mempty
           (TM.lookup handlers :: Maybe (EventHandler ('CustomEvt Void Dynamic)))
     in map eh . concat $ LH.lookup s handlerMap >>= LH.lookup a

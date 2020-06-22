@@ -108,8 +108,8 @@ buildCallback
   :: P.Member (P.Final IO) r => ((Context, a) -> P.Sem (P.Fail ': r) ()) -> P.Sem r ((Context, a) -> IO (Maybe L.Text))
 buildCallback cb = do
   cb' <- bindSemToIO (\x -> P.runFail (cb x) <&> \case
-                        Left e -> Just $ L.pack e
-                        _      -> Nothing)
+                        Left e  -> Just $ L.pack e
+                        Right _ -> Nothing)
   let cb'' = fromMaybe (Just "failed internally") <.> cb'
   pure cb''
 

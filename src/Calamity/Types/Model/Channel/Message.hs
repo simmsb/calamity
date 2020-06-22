@@ -69,6 +69,15 @@ data MessageType
   deriving ( TextShow ) via TSG.FromGeneric MessageType
 
 instance FromJSON MessageType where
-  parseJSON = withScientific "MessageType" $ \n -> case toBoundedInteger n of
-    Just v  -> pure $ toEnum v
+  parseJSON = withScientific "MessageType" $ \n -> case toBoundedInteger @Int n of
+    Just v  -> case v of
+      0 -> pure Default
+      1 -> pure RecipientAdd
+      2 -> pure RecipientRemove
+      3 -> pure Call
+      4 -> pure ChannelNameChange
+      5 -> pure ChannelIconChange
+      6 -> pure ChannelPinnedMessage
+      7 -> pure GuildMemberJoin
+      _ -> fail $ "Invalid MessageType: " <> show n
     Nothing -> fail $ "Invalid MessageType: " <> show n

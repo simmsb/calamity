@@ -75,13 +75,13 @@ class Request a where
 
       inFlightRequests <- registerGauge "inflight_requests" [("route", route' ^. #path)]
       totalRequests <- registerCounter "total_requests" [("route", route' ^. #path)]
-      void $ modifyGauge succ inFlightRequests
+      void $ modifyGauge (+ 1) inFlightRequests
       void $ addCounter 1 totalRequests
 
       resp <- attr "route" (route' ^. #path) $ doRequest rlState' route'
         (action a (requestOptions token') (route' ^. #path . unpacked))
 
-      void $ modifyGauge pred inFlightRequests
+      void $ modifyGauge (subtract 1) inFlightRequests
 
       P.runError $ (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
 

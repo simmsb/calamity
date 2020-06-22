@@ -67,7 +67,9 @@ doDiscordRequest r = do
           let resp = r' ^. responseBody
           debug $ "Got good response from discord: " +|| r' ^. responseStatus ||+ ""
           pure $ if isExhausted r'
-                then ExhaustedBucket resp $ parseRateLimitHeader r'
+                then case parseRateLimitHeader r' of
+                       Just sleepTime -> ExhaustedBucket resp sleepTime
+                       Nothing        -> ServerError (status ^. statusCode)
                 else Good resp
         | status == status429 -> do
           debug "Got 429 from discord, retrying."
@@ -94,11 +96,11 @@ computeDiscordTimeDiff end now = round . (* 1000.0) $ diffUTCTime end' now
   where end' = end & toRational & fromRational & posixSecondsToUTCTime
 
 -- | Parse a ratelimit header returning the number of milliseconds until it resets
-parseRateLimitHeader :: Response a -> Int
-parseRateLimitHeader r = computeDiscordTimeDiff end now
+parseRateLimitHeader :: Response a -> Maybe Int
+parseRateLimitHeader r = computeDiscordTimeDiff end <$> now
  where
   end = r ^?! responseHeader "X-Ratelimit-Reset" . _Double
-  now = r ^?! responseHeader "Date" & parseDiscordTime & fromJust
+  now = r ^?! responseHeader "Date" & parseDiscordTime
 
 isExhausted :: Response a -> Bool
 isExhausted r = r ^? responseHeader "X-RateLimit-Remaining" == Just "0"
@@ -131,7 +133,7 @@ retryRequest max_retries action failAction = retryInner 0
       Retry r | num_retries > max_retries -> do
         debug $ "Request failed after " +| max_retries |+ " retries."
         doFail $ Left r
-      Retry _ -> retryInner (succ num_retries)
+      Retry _ -> retryInner (num_retries + 1)
       RFail r -> do
         debug "Request failed due to error response."
         doFail $ Left r

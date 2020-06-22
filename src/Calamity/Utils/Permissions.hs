@@ -21,6 +21,7 @@ import           Data.Flags
 import qualified Data.Vector.Unboxed                    as V
 
 import qualified Polysemy                               as P
+import Data.Foldable (Foldable(foldl'))
 
 -- | Calculate a 'Member''s 'Permissions' in a 'Guild'
 basePermissions :: Guild -> Member -> Permissions
@@ -29,7 +30,7 @@ basePermissions g m
   | otherwise = let everyoneRole  = g ^. #roles . at (coerceSnowflake $ getID @Guild g)
                     permsEveryone = maybe noFlags (^. #permissions) everyoneRole
                     rolePerms     = g ^.. #roles . foldMap ix (V.toList $ m ^. #roles) . #permissions
-                    perms         = foldl andFlags noFlags (permsEveryone:rolePerms)
+                    perms         = foldl' andFlags noFlags (permsEveryone:rolePerms)
                 in if perms .<=. administrator
                    then allFlags
                    else perms
@@ -45,8 +46,8 @@ applyOverwrites c m p
         p'                = p .-. everyoneDeny .+. everyoneAllow
         roleOverwrites    = c ^.. #permissionOverwrites . foldMap ix
           (map (coerceSnowflake @_ @Overwrite) . V.toList $ m ^. #roles)
-        roleAllow         = foldl andFlags noFlags (roleOverwrites ^.. traverse . #allow)
-        roleDeny          = foldl andFlags noFlags (roleOverwrites ^.. traverse . #deny)
+        roleAllow         = foldl' andFlags noFlags (roleOverwrites ^.. traverse . #allow)
+        roleDeny          = foldl' andFlags noFlags (roleOverwrites ^.. traverse . #deny)
         p''               = p' .-. roleDeny .+. roleAllow
         memberOverwrite   = c ^. #permissionOverwrites . at (coerceSnowflake @_ @Overwrite $ getID @Member m)
         memberAllow       = maybe noFlags (^. #allow) memberOverwrite
@@ -86,7 +87,7 @@ instance PermissionsIn' GuildChannel where
     g <- upgrade (getID @Guild c)
     case (m, g) of
       (Just m, Just g') -> pure $ permissionsIn (g', c) m
-      _                 -> pure noFlags
+      _cantFind         -> pure noFlags
 
 -- | A 'Member''s 'Permissions' in a guild are just their roles
 instance PermissionsIn' Guild where
@@ -103,8 +104,8 @@ instance PermissionsIn' (Snowflake GuildChannel) where
   permissionsIn' cid u = do
     c <- upgrade cid
     case c of
-      Just c' -> permissionsIn' c' u
-      _       -> pure noFlags
+      Just c'  -> permissionsIn' c' u
+      Nothing  -> pure noFlags
 
 -- | A 'Member''s 'Permissions' in a guild are just their roles
 --

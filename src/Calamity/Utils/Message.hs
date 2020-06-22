@@ -33,6 +33,7 @@ import Data.Maybe (fromMaybe)
 import Data.String (IsString, fromString)
 import qualified Data.Text.Lazy as L
 import TextShow (TextShow (showtl))
+import Data.Foldable (Foldable(foldl'))
 
 zws :: IsString s => s
 zws = fromString "\x200b"
@@ -63,7 +64,7 @@ escapeSpoilers = L.replace "||" (L.intercalate zws $ replicate 2 "|")
 
 -- | Escape all discord formatting
 escapeFormatting :: L.Text -> L.Text
-escapeFormatting = foldl (.) Prelude.id [escapeCodelines, escapeCodeblocks, escapeBold, escapeStrike, escapeUnderline, escapeSpoilers, escapeFormatting]
+escapeFormatting = foldl' (.) Prelude.id [escapeCodelines, escapeCodeblocks, escapeBold, escapeStrike, escapeUnderline, escapeSpoilers, escapeFormatting]
 
 -- | Formats a lang and content into a codeblock
 --

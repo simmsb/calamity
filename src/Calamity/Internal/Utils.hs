@@ -42,8 +42,8 @@ whenJust = flip $ maybe (pure ())
 
 whenM :: Monad m => m Bool -> m () -> m ()
 whenM p m = p >>= \case
-  True -> m
-  _    -> pure ()
+  True  -> m
+  False -> pure ()
 
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM = whenM . (not <$>)

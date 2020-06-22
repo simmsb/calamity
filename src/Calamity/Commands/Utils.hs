@@ -141,7 +141,7 @@ buildContext msg prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
   Just channel <- case gchan of
     Just chan -> pure . pure $ GuildChannel' chan
-    _         -> DMChannel' <<$>> getDM (coerceSnowflake $ getID @Channel msg)
+    Nothing   -> DMChannel' <<$>> getDM (coerceSnowflake $ getID @Channel msg)
   Just user <- getUser $ getID msg
 
   pure $ Context msg guild member channel user command prefix unparsed

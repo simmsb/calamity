@@ -88,6 +88,8 @@ dependencies:
 
 library:
   ghc-options:
+    - -fwrite-ide-info
+    - -hiedir=.hie
     - -fplugin=Polysemy.Plugin
     - -funbox-strict-fields
     - -Wall
@@ -95,6 +97,7 @@ library:
   source-dirs: src
 
 default-extensions:
+  - StrictData
   - CPP
   - AllowAmbiguousTypes
   - BlockArguments

@@ -104,13 +104,13 @@ instance RouteFragmentable S ids where
   type ConsRes S ids = RouteBuilder ids
 
   (UnsafeMkRouteBuilder r ids) // (S t) =
-    UnsafeMkRouteBuilder (S' t : r) ids
+    UnsafeMkRouteBuilder (r <> [S' t]) ids
 
 instance Typeable a => RouteFragmentable (ID (a :: Type)) (ids :: [(Type, RouteRequirement)]) where
   type ConsRes (ID a) ids = RouteBuilder (AddRequired a ids)
 
   (UnsafeMkRouteBuilder r ids) // ID =
-    UnsafeMkRouteBuilder (ID' (typeRep (Proxy @a)) : r) ids
+    UnsafeMkRouteBuilder (r <> [ID' (typeRep (Proxy @a))]) ids
 
 infixl 5 //
 
@@ -133,13 +133,11 @@ buildRoute
   => RouteBuilder ids
   -> Route
 buildRoute (UnsafeMkRouteBuilder route ids) = Route
-  (T.intercalate "/" (baseURL : map goR route'))
-  (T.concat (map goIdent route'))
+  (T.intercalate "/" (baseURL : map goR route))
+  (T.concat (map goIdent route))
   (Snowflake <$> lookup (typeRep (Proxy @Channel)) ids)
   (Snowflake <$> lookup (typeRep (Proxy @Guild)) ids)
  where
-  route' = reverse route
-
   goR (S'  t) = t
   goR (ID' t) = showt . fromJust $ lookup t ids
 

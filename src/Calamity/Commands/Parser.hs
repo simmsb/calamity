@@ -230,7 +230,7 @@ mapParserMaybeM m e f = do
   offe <- getOffset
   case r of
     Just r' -> pure r'
-    _       -> parseError . errFancy offs . fancy . ErrorCustom $ SpannedError e offs offe
+    Nothing -> parseError . errFancy offs . fancy . ErrorCustom $ SpannedError e offs offe
 
 -- | Parser for members in the guild the command was invoked in, this only looks
 -- in the cache. Use @'Snowflake' 'Member'@ and use
@@ -308,7 +308,7 @@ ping' :: MonadParsec e L.Text m => m () -> m (Snowflake a)
 ping' m = chunk "<" *> m *> snowflake <* chunk ">"
 
 snowflake :: MonadParsec e L.Text m => m (Snowflake a)
-snowflake = (Snowflake . read) <$> some digitChar
+snowflake = Snowflake <$> decimal
 
 partialEmoji :: MonadParsec e L.Text m => m (Partial Emoji)
 partialEmoji = do

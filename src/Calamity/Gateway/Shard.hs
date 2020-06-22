@@ -109,13 +109,19 @@ tryWriteTBMQueue' q v = do
     Just True  -> pure True
     Nothing    -> pure False
 
+restartUnless :: P.Members '[LogEff, P.Error ShardFlowControl] r => L.Text -> Maybe a -> P.Sem r a
+restartUnless _   (Just a) = pure a
+restartUnless msg Nothing  = do
+  error msg
+  P.throw ShardFlowRestart
+
 -- | The loop a shard will run on
 shardLoop :: ShardC r => Sem r ()
 shardLoop = do
   activeShards <- registerGauge "active_shards" mempty
-  void $ modifyGauge succ activeShards
+  void $ modifyGauge (+ 1) activeShards
   void outerloop
-  void $ modifyGauge pred activeShards
+  void $ modifyGauge (subtract 1) activeShards
   debug "Shard shut down"
  where
   controlStream :: Shard -> TBMQueue ShardMsg -> IO ()
@@ -199,7 +205,7 @@ shardLoop = do
                   , sessionID = s
                   , seq = n
                   })
-      _ -> do
+      _noActiveSession -> do
         debug "Identifying shard"
         sendToWs (Identify IdentifyData
                   { token = shard ^. #token
@@ -224,7 +230,7 @@ shardLoop = do
         (fromEitherVoid <$>) . P.raise . P.runError . forever $ do
           -- only we close the queue
           msg <- P.embed . atomically $ readTBMQueue q
-          handleMsg $ fromJust msg)
+          handleMsg =<< restartUnless "shard message stream closed by someone other than the sink" msg)
 
     debug "Exiting inner loop of shard"
 
@@ -243,7 +249,7 @@ shardLoop = do
         Ready rdata' ->
           P.atomicModify (#sessionID ?~ (rdata' ^. #sessionID))
 
-        _ -> pure ()
+        _NotReady -> pure ()
 
       shard <- P.atomicGets (^. #shardS)
       P.embed $ UC.writeChan (shard ^. #evtIn) (Dispatch (shard ^. #shardID) data')
@@ -314,6 +320,6 @@ heartBeatLoop interval = void . P.runError . forever $ do
   P.embed . threadDelay $ interval * 1000
   unlessM (P.atomicGets (^. #hbResponse)) $ do
     debug "No heartbeat response, restarting shard"
-    wsConn <- fromJust <$> P.atomicGets (^. #wsConn)
+    wsConn <- P.note () =<< P.atomicGets (^. #wsConn)
     P.embed $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: L.Text)
     P.throw ()

@@ -24,6 +24,11 @@ instance ToJSON ChannelType where
   toJSON t = Number $ fromIntegral (fromEnum t)
 
 instance FromJSON ChannelType where
-  parseJSON = withScientific "ChannelType" $ \n -> case toBoundedInteger n of
-    Just v  -> pure $ toEnum v
+  parseJSON = withScientific "ChannelType" $ \n -> case toBoundedInteger @Int n of
+    Just v  -> case v of
+      0 -> pure GuildTextType
+      1 -> pure DMType
+      2 -> pure GuildVoiceType
+      4 -> pure GuildCategoryType
+      _ -> fail $ "Invalid ChannelType: " <> show n
     Nothing -> fail $ "Invalid ChannelType: " <> show n

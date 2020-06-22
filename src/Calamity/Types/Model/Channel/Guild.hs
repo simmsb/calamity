@@ -41,7 +41,7 @@ instance FromJSON GuildChannel where
       GuildTextType     -> GuildTextChannel <$> parseJSON (Object v)
       GuildVoiceType    -> GuildVoiceChannel <$> parseJSON (Object v)
       GuildCategoryType -> GuildCategory <$> parseJSON (Object v)
-      _                 -> fail "Not a valid guild channel"
+      typ               -> fail $ "Not a valid guild channel: " <> show typ
 
 instance HasID GuildChannel GuildChannel where
   getID (GuildTextChannel a) = coerceSnowflake $ a ^. field' @"id"

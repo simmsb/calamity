@@ -157,7 +157,7 @@ react :: forall (s :: EventType) r.
 react handler = do
   handler' <- bindSemToIO handler
   ehidC <- P.asks (^. #ehidCounter)
-  id' <- P.embed $ atomicModifyIORef ehidC (\i -> (succ i, i))
+  id' <- P.embed $ atomicModifyIORef ehidC (\i -> (i + 1, i))
   let handlers = makeEventHandlers (Proxy @s) id' (const () <.> handler')
   P.atomicModify (handlers <>)
   pure $ removeHandler @s id'
