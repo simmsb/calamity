@@ -1,6 +1,14 @@
 # Changelog for Calamity
 
+## 0.1.15.0
+
+* General cleanup of codebase
+
+* Enable StrictData by default
+
 ## 0.1.14.9
+
+*2020-06-22*
 
 * Support manually invoking commands.
 
