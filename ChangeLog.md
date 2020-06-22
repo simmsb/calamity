@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.14.9
+
+* Support manually invoking commands.
+
 ## 0.1.14.8
 
 *2020-06-21*
