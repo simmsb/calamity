@@ -30,12 +30,13 @@ The current customisable effects are:
 
 # Docs
 
-You can find documentation on hackage: [here](https://hackage.haskell.org/package/calamity)
+You can find documentation on hackage at: https://hackage.haskell.org/package/calamity
 
-# Example
+# Examples
 
-An example project can be found at:
-[nitros12/calamity-example](https://github.com/nitros12/calamity-example)
+Some example projects can be found at:
+- [nitros12/calamity-example](https://github.com/nitros12/calamity-example): An extended example of the snippet below, shows use of metrics.
+- [nitros12/calamity-bot](https://github.com/nitros12/calamity-bot): Uses a database, showing modularisation of groups/commands.
 
 ``` haskell
 {-# LANGUAGE DataKinds #-}
