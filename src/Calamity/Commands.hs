@@ -46,7 +46,7 @@ import           Calamity.Commands.Context ( Context )
 --
 --         Fired when a command returns an error.
 --
---     2. @"command-not-found" ['Data.Text.Lazy.Text']@
+--     2. @"command-not-found" ('Calamity.Types.Model.Channel.Message', '['Data.Text.Lazy.Text'])@
 --
 --         Fired when a valid prefix is used, but the command is not found.
 --

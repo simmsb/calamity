@@ -15,7 +15,8 @@ module Calamity.Commands.Dsl
     , groupA
     , groupA'
     , DSLState
-    , raiseDSL ) where
+    , raiseDSL
+    , fetchHandler ) where
 
 import           Calamity.Commands.AliasType
 import           Calamity.Commands.Check
@@ -247,3 +248,7 @@ groupA' name aliases m = mdo
   ltell $ LH.singleton name (group', Original)
   ltell $ LH.fromList [(name, (group', Alias)) | name <- aliases]
   pure res
+
+-- | Retrieve the final command handler for this block
+fetchHandler :: P.Sem (DSLState r) CommandHandler
+fetchHandler = P.ask

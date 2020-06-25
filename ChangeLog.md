@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.16.0
+
+* Change how commands should be manually invoked from code, instead of firing a
+  `"invoke-command"` custom event, now the `handleCommands` function should be
+  used, which returns information about if the command succeeded.
+  
+* Added `fetchHandler` for retrieving the command handler inside a command DSL.
+
 ## 0.1.15.0
 
 * General cleanup of codebase

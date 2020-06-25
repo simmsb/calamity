@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.15.0
+version:            0.1.16.0
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -98,7 +98,6 @@ library:
 
 default-extensions:
   - StrictData
-  - CPP
   - AllowAmbiguousTypes
   - BlockArguments
   - NoMonomorphismRestriction
