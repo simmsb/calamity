@@ -8,6 +8,8 @@
 
 * Drop from using a Wreq fork to vanilla Wreq.
 
+* `TFile` now requires a filename parameter.
+
 ## 0.1.16.0
 
 * Change how commands should be manually invoked from code, instead of firing a
