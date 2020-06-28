@@ -52,7 +52,6 @@ extra-deps:
   - generic-lens-core-2.0.0.0@sha256:40b063c4a1399b3cdb19f2df1fae5a1a82f3313015c7c3e47fc23b8ef1b3e443,2913
   - ghc-tcplugins-extra-0.3.2@sha256:1bbfd4449c3669a31618ea0ebc5d00d980a53988daad3b6218bab5c8cdff268d,1687
   - di-polysemy-0.1.4.0
-  - wreq-patchable-1.0.0.0
   - data-flags-0.0.3.4
 
 # Override default flag values for local packages and extra-deps

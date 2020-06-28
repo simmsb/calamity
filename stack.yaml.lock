@@ -82,13 +82,6 @@ packages:
   original:
     hackage: di-polysemy-0.1.4.0
 - completed:
-    hackage: wreq-patchable-1.0.0.0@sha256:83fbdcc7c6bf30454fb71816dbc20442268b762f53899be5afb96c0c82ece45b,4818
-    pantry-tree:
-      size: 2431
-      sha256: 42d4a01b115fbf4f3a88dca62e3b36002542972b2b11ddaf1328b31e9e428747
-  original:
-    hackage: wreq-patchable-1.0.0.0
-- completed:
     hackage: data-flags-0.0.3.4@sha256:a133f2912e0e22f03419dc89a04b1e117ff6290f1777f5b7f037f683b80ed2cf,1097
     pantry-tree:
       size: 383
