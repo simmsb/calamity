@@ -27,7 +27,9 @@ import qualified Polysemy                     as P
 import qualified Polysemy.Error               as P
 
 -- | A wrapper type for sending files
-newtype TFile = TFile ByteString
+data TFile = TFile
+             S.Text -- ^ The filename
+             ByteString -- ^ The content
   deriving ( Show, Generic )
 
 -- | A wrapper type for allowing mentions
@@ -63,7 +65,7 @@ instance ToMessage Embed where
 
 -- | Message file, '(<>)' keeps the last added file
 instance ToMessage TFile where
-  intoMsg (TFile f) = Endo (#file %~ getLast . (<> Last (Just f)) . Last)
+  intoMsg (TFile n f) = Endo (#file %~ getLast . (<> Last (Just (n, f))) . Last)
 
 -- | Allowed mentions, '(<>)' combines allowed mentions
 instance ToMessage AllowedMentions where

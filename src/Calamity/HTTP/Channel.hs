@@ -26,6 +26,7 @@ import           Data.ByteString.Lazy           ( ByteString )
 import           Data.Default.Class
 import           Data.Generics.Product.Subtype  ( upcast )
 import           Data.Maybe
+import qualified Data.Text                      as S
 import           Data.Text                      ( Text )
 
 import           GHC.Generics
@@ -33,6 +34,7 @@ import           GHC.Generics
 import           Network.Wreq ( partLBS )
 import           Network.Wreq.Lens
 import           Network.Wreq.Session
+import           Network.Mime
 
 import           TextShow
 
@@ -40,7 +42,7 @@ data CreateMessageOptions = CreateMessageOptions
   { content         :: Maybe Text
   , nonce           :: Maybe Text
   , tts             :: Maybe Bool
-  , file            :: Maybe ByteString
+  , file            :: Maybe (Text, ByteString)
   , embed           :: Maybe Embed
   , allowedMentions :: Maybe AllowedMentions
   }
@@ -242,7 +244,8 @@ instance Request (ChannelRequest a) where
   action (CreateMessage _ o@CreateMessageOptions { file = Nothing }) = postWith'
     (toJSON . upcast @CreateMessageJson $ o)
   action (CreateMessage _ o@CreateMessageOptions { file = Just f }) = postWith'
-    [partLBS @IO "file" f, partLBS "payload_json" (encode . upcast @CreateMessageJson $ o)]
+    [partLBS @IO "file" (snd f) & partFileName ?~ (S.unpack $ fst f) & partContentType ?~ defaultMimeLookup (fst f),
+     partLBS "payload_json" (encode . upcast @CreateMessageJson $ o)]
   action (GetChannel _) = getWith
   action (ModifyChannel _ p) = putWith' (toJSON p)
   action (DeleteChannel _) = deleteWith

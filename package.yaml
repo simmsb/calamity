@@ -70,6 +70,7 @@ dependencies:
 - megaparsec >= 8 && < 9
 - data-flags >= 0.0.3 && < 0.1
 - colour >= 2.3.5 && < 2.4
+- mime-types >= 0.1 && < 0.2
 
 # executables:
 #   test-calamity-exe:
