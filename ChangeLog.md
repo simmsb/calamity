@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.17.0
+
+*2020-06-28*
+
+* Allow the session used for http requests to be specified to the client.
+
+* Drop from using a Wreq fork to vanilla Wreq.
+
 ## 0.1.16.0
 
 * Change how commands should be manually invoked from code, instead of firing a

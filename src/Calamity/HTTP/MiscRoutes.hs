@@ -7,7 +7,7 @@ import           Calamity.HTTP.Internal.Types
 
 import           Data.Function
 
-import           Network.Wreq
+import           Network.Wreq.Session
 
 data MiscRequest a where
   GetGateway    :: MiscRequest GatewayResponse

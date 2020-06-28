@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.16.0
+version:            0.1.17.0
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -29,7 +29,7 @@ dependencies:
 - base >= 4.12 && < 5
 - websockets >= 0.12 && < 0.13
 - wuss >= 1.1 && < 2
-- wreq-patchable >= 1.0 && < 2
+- wreq >= 0.5 && < 0.6
 - lens >= 4.18 && < 5
 - stm >= 2.5 && < 3
 - http-types >= 0.12 && < 0.13

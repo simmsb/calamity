@@ -12,7 +12,7 @@ import           Data.Text.Encoding             ( encodeUtf8 )
 
 import           GHC.Generics
 
-import           Network.Wreq
+import           Network.Wreq.Lens
 
 data Reason a = Reason a Text
   deriving ( Show, Eq, Generic )

@@ -10,7 +10,8 @@ import           Control.Lens                   hiding ( (.=) )
 
 import           Data.Text                      ( Text )
 
-import           Network.Wreq
+import           Network.Wreq.Lens
+import           Network.Wreq.Session
 
 import           TextShow
 

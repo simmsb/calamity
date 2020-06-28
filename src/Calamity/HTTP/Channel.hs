@@ -30,7 +30,9 @@ import           Data.Text                      ( Text )
 
 import           GHC.Generics
 
-import           Network.Wreq
+import           Network.Wreq ( partLBS )
+import           Network.Wreq.Lens
+import           Network.Wreq.Session
 
 import           TextShow
 

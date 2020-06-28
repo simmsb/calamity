@@ -30,8 +30,9 @@ import           Data.Text.Strict.Lens
 
 import           DiPolysemy                       hiding ( debug, error, info )
 
-import           Network.Wreq
-import           Network.Wreq.Types               ( Patchable, Postable, Putable )
+import           Network.Wreq                     (Response, checkResponse, header, defaults)
+import           Network.Wreq.Session
+import           Network.Wreq.Types               (Options, Postable, Putable )
 
 import           Polysemy                         ( Sem )
 import qualified Polysemy                         as P
@@ -64,12 +65,13 @@ class Request a where
 
   route :: a -> Route
 
-  action :: a -> Options -> String -> IO (Response LB.ByteString)
+  action :: a -> Options -> Session -> String -> IO (Response LB.ByteString)
 
   invoke :: (BotC r, FromJSON (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
   invoke a = do
-      rlState' <- P.asks rlState
-      token' <- P.asks token
+      rlState' <- P.asks (^. #rlState)
+      session <- P.asks (^. #session)
+      token' <- P.asks (^. #token)
 
       let route' = route a
 
@@ -79,7 +81,7 @@ class Request a where
       void $ addCounter 1 totalRequests
 
       resp <- attr "route" (route' ^. #path) $ doRequest rlState' route'
-        (action a (requestOptions token') (route' ^. #path . unpacked))
+        (action a (requestOptions token') session (route' ^. #path . unpacked))
 
       void $ modifyGauge (subtract 1) inFlightRequests
 
@@ -95,29 +97,29 @@ requestOptions :: Token -> Options
 requestOptions t = defaultRequestOptions
   & header "Authorization" .~ [TS.encodeUtf8 . TL.toStrict $ formatToken t]
 
-postWith' :: Postable a => a -> Options -> String -> IO (Response LB.ByteString)
-postWith' p o s = postWith o s p
+postWith' :: Postable a => a -> Options -> Session -> String -> IO (Response LB.ByteString)
+postWith' p o sess s = postWith o sess s p
 
-postWithP' :: Postable a => a -> (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
-postWithP' p oF o s = postWith (oF o) s p
+postWithP' :: Postable a => a -> (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
+postWithP' p oF o sess s = postWith (oF o) sess s p
 
-postEmpty :: Options -> String -> IO (Response LB.ByteString)
-postEmpty o s = postWith o s ("" :: ByteString)
+postEmpty :: Options -> Session -> String -> IO (Response LB.ByteString)
+postEmpty o sess s = postWith o sess s ("" :: ByteString)
 
-putWith' :: Putable a => a -> Options -> String -> IO (Response LB.ByteString)
-putWith' p o s = putWith o s p
+putWith' :: Putable a => a -> Options -> Session -> String -> IO (Response LB.ByteString)
+putWith' p o sess s = putWith o sess s p
 
-patchWith' :: Patchable a => a -> Options -> String -> IO (Response LB.ByteString)
-patchWith' p o s = patchWith o s p
+patchWith' :: Postable a => a -> Options -> Session -> String -> IO (Response LB.ByteString)
+patchWith' p o sess s = customPayloadMethodWith "PATCH" o sess s p
 
-putEmpty :: Options -> String -> IO (Response LB.ByteString)
-putEmpty o s = putWith o s ("" :: ByteString)
+putEmpty :: Options -> Session -> String -> IO (Response LB.ByteString)
+putEmpty o sess s = putWith o sess s ("" :: ByteString)
 
-putEmptyP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
+putEmptyP :: (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
 putEmptyP = (putEmpty .)
 
-postEmptyP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
+postEmptyP :: (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
 postEmptyP = (postEmpty .)
 
-getWithP :: (Options -> Options) -> Options -> String -> IO (Response LB.ByteString)
+getWithP :: (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
 getWithP oF o = getWith (oF o)

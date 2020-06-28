@@ -55,6 +55,8 @@ import           Data.Typeable
 
 import qualified DiPolysemy                        as Di
 
+import           Network.Wreq.Session            ( Session, newAPISession )
+
 import           Fmt
 
 import qualified Polysemy                          as P
@@ -75,8 +77,8 @@ timeA m = do
   pure (duration, res)
 
 
-newClient :: Token -> IO Client
-newClient token = do
+newClient :: Token -> Session -> IO Client
+newClient token session = do
   shards'        <- newTVarIO []
   numShards'     <- newEmptyMVar
   rlState'       <- newRateLimitState
@@ -90,6 +92,7 @@ newClient token = do
                 inc
                 outc
                 ehidCounter
+                session
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 runBotIO :: forall r a.
@@ -97,20 +100,22 @@ runBotIO :: forall r a.
          => Token
          -> P.Sem (SetupEff r) a
          -> P.Sem r (Maybe StartupError)
-runBotIO token setup = runBotIO' token Nothing Nothing setup
+runBotIO token setup = runBotIO' token Nothing Nothing Nothing setup
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 --
--- This version allows you to specify the initial status and intents.
+-- This version allows you to specify the session and initial status and intents.
 runBotIO' :: forall r a.
           (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r))
           => Token
+          -> Maybe Session
           -> Maybe StatusUpdateData
           -> Maybe Intents
           -> P.Sem (SetupEff r) a
           -> P.Sem r (Maybe StartupError)
-runBotIO' token status intents setup = do
-  client <- P.embed $ newClient token
+runBotIO' token session status intents setup = do
+  session' <- maybe (P.embed newAPISession) pure session
+  client <- P.embed $ newClient token session'
   handlers <- P.embed $ newTVarIO def
   P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIOFinal . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup

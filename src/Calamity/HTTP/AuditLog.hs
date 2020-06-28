@@ -18,7 +18,7 @@ import           Data.Maybe                     ( maybeToList )
 
 import           GHC.Generics
 
-import           Network.Wreq
+import           Network.Wreq.Lens
 
 import           TextShow                       ( showt )
 

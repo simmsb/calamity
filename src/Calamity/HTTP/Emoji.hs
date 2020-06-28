@@ -17,7 +17,8 @@ import           Data.Text                      ( Text )
 
 import           GHC.Generics
 
-import           Network.Wreq
+import           Network.Wreq.Lens
+import           Network.Wreq.Session
 
 
 data CreateGuildEmojiOptions = CreateGuildEmojiOptions
