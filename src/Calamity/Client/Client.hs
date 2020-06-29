@@ -65,6 +65,7 @@ import qualified Polysemy.AtomicState              as P
 import qualified Polysemy.Error                    as P
 import qualified Polysemy.Fail                     as P
 import qualified Polysemy.Reader                   as P
+import qualified Polysemy.Resource                 as P
 
 import           TextShow                          ( TextShow(showt) )
 
@@ -237,12 +238,11 @@ waitUntil
   ( BotC r, ReactConstraints s)
   => (EHType s -> Bool)
   -> P.Sem r (EHType s)
-waitUntil f = do
+waitUntil f = P.resourceToIOFinal $ do
   result <- P.embed newEmptyMVar
-  remove <- react @s (checker result)
-  res <- P.embed $ takeMVar result
-  remove
-  pure res
+  P.bracket (P.raise $ react @s (checker result))
+            P.raise
+            (const . P.embed $ takeMVar result)
   where
     checker :: MVar (EHType s) -> EHType s -> P.Sem r ()
     checker result args = do
@@ -277,12 +277,11 @@ waitUntilM
   ( BotC r, ReactConstraints s)
   => (EHType s -> P.Sem r Bool)
   -> P.Sem r (EHType s)
-waitUntilM f = do
+waitUntilM f = P.resourceToIOFinal $ do
   result <- P.embed newEmptyMVar
-  remove <- react @s (checker result)
-  res <- P.embed $ takeMVar result
-  remove
-  pure res
+  P.bracket (P.raise $ react @s (checker result))
+            P.raise
+            (const . P.embed $ takeMVar result)
   where
     checker :: MVar (EHType s) -> EHType s -> P.Sem r ()
     checker result args = do

@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.17.1
+
+*2020-06-29*
+
+* `waitUntil` and `waitUntilM` now correctly remove the temorary event handler
+  they create if an exception is raised.
+
 ## 0.1.17.0
 
 *2020-06-28*
