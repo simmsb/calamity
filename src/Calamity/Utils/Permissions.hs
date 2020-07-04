@@ -18,7 +18,7 @@ import           Calamity.Types.Upgradeable
 import           Control.Lens
 
 import           Data.Flags
-import qualified Data.Vector.Unboxed                    as V
+import qualified Data.Vector.Unboxing                   as V
 
 import qualified Polysemy                               as P
 import Data.Foldable (Foldable(foldl'))

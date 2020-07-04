@@ -22,7 +22,7 @@ import           Data.Dynamic
 import           Data.Text.Lazy                              ( Text )
 import           Data.Time
 import           Data.Typeable
-import           Data.Vector.Unboxed                         ( Vector )
+import           Data.Vector.Unboxing                        ( Vector )
 
 import           GHC.Generics
 

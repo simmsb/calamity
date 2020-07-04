@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 4cd6c5a80a55753413c0b839551d9d76dac6c32465e782b04be30aa1a16abf24
+-- hash: aa504c6d4018bca851f200c1d97ff49933badcd232e868fb6f56e4a165e30f50
 
 name:           calamity
-version:        0.1.17.1
+version:        0.1.17.2
 synopsis:       A library for writing discord bots in haskell
 description:    Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 category:       Network, Web
@@ -18,7 +18,7 @@ maintainer:     ben@bensimms.moe
 copyright:      2020 Ben Simms
 license:        MIT
 license-file:   LICENSE
-tested-with:    GHC == 8.6.5, GHC == 8.8.3
+tested-with:    GHC == 8.8.3
 build-type:     Simple
 extra-source-files:
     README.md
@@ -135,7 +135,7 @@ library
   hs-source-dirs:
       src
   default-extensions: StrictData AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
-  ghc-options: -fwrite-ide-info -hiedir=.hie -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
+  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       aeson >=1.4 && <2
     , async >=2.2 && <3
@@ -177,6 +177,7 @@ library
     , time >=1.8 && <1.11
     , typerep-map >=0.3 && <0.4
     , unagi-chan >=0.4 && <0.5
+    , unboxing-vector >=0.1 && <0.2
     , unordered-containers >=0.2 && <0.3
     , vector >=0.12 && <0.13
     , websockets >=0.12 && <0.13

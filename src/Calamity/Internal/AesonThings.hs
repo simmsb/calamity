@@ -137,3 +137,4 @@ jsonOptionsKeepNothing :: Options
 jsonOptionsKeepNothing = defaultOptions { sumEncoding        = UntaggedValue
                                         , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
                                         , omitNothingFields  = False }
+

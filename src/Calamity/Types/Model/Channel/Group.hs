@@ -12,7 +12,7 @@ import           Calamity.Types.Snowflake
 import           Data.Aeson
 import           Data.Text.Lazy                       ( Text )
 import           Data.Time
-import           Data.Vector.Unboxed                  ( Vector )
+import           Data.Vector.Unboxing                 ( Vector )
 
 import           GHC.Generics
 

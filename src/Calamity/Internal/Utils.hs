@@ -27,8 +27,9 @@ import qualified Data.Map              as M
 import           Data.Semigroup        ( Last(..) )
 import           Data.Text.Lazy
 import           Data.Time
-import qualified Data.Vector.Unboxed   as VU
-import           Data.Vector.Unboxed   ( Vector )
+import qualified Data.Vector.Unboxing  as VU
+import           Data.Vector.Unboxing  ( Vector )
+import           Data.Aeson
 
 import qualified DiPolysemy            as Di
 
@@ -93,7 +94,7 @@ swap ~(a, b) = (b, a)
 instance TextShow UTCTime where
   showb = fromString . show
 
-instance (TextShow a, VU.Unbox a) => TextShow (Vector a) where
+instance (TextShow a, VU.Unboxable a) => TextShow (Vector a) where
   showb = showbList . VU.toList
 
 instance (Show k, Show v) => TextShow (LH.HashMap k v) where
@@ -106,4 +107,11 @@ instance (Show a, Fractional a) => TextShow (Colour a) where
   showb = fromString . show
 
 instance Default (M.Map k v) where
-  def = M.empty
+    def = M.empty
+
+instance (FromJSON a, VU.Unboxable a) => FromJSON (VU.Vector a) where
+  parseJSON = (VU.fromList <$>) . parseJSON
+
+instance (ToJSON a, VU.Unboxable a) => ToJSON (VU.Vector a) where
+  toJSON = toJSON . VU.toList
+  toEncoding = toEncoding . VU.toList

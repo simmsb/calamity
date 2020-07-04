@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.17.1
+version:            0.1.17.2
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -9,7 +9,7 @@ author:             "Ben Simms"
 maintainer:         "ben@bensimms.moe"
 copyright:          2020 Ben Simms
 category:           Network, Web
-tested-with:        GHC == 8.6.5, GHC == 8.8.3
+tested-with:        GHC == 8.8.3
 
 extra-source-files:
   - README.md
@@ -71,6 +71,7 @@ dependencies:
 - data-flags >= 0.0.3 && < 0.1
 - colour >= 2.3.5 && < 2.4
 - mime-types >= 0.1 && < 0.2
+- unboxing-vector >= 0.1 && < 0.2
 
 # executables:
 #   test-calamity-exe:
@@ -89,8 +90,6 @@ dependencies:
 
 library:
   ghc-options:
-    - -fwrite-ide-info
-    - -hiedir=.hie
     - -fplugin=Polysemy.Plugin
     - -funbox-strict-fields
     - -Wall

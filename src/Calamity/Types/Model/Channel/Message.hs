@@ -15,7 +15,7 @@ import           Data.Aeson
 import           Data.Scientific
 import           Data.Text.Lazy                   ( Text )
 import           Data.Time
-import qualified Data.Vector.Unboxed              as UV
+import qualified Data.Vector.Unboxing             as UV
 
 import           GHC.Generics
 

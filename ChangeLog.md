@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.17.2
+
+*2020-07-04*
+
+* Drop GHC-8.6.5, it doesn't like strictdata
+
+* Use unboxing-vector instead of doing stuff ourselves
+
 ## 0.1.17.1
 
 *2020-06-29*
