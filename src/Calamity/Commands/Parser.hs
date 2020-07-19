@@ -21,6 +21,7 @@ import           Control.Monad.Trans           ( lift )
 import           Data.Char                     ( isSpace )
 import           Data.Kind
 import           Data.List.NonEmpty            ( NonEmpty(..) )
+import           Data.Maybe                    ( isJust )
 import           Data.Semigroup
 import qualified Data.Text                     as S
 import qualified Data.Text.Lazy                as L
@@ -312,11 +313,11 @@ snowflake = Snowflake <$> decimal
 
 partialEmoji :: MonadParsec e L.Text m => m (Partial Emoji)
 partialEmoji = do
-  void (chunk "<" *> optional (chunk "a"))
+  animated <- isJust <$> (chunk "<" *> optional (chunk "a"))
   name <-  between (chunk ":") (chunk ":") (takeWhileP (Just "Emoji name") $ not . (== ':'))
   id <- snowflake
   void $ chunk ">"
-  pure (PartialEmoji id name)
+  pure (PartialEmoji id name animated)
 
 emoji :: MonadParsec e L.Text m => m (Snowflake a)
 emoji = ping' (optional (chunk "a") *> between (chunk ":") (chunk ":") (void $ takeWhileP Nothing $ not . (== ':')))

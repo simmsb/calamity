@@ -27,6 +27,7 @@ import           Data.Default.Class
 import           Data.Generics.Product.Subtype  ( upcast )
 import           Data.Maybe
 import qualified Data.Text                      as S
+import qualified Data.Text.Encoding as S
 import           Data.Text                      ( Text )
 
 import           GHC.Generics
@@ -37,6 +38,7 @@ import           Network.Wreq.Session
 import           Network.Mime
 
 import           TextShow
+import Network.HTTP.Types (urlEncode)
 
 data CreateMessageOptions = CreateMessageOptions
   { content         :: Maybe Text
@@ -167,6 +169,9 @@ baseRoute :: Snowflake Channel -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "channels" // ID @Channel
   & giveID id
 
+encodeEmoji :: RawEmoji -> S.Text
+encodeEmoji = S.decodeUtf8 . urlEncode True . S.encodeUtf8 . showt
+
 instance Request (ChannelRequest a) where
   type Result (ChannelRequest a) = a
 
@@ -184,20 +189,20 @@ instance Request (ChannelRequest a) where
     & giveID mid
     & buildRoute
   route (CreateReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji) // S "@me"
     & giveID mid
     & buildRoute
   route (DeleteOwnReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji) // S "@me"
     & giveID mid
     & buildRoute
   route (DeleteUserReaction (getID -> cid) (getID @Message -> mid) emoji (getID @User -> uid)) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // ID @User
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji) // ID @User
     & giveID mid
     & giveID uid
     & buildRoute
   route (GetReactions (getID -> cid) (getID @Message -> mid) emoji _) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji)
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji)
     & giveID mid
     & buildRoute
   route (DeleteAllReactions (getID -> cid) (getID @Message -> mid)) =

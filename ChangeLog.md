@@ -9,6 +9,11 @@
 * Fixed bulk message deletes firing a message delete per deleted message,
   instead of a bulk message delete event (I'm not sure how I did that).
   
+* Add `animated` field to `Partial Emoji`s.
+
+* Make show instances for `Partial Emoji` and `RawEmoji` show to their discord
+  representation.
+  
 ## 0.1.17.2
 
 *2020-07-04*
