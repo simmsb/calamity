@@ -22,6 +22,7 @@ import           Calamity.HTTP.Internal.Types
 import           Calamity.Metrics.Eff
 import           Calamity.Types.LogEff
 import           Calamity.Types.Model.Channel
+import           Calamity.Types.Model.Channel.UpdatedMessage
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Token
@@ -112,11 +113,43 @@ data EventType
   | InviteDeleteEvt
   | MessageCreateEvt
   | MessageUpdateEvt
+  -- ^ Fired when a cached message is updated, use 'RawMessageUpdateEvt' to see
+  -- updates of uncached messages
+  | RawMessageUpdateEvt
+  -- ^ Fired when a message is updated
   | MessageDeleteEvt
+  -- ^ Fired when a cached message is deleted, use 'RawMessageDeleteEvt' to see
+  -- deletes of uncached messages.
+  --
+  -- Does not include messages deleted through bulk deletes, use
+  -- 'MessageDeleteBulkEvt' for those
+  | RawMessageDeleteEvt
+  -- ^ Fired when a message is deleted.
+  --
+  -- Does not include messages deleted through bulk deletes, use
+  -- 'RawMessageDeleteBulkEvt' for those
   | MessageDeleteBulkEvt
+  -- ^ Fired when messages are bulk deleted. Only includes cached messages, use
+  -- 'RawMessageDeleteBulkEvt' to see deletes of uncached messages.
+  | RawMessageDeleteBulkEvt
+  -- ^ Fired when messages are bulk deleted.
   | MessageReactionAddEvt
+  -- ^ Fired when a reaction is added to a cached message, use
+  -- 'RawMessageReactionAddEvt' to see reactions on uncached messages.
+  | RawMessageReactionAddEvt
+  -- ^ Fired when a reaction is added to a message.
   | MessageReactionRemoveEvt
+  -- ^ Fired when a reaction is removed from a cached message, use
+  -- 'RawMessageReactionRemoveEvt' to see reactions on uncached messages.
+  | RawMessageReactionRemoveEvt
+  -- ^ Fired when a reaction is removed from a message.
   | MessageReactionRemoveAllEvt
+  -- ^ Fired when all reactions are removed from a cached message, use
+  -- 'RawMessageReactionRemoveEvt' to see reactions on uncached messages.
+  --
+  -- The message passed will contain the removed events.
+  | RawMessageReactionRemoveAllEvt
+  -- ^ Fired when all reactions are removed from a message.
   | TypingStartEvt
   | UserUpdateEvt
   | forall s a. CustomEvt s a
@@ -165,6 +198,12 @@ type family EHType (d :: EventType) where
   EHType 'MessageReactionAddEvt       = (Message, Reaction)
   EHType 'MessageReactionRemoveEvt    = (Message, Reaction)
   EHType 'MessageReactionRemoveAllEvt = Message
+  EHType 'RawMessageUpdateEvt            = UpdatedMessage
+  EHType 'RawMessageDeleteEvt            = Snowflake Message
+  EHType 'RawMessageDeleteBulkEvt        = [Snowflake Message]
+  EHType 'RawMessageReactionAddEvt       = Reaction
+  EHType 'RawMessageReactionRemoveEvt    = Reaction
+  EHType 'RawMessageReactionRemoveAllEvt = Snowflake Message
   EHType 'TypingStartEvt              = (Channel, Snowflake User, UnixTimestamp)
   EHType 'UserUpdateEvt               = (User, User)
   EHType ('CustomEvt s a)             = a

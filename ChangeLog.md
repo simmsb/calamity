@@ -1,5 +1,14 @@
 # Changelog for Calamity
 
+## 0.1.18.0
+
+* Add raw message events: `RawMessageUpdateEvt`, `RawMessageDeleteEvt`,
+  `RawMessageDeleteBulkEvt`, `RawMessageReactionAddEvt`,
+  `RawMessageReactionRemoveEvt`, `RawMessageReactionRemoveAllEvt`.
+  
+* Fixed bulk message deletes firing a message delete per deleted message,
+  instead of a bulk message delete event (I'm not sure how I did that).
+  
 ## 0.1.17.2
 
 *2020-07-04*
@@ -30,7 +39,7 @@
 * Change how commands should be manually invoked from code, instead of firing a
   `"invoke-command"` custom event, now the `handleCommands` function should be
   used, which returns information about if the command succeeded.
-  
+
 * Added `fetchHandler` for retrieving the command handler inside a command DSL.
 
 ## 0.1.15.0
@@ -70,7 +79,7 @@
 
 * The `DecodeError` variant of the `RestError` type has been renamed to
   `InternalClientError` as all issues in the rest client now end up here.
-  
+
 * We're now using `discord.com` instead of `discordapp.com`
 
 ## 0.1.14.4
@@ -160,7 +169,7 @@
 * Renamed `Calamity.Commands.Parser.KleeneConcat` to
   `Calamity.Commands.Parser.KleeneStarConcat` and added
   `Calamity.Commands.Parser.KleenePlusConcat`
-  
+
 * Added `Calamity.Types.Upgradeable`
 
 ## 0.1.9.2
@@ -185,7 +194,7 @@
 
 * Added commands, located in `Calamity.Commands`, along with a DSL for declaring
   commands nicely.
-  
+
 * Renamed `waitUntil` to `waitUntilM`, and introduced a variant with a pure
   check function that takes the original name of `waitUntil`.
 

@@ -50,7 +50,6 @@ import           Data.Maybe
 import           Data.Proxy
 import qualified Data.Text                         as S
 import           Data.Time.Clock.POSIX
-import           Data.Traversable
 import           Data.Typeable
 
 import qualified DiPolysemy                        as Di
@@ -147,7 +146,7 @@ runBotIO' token session status intents setup = do
 -- Reacting to a custom event:
 --
 -- @
--- 'react' @(\''CustomEvt' "my-event" ('Data.Text.Text', 'Message')) $ \(s, m) ->
+-- 'react' @(\''CustomEvt' "my-event" ('Data.Text.Text', 'Message')) $ \\(s, m) ->
 --    'void' $ 'Calamity.Types.Tellable.tell' @'Data.Text.Text' m ("Somebody told me to tell you about: " '<>' s)
 -- @
 --
@@ -230,7 +229,7 @@ events = do
 -- Waiting for a message containing the text \"hi\":
 --
 -- @
--- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\m -> 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
+-- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\\m -> 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
 --        print $ msg ^. #content
 -- @
 waitUntil
@@ -269,7 +268,7 @@ waitUntil f = P.resourceToIOFinal $ do
 -- Waiting for a message containing the text \"hi\":
 --
 -- @
--- f = do msg \<\- 'waitUntilM' @\''MessageCreateEvt' (\m -> ('debug' $ "got message: " <> 'showt' msg) >> ('pure' $ 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content))
+-- f = do msg \<\- 'waitUntilM' @\''MessageCreateEvt' (\\m -> ('debug' $ "got message: " <> 'showt' msg) >> ('pure' $ 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content))
 --        print $ msg ^. #content
 -- @
 waitUntilM
@@ -511,35 +510,62 @@ handleEvent' eh evt@(MessageCreate msg) = do
   pure $ map ($ msg) (getEventHandlers @'MessageCreateEvt eh)
 
 handleEvent' eh evt@(MessageUpdate msg) = do
-  Just oldMsg <- getMessage (getID msg)
+  oldMsg <- getMessage (getID msg)
   updateCache evt
-  Just newMsg <- getMessage (getID msg)
-  pure $ map ($ (oldMsg, newMsg)) (getEventHandlers @'MessageUpdateEvt eh)
+  newMsg <- getMessage (getID msg)
+  let rawActions = map ($ msg) (getEventHandlers @'RawMessageUpdateEvt eh)
+  let actions = case (oldMsg, newMsg) of
+                  (Just oldMsg', Just newMsg') ->
+                    map ($ (oldMsg', newMsg')) (getEventHandlers @'MessageUpdateEvt eh)
+                  _ -> []
+  pure $ rawActions <> actions
 
 handleEvent' eh evt@(MessageDelete MessageDeleteData { id }) = do
-  Just oldMsg <- getMessage id
+  oldMsg <- getMessage id
   updateCache evt
-  pure $ map ($ oldMsg) (getEventHandlers @'MessageDeleteEvt eh)
+  let rawActions = map ($ id) (getEventHandlers @'RawMessageDeleteEvt eh)
+  let actions = case oldMsg of
+        Just oldMsg' ->
+          map ($ oldMsg') (getEventHandlers @'MessageDeleteEvt eh)
+        _ -> []
+  pure $ rawActions <> actions
 
 handleEvent' eh evt@(MessageDeleteBulk MessageDeleteBulkData { ids }) = do
   messages <- catMaybes <$> traverse getMessage ids
   updateCache evt
-  join <$> for messages (\msg -> pure $ map ($ msg) (getEventHandlers @'MessageDeleteEvt eh))
+  let rawActions = map ($ ids) (getEventHandlers @'RawMessageDeleteBulkEvt eh)
+  let actions = map ($ messages) (getEventHandlers @'MessageDeleteBulkEvt eh)
+  pure $ rawActions <> actions
 
 handleEvent' eh evt@(MessageReactionAdd reaction) = do
   updateCache evt
-  Just msg <- getMessage (getID reaction)
-  pure $ map ($ (msg, reaction)) (getEventHandlers @'MessageReactionAddEvt eh)
+  msg <- getMessage (getID reaction)
+  let rawActions = map ($ reaction) (getEventHandlers @'RawMessageReactionAddEvt eh)
+  let actions = case msg of
+        Just msg' ->
+          map ($ (msg', reaction)) (getEventHandlers @'MessageReactionAddEvt eh)
+        _ -> []
+  pure $ rawActions <> actions
 
 handleEvent' eh evt@(MessageReactionRemove reaction) = do
-  Just msg <- getMessage (getID reaction)
+  msg <- getMessage (getID reaction)
   updateCache evt
-  pure $ map ($ (msg, reaction)) (getEventHandlers @'MessageReactionRemoveEvt eh)
+  let rawActions = map ($ reaction) (getEventHandlers @'RawMessageReactionRemoveEvt eh)
+  let actions = case msg of
+        Just msg' ->
+          map ($ (msg', reaction)) (getEventHandlers @'MessageReactionRemoveEvt eh)
+        _ -> []
+  pure $ rawActions <> actions
 
 handleEvent' eh evt@(MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) = do
-  Just msg <- getMessage messageID
+  msg <- getMessage messageID
   updateCache evt
-  pure $ map ($ msg) (getEventHandlers @'MessageReactionRemoveAllEvt eh)
+  let rawActions = map ($ messageID) (getEventHandlers @'RawMessageReactionRemoveAllEvt eh)
+  let actions = case msg of
+        Just msg' ->
+          map ($ msg') (getEventHandlers @'MessageReactionRemoveAllEvt eh)
+        _ -> []
+  pure $ rawActions <> actions
 
 handleEvent' eh evt@(PresenceUpdate PresenceUpdateData { userID, presence = Presence { guildID } }) = do
   Just oldGuild <- getGuild guildID

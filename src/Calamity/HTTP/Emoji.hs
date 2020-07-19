@@ -17,7 +17,6 @@ import           Data.Text                      ( Text )
 
 import           GHC.Generics
 
-import           Network.Wreq.Lens
 import           Network.Wreq.Session
 
 
