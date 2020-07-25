@@ -28,11 +28,14 @@ data ActivityType
   | Streaming
   | Listening
   | Custom
-  deriving ( Eq, Generic, Show, Enum )
+  deriving ( Eq, Generic, Show )
   deriving ( TextShow ) via TSG.FromGeneric ActivityType
 
 instance ToJSON ActivityType where
-  toJSON t = Number $ fromIntegral (fromEnum t)
+  toJSON Game = Number 0
+  toJSON Streaming = Number 1
+  toJSON Listening = Number 2
+  toJSON Custom = Number 4
 
 instance FromJSON ActivityType where
   parseJSON = withScientific "ActivityType" $ \n -> case toBoundedInteger @Int n of
@@ -40,7 +43,7 @@ instance FromJSON ActivityType where
       0 -> pure Game
       1 -> pure Streaming
       2 -> pure Listening
-      3 -> pure Custom
+      4 -> pure Custom
       _ -> fail $ "Invalid ActivityType: " <> show n
     Nothing -> fail $ "Invalid ActivityType: " <> show n
 
