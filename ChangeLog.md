@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.18.1
+
+* Fix custom presences failing to parse.
+
 ## 0.1.18.0
 
 * Add raw message events: `RawMessageUpdateEvt`, `RawMessageDeleteEvt`,
