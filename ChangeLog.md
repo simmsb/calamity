@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.19.0
+
+* Support hidden commands.
+
 ## 0.1.18.1
 
 * Fix custom presences failing to parse.
