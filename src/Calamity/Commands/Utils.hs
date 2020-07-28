@@ -124,6 +124,7 @@ buildCommands m = P.fixpointToFinal $ mdo
           P.runReader [] .
           P.runReader defaultHelp . P.untag @"original-help" .
           P.runReader defaultHelp .
+          P.runReader False . P.untag @"hidden" .
           P.runReader Nothing .
           runLocalWriter @(LH.HashMap S.Text (Group, AliasType)) .
           runLocalWriter @(LH.HashMap S.Text (Command, AliasType))

@@ -24,6 +24,7 @@ import qualified Data.List.NonEmpty as NE
 data Group = Group
   { names    :: NonEmpty S.Text
   , parent   :: Maybe Group
+  , hidden   :: Bool
   , commands :: LH.HashMap S.Text (Command, AliasType)
     -- ^ Any child commands of this group
   , children :: LH.HashMap S.Text (Group, AliasType)
@@ -31,7 +32,7 @@ data Group = Group
   , help     :: Context -> L.Text
     -- ^ A function producing the \'help' for the group
   , checks   :: [Check]
-    -- -- ^ A list of checks that must pass
+    -- ^ A list of checks that must pass
   }
   deriving ( Generic )
 
@@ -40,12 +41,13 @@ data GroupS = GroupS
   , parent   :: Maybe S.Text
   , commands :: LH.HashMap S.Text (Command, AliasType)
   , children :: LH.HashMap S.Text (Group, AliasType)
+  , hidden   :: Bool
   }
   deriving ( Generic, Show )
   deriving ( TextShow ) via TSG.FromGeneric GroupS
 
 instance Show Group where
-  showsPrec d Group { names, parent, commands, children } = showsPrec d $ GroupS names (NE.head <$> parent ^? _Just . #names) commands children
+  showsPrec d Group {names, parent, commands, children, hidden} = showsPrec d $ GroupS names (NE.head <$> parent ^? _Just . #names) commands children hidden
 
 instance TextShow Group where
-  showbPrec d Group { names, parent, commands, children } = showbPrec d $ GroupS names (NE.head <$> parent ^? _Just . #names) commands children
+  showbPrec d Group {names, parent, commands, children, hidden} = showbPrec d $ GroupS names (NE.head <$> parent ^? _Just . #names) commands children hidden

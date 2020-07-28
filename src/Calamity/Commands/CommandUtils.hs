@@ -50,17 +50,26 @@ commandParams Command { params } = L.fromStrict $ S.unwords params
 -- actions.
 buildCommand' :: P.Member (P.Final IO) r
               => NonEmpty S.Text
+              -- ^ The name (and aliases) of the command
               -> Maybe Group
+              -- ^ The parent group of the command
+              -> Bool
+              -- ^ If the command is hidden
               -> [Check]
+              -- ^ The checks for the command
               -> [S.Text]
+              -- ^ The names of the command's parameters
               -> (Context -> L.Text)
+              -- ^ The help generator for this command
               -> (Context -> P.Sem r (Either CommandError a))
+              -- ^ The parser for this command
               -> ((Context, a) -> P.Sem (P.Fail ': r) ())
+              -- ^ The callback for this command
               -> P.Sem r Command
-buildCommand' names@(name :| _) parent checks params help parser cb = do
+buildCommand' names@(name :| _) parent hidden checks params help parser cb = do
   cb' <- buildCallback cb
   parser' <- buildParser name parser
-  pure $ Command names parent checks params help parser' cb'
+  pure $ Command names parent hidden checks params help parser' cb'
 
 -- | Given the properties of a 'Command', a callback, and a type level list of
 -- the parameters, build a command by constructing a parser and wiring it up to
@@ -81,14 +90,21 @@ buildCommand' names@(name :| _) parent checks params help parser cb = do
 buildCommand :: forall ps r.
              (P.Member (P.Final IO) r, TypedCommandC ps r)
              => NonEmpty S.Text
+             -- ^ The name (and aliases) of the command
              -> Maybe Group
+             -- ^ The parent group of the command
+             -> Bool
+             -- ^ If the command is hidden
              -> [Check]
+             -- ^ The checks for the command
              -> (Context -> L.Text)
+             -- ^ The help generator for this command
              -> (Context -> CommandForParsers ps r)
+             -- ^ The callback foor this command
              -> P.Sem r Command
-buildCommand names parent checks help command =
+buildCommand names parent hidden checks help command =
   let (parser, cb) = buildTypedCommand @ps command
-  in buildCommand' names parent checks (paramNames @ps @r) help parser cb
+  in buildCommand' names parent hidden checks (paramNames @ps @r) help parser cb
 
 -- | Given the name of the command the parser is for and a parser function in
 -- the 'P.Sem' monad, build a parser by transforming the Polysemy action into an

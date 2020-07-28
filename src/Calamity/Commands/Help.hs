@@ -109,7 +109,7 @@ helpCommandCallback handler ctx path = do
 -- construct a help command that will provide help for all the commands and
 -- groups in the passed 'CommandHandler'.
 helpCommand' :: BotC r => CommandHandler -> Maybe Group -> [Check] -> P.Sem r Command
-helpCommand' handler parent checks = buildCommand @'[[S.Text]] ("help" :| []) parent checks helpCommandHelp
+helpCommand' handler parent checks = buildCommand @'[[S.Text]] ("help" :| []) parent False checks helpCommandHelp
   (helpCommandCallback handler)
 
 -- | Create and register the default help command for all the commands
@@ -123,6 +123,12 @@ helpCommand = do
   ltell $ LH.singleton "help" (cmd, Original)
   pure cmd
 
+notHiddenC :: Command -> Maybe Command
+notHiddenC c@(Command { hidden }) = if hidden then Nothing else Just c
+
+notHiddenG :: Group -> Maybe Group
+notHiddenG g@(Group { hidden }) = if hidden then Nothing else Just g
+
 findCommandOrGroup :: CommandHandler -> [S.Text] -> Maybe CommandOrGroup
 findCommandOrGroup handler path = go (handler ^. #commands, handler ^. #groups) path
   where go :: (LH.HashMap S.Text (Command, AliasType), LH.HashMap S.Text (Group, AliasType))
@@ -130,8 +136,8 @@ findCommandOrGroup handler path = go (handler ^. #commands, handler ^. #groups) 
            -> Maybe CommandOrGroup
         go (commands, groups) (x : xs) =
           case LH.lookup x commands of
-            Just (cmd, _) -> Just (Command' cmd)
-            Nothing       -> case LH.lookup x groups of
-              Just (group, _) -> go (group ^. #commands, group ^. #children) xs <|> Just (Group' group xs)
-              Nothing         -> Nothing
+            Just (notHiddenC -> Just cmd, _) -> Just (Command' cmd)
+            _                -> case LH.lookup x groups of
+              Just (notHiddenG -> Just group, _) -> go (group ^. #commands, group ^. #children) xs <|> Just (Group' group xs)
+              _                                  -> Nothing
         go _ [] = Nothing

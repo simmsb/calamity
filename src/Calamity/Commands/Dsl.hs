@@ -6,6 +6,7 @@ module Calamity.Commands.Dsl
     , command'
     , commandA
     , commandA'
+    , hide
     , help
     , requires
     , requires'
@@ -43,6 +44,7 @@ type DSLState r =
   ( LocalWriter (LH.HashMap S.Text (Command, AliasType))
       ': LocalWriter (LH.HashMap S.Text (Group, AliasType))
       ': P.Reader (Maybe Group)
+      ': P.Tagged "hidden" (P.Reader Bool)
       ': P.Reader (Context -> L.Text)
       ': P.Tagged "original-help" (P.Reader (Context -> L.Text))
       ': P.Reader [Check]
@@ -52,46 +54,61 @@ type DSLState r =
   )
 
 raiseDSL :: P.Sem r a -> P.Sem (DSLState r) a
-raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise
+raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise
 
 -- | Given the command name and parameter names, @parser@ and @callback@ for a
 -- command in the 'P.Sem' monad, build a command by transforming the Polysemy
 -- actions into IO actions. Then register the command.
 --
--- The parent group, checks, and command help are drawn from the reader context.
+-- The parent group, visibility, checks, and command help are drawn from the
+-- reader context.
 command'
   :: P.Member (P.Final IO) r
   => S.Text
+  -- ^ The name of the command
   -> [S.Text]
+  -- ^ The names of the command's parameters
   -> (Context -> P.Sem r (Either CommandError a))
+  -- ^ The parser for this command
   -> ((Context, a) -> P.Sem (P.Fail ': r) ())
+  -- ^ The callback for this command
   -> P.Sem (DSLState r) Command
 command' name params parser cb = commandA' name [] params parser cb
 
--- | Given the command name, aliases, and parameter names, @parser@ and @callback@ for a
--- command in the 'P.Sem' monad, build a command by transforming the Polysemy
--- actions into IO actions. Then register the command.
+-- | Given the command name, aliases, and parameter names, @parser@ and
+-- @callback@ for a command in the 'P.Sem' monad, build a command by
+-- transforming the Polysemy actions into IO actions. Then register the command.
 --
--- The parent group, checks, and command help are drawn from the reader context.
+-- The parent group, visibility, checks, and command help are drawn from the
+-- reader context.
 commandA'
   :: P.Member (P.Final IO) r
-  => S.Text -- ^ name
-  -> [S.Text] -- ^ aliases
-  -> [S.Text] -- ^ parameter names
+  => S.Text
+  -- ^ The name of the command
+  -> [S.Text]
+  -- ^ The aliases for the command
+  -> [S.Text]
+  -- ^ The names of the command's parameters
   -> (Context -> P.Sem r (Either CommandError a))
+  -- ^ The parser for this command
   -> ((Context, a) -> P.Sem (P.Fail ': r) ())
+  -- ^ The callback for this command
   -> P.Sem (DSLState r) Command
 commandA' name aliases params parser cb = do
   parent <- P.ask @(Maybe Group)
+  hidden <- P.tag $ P.ask @Bool
   checks <- P.ask @[Check]
   help' <- P.ask @(Context -> L.Text)
-  cmd <- raiseDSL $ buildCommand' (name :| aliases) parent checks params help' parser cb
+  cmd <- raiseDSL $ buildCommand' (name :| aliases) parent hidden checks params help' parser cb
   ltell $ LH.singleton name (cmd, Original)
   ltell $ LH.fromList [(name, (cmd, Alias)) | name <- aliases]
   pure cmd
 
 -- | Given the name of a command and a callback, and a type level list of
 -- the parameters, build and register a command.
+--
+-- The parent group, visibility, checks, and command help are drawn from the
+-- reader context.
 --
 -- ==== Examples
 --
@@ -110,12 +127,17 @@ command :: forall ps r.
         ( P.Member (P.Final IO) r,
           TypedCommandC ps r)
         => S.Text
+        -- ^ The name of the command
         -> (Context -> CommandForParsers ps r)
+        -- ^ The callback for this command
         -> P.Sem (DSLState r) Command
 command name cmd = commandA @ps name [] cmd
 
 -- | Given the name and aliases of a command and a callback, and a type level list of
 -- the parameters, build and register a command.
+--
+-- The parent group, visibility, checks, and command help are drawn from the
+-- reader context.
 --
 -- ==== Examples
 --
@@ -133,18 +155,29 @@ command name cmd = commandA @ps name [] cmd
 commandA :: forall ps r.
         ( P.Member (P.Final IO) r,
           TypedCommandC ps r)
-        => S.Text -- ^ name
-        -> [S.Text] -- ^ aliases
+        => S.Text
+        -- ^ The name of the command
+        -> [S.Text]
+        -- ^ The aliases for the command
         -> (Context -> CommandForParsers ps r)
+        -- ^ The callback for this command
         -> P.Sem (DSLState r) Command
 commandA name aliases cmd = do
   parent <- P.ask @(Maybe Group)
+  hidden <- P.tag $ P.ask @Bool
   checks <- P.ask @[Check]
   help' <- P.ask @(Context -> L.Text)
-  cmd' <- raiseDSL $ buildCommand @ps (name :| aliases) parent checks help' cmd
+  cmd' <- raiseDSL $ buildCommand @ps (name :| aliases) parent hidden checks help' cmd
   ltell $ LH.singleton name (cmd', Original)
   ltell $ LH.fromList [(name, (cmd', Alias)) | name <- aliases]
   pure cmd'
+
+-- | Set the visibility of any groups or commands registered inside the given
+-- action to hidden.
+hide :: P.Member (P.Tagged "hidden" (P.Reader Bool)) r
+     => P.Sem r a
+     -> P.Sem r a
+hide = P.tag @"hidden" . P.local @Bool (const True) . P.raise
 
 -- | Set the help for any groups or commands registered inside the given action.
 help :: P.Member (P.Reader (Context -> L.Text)) r
@@ -162,9 +195,13 @@ requires = P.local . (<>)
 
 -- | Construct a check and add it to the list of checks for any commands
 -- registered inside the given action.
+--
+-- Refer to 'Calamity.Commands.Check.Check' for more info on checks.
 requires' :: P.Member (P.Final IO) r
           => S.Text
+          -- ^ The name of the check
           -> (Context -> P.Sem r (Maybe L.Text))
+          -- ^ The callback for the check
           -> P.Sem (DSLState r) a
           -> P.Sem (DSLState r) a
 requires' name cb m = do
@@ -173,7 +210,10 @@ requires' name cb m = do
 
 -- | Construct some pure checks and add them to the list of checks for any
 -- commands registered inside the given action.
+--
+-- Refer to 'Calamity.Commands.Check.Check' for more info on checks.
 requiresPure :: [(S.Text, Context -> Maybe L.Text)]
+             -- A list of check names and check callbacks
              -> P.Sem (DSLState r) a
              -> P.Sem (DSLState r) a
 requiresPure checks = requires $ map (uncurry buildCheckPure) checks
@@ -184,27 +224,34 @@ requiresPure checks = requires $ map (uncurry buildCheckPure) checks
 -- This also resets the @help@ function back to it's original value, use
 -- 'group'' if you don't want that (i.e. your help function is context aware).
 group :: P.Member (P.Final IO) r
-         => S.Text
-         -> P.Sem (DSLState r) a
-         -> P.Sem (DSLState r) a
+      => S.Text
+      -- ^ The name of the group
+      -> P.Sem (DSLState r) a
+      -> P.Sem (DSLState r) a
 group name m = groupA name [] m
 
--- | Construct a group with aliases and place any commands registered in the given action
--- into the new group.
+-- | Construct a group with aliases and place any commands registered in the
+-- given action into the new group.
+--
+-- The parent group, visibility, checks, and command help are drawn from the
+-- reader context.
 --
 -- This also resets the @help@ function back to it's original value, use
 -- 'group'' if you don't want that (i.e. your help function is context aware).
 groupA :: P.Member (P.Final IO) r
-         => S.Text -- ^ name
-         -> [S.Text] -- ^ aliases
-         -> P.Sem (DSLState r) a
-         -> P.Sem (DSLState r) a
+       => S.Text
+       -- ^ The name of the group
+       -> [S.Text]
+       -- ^ The aliases of the group
+       -> P.Sem (DSLState r) a
+       -> P.Sem (DSLState r) a
 groupA name aliases m = mdo
   parent <- P.ask @(Maybe Group)
+  hidden <- P.tag $ P.ask @Bool
   checks <- P.ask @[Check]
   help'  <- P.ask @(Context -> L.Text)
   origHelp <- fetchOrigHelp
-  let group' = Group (name :| aliases) parent commands children help' checks
+  let group' = Group (name :| aliases) parent hidden commands children help' checks
   (children, (commands, res)) <- llisten @(LH.HashMap S.Text (Group, AliasType)) $
                                  llisten @(LH.HashMap S.Text (Command, AliasType)) $
                                  P.local @(Maybe Group) (const $ Just group') $
@@ -219,10 +266,14 @@ fetchOrigHelp = P.tag P.ask
 -- | Construct a group and place any commands registered in the given action
 -- into the new group.
 --
+-- The parent group, visibility, checks, and command help are drawn from the
+-- reader context.
+--
 -- Unlike 'help' this doesn't reset the @help@ function back to it's original
 -- value.
 group' :: P.Member (P.Final IO) r
-         => S.Text -- ^ name
+         => S.Text
+         -- The name of the group
          -> P.Sem (DSLState r) a
          -> P.Sem (DSLState r) a
 group' name m = groupA' name [] m
@@ -230,18 +281,24 @@ group' name m = groupA' name [] m
 -- | Construct a group with aliases and place any commands registered in the given action
 -- into the new group.
 --
+-- The parent group, visibility, checks, and command help are drawn from the
+-- reader context.
+--
 -- Unlike 'help' this doesn't reset the @help@ function back to it's original
 -- value.
 groupA' :: P.Member (P.Final IO) r
-         => S.Text -- ^ name
-         -> [S.Text] -- ^ aliases
+         => S.Text
+         -- ^ The name of the group
+         -> [S.Text]
+         -- ^ The aliases of the group
          -> P.Sem (DSLState r) a
          -> P.Sem (DSLState r) a
 groupA' name aliases m = mdo
   parent <- P.ask @(Maybe Group)
+  hidden <- P.tag $ P.ask @Bool
   checks <- P.ask @[Check]
   help'  <- P.ask @(Context -> L.Text)
-  let group' = Group (name :| aliases) parent commands children help' checks
+  let group' = Group (name :| aliases) parent hidden commands children help' checks
   (children, (commands, res)) <- llisten @(LH.HashMap S.Text (Group, AliasType)) $
                                  llisten @(LH.HashMap S.Text (Command, AliasType)) $
                                  P.local @(Maybe Group) (const $ Just group') m

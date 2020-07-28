@@ -23,7 +23,9 @@ import qualified Data.List.NonEmpty as NE
 data Command = forall a. Command
   { names    :: NonEmpty S.Text
   , parent   :: Maybe Group
-  , checks   :: [Check] -- TODO check checks on default help
+  , hidden   :: Bool
+    -- ^ If this command is hidden
+  , checks   :: [Check]
     -- ^ A list of checks that must pass for this command to be invoked
   , params   :: [S.Text]
     -- ^ A list of the parameters the command takes, only used for constructing
@@ -43,14 +45,27 @@ data CommandS = CommandS
   , params :: [S.Text]
   , parent :: Maybe S.Text
   , checks :: [S.Text]
+  , hidden :: Bool
   }
   deriving ( Generic, Show )
   deriving ( TextShow ) via TSG.FromGeneric CommandS
 
 instance Show Command where
-  showsPrec d Command { names, params, parent, checks } = showsPrec d $ CommandS names params (NE.head <$> parent ^? _Just . #names)
-    (checks ^.. traverse . #name)
+  showsPrec d Command {names, params, parent, checks, hidden} =
+    showsPrec d $
+      CommandS
+        names
+        params
+        (NE.head <$> parent ^? _Just . #names)
+        (checks ^.. traverse . #name)
+        hidden
 
 instance TextShow Command where
-  showbPrec d Command { names, params, parent, checks } = showbPrec d $ CommandS names params (NE.head <$> parent ^? _Just . #names)
-    (checks ^.. traverse . #name)
+  showbPrec d Command {names, params, parent, checks, hidden} =
+    showbPrec d $
+      CommandS
+        names
+        params
+        (NE.head <$> parent ^? _Just . #names)
+        (checks ^.. traverse . #name)
+        hidden
