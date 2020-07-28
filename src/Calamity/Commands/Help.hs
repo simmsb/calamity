@@ -22,6 +22,7 @@ import           Control.Monad
 import qualified Data.HashMap.Lazy              as LH
 import           Data.List.NonEmpty             ( NonEmpty(..) )
 import qualified Data.List.NonEmpty             as NE
+import           Data.Maybe                     ( catMaybes )
 import qualified Data.Text                      as S
 import qualified Data.Text.Lazy                 as L
 
@@ -65,6 +66,12 @@ onlyOriginals = mapMaybe inner
   where inner (_, Alias) = Nothing
         inner (a, Original) = Just a
 
+onlyVisibleC :: [Command] -> [Command]
+onlyVisibleC = catMaybes . map notHiddenC
+
+onlyVisibleG :: [Group] -> [Group]
+onlyVisibleG = catMaybes . map notHiddenG
+
 helpForGroup :: Context -> Group -> L.Text
 helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n" <>
                        aliasesFmt <>
@@ -72,8 +79,8 @@ helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n" <>
                        (grp ^. #help) ctx <> "\n" <>
                        groupsMsg <> commandsMsg <> "\n```"
   where path' = L.fromStrict . S.unwords $ groupPath grp
-        groups =  onlyOriginals . LH.elems $ grp ^. #children
-        commands = onlyOriginals . LH.elems $ grp ^. #commands
+        groups =  onlyVisibleG . onlyOriginals . LH.elems $ grp ^. #children
+        commands = onlyVisibleC .onlyOriginals . LH.elems $ grp ^. #commands
         groupsFmt = map formatWithAliases (groups ^.. traverse . #names)
         groupsMsg = if null groups then "" else "The following child groups exist:\n" <> (L.unlines . map ("- " <>) $ groupsFmt)
         commandsMsg = if null commands then "" else "\nThe following child commands exist:\n" <> (L.unlines . map ("- " <>) . map fmtCommandWithParams $ commands)
@@ -84,8 +91,8 @@ helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n" <>
 
 rootHelp :: CommandHandler -> L.Text
 rootHelp handler = "```\n" <> groupsMsg <> commandsMsg <> "\n```"
-  where groups =  onlyOriginals . LH.elems $ handler ^. #groups
-        commands = onlyOriginals . LH.elems $ handler ^. #commands
+  where groups =  onlyVisibleG . onlyOriginals . LH.elems $ handler ^. #groups
+        commands = onlyVisibleC . onlyOriginals . LH.elems $ handler ^. #commands
         groupsFmt = map formatWithAliases (groups ^.. traverse . #names)
         groupsMsg = if null groups then "" else "The following groups exist:\n" <> (L.unlines . map ("- " <>) $ groupsFmt)
         commandsMsg = if null commands then "" else "\nThe following commands exist:\n" <> (L.unlines . map ("- " <>) . map fmtCommandWithParams $ commands)
