@@ -28,6 +28,7 @@ data ActivityType
   | Streaming
   | Listening
   | Custom
+  | Other Int
   deriving ( Eq, Generic, Show )
   deriving ( TextShow ) via TSG.FromGeneric ActivityType
 
@@ -35,6 +36,7 @@ instance ToJSON ActivityType where
   toJSON Game = Number 0
   toJSON Streaming = Number 1
   toJSON Listening = Number 2
+  toJSON (Other n) = Number $ fromIntegral n
   toJSON Custom = Number 4
 
 instance FromJSON ActivityType where
@@ -44,7 +46,7 @@ instance FromJSON ActivityType where
       1 -> pure Streaming
       2 -> pure Listening
       4 -> pure Custom
-      _ -> fail $ "Invalid ActivityType: " <> show n
+      n -> pure $ Other n
     Nothing -> fail $ "Invalid ActivityType: " <> show n
 
 data Activity = Activity
