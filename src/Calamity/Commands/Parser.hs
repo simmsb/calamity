@@ -113,7 +113,7 @@ instance Parser Word r where
   parse = parseMP (parserName @Word) decimal
 
 instance Parser Float r where
-  parse = parseMP (parserName @Float) (signed mempty float)
+  parse = parseMP (parserName @Float) (signed mempty (try float <|> decimal))
 
 instance Parser a r => Parser (Maybe a) r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
