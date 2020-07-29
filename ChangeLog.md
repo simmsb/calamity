@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.19.1
+
+* Fixed another missing activity type
+
 ## 0.1.19.0
 
 * Support hidden commands.
