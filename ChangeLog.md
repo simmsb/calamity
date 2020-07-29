@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.19.2
+
+* Fix broken `Float` parsing.
+
 ## 0.1.19.1
 
 * Fixed another missing activity type
