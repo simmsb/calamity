@@ -44,7 +44,7 @@ commandPath Command { names, parent } = maybe [] groupPath parent ++ [NE.head na
 
 -- | Format a command's parameters
 commandParams :: Command -> L.Text
-commandParams Command { params } = L.fromStrict . S.unwords . Prelude.map (\p -> "(" <> p <> ")") $ params
+commandParams Command { params } = L.fromStrict $ S.intercalate ", " params
 
 -- | Given the properties of a 'Command' with the @parser@ and @callback@ in the
 -- 'P.Sem' monad, build a command by transforming the Polysemy actions into IO
