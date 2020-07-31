@@ -42,8 +42,9 @@ groupPath Group { names, parent } = maybe [] groupPath parent ++ [NE.head names]
 commandPath :: Command -> [S.Text]
 commandPath Command { names, parent } = maybe [] groupPath parent ++ [NE.head names]
 
+-- | Format a command's parameters
 commandParams :: Command -> L.Text
-commandParams Command { params } = L.fromStrict $ S.unwords params
+commandParams Command { params } = L.fromStrict . S.unwords . Prelude.map (\p -> "(" <> p <> ")") $ params
 
 -- | Given the properties of a 'Command' with the @parser@ and @callback@ in the
 -- 'P.Sem' monad, build a command by transforming the Polysemy actions into IO
