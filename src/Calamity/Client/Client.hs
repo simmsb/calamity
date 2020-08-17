@@ -316,13 +316,12 @@ finishUp = do
 clientLoop :: BotC r => P.Sem r ()
 clientLoop = do
   outc <- P.asks (^. #eventsOut)
-  void . P.runError . forever $ do
+  whileMFinalIO $ do
     evt' <- P.embed $ readChan outc
     case evt' of
-      -- NOTE: these raise's are needed to raise into the Error effect
-      Dispatch sid evt -> P.raise $ handleEvent sid evt
-      Custom s d   -> P.raise $ handleCustomEvent s d
-      ShutDown     -> P.throw ()
+      Dispatch sid evt -> handleEvent sid evt >> pure True
+      Custom s d       -> handleCustomEvent s d >> pure True
+      ShutDown         -> pure False
   debug "leaving client loop"
 
 handleCustomEvent :: forall r. BotC r => TypeRep -> Dynamic -> P.Sem r ()

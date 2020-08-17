@@ -2,7 +2,9 @@
 
 -- | Internal utilities and instances
 module Calamity.Internal.Utils
-    ( whenJust
+    ( whileMFinalIO
+    , untilJustFinalIO
+    , whenJust
     , whenM
     , unlessM
     , lastMaybe
@@ -18,6 +20,7 @@ module Calamity.Internal.Utils
     , swap ) where
 
 import           Calamity.Types.LogEff
+import           Calamity.Internal.RunIntoIO
 
 import           Control.Applicative
 
@@ -37,6 +40,38 @@ import qualified Polysemy              as P
 
 import           TextShow
 import Data.Colour (Colour)
+
+-- | Like whileM, but stateful effects are not preserved to mitigate memory leaks
+--
+-- This means Polysemy.Error won't work to break the loop, etc.
+-- Instead, Error/Alternative will just result in the loop quitting.
+whileMFinalIO :: P.Member (P.Final IO) r => P.Sem r Bool -> P.Sem r ()
+whileMFinalIO action = do
+  action' <- runSemToIO action
+  P.embedFinal $ go action'
+  where go action' = do
+          r <- action'
+          case r of
+            Just True ->
+              go action'
+            _ ->
+              pure ()
+
+-- | Like untilJust, but stateful effects are not preserved to mitigate memory leaks
+--
+-- This means Polysemy.Error won't work to break the loop, etc.
+-- Instead, Error/Alternative will just result in another loop.
+untilJustFinalIO :: P.Member (P.Final IO) r => P.Sem r (Maybe a) -> P.Sem r a
+untilJustFinalIO action = do
+  action' <- runSemToIO action
+  P.embedFinal $ go action'
+  where go action' = do
+          r <- action'
+          case r of
+            Just (Just a) ->
+              pure a
+            _ ->
+              go action'
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())

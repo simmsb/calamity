@@ -31,7 +31,6 @@ import           Data.Functor
 import           Data.IORef
 import           Data.Maybe
 import qualified Data.Text.Lazy                  as L
-import           Data.Void
 
 import           DiPolysemy                      hiding ( debug, error, info )
 
@@ -97,10 +96,6 @@ sendToWs data' = do
       P.embed . sendTextData wsConn $ encodedData
     Nothing -> debug "tried to send to closed WS"
 
-fromEitherVoid :: Either a Void -> a
-fromEitherVoid (Left a) = a
-fromEitherVoid (Right a) = absurd a -- yeet
-
 tryWriteTBMQueue' :: TBMQueue a -> a -> STM Bool
 tryWriteTBMQueue' q v = do
   v' <- tryWriteTBMQueue q v
@@ -161,11 +156,8 @@ shardLoop = do
                 when r inner
 
   -- | The outer loop, sets up the ws conn, etc handles reconnecting and such
-  -- Currently if this goes to the error path we just exit the forever loop
-  -- and the shard stops, maybe we might want to do some extra logic to reboot
-  -- the shard, or maybe force a resharding
-  outerloop :: ShardC r => Sem r (Either ShardFlowControl ())
-  outerloop = P.runError . forever $ do
+  outerloop :: ShardC r => Sem r ()
+  outerloop = whileMFinalIO $ do
     shard :: Shard <- P.atomicGets (^. #shardS)
     let host = shard ^. #gateway
     let host' =  fromMaybe host $ L.stripPrefix "wss://" host
@@ -176,14 +168,16 @@ shardLoop = do
     case innerLoopVal of
       Just ShardFlowShutDown -> do
         info "Shutting down shard"
-        P.throw ShardFlowShutDown
+        pure False
 
-      Just ShardFlowRestart ->
+      Just ShardFlowRestart -> do
         info "Restaring shard"
+        pure True
         -- we restart normally when we loop
 
-      Nothing -> -- won't happen unless innerloop starts using a non-deterministic effect
+      Nothing -> do -- won't happen unless innerloop starts using a non-deterministic effect
         info "Restarting shard (abnormal reasons?)"
+        pure True
 
   -- | The inner loop, handles receiving a message from discord or a command message
   -- and then decides what to do with it
@@ -227,7 +221,7 @@ shardLoop = do
         debug "handling events now"
         _controlThread <- P.async . P.embed $ controlStream shard q
         _discordThread <- P.async $ discordStream ws q
-        (fromEitherVoid <$>) . P.raise . P.runError . forever $ do
+        P.raise . untilJustFinalIO . (leftToMaybe <$>) . P.runError $ do
           -- only we close the queue
           msg <- P.embed . atomically $ readTBMQueue q
           handleMsg =<< restartUnless "shard message stream closed by someone other than the sink" msg)
@@ -315,7 +309,7 @@ sendHeartBeat = do
   P.atomicModify (#hbResponse .~ False)
 
 heartBeatLoop :: ShardC r => Int -> Sem r ()
-heartBeatLoop interval = void . P.runError . forever $ do
+heartBeatLoop interval = untilJustFinalIO . (leftToMaybe <$>) . P.runError $ do
   sendHeartBeat
   P.embed . threadDelay $ interval * 1000
   unlessM (P.atomicGets (^. #hbResponse)) $ do
