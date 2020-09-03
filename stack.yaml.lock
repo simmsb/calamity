@@ -75,23 +75,19 @@ packages:
   original:
     hackage: ghc-tcplugins-extra-0.3.2@sha256:1bbfd4449c3669a31618ea0ebc5d00d980a53988daad3b6218bab5c8cdff268d,1687
 - completed:
+    hackage: di-polysemy-0.2.0.0@sha256:9da81102b7e5b2782e4f7194189cde552f042c94ac875ef8f542f6620035f885,2160
+    pantry-tree:
+      size: 320
+      sha256: 103285358a5c2430e3fadd2c35ab285536c05164db1b78ed7155e9ef2e3fae42
+  original:
+    hackage: di-polysemy-0.2.0.0
+- completed:
     hackage: data-flags-0.0.3.4@sha256:a133f2912e0e22f03419dc89a04b1e117ff6290f1777f5b7f037f683b80ed2cf,1097
     pantry-tree:
       size: 383
       sha256: fabce261d22601659cc3aeab1d5bb8f918dd3f8a8b01a8b9c483a08113a2535a
   original:
     hackage: data-flags-0.0.3.4
-- completed:
-    size: 25844
-    url: https://github.com/nitros12/di-polysemy/archive/0f4cb5138d402e55793d7fa0666f30b1ee267577.tar.gz
-    name: di-polysemy
-    version: 0.2.0.0
-    sha256: 30a36288a53f366d2eb2a224b327942cd1bcd80bfec915cf5ae2c9424f536643
-    pantry-tree:
-      size: 643
-      sha256: 7cfa8e4578f4ea0517fb475f05f42070c4f026d5c2608aecc1941e4ea5b0daaa
-  original:
-    url: https://github.com/nitros12/di-polysemy/archive/0f4cb5138d402e55793d7fa0666f30b1ee267577.tar.gz
 snapshots:
 - completed:
     size: 493124
