@@ -51,10 +51,8 @@ extra-deps:
   - polysemy-plugin-0.2.5.0@sha256:67e30be568a141b852aace1a60e180cb5060fbb2835365a81a3ea779536d6d35,2952
   - generic-lens-core-2.0.0.0@sha256:40b063c4a1399b3cdb19f2df1fae5a1a82f3313015c7c3e47fc23b8ef1b3e443,2913
   - ghc-tcplugins-extra-0.3.2@sha256:1bbfd4449c3669a31618ea0ebc5d00d980a53988daad3b6218bab5c8cdff268d,1687
-# - di-polysemy-0.2.0.0
+  - di-polysemy-0.2.0.0
   - data-flags-0.0.3.4
-  - github: nitros12/di-polysemy
-    commit: 0f4cb5138d402e55793d7fa0666f30b1ee267577
 
 # Override default flag values for local packages and extra-deps
 # flags: {}
