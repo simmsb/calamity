@@ -57,6 +57,8 @@ import qualified Polysemy.Reader                 as P
 
 import qualified TextShow.Generic                as TSG
 import TextShow
+import qualified Df1 as Df1
+import qualified Di.Core as DC
 
 data Client = Client
   { shards              :: TVar [(InChan ControlMessage, Async (Maybe ()))]
@@ -67,6 +69,7 @@ data Client = Client
   , eventsOut           :: OutChan CalamityEvent
   , ehidCounter         :: IORef Integer
   , session             :: Session
+  , initialDi           :: Maybe (DC.Di Df1.Level Df1.Path Df1.Message)
   }
   deriving ( Generic )
 
@@ -76,7 +79,7 @@ type BotC r =
   , Typeable r)
 
 -- | A concrete effect stack used inside the bot
-type SetupEff r = (LogEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r)
+type SetupEff r = (P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r)
 
 -- | Some constraints that 'Calamity.Client.Client.react' needs to work. Don't
 -- worry about these since they are satisfied for any type @s@ can be

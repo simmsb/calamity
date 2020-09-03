@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.20.0
+
+* Migrate do di-polysemy 0.2, runBotIO no longer handles the Log effect.
+
 ## 0.1.19.2
 
 * Fix broken `Float` parsing.

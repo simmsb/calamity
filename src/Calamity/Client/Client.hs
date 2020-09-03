@@ -33,6 +33,7 @@ import           Calamity.Types.Model.Presence     ( Presence(..) )
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
+import           Calamity.Types.LogEff
 
 import           Control.Concurrent.Chan.Unagi
 import           Control.Concurrent.MVar
@@ -52,6 +53,8 @@ import qualified Data.Text                         as S
 import           Data.Time.Clock.POSIX
 import           Data.Typeable
 
+import qualified Di.Core                           as DC
+import qualified Df1
 import qualified DiPolysemy                        as Di
 
 import           Network.Wreq.Session            ( Session, newAPISession )
@@ -77,8 +80,8 @@ timeA m = do
   pure (duration, res)
 
 
-newClient :: Token -> Session -> IO Client
-newClient token session = do
+newClient :: Token -> Session -> Maybe (DC.Di Df1.Level Df1.Path Df1.Message) -> IO Client
+newClient token session initialDi = do
   shards'        <- newTVarIO []
   numShards'     <- newEmptyMVar
   rlState'       <- newRateLimitState
@@ -93,31 +96,41 @@ newClient token session = do
                 outc
                 ehidCounter
                 session
+                initialDi
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 runBotIO :: forall r a.
-         (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r))
+         (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r, Typeable (SetupEff r))
          => Token
          -> P.Sem (SetupEff r) a
          -> P.Sem r (Maybe StartupError)
 runBotIO token setup = runBotIO' token Nothing Nothing Nothing setup
 
+resetDi :: BotC r => P.Sem r a -> P.Sem r a
+resetDi m = do
+  initialDi <- P.asks (^. #initialDi)
+  Di.local (flip fromMaybe initialDi) m
+
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 --
--- This version allows you to specify the session and initial status and intents.
+-- This version allows you to specify the http session, initial status, and intents.
 runBotIO' :: forall r a.
-          (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff] r, Typeable (SetupEff r))
+          (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r, Typeable (SetupEff r))
           => Token
           -> Maybe Session
+          -- ^ The HTTP session to use, defaults to 'newAPISession'
           -> Maybe StatusUpdateData
+          -- ^ The initial status to send to the gateway
           -> Maybe Intents
+          -- ^ The intents to send to the gateway
           -> P.Sem (SetupEff r) a
           -> P.Sem r (Maybe StartupError)
 runBotIO' token session status intents setup = do
+  initialDi <- Di.fetch
   session' <- maybe (P.embed newAPISession) pure session
-  client <- P.embed $ newClient token session'
+  client <- P.embed $ newClient token session' initialDi
   handlers <- P.embed $ newTVarIO def
-  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.runDiToStderrIOFinal . Di.push "calamity" $ do
+  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup
     r <- shardBot status intents
     case r of
@@ -348,7 +361,7 @@ handleEvent shardID data' = do
     evtCounter <- registerCounter "events_received" [("type", S.pack $ ctorName data'), ("shard", showt shardID)]
     void $ addCounter 1 evtCounter
     cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20..100]
-    (time, res) <- timeA $ Di.reset $ handleEvent' eventHandlers data'
+    (time, res) <- timeA $ resetDi $ handleEvent' eventHandlers data'
     void $ observeHistogram time cacheUpdateHisto
     pure res
 
