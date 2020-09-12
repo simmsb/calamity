@@ -198,8 +198,15 @@ type family ListToTup (ps :: [Type]) where
   ListToTup '[] = ()
   ListToTup (x ': xs) = (x, ListToTup xs)
 
--- | Transform a type level list of types implementing the parser typeclass into
+-- | Transform a type level list of types implementing the 'Parser' typeclass into
 -- the type a command callback matching those parameters should be.
+--
+-- As an example:
+--
+-- @
+-- 'CommandForParsers' [ 'L.Text', 'Calamity.Types.Snowflake' 'Calamity.Types.User', 'Calamity.Commands.Parser.Named' "something" 'L.Text' ] r ~
+--   ('L.Text' -> 'Calamity.Types.Snowflake' 'Calamity.Types.User' -> 'L.Text' -> 'P.Sem' r ('P.Fail' ': r) ())
+-- @
 type family CommandForParsers (ps :: [Type]) r where
   CommandForParsers '[] r = P.Sem (P.Fail ': r) ()
   CommandForParsers (x ': xs) r = ParserResult x -> CommandForParsers xs r

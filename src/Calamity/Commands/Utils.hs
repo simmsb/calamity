@@ -54,7 +54,19 @@ data CmdInvokeFailReason
 -- | Construct commands and groups from a command DSL, then registers an event
 -- handler on the bot that manages running those commands.
 --
+--
 -- Returns an action to remove the event handler, and the 'CommandHandler' that was constructed.
+--
+-- ==== Command Resolution
+--
+-- To determine if a command was invoked, and if so which command was invoked, the following happens:
+--
+--     1. 'parsePrefix' is invoked, if no prefix is found: stop here.
+--
+--     2. The input is read a word at a time until a matching command is found,
+--        fire the \"command-not-found\" event if not.
+--
+--     3. A 'Calamity.Commands.Context.Context' is built, and the command invoked.
 --
 -- ==== Custom Events
 --
@@ -130,7 +142,7 @@ buildCommands m = P.fixpointToFinal $ mdo
           runLocalWriter @(LH.HashMap S.Text (Command, AliasType))
         defaultHelp = (const "This command or group has no help.")
 
-
+-- TODO: turn this into an effect
 -- | Attempt to build the context for a command
 buildContext :: BotC r => Message -> L.Text -> Command -> L.Text -> P.Sem r (Maybe Context)
 buildContext msg prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do

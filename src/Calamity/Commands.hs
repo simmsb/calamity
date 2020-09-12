@@ -1,5 +1,5 @@
 -- | Calamity commands
--- This module only exports the DSL and core types for using commands
+-- This module exports the DSL and core types for using commands
 module Calamity.Commands
     ( module Calamity.Commands.Dsl
     , module Calamity.Commands.Error
@@ -28,13 +28,13 @@ import           Calamity.Commands.Context ( Context )
 -- support grouping, pre-invokation checks, and automatic argument parsing by
 -- using a type level list of parameter types.
 --
--- A DSL is provided in 'Calamity.Commands.Dsl' for constructing commands
+-- A DSL is provided in "Calamity.Commands.Dsl" for constructing commands
 -- declaratively.
 --
 -- You can implement 'Parser' for your own types to allow them to be used in the
 -- parameter list of commands.
 --
--- A default help command is provided in 'Calamity.Commands.Help' which can be
+-- A default help command is provided in "Calamity.Commands.Help" which can be
 -- added just by using 'helpCommand' inside the command declaration DSL.
 --
 --
@@ -69,10 +69,10 @@ import           Calamity.Commands.Context ( Context )
 -- @
 -- 'addCommands' $ do
 --   'helpCommand'
---   'command' \@\'['Calamity.Types.Model.User.User'] "utest" $ \ctx u \-\> do
+--   'command' \@\'['Calamity.Types.Model.User.User'] "utest" $ \\ctx u \-\> do
 --     'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx $ "got user: " '<>' 'TextShow.showtl' u
 --   'group' "admin" $ do
---     'command' \@'[] "bye" $ \ctx -> do
+--     'command' \@'[] "bye" $ \\ctx -> do
 --       'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx "bye!"
 --       'Calamity.Client.stopBot'
 -- @

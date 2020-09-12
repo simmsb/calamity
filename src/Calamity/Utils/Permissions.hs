@@ -23,7 +23,7 @@ import qualified Data.Vector.Unboxing                   as V
 import qualified Polysemy                               as P
 import Data.Foldable (Foldable(foldl'))
 
--- | Calculate a 'Member''s 'Permissions' in a 'Guild'
+-- | Calculate a 'Member'\'s 'Permissions' in a 'Guild'
 basePermissions :: Guild -> Member -> Permissions
 basePermissions g m
   | (g ^. #ownerID == getID m) = allFlags
@@ -57,14 +57,14 @@ applyOverwrites c m p
 
 -- | Things that 'Member's have 'Permissions' in
 class PermissionsIn a where
-  -- | Calculate a 'Member''s 'Permissions' in something
+  -- | Calculate a 'Member'\'s 'Permissions' in something
   permissionsIn :: a -> Member -> Permissions
 
--- | A 'Member''s 'Permissions' in a channel are their roles and overwrites
+-- | A 'Member'\'s 'Permissions' in a channel are their roles and overwrites
 instance PermissionsIn (Guild, GuildChannel) where
   permissionsIn (g, c) m = applyOverwrites c m $ basePermissions g m
 
--- | A 'Member''s 'Permissions' in a guild are just their roles
+-- | A 'Member'\'s 'Permissions' in a guild are just their roles
 instance PermissionsIn Guild where
   permissionsIn g m = basePermissions g m
 
@@ -89,7 +89,7 @@ instance PermissionsIn' GuildChannel where
       (Just m, Just g') -> pure $ permissionsIn (g', c) m
       _cantFind         -> pure noFlags
 
--- | A 'Member''s 'Permissions' in a guild are just their roles
+-- | A 'Member'\'s 'Permissions' in a guild are just their roles
 instance PermissionsIn' Guild where
   permissionsIn' g (getID @User -> uid) = do
     m <- upgrade (getID @Guild g, coerceSnowflake @_ @Member uid)
@@ -97,7 +97,7 @@ instance PermissionsIn' Guild where
       Just m' -> pure $ permissionsIn g m'
       Nothing -> pure noFlags
 
--- | A 'Member''s 'Permissions' in a channel are their roles and overwrites
+-- | A 'Member'\'s 'Permissions' in a channel are their roles and overwrites
 --
 -- This will fetch the guild and channel from the cache or http as needed
 instance PermissionsIn' (Snowflake GuildChannel) where
@@ -107,7 +107,7 @@ instance PermissionsIn' (Snowflake GuildChannel) where
       Just c'  -> permissionsIn' c' u
       Nothing  -> pure noFlags
 
--- | A 'Member''s 'Permissions' in a guild are just their roles
+-- | A 'Member'\'s 'Permissions' in a guild are just their roles
 --
 -- This will fetch the guild from the cache or http as needed
 instance PermissionsIn' (Snowflake Guild) where

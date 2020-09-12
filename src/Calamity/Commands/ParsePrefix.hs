@@ -16,6 +16,7 @@ import qualified Polysemy                             as P
 
 -- | An effect for parsing the prefix of a command.
 data ParsePrefix m a where
+  -- | Parse a prefix in a message, returning a tuple of @(prefix, remaining message)@
   ParsePrefix :: Message -> ParsePrefix m (Maybe (L.Text, L.Text))
 
 P.makeSem ''ParsePrefix

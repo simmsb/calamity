@@ -40,5 +40,5 @@ import           Calamity.Client.Types
 --
 -- @
 -- 'Control.Monad.void' . 'Polysemy.runFinal' . 'Polysemy.embedToFinal' . 'Calamity.Cache.InMemory.runCacheInMemory' . 'Calamity.Metrics.Noop.runMetricsNoop' $ 'runBotIO' ('Calamity.Types.Token.BotToken' token) $ do
---   'react' \@\''MessageCreateEvt' (\msg -> 'Polysemy.embed' $ 'print' msg)
+--   'react' \@\''MessageCreateEvt' $ \\msg -> 'Polysemy.embed' $ 'print' msg
 -- @

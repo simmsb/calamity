@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.20.1
+
+* Documentation improvements.
+
 ## 0.1.20.0
 
 * Migrate do di-polysemy 0.2, runBotIO no longer handles the Log effect.

@@ -65,7 +65,7 @@ data CacheEff m a where
   SetDM :: DMChannel -> CacheEff m ()
   -- | Get a 'DMChannel' from the cache
   GetDM :: Snowflake DMChannel -> CacheEff m (Maybe DMChannel)
-  -- | Get all 'DM's from the cache
+  -- | Get all 'DMChannel's from the cache
   GetDMs :: CacheEff m [DMChannel]
   -- | Delete a 'DMChannel' from the cache
   DelDM :: Snowflake DMChannel -> CacheEff m ()

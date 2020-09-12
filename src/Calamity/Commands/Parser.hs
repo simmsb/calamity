@@ -4,6 +4,7 @@ module Calamity.Commands.Parser
     , Named
     , KleeneStarConcat
     , KleenePlusConcat
+    , ParserEffs
     , runCommandParser ) where
 
 import           Calamity.Cache.Eff
@@ -150,7 +151,7 @@ instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
 
 -- | A parser that consumes zero or more of @a@ then concatenates them together.
 --
--- @'KleeneStarConcat' 'L.Text'@ Is therefore consumes all remaining input.
+-- @'KleeneStarConcat' 'L.Text'@ therefore consumes all remaining input.
 data KleeneStarConcat (a :: Type)
 
 instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneStarConcat a) r where
@@ -172,7 +173,7 @@ instance {-# OVERLAPS #-}Parser (KleeneStarConcat S.Text) r where
 
 -- | A parser that consumes one or more of @a@ then concatenates them together.
 --
--- @'KleenePlusConcat' 'L.Text'@ Is therefore consumes all remaining input.
+-- @'KleenePlusConcat' 'L.Text'@ therefore consumes all remaining input.
 data KleenePlusConcat (a :: Type)
 
 instance (Semigroup (ParserResult a), Parser a r) => Parser (KleenePlusConcat a) r where

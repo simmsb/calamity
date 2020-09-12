@@ -2,7 +2,9 @@
 
 -- | A DSL for generating commands and groups
 module Calamity.Commands.Dsl
-    ( command
+    ( -- * Commands DSL
+      -- $dslTutorial
+      command
     , command'
     , commandA
     , commandA'
@@ -39,6 +41,49 @@ import qualified Polysemy.Tagged               as P
 import qualified Polysemy.Fixpoint             as P
 import qualified Polysemy.Reader               as P
 import Data.List.NonEmpty (NonEmpty(..))
+
+-- $dslTutorial
+--
+-- This module provides a way of constructing bot commands in a declarative way.
+--
+-- The main component of this is the 'command' function, which takes a
+-- type-level list of command parameters, the name, and the callback and
+-- produces a command. There are also the alternatives 'command'', 'commandA'
+-- and 'commandA'', for when you want to handle parsing of the input yourself,
+-- and/or want aliases of the command.
+--
+-- The functions: 'hide', 'help', 'requires', and 'group' can be used to change
+-- attributes of any commands declared inside the monadic action passed to them,
+-- for example:
+--
+-- @
+-- 'hide' '$' do
+--   'command' \@'[] "test" \ctx -> 'pure' ()
+-- @
+--
+-- In the above block, any command declared inside 'hide' will have it's
+-- \'hidden\' flag set and will not be shown by the default help command:
+-- 'Calamity.Commands.Help.helpCommand'
+--
+-- The 'Calamity.Commands.Help.helpCommand' function can be used to create a
+-- help command for the commands DSL action it is used in, read it's doc page
+-- for more information on how it functions.
+--
+-- The 'Calamity.Commands.Utils.addCommands' function creates the command
+-- handler for the commands registered in the passed action, it is what reads a
+-- message to determine what command was invoked. It should be used to register the
+-- commands with the bot by using it inside the setup action, for example:
+--
+-- @
+-- 'Calamity.Client.runBotIO' ('Calamity.BotToken' token)
+--   $ 'Calamity.Commands.Utils.addCommands' $ do
+--     'Calamity.Commands.Help.helpCommand'
+--     'Calamity.Commands.Dsl.command' \@'[] "test" \ctx ->
+--       'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' \@'L.Text' ctx "hi"
+-- @
+--
+-- The above block will create a command with no parameters named \'test\',
+-- along with a help command.
 
 type DSLState r =
   ( LocalWriter (LH.HashMap S.Text (Command, AliasType))
@@ -110,6 +155,11 @@ commandA' name aliases params parser cb = do
 -- The parent group, visibility, checks, and command help are drawn from the
 -- reader context.
 --
+-- Command parameters are parsed by first invoking
+-- 'Calamity.Commands.Parser.parse' for the first
+-- 'Calamity.Commands.Parser.Parser', then running the next parser on the
+-- remaining input, and so on.
+--
 -- ==== Examples
 --
 -- Building a command that bans a user by id.
@@ -117,7 +167,7 @@ commandA' name aliases params parser cb = do
 -- @
 -- 'command' \@\'['Calamity.Commands.Parser.Named' "user" ('Calamity.Types.Snowflake' 'Calamity.Types.Model.User'),
 --                'Calamity.Commands.Parser.Named' "reason" ('Calamity.Commands.Parser.KleeneStarConcat' 'S.Text')]
---    "ban" $ \ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
+--    "ban" $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
 --      'Just' guild -> do
 --        'Control.Monad.void' . 'Calamity.HTTP.invoke' . 'Calamity.HTTP.reason' r $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid
 --        'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
@@ -146,7 +196,7 @@ command name cmd = commandA @ps name [] cmd
 -- @
 -- 'commandA' \@\'['Calamity.Commands.Parser.Named' "user" ('Calamity.Types.Snowflake' 'Calamity.Types.Model.User'),
 --                'Calamity.Commands.Parser.Named' "reason" ('Calamity.Commands.Parser.KleeneStarConcat' 'S.Text')]
---    "ban" [] $ \ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
+--    "ban" [] $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
 --      'Just' guild -> do
 --        'Control.Monad.void' . 'Calamity.HTTP.invoke' . 'Calamity.HTTP.reason' r $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid
 --        'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
