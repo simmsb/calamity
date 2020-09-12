@@ -84,8 +84,8 @@ buildCommand' names@(name :| _) parent hidden checks params help parser cb = do
 -- 'buildCommand' @\'['Named' "user" ('Snowflake' 'User'), 'Named' "reason" ('KleeneStarConcat' 'S.Text')]
 --    "ban" 'Nothing' [] ('const' "Ban a user") $ \ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
 --      'Just' guild -> do
---        'void' . 'Calamity.HTTP.invoke' . 'Calamity.HTTP.reason' r $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid
---        'void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
+--        'Control.Monad.void' . 'Calamity.HTTP.invoke' $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid ('Calamity.HTTP.Guild.CreateGuildBanData' 'Nothing' $ 'Just' r)
+--        'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
 --      'Nothing' -> 'void' $ 'Calamity.Types.Tellable.tell' @'L.Text' ctx "Can only ban users from guilds."
 -- @
 buildCommand :: forall ps r.

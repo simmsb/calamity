@@ -169,7 +169,7 @@ commandA' name aliases params parser cb = do
 --                'Calamity.Commands.Parser.Named' "reason" ('Calamity.Commands.Parser.KleeneStarConcat' 'S.Text')]
 --    "ban" $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
 --      'Just' guild -> do
---        'Control.Monad.void' . 'Calamity.HTTP.invoke' . 'Calamity.HTTP.reason' r $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid
+--        'Control.Monad.void' . 'Calamity.HTTP.invoke' $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid ('Calamity.HTTP.Guild.CreateGuildBanData' 'Nothing' $ 'Just' r)
 --        'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
 --      'Nothing' -> 'void' $ 'Calamity.Types.Tellable.tell' @'L.Text' ctx "Can only ban users from guilds."
 -- @
@@ -198,7 +198,7 @@ command name cmd = commandA @ps name [] cmd
 --                'Calamity.Commands.Parser.Named' "reason" ('Calamity.Commands.Parser.KleeneStarConcat' 'S.Text')]
 --    "ban" [] $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
 --      'Just' guild -> do
---        'Control.Monad.void' . 'Calamity.HTTP.invoke' . 'Calamity.HTTP.reason' r $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid
+--        'Control.Monad.void' . 'Calamity.HTTP.invoke' $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid ('Calamity.HTTP.Guild.CreateGuildBanData' 'Nothing' $ 'Just' r)
 --        'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
 --      'Nothing' -> 'void' $ 'Calamity.Types.Tellable.tell' @'L.Text' ctx "Can only ban users from guilds."
 -- @
