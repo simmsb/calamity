@@ -19,6 +19,7 @@ import           Data.Kind
 import           Data.Text.Read
 import qualified Data.Vector.Unboxing         as U
 import           Data.Word
+import           Data.Bits
 
 import           GHC.Generics
 
@@ -31,7 +32,18 @@ newtype Snowflake (t :: Type) = Snowflake
   }
   deriving ( Generic, Eq, Ord, Data )
   deriving ( Show, TextShow ) via Word64
-  deriving newtype ( NFData, ToJSONKey, Hashable, U.Unboxable )
+  deriving newtype ( NFData, ToJSONKey, U.Unboxable )
+
+-- I'm pretty sure that Word64's hash just being 'fromIntegral' is a bad idea when
+-- attempting to use it in a hashmap, so swizzle the bits a bit to give a good
+-- distribution of bits
+instance Hashable (Snowflake t) where
+  hashWithSalt salt (Snowflake a) =
+    let initial = hashWithSalt salt a
+        round1 = ((initial `shiftR` 16) `xor` initial) * 0x45d9f3b
+        round2 = ((round1 `shiftR` 16) `xor` round1) * 0x45d9f3b
+        round3 = ((round2 `shiftR` 16) `xor` round2) * 0x45d9f3b
+     in round3
 
 instance ToJSON (Snowflake t) where
   toJSON (Snowflake s) = String . showt $ s
