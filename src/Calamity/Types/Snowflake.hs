@@ -39,11 +39,11 @@ newtype Snowflake (t :: Type) = Snowflake
 -- distribution of bits
 instance Hashable (Snowflake t) where
   hashWithSalt salt (Snowflake a) =
-    let initial = hashWithSalt salt a
-        round1 = ((initial `shiftR` 16) `xor` initial) * 0x45d9f3b
-        round2 = ((round1 `shiftR` 16) `xor` round1) * 0x45d9f3b
-        round3 = ((round2 `shiftR` 16) `xor` round2) * 0x45d9f3b
-     in round3
+    let initial = fromIntegral @_ @Word64 $ hashWithSalt salt a
+        round1 = ((initial `shiftR` 30) `xor` initial) * 0xbf58476d1ce4e5b9
+        round2 = ((round1 `shiftR` 27) `xor` round1) * 0xbf58476d1ce4e5b9
+        round3 = ((round2 `shiftR` 31) `xor` round2)
+     in fromIntegral @_ @Int round3
 
 instance ToJSON (Snowflake t) where
   toJSON (Snowflake s) = String . showt $ s
