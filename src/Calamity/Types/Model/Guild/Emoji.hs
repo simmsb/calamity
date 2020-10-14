@@ -75,8 +75,8 @@ instance TextShow RawEmoji where
   showb (CustomEmoji p) = showb p
 
 instance ToJSON RawEmoji where
-  toJSON (CustomEmoji e) = object ["emoji" .= e]
-  toJSON (UnicodeEmoji s) = object ["emoji" .= object ["name" .= s]]
+  toJSON (CustomEmoji e) = toJSON e
+  toJSON (UnicodeEmoji s) = object ["name" .= s, "id" .= Nothing @()]
 
 instance FromJSON RawEmoji where
   parseJSON = withObject "RawEmoji" $ \v -> do

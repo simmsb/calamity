@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.21.0
+
+- Fix ToJSON instance for `RawEmoji`
+
 ## 0.1.20.1
 
 * Documentation improvements.
