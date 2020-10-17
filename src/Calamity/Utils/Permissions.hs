@@ -58,6 +58,11 @@ applyOverwrites c m p
 -- | Things that 'Member's have 'Permissions' in
 class PermissionsIn a where
   -- | Calculate a 'Member'\'s 'Permissions' in something
+  --
+  -- If permissions could not be calculated because something couldn't be found
+  -- in the cache, this will return an empty set of permissions. Use
+  -- 'permissionsIn'' if you want to handle cases where something might not exist
+  -- in cache.
   permissionsIn :: a -> Member -> Permissions
 
 -- | A 'Member'\'s 'Permissions' in a channel are their roles and overwrites
@@ -71,11 +76,6 @@ instance PermissionsIn Guild where
 -- | A variant of 'PermissionsIn' that will use the cache/http.
 class PermissionsIn' a where
   -- | Calculate the permissions of something that has a 'User' id
-  --
-  -- If permissions could not be calculated because something couldn't be found
-  -- in the cache, this will return an empty set of permissions. Use
-  -- 'permissionsIn' if you want to handle cases where something might not exist
-  -- in cache.
   permissionsIn' :: (BotC r, HasID User u) => a -> u -> P.Sem r Permissions
 
 -- | A 'User''s 'Permissions' in a channel are their roles and overwrites
