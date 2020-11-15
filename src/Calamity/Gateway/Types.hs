@@ -115,7 +115,7 @@ parseDispatchData INVITE_CREATE data'               = InviteCreate <$> parseJSON
 parseDispatchData INVITE_DELETE data'               = InviteDelete <$> parseJSON data'
 parseDispatchData MESSAGE_CREATE data'              = do
   message <- parseJSON data'
-  let user = parseMaybe parseJSON =<< (data' ^? _Object . ix "user")
+  let user = parseMaybe parseJSON =<< (data' ^? _Object . ix "author")
   pure $ MessageCreate message user
 parseDispatchData MESSAGE_UPDATE data'              = MessageUpdate <$> parseJSON data'
 parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'
