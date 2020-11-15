@@ -69,7 +69,7 @@ newShard :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r
          -> Int
          -> Token
          -> Maybe StatusUpdateData
-         -> Maybe Intents
+         -> Intents
          -> UC.InChan CalamityEvent
          -> Sem r (UC.InChan ControlMessage, Async (Maybe ()))
 newShard gateway id count token presence intents evtIn = do
@@ -163,7 +163,7 @@ shardLoop = do
     let host' =  fromMaybe host $ L.stripPrefix "wss://" host
     info $ "starting up shard "+| (shard ^. #shardID) |+" of "+| (shard ^. #shardCount) |+""
 
-    innerLoopVal <- runWebsocket host' "/?v=6&encoding=json" innerloop
+    innerLoopVal <- runWebsocket host' "/?v=8&encoding=json" innerloop
 
     case innerLoopVal of
       Just ShardFlowShutDown -> do

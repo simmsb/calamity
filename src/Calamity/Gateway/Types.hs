@@ -44,6 +44,10 @@ import qualified Polysemy.Async                   as P
 import qualified Polysemy.AtomicState             as P
 import qualified TextShow.Generic as TSG
 import TextShow (TextShow)
+import Control.Lens.Operators ((^?))
+import Data.Aeson.Types (parseMaybe)
+import Control.Lens (Ixed(ix))
+import Data.Aeson.Lens
 
 type ShardC r = (P.Members '[LogEff, P.AtomicState ShardState, P.Embed IO, P.Final IO,
   P.Async, MetricEff] r)
@@ -109,7 +113,10 @@ parseDispatchData GUILD_ROLE_UPDATE data'           = GuildRoleUpdate <$> parseJ
 parseDispatchData GUILD_ROLE_DELETE data'           = GuildRoleDelete <$> parseJSON data'
 parseDispatchData INVITE_CREATE data'               = InviteCreate <$> parseJSON data'
 parseDispatchData INVITE_DELETE data'               = InviteDelete <$> parseJSON data'
-parseDispatchData MESSAGE_CREATE data'              = MessageCreate <$> parseJSON data'
+parseDispatchData MESSAGE_CREATE data'              = do
+  message <- parseJSON data'
+  let user = parseMaybe parseJSON =<< (data' ^? _Object . ix "user")
+  pure $ MessageCreate message user
 parseDispatchData MESSAGE_UPDATE data'              = MessageUpdate <$> parseJSON data'
 parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'
 parseDispatchData MESSAGE_DELETE_BULK data'         = MessageDeleteBulk <$> parseJSON data'
@@ -205,7 +212,7 @@ data IdentifyData = IdentifyData
   , largeThreshold :: Int
   , shard          :: (Int, Int)
   , presence       :: Maybe StatusUpdateData
-  , intents        :: Maybe Intents
+  , intents        :: Intents
   }
   deriving ( Show, Generic )
   deriving ToJSON via CalamityJSON IdentifyData
@@ -268,7 +275,7 @@ data Shard = Shard
   , shardState    :: IORef ShardState
   , token         :: Text
   , initialStatus :: Maybe StatusUpdateData
-  , intents       :: Maybe Intents
+  , intents       :: Intents
   }
   deriving ( Generic )
 

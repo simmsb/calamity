@@ -59,7 +59,7 @@ data DispatchData
   | GuildRoleDelete GuildRoleDeleteData
   | InviteCreate InviteCreateData
   | InviteDelete InviteDeleteData
-  | MessageCreate Message
+  | MessageCreate Message (Maybe User)
   | MessageUpdate UpdatedMessage
   | MessageDelete MessageDeleteData
   | MessageDeleteBulk MessageDeleteBulkData

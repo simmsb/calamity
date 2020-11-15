@@ -65,6 +65,13 @@ data MessageType
   | ChannelIconChange
   | ChannelPinnedMessage
   | GuildMemberJoin
+  | UserPremiumGuildSubscription
+  | UserPremiumGuildSubscriptionTier1
+  | UserPremiumGuildSubscriptionTier2
+  | UserPremiumGuildSubscriptionTier3
+  | ChannelFollowAdd
+  | GuildDiscoveryDisqualified
+  | GuildDiscoveryRequalified
   deriving ( Eq, Show, Enum, Generic )
   deriving ( TextShow ) via TSG.FromGeneric MessageType
 
@@ -79,5 +86,12 @@ instance FromJSON MessageType where
       5 -> pure ChannelIconChange
       6 -> pure ChannelPinnedMessage
       7 -> pure GuildMemberJoin
+      8 -> pure UserPremiumGuildSubscription
+      9 -> pure UserPremiumGuildSubscriptionTier1
+      10 -> pure UserPremiumGuildSubscriptionTier2
+      11 -> pure UserPremiumGuildSubscriptionTier3
+      12 -> pure ChannelFollowAdd
+      13 -> pure GuildDiscoveryDisqualified
+      14 -> pure GuildDiscoveryRequalified
       _ -> fail $ "Invalid MessageType: " <> show n
     Nothing -> fail $ "Invalid MessageType: " <> show n

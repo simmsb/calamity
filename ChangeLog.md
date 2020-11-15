@@ -1,8 +1,17 @@
 # Changelog for Calamity
 
+## 0.1.22.0
+
+* Update to gateway v8.
+* Updated the message types.
+* Added `defaultIntents`, which is all but the privileged intents, also a
+  Data.Default instance.
+* `runBotIO` and `runBotIO'` now always take an `Intents` parameter.
+* Users are cached from messages, as well as member create events.
+
 ## 0.1.21.0
 
-- Fix ToJSON instance for `RawEmoji`
+* Fix ToJSON instance for `RawEmoji`
 
 ## 0.1.20.1
 

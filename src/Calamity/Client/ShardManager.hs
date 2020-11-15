@@ -26,7 +26,7 @@ mapLeft f (Left a) = Left $ f a
 mapLeft _ (Right b) = Right b
 
 -- | Connects the bot to the gateway over n shards
-shardBot :: BotC r => Maybe StatusUpdateData -> Maybe Intents -> Sem r (Either StartupError ())
+shardBot :: BotC r => Maybe StatusUpdateData -> Intents -> Sem r (Either StartupError ())
 shardBot initialStatus intents = (mapLeft StartupError <$>) . P.runFail $ do
   numShardsVar <- P.asks numShards
   shardsVar <- P.asks shards
@@ -50,24 +50,3 @@ shardBot initialStatus intents = (mapLeft StartupError <$>) . P.runFail $ do
 
   P.embed . atomically $ writeTVar shardsVar shards
 
--- | Connects the bot to the gateway over 1 shard (userbot)
--- shardUserBot :: BotM ()
--- shardUserBot = do
---   numShardsVar <- asks numShards
---   shardsVar <- asks shards
-
---   hasShards <- liftIO $ (not . null) <$> readTVarIO shardsVar
---   when hasShards $ fail "don't use shardUserBot on an already running bot."
-
---   token <- asks Calamity.Client.Types.token
---   eventQueue <- asks eventQueue
---   logEnv <- askLog
-
---   gateway <- aa <$> invoke GetGateway
-
---   let host = gateway ^. #url
---   liftIO $ putMVar numShardsVar 1
-
---   liftIO $ do
---     shard <- newShard host 0 1 token logEnv eventQueue
---     atomically $ writeTVar shardsVar [shard]

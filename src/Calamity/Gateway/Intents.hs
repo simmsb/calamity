@@ -4,6 +4,7 @@
 -- | Discord gateway intents
 module Calamity.Gateway.Intents
     ( Intents(..)
+    , defaultIntents
     , intentGuilds
     , intentGuildMembers
     , intentGuildBans
@@ -22,9 +23,10 @@ module Calamity.Gateway.Intents
 
 import           Data.Aeson    ( ToJSON )
 import           Data.Bits
-import           Data.Flags    ()
+import           Data.Flags    (allBut, (.+.))
 import           Data.Flags.TH
 import           Data.Word
+import           Data.Default.Class
 
 $(bitmaskWrapper "Intents" ''Word32 []
    [ ("intentGuilds", 1 `shiftL` 0)
@@ -44,3 +46,11 @@ $(bitmaskWrapper "Intents" ''Word32 []
    , ("intentDirectMessageTyping", 1 `shiftL` 14)])
 
 deriving via Word32 instance ToJSON Intents
+
+-- | Default intents are all but the privileged intents: members and intents
+defaultIntents :: Intents
+defaultIntents = allBut (intentGuildMembers .+. intentGuildPresences)
+
+-- | Default intents are all but the privileged intents: members and intents
+instance Default Intents where
+  def = defaultIntents

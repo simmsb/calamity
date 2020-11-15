@@ -102,9 +102,11 @@ newClient token session initialDi = do
 runBotIO :: forall r a.
          (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r, Typeable (SetupEff r))
          => Token
+         -> Intents
+         -- ^ The intents the bot should use
          -> P.Sem (SetupEff r) a
          -> P.Sem r (Maybe StartupError)
-runBotIO token setup = runBotIO' token Nothing Nothing Nothing setup
+runBotIO token intents setup = runBotIO' token intents Nothing Nothing setup
 
 resetDi :: BotC r => P.Sem r a -> P.Sem r a
 resetDi m = do
@@ -117,15 +119,15 @@ resetDi m = do
 runBotIO' :: forall r a.
           (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r, Typeable (SetupEff r))
           => Token
+          -> Intents
+          -- ^ The intents the bot should use
           -> Maybe Session
           -- ^ The HTTP session to use, defaults to 'newAPISession'
           -> Maybe StatusUpdateData
           -- ^ The initial status to send to the gateway
-          -> Maybe Intents
-          -- ^ The intents to send to the gateway
           -> P.Sem (SetupEff r) a
           -> P.Sem r (Maybe StartupError)
-runBotIO' token session status intents setup = do
+runBotIO' token intents session status setup = do
   initialDi <- Di.fetch
   session' <- maybe (P.embed newAPISession) pure session
   client <- P.embed $ newClient token session' initialDi
@@ -517,7 +519,7 @@ handleEvent' eh (InviteCreate d) = do
 handleEvent' eh (InviteDelete d) = do
   pure $ map ($ d) (getEventHandlers @'InviteDeleteEvt eh)
 
-handleEvent' eh evt@(MessageCreate msg) = do
+handleEvent' eh evt@(MessageCreate msg _) = do
   updateCache evt
   pure $ map ($ msg) (getEventHandlers @'MessageCreateEvt eh)
 
@@ -675,7 +677,9 @@ updateCache (GuildRoleUpdate GuildRoleData { guildID, role }) =
 updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) =
   updateGuild guildID (#roles %~ sans roleID)
 
-updateCache (MessageCreate msg) = setMessage msg
+updateCache (MessageCreate msg user) = do
+  setMessage msg
+  forM_ user setUser
 
 updateCache (MessageUpdate msg) =
   updateMessage (getID msg) (update msg)
