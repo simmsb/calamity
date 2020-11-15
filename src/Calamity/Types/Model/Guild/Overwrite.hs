@@ -7,7 +7,6 @@ import           Calamity.Types.Model.Guild.Permissions
 import           Calamity.Types.Snowflake
 
 import           Data.Aeson
-import           Data.Text.Lazy                         ( Text )
 
 import           GHC.Generics
 
@@ -16,7 +15,7 @@ import qualified TextShow.Generic                       as TSG
 
 data Overwrite = Overwrite
   { id    :: Snowflake Overwrite
-  , type_ :: Text
+  , type_ :: Int
   , allow :: Permissions
   , deny  :: Permissions
   }

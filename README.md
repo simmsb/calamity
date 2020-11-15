@@ -110,7 +110,7 @@ main = do
   token <- view packed <$> getEnv "BOT_TOKEN"
   Di.new $ \di ->
     void . P.runFinal . P.embedToFinal . DiP.runDiToIO di . runCounterAtomic . runCacheInMemory . runMetricsNoop . useConstantPrefix "!"
-      $ runBotIO (BotToken token) $ do
+      $ runBotIO (BotToken token) defaultIntents $ do
       addCommands $ do
         helpCommand
         command @'[User] "utest" $ \ctx u -> do

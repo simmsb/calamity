@@ -8,6 +8,7 @@
   Data.Default instance.
 * `runBotIO` and `runBotIO'` now always take an `Intents` parameter.
 * Users are cached from messages, as well as member create events.
+* Fix `Overwrite`s having an incorrect `type_` field.
 
 ## 0.1.21.0
 
