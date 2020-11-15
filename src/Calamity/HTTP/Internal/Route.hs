@@ -125,7 +125,7 @@ instance Hashable Route where
   hashWithSalt s (Route _ ident c g) = hashWithSalt s (ident, c, g)
 
 baseURL :: Text
-baseURL = "https://discord.com/api/v7"
+baseURL = "https://discord.com/api/v8"
 
 buildRoute
   :: forall (ids :: [(Type, RouteRequirement)])

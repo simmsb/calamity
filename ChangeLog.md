@@ -2,7 +2,7 @@
 
 ## 0.1.22.0
 
-* Update to gateway v8.
+* Update to gateway/http endpoint v8.
 * Updated the message types.
 * Added `defaultIntents`, which is all but the privileged intents, also a
   Data.Default instance.
