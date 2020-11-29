@@ -90,7 +90,7 @@ invoke a = do
 
     void $ modifyGauge (subtract 1) inFlightRequests
 
-    P.runError $ (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
+    P.runError $ (fromResult . fromJSON . modifyResponse a) =<< (fromJSONDecode . readResp) =<< extractRight resp
 
 
 defaultRequestOptions :: Options
