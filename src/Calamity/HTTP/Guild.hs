@@ -282,6 +282,6 @@ instance Request (GuildRequest a) where
   action (GetGuildVoiceRegions _) = getWith
   action (GetGuildInvites _) = getWith
 
-  modifyResponse (GetGuildMember (getID @Guild -> gid) _) = _Object . ix "guild_id" . _Integral .~ fromSnowflake gid
-  modifyResponse (ListGuildMembers (getID @Guild -> gid) _) = _Object . traverse . ix "guild_id" . _Integral .~ fromSnowflake gid
+  modifyResponse (GetGuildMember (getID @Guild -> gid) _) = _Object . at "guild_id"  ?~ _Integral # fromSnowflake gid
+  modifyResponse (ListGuildMembers (getID @Guild -> gid) _) = values . _Object . at "guild_id"  ?~ _Integral # fromSnowflake gid
   modifyResponse _ = Prelude.id
