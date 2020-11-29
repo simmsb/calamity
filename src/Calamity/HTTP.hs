@@ -2,7 +2,6 @@
 module Calamity.HTTP
     ( invoke
     , module Calamity.HTTP.AuditLog
-    , module Calamity.HTTP.Internal.Request
     , module Calamity.HTTP.Channel
     , module Calamity.HTTP.Emoji
     , module Calamity.HTTP.Guild

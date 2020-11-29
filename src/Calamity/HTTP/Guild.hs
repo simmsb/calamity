@@ -282,6 +282,8 @@ instance Request (GuildRequest a) where
   action (GetGuildVoiceRegions _) = getWith
   action (GetGuildInvites _) = getWith
 
-  modifyResponse (GetGuildMember (getID @Guild -> gid) _) = _Object . at "guild_id"  ?~ _Integral # fromSnowflake gid
-  modifyResponse (ListGuildMembers (getID @Guild -> gid) _) = values . _Object . at "guild_id"  ?~ _Integral # fromSnowflake gid
+  -- this is a bit of a hack
+  -- TODO: add something to allow for contextual parsing
+  modifyResponse (GetGuildMember (getID @Guild -> gid) _) = _Object . at "guild_id"  ?~ _String # showt (fromSnowflake gid)
+  modifyResponse (ListGuildMembers (getID @Guild -> gid) _) = values . _Object . at "guild_id"  ?~ _String # showt (fromSnowflake gid)
   modifyResponse _ = Prelude.id
