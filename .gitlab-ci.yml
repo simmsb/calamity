@@ -9,7 +9,7 @@ variables:
 
 build-backend:
   stage: build
-  image: haskell:8.8
+  image: ghcr.io/nitros12/haskell:8.8
   cache:
     paths:
       - ${STACK_ROOT}
