@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.22.1
+
++ Bump some upper bounds
++ Fix parsing of members from GetGuildMember
++ Make game field in Presence correctly optional
++ Make roles field in Presence updates correctly optional (internal)
+
 ## 0.1.22.0
 
 * Update to gateway/http endpoint v8.
