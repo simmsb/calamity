@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.22.0
+version:            0.1.22.1
 github:             "nitros12/calamity"
 homepage:           https://github.com/nitros12/calamity
 bug-reports:        https://github.com/nitros12/calamity/issues
@@ -46,11 +46,11 @@ dependencies:
 - focus >= 1.0 && < 2
 - data-default-class >= 0.1 && < 0.2
 - hashable >= 1.2 && < 2
-- time >= 1.8 && < 1.11
+- time >= 1.8 && < 1.12
 - containers >= 0.6 && < 0.7
 - unordered-containers >= 0.2 && < 0.3
 - http-date >= 0.0.8 && < 0.1
-- bytestring >= 0.10 && < 0.11
+- bytestring >= 0.10 && < 0.12
 - async >= 2.2 && < 3
 - scientific >= 0.3 && < 0.4
 - deque >= 0.4 && < 0.5
@@ -68,11 +68,11 @@ dependencies:
 - mtl >= 2.2 && < 3
 - safe-exceptions >= 0.1 && < 2
 - unagi-chan >= 0.4 && < 0.5
-- megaparsec >= 8 && < 9
+- megaparsec >= 8 && < 10
 - data-flags >= 0.0.3 && < 0.1
 - colour >= 2.3.5 && < 2.4
 - mime-types >= 0.1 && < 0.2
-- unboxing-vector >= 0.1 && < 0.2
+- unboxing-vector >= 0.2 && < 0.3
 
 # executables:
 #   test-calamity-exe:

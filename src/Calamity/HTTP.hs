@@ -1,6 +1,7 @@
 -- | Combined http request stuff
 module Calamity.HTTP
-    ( module Calamity.HTTP.AuditLog
+    ( invoke
+    , module Calamity.HTTP.AuditLog
     , module Calamity.HTTP.Internal.Request
     , module Calamity.HTTP.Channel
     , module Calamity.HTTP.Emoji

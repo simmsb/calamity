@@ -27,6 +27,7 @@ import           Control.Arrow
 import           Control.Lens                   hiding ( (.=) )
 
 import           Data.Aeson
+import           Data.Aeson.Lens
 import           Data.Colour                    ( Colour )
 import           Data.Default.Class
 import           Data.Maybe
@@ -280,3 +281,7 @@ instance Request (GuildRequest a) where
   action (BeginGuildPrune _ d r) = postEmptyP (param "days" .~ [showt d] >>> param "compute_prune_count" .~ [showt r])
   action (GetGuildVoiceRegions _) = getWith
   action (GetGuildInvites _) = getWith
+
+  modifyResponse (GetGuildMember (getID @Guild -> gid) _) = _Object . ix "guild_id" . _Integral .~ fromSnowflake gid
+  modifyResponse (ListGuildMembers (getID @Guild -> gid) _) = _Object . traverse . ix "guild_id" . _Integral .~ fromSnowflake gid
+  modifyResponse _ = Prelude.id

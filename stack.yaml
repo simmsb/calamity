@@ -53,6 +53,7 @@ extra-deps:
   - ghc-tcplugins-extra-0.3.2@sha256:1bbfd4449c3669a31618ea0ebc5d00d980a53988daad3b6218bab5c8cdff268d,1687
   - di-polysemy-0.2.0.0
   - data-flags-0.0.3.4
+  - unboxing-vector-0.2.0.0@sha256:a8f8ddab08d16cd4051fb1febb06aaaa54d211b50001664c06282cfdcb97bab0,3768
 
 # Override default flag values for local packages and extra-deps
 # flags: {}

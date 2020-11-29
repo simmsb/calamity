@@ -88,6 +88,13 @@ packages:
       sha256: fabce261d22601659cc3aeab1d5bb8f918dd3f8a8b01a8b9c483a08113a2535a
   original:
     hackage: data-flags-0.0.3.4
+- completed:
+    hackage: unboxing-vector-0.2.0.0@sha256:a8f8ddab08d16cd4051fb1febb06aaaa54d211b50001664c06282cfdcb97bab0,3768
+    pantry-tree:
+      size: 1349
+      sha256: e0dbf018cae082041160d633263a6e33ffd861fe6813675f3cb0f08b96ad458e
+  original:
+    hackage: unboxing-vector-0.2.0.0@sha256:a8f8ddab08d16cd4051fb1febb06aaaa54d211b50001664c06282cfdcb97bab0,3768
 snapshots:
 - completed:
     size: 493124

@@ -1,6 +1,7 @@
 -- | Generic Request type
 module Calamity.HTTP.Internal.Request
     ( Request(..)
+    , invoke
     , postWith'
     , postWithP'
     , putWith'
@@ -67,25 +68,30 @@ class Request a where
 
   action :: a -> Options -> Session -> String -> IO (Response LB.ByteString)
 
-  invoke :: (BotC r, FromJSON (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
-  invoke a = do
-      rlState' <- P.asks (^. #rlState)
-      session <- P.asks (^. #session)
-      token' <- P.asks (^. #token)
+  modifyResponse :: a -> Value -> Value
+  modifyResponse _ = id
 
-      let route' = route a
 
-      inFlightRequests <- registerGauge "inflight_requests" [("route", route' ^. #path)]
-      totalRequests <- registerCounter "total_requests" [("route", route' ^. #path)]
-      void $ modifyGauge (+ 1) inFlightRequests
-      void $ addCounter 1 totalRequests
+invoke :: (BotC r, Request a, FromJSON (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
+invoke a = do
+    rlState' <- P.asks (^. #rlState)
+    session <- P.asks (^. #session)
+    token' <- P.asks (^. #token)
 
-      resp <- attr "route" (route' ^. #path) $ doRequest rlState' route'
-        (action a (requestOptions token') session (route' ^. #path . unpacked))
+    let route' = route a
 
-      void $ modifyGauge (subtract 1) inFlightRequests
+    inFlightRequests <- registerGauge "inflight_requests" [("route", route' ^. #path)]
+    totalRequests <- registerCounter "total_requests" [("route", route' ^. #path)]
+    void $ modifyGauge (+ 1) inFlightRequests
+    void $ addCounter 1 totalRequests
 
-      P.runError $ (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
+    resp <- attr "route" (route' ^. #path) $ doRequest rlState' route'
+      (action a (requestOptions token') session (route' ^. #path . unpacked))
+
+    void $ modifyGauge (subtract 1) inFlightRequests
+
+    P.runError $ (fromResult . fromJSON) =<< (fromJSONDecode . readResp) =<< extractRight resp
+
 
 defaultRequestOptions :: Options
 defaultRequestOptions = defaults

@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: b3783e8d7e7db062a2aa10f4642564dea368efe4f9130957aaa0259e2f96e54e
+-- hash: a5846981d4aa83053956a4f860e1145f8c044323b2d869cf4a670bad5106addf
 
 name:           calamity
-version:        0.1.22.0
+version:        0.1.22.1
 synopsis:       A library for writing discord bots in haskell
 description:    Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
 category:       Network, Web
@@ -140,7 +140,7 @@ library
       aeson >=1.4 && <2
     , async >=2.2 && <3
     , base >=4.12 && <5
-    , bytestring >=0.10 && <0.11
+    , bytestring >=0.10 && <0.12
     , colour >=2.3.5 && <2.4
     , concurrent-extra >=0.7 && <0.8
     , containers >=0.6 && <0.7
@@ -162,7 +162,7 @@ library
     , http-types >=0.12 && <0.13
     , lens >=4.18 && <5
     , lens-aeson >=1.1 && <2
-    , megaparsec >=8 && <9
+    , megaparsec >=8 && <10
     , mime-types >=0.1 && <0.2
     , mtl >=2.2 && <3
     , polysemy >=1.3 && <2
@@ -175,10 +175,10 @@ library
     , stm-containers >=1.1 && <2
     , text >=1.2 && <2
     , text-show >=3.8 && <4
-    , time >=1.8 && <1.11
+    , time >=1.8 && <1.12
     , typerep-map >=0.3 && <0.4
     , unagi-chan >=0.4 && <0.5
-    , unboxing-vector >=0.1 && <0.2
+    , unboxing-vector >=0.2 && <0.3
     , unordered-containers >=0.2 && <0.3
     , vector >=0.12 && <0.13
     , websockets >=0.12 && <0.13
