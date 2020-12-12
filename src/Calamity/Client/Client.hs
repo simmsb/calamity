@@ -698,9 +698,8 @@ updateCache (MessageReactionRemove reaction) =
 updateCache (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) =
   updateMessage messageID (#reactions .~ mempty)
 
-updateCache (PresenceUpdate PresenceUpdateData { userID, roles, presence }) =
-  updateGuild (getID presence) ((#members . at (coerceSnowflake userID) . _Just . #roles .~ roles)
-                                . (#presences . at userID ?~ presence))
+updateCache (PresenceUpdate PresenceUpdateData { userID, presence }) =
+  updateGuild (getID presence) (#presences . at userID ?~ presence)
 
 updateCache (UserUpdate user) = setBotUser user
 

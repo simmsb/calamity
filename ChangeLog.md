@@ -1,5 +1,11 @@
 # Changelog for Calamity
 
+## 0.1.23.0
+
++ The `roles` field was incorrectly present on the `PresenceUpdate` type, that
+  field has been removed.
++ The `game` field on `Presence` was changed to `activities :: [Activity]`
+
 ## 0.1.22.1
 
 + Bump some upper bounds

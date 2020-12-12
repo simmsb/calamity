@@ -111,10 +111,10 @@ data GuildMemberRemoveData = GuildMemberRemoveData
   deriving FromJSON via CalamityJSON GuildMemberRemoveData
 
 data GuildMemberUpdateData = GuildMemberUpdateData
-  { guildID :: Snowflake Guild
-  , roles   :: Vector (Snowflake Role)
-  , user    :: User
-  , nick    :: Maybe Text
+  { guildID  :: Snowflake Guild
+  , roles    :: Vector (Snowflake Role)
+  , user     :: User
+  , nick     :: Maybe Text
   }
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON GuildMemberUpdateData
@@ -201,7 +201,6 @@ data MessageReactionRemoveAllData = MessageReactionRemoveAllData
 
 data PresenceUpdateData = PresenceUpdateData
   { userID   :: Snowflake User
-  , roles    :: Vector (Snowflake Role)
   , presence :: Presence
   }
   deriving ( Show, Generic )
@@ -209,9 +208,8 @@ data PresenceUpdateData = PresenceUpdateData
 instance FromJSON PresenceUpdateData where
   parseJSON = withObject "PresenceUpdate" $ \v -> do
     user <- (v .: "user") >>= (.: "id")
-    roles <- v .: "roles"
     presence <- parseJSON $ Object v
-    pure $ PresenceUpdateData user roles presence
+    pure $ PresenceUpdateData user presence
 
 data TypingStartData = TypingStartData
   { channelID :: Snowflake Channel

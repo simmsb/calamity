@@ -20,9 +20,9 @@ import qualified TextShow.Generic as TSG
 
 data Presence = Presence
   { user :: Snowflake User,
-    game :: Maybe Activity,
     guildID :: Snowflake Guild,
     status :: StatusType,
+    activities :: [Activity],
     clientStatus :: ClientStatus
   }
   deriving (Eq, Show, Generic)
