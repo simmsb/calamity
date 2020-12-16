@@ -152,7 +152,7 @@ data GuildRoleDeleteData = GuildRoleDeleteData
 data InviteCreateData = InviteCreateData
   { channelID      :: Snowflake Channel
   , code           :: Text
-  , createdAt      :: UnixTimestamp
+  , createdAt      :: UTCTime
   , guildID        :: Maybe (Snowflake Guild)
   , inviter        :: Maybe (Snowflake User)
   , maxAge         :: Int

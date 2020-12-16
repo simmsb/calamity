@@ -36,6 +36,7 @@ data ExtractFieldInto label field target
 type ExtractFieldFrom label field = ExtractFieldInto label field label
 data ExtractFields label fields
 data ExtractArrayField label field
+data MapFieldWith field ty
 
 class PerformAction action where
   runAction :: Proxy action -> Object -> Parser Object
@@ -67,6 +68,9 @@ instance (KnownSymbol label, KnownSymbol field) => PerformAction (ExtractArrayFi
         a'' <- Array <$> traverse (withObject "extracting field" (.: textSymbolVal @field)) a'
         pure $ o & at (textSymbolVal @label) ?~ a''
       Nothing -> pure o
+
+instance (KnownSymbol field, Reifies ty (Value -> Value)) => PerformAction (MapFieldWith field ty) where
+  runAction _ o = pure (o & ix (textSymbolVal @field) %~ reflect @ty Proxy)
 
 newtype WithSpecialCases (rules :: [Type]) a = WithSpecialCases a
 

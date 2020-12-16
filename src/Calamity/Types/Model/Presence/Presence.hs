@@ -34,7 +34,7 @@ data Presence = Presence
   deriving
     (FromJSON)
     via WithSpecialCases
-          '["user" `ExtractFieldFrom` "user"]
+          '["user" `ExtractFieldFrom` "id"]
           Presence
   deriving (HasID User) via HasIDField "user" Presence
   deriving (HasID Guild) via HasIDField "guildID" Presence
