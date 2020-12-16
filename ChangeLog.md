@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.23.1
+
++ Fix some more json parsing issues
+
 ## 0.1.23.0
 
 + The `roles` field was incorrectly present on the `PresenceUpdate` type, that
