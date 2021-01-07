@@ -108,13 +108,13 @@ requestOptions :: Token -> Option 'Https
 requestOptions t = defaultRequestOptions <> header "Authorization" (TS.encodeUtf8 . TL.toStrict $ formatToken t)
 
 getWith :: Url 'Https -> Option 'Https -> Req LbsResponse
-getWith u = req POST u NoReqBody lbsResponse
+getWith u = req GET u NoReqBody lbsResponse
 
 postWith' :: HttpBody a => a -> Url 'Https -> Option 'Https -> Req LbsResponse
 postWith' a u = req POST u a lbsResponse
 
 postWithP' :: HttpBody a => a -> Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
-postWithP' a o u o' = req POST u a lbsResponse (o' <> o)
+postWithP' a o u o' = req POST u a lbsResponse (o <> o')
 
 postEmpty :: Url 'Https -> Option 'Https -> Req LbsResponse
 postEmpty u = req POST u NoReqBody lbsResponse
@@ -129,13 +129,13 @@ putEmpty :: Url 'Https -> Option 'Https -> Req LbsResponse
 putEmpty u = req PUT u NoReqBody lbsResponse
 
 putEmptyP :: Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
-putEmptyP o u o' = req PUT u NoReqBody lbsResponse (o' <> o)
+putEmptyP o u o' = req PUT u NoReqBody lbsResponse (o <> o')
 
 postEmptyP :: Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
-postEmptyP o u o' = req POST u NoReqBody lbsResponse (o' <> o)
+postEmptyP o u o' = req POST u NoReqBody lbsResponse (o <> o')
 
 getWithP :: Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
-getWithP o u o' = req GET u NoReqBody lbsResponse (o' <> o)
+getWithP o u o' = req GET u NoReqBody lbsResponse (o <> o')
 
 deleteWith :: Url 'Https -> Option 'Https -> Req LbsResponse
 deleteWith u = req DELETE u NoReqBody lbsResponse
