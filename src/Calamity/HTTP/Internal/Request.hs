@@ -1,44 +1,45 @@
 -- | Generic Request type
-module Calamity.HTTP.Internal.Request
-    ( Request(..)
-    , invoke
-    , postWith'
-    , postWithP'
-    , putWith'
-    , patchWith'
-    , putEmpty
-    , putEmptyP
-    , postEmpty
-    , postEmptyP
-    , getWithP ) where
+module Calamity.HTTP.Internal.Request (
+  Request (..),
+  invoke,
+  getWith,
+  postWith',
+  postWithP',
+  putWith',
+  patchWith',
+  putEmpty,
+  putEmptyP,
+  postEmpty,
+  postEmptyP,
+  getWithP,
+  deleteWith,
+  (=:?),
+) where
 
-import           Calamity.Client.Types
-import           Calamity.HTTP.Internal.Ratelimit
-import           Calamity.HTTP.Internal.Route
-import           Calamity.HTTP.Internal.Types
-import           Calamity.Metrics.Eff
-import           Calamity.Types.Token
+import Calamity.Client.Types
+import Calamity.HTTP.Internal.Ratelimit
+import Calamity.HTTP.Internal.Route
+import Calamity.HTTP.Internal.Types
+import Calamity.Metrics.Eff
+import Calamity.Types.Token
 
-import           Control.Lens
-import           Control.Monad
+import Control.Lens
+import Control.Monad
 
-import           Data.Aeson                       hiding ( Options )
-import           Data.ByteString                  ( ByteString )
-import qualified Data.ByteString.Lazy             as LB
-import qualified Data.Text.Encoding               as TS
-import qualified Data.Text.Lazy                   as TL
-import           Data.Text.Strict.Lens
+import Data.Aeson hiding (Options)
+import qualified Data.ByteString.Lazy as LB
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as TS
+import qualified Data.Text.Lazy as TL
 
-import           DiPolysemy                       hiding ( debug, error, info )
+import DiPolysemy hiding (debug, error, info)
 
-import           Network.Wreq                     (Response, checkResponse, header, defaults)
-import           Network.Wreq.Session
-import           Network.Wreq.Types               (Options, Postable, Putable )
+import Network.HTTP.Req
 
-import           Polysemy                         ( Sem )
-import qualified Polysemy                         as P
-import qualified Polysemy.Error                   as P
-import qualified Polysemy.Reader                  as P
+import Polysemy (Sem)
+import qualified Polysemy as P
+import qualified Polysemy.Error as P
+import qualified Polysemy.Reader as P
 
 fromResult :: P.Member (P.Error RestError) r => Data.Aeson.Result a -> Sem r a
 fromResult (Success a) = pure a
@@ -58,7 +59,7 @@ class ReadResponse a where
 instance ReadResponse () where
   readResp = const (Right ())
 
-instance {-# OVERLAPS #-}FromJSON a => ReadResponse a where
+instance {-# OVERLAPS #-} FromJSON a => ReadResponse a where
   readResp = eitherDecode
 
 class Request a where
@@ -66,66 +67,79 @@ class Request a where
 
   route :: a -> Route
 
-  action :: a -> Options -> Session -> String -> IO (Response LB.ByteString)
+  action :: a -> Url 'Https -> Option 'Https -> Req LbsResponse
 
   modifyResponse :: a -> Value -> Value
   modifyResponse _ = id
 
-
 invoke :: (BotC r, Request a, FromJSON (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
 invoke a = do
-    rlState' <- P.asks (^. #rlState)
-    session <- P.asks (^. #session)
-    token' <- P.asks (^. #token)
+  rlState' <- P.asks (^. #rlState)
+  token' <- P.asks (^. #token)
 
-    let route' = route a
+  let route' = route a
 
-    inFlightRequests <- registerGauge "inflight_requests" [("route", route' ^. #path)]
-    totalRequests <- registerCounter "total_requests" [("route", route' ^. #path)]
-    void $ modifyGauge (+ 1) inFlightRequests
-    void $ addCounter 1 totalRequests
+  inFlightRequests <- registerGauge "inflight_requests" [("route", renderUrl $ route' ^. #path)]
+  totalRequests <- registerCounter "total_requests" [("route", renderUrl $ route' ^. #path)]
+  void $ modifyGauge (+ 1) inFlightRequests
+  void $ addCounter 1 totalRequests
 
-    resp <- attr "route" (route' ^. #path) $ doRequest rlState' route'
-      (action a (requestOptions token') session (route' ^. #path . unpacked))
+  let r = action a (route' ^. #path) (requestOptions token')
+      act = runReq reqConfig r
 
-    void $ modifyGauge (subtract 1) inFlightRequests
+  resp <- attr "route" (renderUrl $ route' ^. #path) $ doRequest rlState' route' act
 
-    P.runError $ (fromResult . fromJSON . modifyResponse a) =<< (fromJSONDecode . readResp) =<< extractRight resp
+  void $ modifyGauge (subtract 1) inFlightRequests
 
+  P.runError $ fromResult . fromJSON . modifyResponse a =<< fromJSONDecode . readResp =<< extractRight resp
 
-defaultRequestOptions :: Options
-defaultRequestOptions = defaults
-  & header "User-Agent" .~ ["Calamity (https://github.com/nitros12/calamity)"]
-  & header "X-RateLimit-Precision" .~ ["millisecond"]
-  & checkResponse ?~ (\_ _ -> pure ())
+reqConfig :: HttpConfig
+reqConfig =
+  defaultHttpConfig
+    { httpConfigCheckResponse = \_ _ _ -> Nothing
+    }
 
-requestOptions :: Token -> Options
-requestOptions t = defaultRequestOptions
-  & header "Authorization" .~ [TS.encodeUtf8 . TL.toStrict $ formatToken t]
+defaultRequestOptions :: Option 'Https
+defaultRequestOptions =
+  header "User-Agent" "Calamity (https://github.com/nitros12/calamity)"
+    <> header "X-RateLimit-Precision" "millisecond"
 
-postWith' :: Postable a => a -> Options -> Session -> String -> IO (Response LB.ByteString)
-postWith' p o sess s = postWith o sess s p
+requestOptions :: Token -> Option 'Https
+requestOptions t = defaultRequestOptions <> header "Authorization" (TS.encodeUtf8 . TL.toStrict $ formatToken t)
 
-postWithP' :: Postable a => a -> (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
-postWithP' p oF o sess s = postWith (oF o) sess s p
+getWith :: Url 'Https -> Option 'Https -> Req LbsResponse
+getWith u = req POST u NoReqBody lbsResponse
 
-postEmpty :: Options -> Session -> String -> IO (Response LB.ByteString)
-postEmpty o sess s = postWith o sess s ("" :: ByteString)
+postWith' :: HttpBody a => a -> Url 'Https -> Option 'Https -> Req LbsResponse
+postWith' a u = req POST u a lbsResponse
 
-putWith' :: Putable a => a -> Options -> Session -> String -> IO (Response LB.ByteString)
-putWith' p o sess s = putWith o sess s p
+postWithP' :: HttpBody a => a -> Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
+postWithP' a o u o' = req POST u a lbsResponse (o' <> o)
 
-patchWith' :: Postable a => a -> Options -> Session -> String -> IO (Response LB.ByteString)
-patchWith' p o sess s = customPayloadMethodWith "PATCH" o sess s p
+postEmpty :: Url 'Https -> Option 'Https -> Req LbsResponse
+postEmpty u = req POST u NoReqBody lbsResponse
 
-putEmpty :: Options -> Session -> String -> IO (Response LB.ByteString)
-putEmpty o sess s = putWith o sess s ("" :: ByteString)
+putWith' :: HttpBody a => a -> Url 'Https -> Option 'Https -> Req LbsResponse
+putWith' a u = req PUT u a lbsResponse
 
-putEmptyP :: (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
-putEmptyP = (putEmpty .)
+patchWith' :: HttpBody a => a -> Url 'Https -> Option 'Https -> Req LbsResponse
+patchWith' a u = req PATCH u a lbsResponse
 
-postEmptyP :: (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
-postEmptyP = (postEmpty .)
+putEmpty :: Url 'Https -> Option 'Https -> Req LbsResponse
+putEmpty u = req PUT u NoReqBody lbsResponse
 
-getWithP :: (Options -> Options) -> Options -> Session -> String -> IO (Response LB.ByteString)
-getWithP oF o = getWith (oF o)
+putEmptyP :: Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
+putEmptyP o u o' = req PUT u NoReqBody lbsResponse (o' <> o)
+
+postEmptyP :: Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
+postEmptyP o u o' = req POST u NoReqBody lbsResponse (o' <> o)
+
+getWithP :: Option 'Https -> Url 'Https -> Option 'Https -> Req LbsResponse
+getWithP o u o' = req GET u NoReqBody lbsResponse (o' <> o)
+
+deleteWith :: Url 'Https -> Option 'Https -> Req LbsResponse
+deleteWith u = req DELETE u NoReqBody lbsResponse
+
+(=:?) :: T.Text -> Maybe T.Text -> Option 'Https
+n =:? (Just x) = n =: x
+n =:? Nothing = mempty

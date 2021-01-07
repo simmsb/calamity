@@ -57,8 +57,6 @@ import qualified Di.Core                           as DC
 import qualified Df1
 import qualified DiPolysemy                        as Di
 
-import           Network.Wreq.Session            ( Session, newAPISession )
-
 import           Fmt
 
 import qualified Polysemy                          as P
@@ -80,8 +78,8 @@ timeA m = do
   pure (duration, res)
 
 
-newClient :: Token -> Session -> Maybe (DC.Di Df1.Level Df1.Path Df1.Message) -> IO Client
-newClient token session initialDi = do
+newClient :: Token -> Maybe (DC.Di Df1.Level Df1.Path Df1.Message) -> IO Client
+newClient token initialDi = do
   shards'        <- newTVarIO []
   numShards'     <- newEmptyMVar
   rlState'       <- newRateLimitState
@@ -95,7 +93,6 @@ newClient token session initialDi = do
                 inc
                 outc
                 ehidCounter
-                session
                 initialDi
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
@@ -106,7 +103,7 @@ runBotIO :: forall r a.
          -- ^ The intents the bot should use
          -> P.Sem (SetupEff r) a
          -> P.Sem r (Maybe StartupError)
-runBotIO token intents setup = runBotIO' token intents Nothing Nothing setup
+runBotIO token intents = runBotIO' token intents Nothing
 
 resetDi :: BotC r => P.Sem r a -> P.Sem r a
 resetDi m = do
@@ -115,22 +112,19 @@ resetDi m = do
 
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 --
--- This version allows you to specify the http session, initial status, and intents.
+-- This version allows you to specify the initial status, and intents.
 runBotIO' :: forall r a.
           (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r, Typeable (SetupEff r))
           => Token
           -> Intents
           -- ^ The intents the bot should use
-          -> Maybe Session
-          -- ^ The HTTP session to use, defaults to 'newAPISession'
           -> Maybe StatusUpdateData
           -- ^ The initial status to send to the gateway
           -> P.Sem (SetupEff r) a
           -> P.Sem r (Maybe StartupError)
-runBotIO' token intents session status setup = do
+runBotIO' token intents status setup = do
   initialDi <- Di.fetch
-  session' <- maybe (P.embed newAPISession) pure session
-  client <- P.embed $ newClient token session' initialDi
+  client <- P.embed $ newClient token initialDi
   handlers <- P.embed $ newTVarIO def
   P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup

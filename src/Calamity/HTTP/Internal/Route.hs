@@ -24,6 +24,9 @@ import           Data.Text                    ( Text )
 import qualified Data.Text                    as T
 import           Data.Typeable
 import           Data.Word
+import           Data.List ( foldl' )
+
+import           Network.HTTP.Req
 
 import           GHC.Generics                 hiding ( S )
 
@@ -115,7 +118,7 @@ instance Typeable a => RouteFragmentable (ID (a :: Type)) (ids :: [(Type, RouteR
 infixl 5 //
 
 data Route = Route
-  { path      :: Text
+  { path      :: Url 'Https
   , key       :: Text
   , channelID :: Maybe (Snowflake Channel)
   , guildID   :: Maybe (Snowflake Guild)
@@ -124,8 +127,8 @@ data Route = Route
 instance Hashable Route where
   hashWithSalt s (Route _ ident c g) = hashWithSalt s (ident, c, g)
 
-baseURL :: Text
-baseURL = "https://discord.com/api/v8"
+baseURL :: Url 'Https
+baseURL = https "discord.com" /: "api" /: "v8"
 
 buildRoute
   :: forall (ids :: [(Type, RouteRequirement)])
@@ -133,7 +136,7 @@ buildRoute
   => RouteBuilder ids
   -> Route
 buildRoute (UnsafeMkRouteBuilder route ids) = Route
-  (T.intercalate "/" (baseURL : map goR route))
+  (foldl' (/:) baseURL $ map goR route)
   (T.concat (map goIdent route))
   (Snowflake <$> lookup (typeRep (Proxy @Channel)) ids)
   (Snowflake <$> lookup (typeRep (Proxy @Guild)) ids)

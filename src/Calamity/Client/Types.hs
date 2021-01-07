@@ -45,8 +45,6 @@ import           Data.TypeRepMap                 ( TypeRepMap, WrapTypeable(..) 
 import           Data.Typeable
 import           Data.Void
 
-import           Network.Wreq.Session            ( Session )
-
 import           GHC.Exts                        ( fromList )
 import           GHC.Generics
 
@@ -68,7 +66,6 @@ data Client = Client
   , eventsIn            :: InChan CalamityEvent
   , eventsOut           :: OutChan CalamityEvent
   , ehidCounter         :: IORef Integer
-  , session             :: Session
   , initialDi           :: Maybe (DC.Di Df1.Level Df1.Path Df1.Message)
   }
   deriving ( Generic )
