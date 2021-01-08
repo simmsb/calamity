@@ -73,11 +73,9 @@ newShard :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r
          -> UC.InChan CalamityEvent
          -> Sem r (UC.InChan ControlMessage, Async (Maybe ()))
 newShard gateway id count token presence intents evtIn = do
-  (cmdIn, stateVar) <- P.embed $ mdo
-    (cmdIn, cmdOut) <- UC.newChan
-    stateVar <- newIORef $ newShardState shard
-    let shard = Shard id count gateway evtIn cmdOut stateVar (rawToken token) presence intents
-    pure (cmdIn, stateVar)
+  (cmdIn, cmdOut) <- P.embed UC.newChan
+  let shard = Shard id count gateway evtIn cmdOut (rawToken token) presence intents
+  stateVar <- P.embed . newIORef $ newShardState shard
 
   let runShard = P.runAtomicStateIORef stateVar shardLoop
   let action = push "calamity-shard" . attr "shard-id" id $ runShard

@@ -31,7 +31,6 @@ import           Control.Concurrent.Chan.Unagi
 import           Data.Aeson
 import qualified Data.Aeson.Types                 as AT
 import           Data.Generics.Labels             ()
-import           Data.IORef
 import           Data.Maybe
 import           Data.Text.Lazy                   ( Text )
 
@@ -272,7 +271,6 @@ data Shard = Shard
   , gateway       :: Text
   , evtIn         :: InChan CalamityEvent
   , cmdOut        :: OutChan ControlMessage
-  , shardState    :: IORef ShardState
   , token         :: Text
   , initialStatus :: Maybe StatusUpdateData
   , intents       :: Intents
