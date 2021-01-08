@@ -184,7 +184,7 @@ shardLoop = do
     debug "Entering inner loop of shard"
 
     shard <- P.atomicGets (^. #shardS)
-    P.atomicModify (#wsConn ?~ ws)
+    P.atomicModify' (#wsConn ?~ ws)
 
     seqNum'    <- P.atomicGets (^. #seqNum)
     sessionID' <- P.atomicGets (^. #sessionID)
@@ -226,7 +226,7 @@ shardLoop = do
 
     debug "Exiting inner loop of shard"
 
-    P.atomicModify (#wsConn .~ Nothing)
+    P.atomicModify' (#wsConn .~ Nothing)
     haltHeartBeat
     pure result
 
@@ -235,11 +235,11 @@ shardLoop = do
   handleMsg (Discord msg) = case msg of
     EvtDispatch sn data' -> do
       -- trace $ "Handling event: ("+||data'||+")"
-      P.atomicModify (#seqNum ?~ sn)
+      P.atomicModify' (#seqNum ?~ sn)
 
       case data' of
         Ready rdata' ->
-          P.atomicModify (#sessionID ?~ (rdata' ^. #sessionID))
+          P.atomicModify' (#sessionID ?~ (rdata' ^. #sessionID))
 
         _NotReady -> pure ()
 
@@ -260,8 +260,8 @@ shardLoop = do
         info "Received resumable invalid session"
       else do
         info "Received non-resumable invalid session, sleeping for 15 seconds then retrying"
-        P.atomicModify (#sessionID .~ Nothing)
-        P.atomicModify (#seqNum .~ Nothing)
+        P.atomicModify' (#sessionID .~ Nothing)
+        P.atomicModify' (#seqNum .~ Nothing)
         P.embed $ threadDelay (15 * 1000 * 1000)
       P.throw ShardFlowRestart
 
@@ -271,7 +271,7 @@ shardLoop = do
 
     HeartBeatAck -> do
       debug "Received heartbeat ack"
-      P.atomicModify (#hbResponse .~ True)
+      P.atomicModify' (#hbResponse .~ True)
 
   handleMsg (Control msg) = case msg of
     SendPresence data' -> do
@@ -285,7 +285,7 @@ startHeartBeatLoop :: ShardC r => Int -> Sem r ()
 startHeartBeatLoop interval = do
   haltHeartBeat -- cancel any currently running hb thread
   thread <- P.async $ heartBeatLoop interval
-  P.atomicModify (#hbThread ?~ thread)
+  P.atomicModify' (#hbThread ?~ thread)
 
 haltHeartBeat :: ShardC r => Sem r ()
 haltHeartBeat = do
@@ -304,7 +304,7 @@ sendHeartBeat = do
   sn <- P.atomicGets (^. #seqNum)
   debug $ "Sending heartbeat (seq: " +|| sn ||+ ")"
   sendToWs $ HeartBeat sn
-  P.atomicModify (#hbResponse .~ False)
+  P.atomicModify' (#hbResponse .~ False)
 
 heartBeatLoop :: ShardC r => Int -> Sem r ()
 heartBeatLoop interval = untilJustFinalIO . (leftToMaybe <$>) . P.runError $ do
