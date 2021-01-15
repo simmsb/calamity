@@ -18,24 +18,17 @@ import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-
 import Control.Lens hiding ((.=))
-
 import Data.Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
 import Data.Generics.Product.Subtype (upcast)
 import Data.Text (Text)
 import qualified Data.Text as S
-import qualified Data.Text.Encoding as S
-
 import GHC.Generics
-
 import Network.HTTP.Req
 import Network.Mime
-
 import Network.HTTP.Client.MultipartFormData
-import Network.HTTP.Types (urlEncode)
 import TextShow
 
 data CreateMessageOptions = CreateMessageOptions
@@ -167,9 +160,6 @@ baseRoute id =
   mkRouteBuilder // S "channels" // ID @Channel
     & giveID id
 
-encodeEmoji :: RawEmoji -> S.Text
-encodeEmoji = S.decodeUtf8 . urlEncode True . S.encodeUtf8 . showt
-
 instance Request (ChannelRequest a) where
   type Result (ChannelRequest a) = a
 
@@ -193,20 +183,20 @@ instance Request (ChannelRequest a) where
       & giveID mid
       & buildRoute
   route (CreateReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
       & giveID mid
       & buildRoute
   route (DeleteOwnReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
       & giveID mid
       & buildRoute
   route (DeleteUserReaction (getID -> cid) (getID @Message -> mid) emoji (getID @User -> uid)) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji) // ID @User
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // ID @User
       & giveID mid
       & giveID uid
       & buildRoute
   route (GetReactions (getID -> cid) (getID @Message -> mid) emoji _) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (encodeEmoji emoji)
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji)
       & giveID mid
       & buildRoute
   route (DeleteAllReactions (getID -> cid) (getID @Message -> mid)) =
