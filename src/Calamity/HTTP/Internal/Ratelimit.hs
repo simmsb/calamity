@@ -74,7 +74,7 @@ doDiscordRequest r = do
             pure $
               if isExhausted r'
                 then case parseRateLimitHeader r' of
-                  Just sleepTime -> ExhaustedBucket resp sleepTime
+                  Just !sleepTime -> ExhaustedBucket resp sleepTime
                   Nothing -> ServerError (statusCode status)
                 else Good resp
           | status == status429 -> do
@@ -98,9 +98,9 @@ parseDiscordTime :: ByteString -> Maybe UTCTime
 parseDiscordTime s = httpDateToUTC <$> parseHTTPDate s
 
 computeDiscordTimeDiff :: Double -> UTCTime -> Int
-computeDiscordTimeDiff end now = round . (* 1000.0) $ diffUTCTime end' now
+computeDiscordTimeDiff end !now = round . (* 1000.0) $! diffUTCTime end' now
  where
-  end' = end & toRational & fromRational & posixSecondsToUTCTime
+  !end' = end & toRational & fromRational & posixSecondsToUTCTime
 
 -- | Parse a ratelimit header returning the number of milliseconds until it resets
 parseRateLimitHeader :: HttpResponse r => r -> Maybe Int

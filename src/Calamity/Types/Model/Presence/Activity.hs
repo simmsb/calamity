@@ -40,7 +40,7 @@ instance ToJSON ActivityType where
 
 instance FromJSON ActivityType where
   parseJSON = withScientific "ActivityType" $ \n -> case toBoundedInteger @Int n of
-    Just v -> case v of
+    Just !v -> case v of
       0 -> pure Game
       1 -> pure Streaming
       2 -> pure Listening
@@ -50,7 +50,7 @@ instance FromJSON ActivityType where
 
 data Activity = Activity
   { name :: Text
-  , type_ :: ActivityType
+  , type_ :: !ActivityType
   , url :: Maybe Text
   , timestamps :: Maybe ActivityTimestamps
   , applicationID :: Maybe (Snowflake ())
@@ -68,7 +68,7 @@ data Activity = Activity
 
 -- | Make an 'Activity' with all optional fields set to Nothing
 activity :: Text -> ActivityType -> Activity
-activity name type_ =
+activity !name !type_ =
   Activity
     { name = name
     , type_ = type_
@@ -85,8 +85,8 @@ activity name type_ =
     }
 
 data ActivityTimestamps = ActivityTimestamps
-  { start :: Maybe UnixTimestamp
-  , end :: Maybe UnixTimestamp
+  { start :: !(Maybe UnixTimestamp)
+  , end :: !(Maybe UnixTimestamp)
   }
   deriving (Eq, Show, Generic, NFData)
   deriving (TextShow) via TSG.FromGeneric ActivityTimestamps

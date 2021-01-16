@@ -37,41 +37,41 @@ data CalamityEvent
   deriving ( Show, Generic )
 
 data DispatchData
-  = Ready ReadyData
+  = Ready !ReadyData
   | Resumed
-  | ChannelCreate Channel
-  | ChannelUpdate Channel
-  | ChannelDelete Channel
-  | ChannelPinsUpdate ChannelPinsUpdateData
-  | GuildCreate Guild
-  | GuildUpdate UpdatedGuild
-  | GuildDelete UnavailableGuild
-  | GuildBanAdd BanData
-  | GuildBanRemove BanData
-  | GuildEmojisUpdate GuildEmojisUpdateData
-  | GuildIntegrationsUpdate GuildIntegrationsUpdateData
-  | GuildMemberAdd Member
-  | GuildMemberRemove GuildMemberRemoveData
-  | GuildMemberUpdate GuildMemberUpdateData
-  | GuildMembersChunk GuildMembersChunkData
-  | GuildRoleCreate GuildRoleData
-  | GuildRoleUpdate GuildRoleData
-  | GuildRoleDelete GuildRoleDeleteData
-  | InviteCreate InviteCreateData
-  | InviteDelete InviteDeleteData
-  | MessageCreate Message (Maybe User)
-  | MessageUpdate UpdatedMessage
-  | MessageDelete MessageDeleteData
-  | MessageDeleteBulk MessageDeleteBulkData
-  | MessageReactionAdd Reaction
-  | MessageReactionRemove Reaction
-  | MessageReactionRemoveAll MessageReactionRemoveAllData
-  | PresenceUpdate PresenceUpdateData
-  | TypingStart TypingStartData
-  | UserUpdate User
-  | VoiceStateUpdate VoiceStateUpdateData
-  | VoiceServerUpdate VoiceServerUpdateData
-  | WebhooksUpdate WebhooksUpdateData
+  | ChannelCreate !Channel
+  | ChannelUpdate !Channel
+  | ChannelDelete !Channel
+  | ChannelPinsUpdate !ChannelPinsUpdateData
+  | GuildCreate !Guild
+  | GuildUpdate !UpdatedGuild
+  | GuildDelete !UnavailableGuild
+  | GuildBanAdd !BanData
+  | GuildBanRemove !BanData
+  | GuildEmojisUpdate !GuildEmojisUpdateData
+  | GuildIntegrationsUpdate !GuildIntegrationsUpdateData
+  | GuildMemberAdd !Member
+  | GuildMemberRemove !GuildMemberRemoveData
+  | GuildMemberUpdate !GuildMemberUpdateData
+  | GuildMembersChunk !GuildMembersChunkData
+  | GuildRoleCreate !GuildRoleData
+  | GuildRoleUpdate !GuildRoleData
+  | GuildRoleDelete !GuildRoleDeleteData
+  | InviteCreate !InviteCreateData
+  | InviteDelete !InviteDeleteData
+  | MessageCreate !Message !(Maybe User)
+  | MessageUpdate !UpdatedMessage
+  | MessageDelete !MessageDeleteData
+  | MessageDeleteBulk !MessageDeleteBulkData
+  | MessageReactionAdd !Reaction
+  | MessageReactionRemove !Reaction
+  | MessageReactionRemoveAll !MessageReactionRemoveAllData
+  | PresenceUpdate !PresenceUpdateData
+  | TypingStart !TypingStartData
+  | UserUpdate !User
+  | VoiceStateUpdate !VoiceStateUpdateData
+  | VoiceServerUpdate !VoiceServerUpdateData
+  | WebhooksUpdate !WebhooksUpdateData
   deriving ( Show, Generic, CtorName )
 
 data ReadyData = ReadyData

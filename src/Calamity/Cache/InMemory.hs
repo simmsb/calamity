@@ -87,10 +87,10 @@ instance MessageMod CacheWithMsg where
   delMessage' mid = #messages . _Wrapped %= sans mid
 
 instance MessageMod CacheNoMsg where
-  setMessage' _ = pure ()
-  getMessage' _ = pure Nothing
+  setMessage' !_ = pure ()
+  getMessage' !_ = pure Nothing
   getMessages' = pure []
-  delMessage' _ = pure ()
+  delMessage' !_ = pure ()
 
 runCache :: MessageMod (Cache t) => CacheEff m a -> State (Cache t) a
 runCache (SetBotUser u) = #user ?= u
