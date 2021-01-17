@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.24.0
+
++ Switch from using Wreq to Req
++ The `session` parameter has been removed from `runBotIO'`
++ Add an `Upgradeable` instance for `Role`s
++ Add a command `Parser` instance for `Role`s
+
 ## 0.1.23.1
 
 + Fix some more json parsing issues
