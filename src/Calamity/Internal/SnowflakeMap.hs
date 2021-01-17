@@ -30,7 +30,7 @@ newtype SnowflakeMap a = SnowflakeMap
   deriving ( Generic, Eq, Data, Ord, Show )
   deriving ( TextShow ) via TSG.FromGeneric (SnowflakeMap a)
   deriving newtype ( IsList, Semigroup, Monoid )
-  deriving anyclass ( NFData, Hashable )
+  deriving newtype ( NFData, Hashable )
 
 -- instance At (SnowflakeMap a) where
 --   at k f m = at (unSnowflakeMap k) f m

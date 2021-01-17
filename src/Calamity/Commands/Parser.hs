@@ -266,7 +266,7 @@ instance Parser GuildChannel r where
 -- and use 'Calamity.Types.Upgradeable.upgrade' if you want to allow fetching
 -- from http.
 instance P.Member CacheEff r => Parser Guild r where
-  parse = parseMP (parserName @Guild @r) $ mapParserMaybeM (try (ping "#") <|> snowflake)
+  parse = parseMP (parserName @Guild @r) $ mapParserMaybeM snowflake
           "Couldn't find a Guild with this id"
           getGuild
 
@@ -274,7 +274,7 @@ instance P.Member CacheEff r => Parser Guild r where
 -- looks in the cache. Use @'Snowflake' 'Emoji'@ and use
 -- 'Calamity.Types.Upgradeable.upgrade' if you want to allow fetching from http.
 instance Parser Emoji r where
-  parse = parseMP (parserName @Emoji @r) $ mapParserMaybeM (try (ping "#") <|> snowflake)
+  parse = parseMP (parserName @Emoji @r) $ mapParserMaybeM (try emoji <|> snowflake)
           "Couldn't find an Emoji with this id"
           (\eid -> do
               ctx <- P.ask
@@ -284,6 +284,16 @@ instance Parser Emoji r where
 instance Parser RawEmoji r where
   parse = parseMP (parserName @RawEmoji) (try parseCustomEmoji <|> (UnicodeEmoji <$> takeP (Just "A unicode emoji") 1))
     where parseCustomEmoji = CustomEmoji <$> partialEmoji
+
+-- | Parser for roles in the guild the command was invoked in, this only
+-- looks in the cache. Use @'Snowflake' 'Role'@ and use
+-- 'Calamity.Types.Upgradeable.upgrade' if you want to allow fetching from http.
+instance Parser Role r where
+  parse = parseMP (parserName @Role @r) $ mapParserMaybeM (try (ping "@&") <|> snowflake)
+          "Couldn't find an Emoji with this id"
+          (\rid -> do
+              ctx <- P.ask
+              pure $ ctx ^? #guild . _Just . #roles . ix rid)
 
 instance (Parser a r, Parser b r) => Parser (a, b) r where
   type ParserResult (a, b) = (ParserResult a, ParserResult b)

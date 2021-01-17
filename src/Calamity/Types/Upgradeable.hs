@@ -6,6 +6,7 @@ import           Calamity.Cache.Eff
 import           Calamity.Client.Types
 import           Calamity.HTTP                  as H
 import           Calamity.Internal.Utils
+import qualified Calamity.Internal.SnowflakeMap as SM
 import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
@@ -97,3 +98,17 @@ instance Upgradeable Emoji (Snowflake Guild, Snowflake Emoji) where
         Right e <- invoke $ H.GetGuildEmoji gid eid
         updateGuild gid (#emojis . at eid ?~ e)
         pure e
+
+instance Upgradeable Role (Snowflake Guild, Snowflake Role) where
+  upgrade (gid, rid) = P.runNonDetMaybe (getcache <|> gethttp)
+    where
+      getcache = P.failToNonDet $ do
+        Just g <- getGuild gid
+        Just r <- pure (g ^. #roles . at rid)
+        pure r
+      gethttp = P.failToNonDet $ do
+        Right rs <- invoke $ H.GetGuildRoles gid
+        let sm = SM.fromList rs
+        updateGuild gid (#roles <>~ sm)
+        Just r <- pure (sm ^. at rid)
+        pure r
