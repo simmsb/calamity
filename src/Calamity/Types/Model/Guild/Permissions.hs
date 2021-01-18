@@ -45,6 +45,7 @@ import Data.Flags.TH
 import Data.Text.Read (decimal)
 import Data.Word
 import TextShow
+import Control.DeepSeq (NFData)
 
 $( bitmaskWrapper
      "Permissions"
@@ -96,3 +97,4 @@ instance FromJSON Permissions where
       Left e -> parseFail e
 
 deriving via FromStringShow Permissions instance TextShow Permissions
+deriving via Word64 instance NFData Permissions
