@@ -72,6 +72,9 @@ runWebsocket ::
 runWebsocket host path ma = do
   inner <- bindSemToIO ma
 
+  -- We have to do this all ourself I think?
+  -- TODO: see if this isn't needed
+
   ctx <- P.embed NC.initConnectionContext
   certStore <- P.embed X509.getSystemCertificateStore
   let clientParams =
