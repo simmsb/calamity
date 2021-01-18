@@ -55,10 +55,13 @@ import qualified Polysemy.Resource as P
 import Prelude hiding (error)
 
 import qualified Data.ByteString.Lazy as LBS
+import Data.Default.Class (def)
 import qualified Network.Connection as NC
 import qualified Network.TLS as NT
+import qualified Network.TLS.Extra as NT
 import qualified Network.WebSockets as NW
 import qualified Network.WebSockets.Stream as NW
+import qualified System.X509 as X509
 
 runWebsocket ::
   P.Members '[P.Final IO, P.Embed IO] r =>
@@ -70,8 +73,16 @@ runWebsocket host path ma = do
   inner <- bindSemToIO ma
 
   ctx <- P.embed NC.initConnectionContext
-  let clientParams = NT.defaultParamsClient (L.unpack host) "443"
-      tlsSettings = NC.TLSSettings clientParams
+  certStore <- P.embed X509.getSystemCertificateStore
+  let clientParams =
+        (NT.defaultParamsClient (L.unpack host) "443")
+          { NT.clientSupported = def{NT.supportedCiphers = NT.ciphersuite_default}
+          , NT.clientShared =
+              def
+                { NT.sharedCAStore = certStore
+                }
+          }
+  let tlsSettings = NC.TLSSettings clientParams
       connParams = NC.ConnectionParams (L.unpack host) 443 (Just tlsSettings) Nothing
 
   P.embed $

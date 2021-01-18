@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 285749fca300fc8866ac70fc6aab9daa824ddd288651b4e6b652c5051ed12afd
+-- hash: cb9ed5b45295e948764ffec4fa3db9f792e63300b0a743a8ab16eddf14b90c0c
 
 name:           calamity
 version:        0.1.24.0
@@ -186,4 +186,5 @@ library
     , unordered-containers >=0.2 && <0.3
     , vector >=0.12 && <0.13
     , websockets >=0.12 && <0.13
+    , x509-system >=1.6.6 && <1.7
   default-language: Haskell2010
