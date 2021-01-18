@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.24.1
+
++ Fix some memory leaks
+
 ## 0.1.24.0
 
 + Switch from using Wreq to Req

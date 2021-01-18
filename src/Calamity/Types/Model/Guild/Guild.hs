@@ -1,74 +1,72 @@
 -- | Discord Guilds
-module Calamity.Types.Model.Guild.Guild
-    ( Guild(..)
-    , Partial(PartialGuild)
-    , UpdatedGuild(..) ) where
+module Calamity.Types.Model.Guild.Guild (
+  Guild (..),
+  Partial (PartialGuild),
+  UpdatedGuild (..),
+) where
 
-import           Calamity.Internal.AesonThings
-import qualified Calamity.Internal.SnowflakeMap         as SM
-import           Calamity.Internal.SnowflakeMap         ( SnowflakeMap )
-import           Calamity.Internal.Utils                ()
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild.Emoji
+import Calamity.Internal.AesonThings
+import Calamity.Internal.SnowflakeMap (SnowflakeMap)
+import qualified Calamity.Internal.SnowflakeMap as SM
+import Calamity.Internal.Utils ()
+import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Guild.Emoji
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
-import           Calamity.Types.Model.Guild.Role
-import           Calamity.Types.Model.Presence.Presence
-import           Calamity.Types.Model.User
-import           Calamity.Types.Model.Voice.VoiceState
-import           Calamity.Types.Snowflake
-
-import           Control.Lens                           ( (^.) )
-
-import           Data.Aeson
-import           Data.Generics.Product.Fields
-import           Data.HashMap.Lazy                      ( HashMap )
-import qualified Data.HashMap.Lazy                      as LH
-import           Data.Text.Lazy                         ( Text )
-import           Data.Time
-import           Data.Word
-
-import           GHC.Generics
-
-import           TextShow
-import qualified TextShow.Generic                       as TSG
+import Calamity.Types.Model.Guild.Role
+import Calamity.Types.Model.Presence.Presence
+import Calamity.Types.Model.User
+import Calamity.Types.Model.Voice.VoiceState
+import Calamity.Types.Snowflake
+import Control.DeepSeq
+import Control.Lens ((^.))
+import Data.Aeson
+import Data.Generics.Product.Fields
+import Data.HashMap.Strict (HashMap)
+import qualified Data.HashMap.Strict as LH
+import Data.Text.Lazy (Text)
+import Data.Time
+import Data.Word
+import GHC.Generics
+import TextShow
+import qualified TextShow.Generic as TSG
 
 data Guild = Guild
-  { id                          :: Snowflake Guild
-  , name                        :: Text
-  , icon                        :: Maybe Text
-  , splash                      :: Maybe Text
-  , owner                       :: Maybe Bool
-  , ownerID                     :: Snowflake User
-  , permissions                 :: Word64
-  , region                      :: Text
-  , afkChannelID                :: Maybe (Snowflake GuildChannel)
-  , afkTimeout                  :: Int
-  , embedEnabled                :: Bool
-  , embedChannelID              :: Maybe (Snowflake GuildChannel)
-  , verificationLevel           :: Int
+  { id :: Snowflake Guild
+  , name :: Text
+  , icon :: Maybe Text
+  , splash :: Maybe Text
+  , owner :: Maybe Bool
+  , ownerID :: Snowflake User
+  , permissions :: Word64
+  , region :: Text
+  , afkChannelID :: Maybe (Snowflake GuildChannel)
+  , afkTimeout :: Int
+  , embedEnabled :: Bool
+  , embedChannelID :: Maybe (Snowflake GuildChannel)
+  , verificationLevel :: Int
   , defaultMessageNotifications :: Int
-  , explicitContentFilter       :: Int
-  , roles                       :: SnowflakeMap Role
-  , emojis                      :: SnowflakeMap Emoji
-  , features                    :: [Text]
-  , mfaLevel                    :: Int
-  , applicationID               :: Maybe (Snowflake User)
-  , widgetEnabled               :: Bool
-  , widgetChannelID             :: Maybe (Snowflake GuildChannel)
-  , systemChannelID             :: Maybe (Snowflake GuildChannel)
-    -- NOTE: Below are only sent on GuildCreate
-  , joinedAt                    :: Maybe UTCTime
-  , large                       :: Bool
-  , unavailable                 :: Bool
-  , memberCount                 :: Int
-  , voiceStates                 :: [VoiceState]
-  , members                     :: SnowflakeMap Member
-  , channels                    :: SnowflakeMap GuildChannel
-  , presences                   :: HashMap (Snowflake User) Presence
+  , explicitContentFilter :: Int
+  , roles :: SnowflakeMap Role
+  , emojis :: SnowflakeMap Emoji
+  , features :: [Text]
+  , mfaLevel :: Int
+  , applicationID :: Maybe (Snowflake User)
+  , widgetEnabled :: Bool
+  , widgetChannelID :: Maybe (Snowflake GuildChannel)
+  , systemChannelID :: Maybe (Snowflake GuildChannel)
+  , -- NOTE: Below are only sent on GuildCreate
+    joinedAt :: Maybe UTCTime
+  , large :: Bool
+  , unavailable :: Bool
+  , memberCount :: Int
+  , voiceStates :: [VoiceState]
+  , members :: SnowflakeMap Member
+  , channels :: SnowflakeMap GuildChannel
+  , presences :: HashMap (Snowflake User) Presence
   }
-  deriving ( Eq, Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric Guild
-  deriving ( HasID Guild ) via HasIDField "id" Guild
+  deriving (Eq, Show, Generic, NFData)
+  deriving (TextShow) via TSG.FromGeneric Guild
+  deriving (HasID Guild) via HasIDField "id" Guild
 
 instance FromJSON Guild where
   parseJSON = withObject "Guild" $ \v -> do
@@ -84,9 +82,13 @@ instance FromJSON Guild where
 
     presences' <- do
       presences' <- v .: "presences"
-      LH.fromList <$> traverse (\m -> do
-                                  p <- parseJSON $ Object (m <> "guild_id" .= id)
-                                  pure (getID $ p ^. field @"user", p)) presences'
+      LH.fromList
+        <$> traverse
+          ( \m -> do
+              p <- parseJSON $ Object (m <> "guild_id" .= id)
+              pure (getID $ p ^. field @"user", p)
+          )
+          presences'
 
     Guild id
       <$> v .: "name"
@@ -94,11 +96,11 @@ instance FromJSON Guild where
       <*> v .:? "splash"
       <*> v .:? "owner"
       <*> v .: "owner_id"
-      <*> v .:? "permissions"    .!= 0
+      <*> v .:? "permissions" .!= 0
       <*> v .: "region"
       <*> v .:? "afk_channel_id"
       <*> v .: "afk_timeout"
-      <*> v .:? "embed_enabled"  .!= False
+      <*> v .:? "embed_enabled" .!= False
       <*> v .:? "embed_channel_id"
       <*> v .: "verification_level"
       <*> v .: "default_message_notifications"
@@ -121,40 +123,40 @@ instance FromJSON Guild where
       <*> pure presences'
 
 data instance Partial Guild = PartialGuild
-  { id   :: Snowflake Guild
+  { id :: Snowflake Guild
   , name :: Text
   }
-  deriving ( Eq, Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric (Partial Guild)
-  deriving ( ToJSON, FromJSON ) via CalamityJSON (Partial Guild)
-  deriving ( HasID Guild ) via HasIDField "id" (Partial Guild)
+  deriving (Eq, Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric (Partial Guild)
+  deriving (ToJSON, FromJSON) via CalamityJSON (Partial Guild)
+  deriving (HasID Guild) via HasIDField "id" (Partial Guild)
 
 data UpdatedGuild = UpdatedGuild
-  { id                          :: Snowflake Guild
-  , name                        :: Text
-  , icon                        :: Maybe Text
-  , splash                      :: Maybe Text
-  , owner                       :: Maybe Bool
-  , ownerID                     :: Snowflake User
-  , permissions                 :: Maybe Word64
-  , region                      :: Text
-  , afkChannelID                :: Maybe (Snowflake GuildChannel)
-  , afkTimeout                  :: Int
-  , embedEnabled                :: Maybe Bool
-  , embedChannelID              :: Maybe (Snowflake GuildChannel)
-  , verificationLevel           :: Int
+  { id :: Snowflake Guild
+  , name :: Text
+  , icon :: Maybe Text
+  , splash :: Maybe Text
+  , owner :: Maybe Bool
+  , ownerID :: Snowflake User
+  , permissions :: Maybe Word64
+  , region :: Text
+  , afkChannelID :: Maybe (Snowflake GuildChannel)
+  , afkTimeout :: Int
+  , embedEnabled :: Maybe Bool
+  , embedChannelID :: Maybe (Snowflake GuildChannel)
+  , verificationLevel :: Int
   , defaultMessageNotifications :: Int
-  , explicitContentFilter       :: Int
-  , roles                       :: SnowflakeMap Role
-  , emojis                      :: SnowflakeMap Emoji
-  , features                    :: [Text]
-  , mfaLevel                    :: Int
-  , applicationID               :: Maybe (Snowflake User)
-  , widgetEnabled               :: Maybe Bool
-  , widgetChannelID             :: Maybe (Snowflake GuildChannel)
-  , systemChannelID             :: Maybe (Snowflake GuildChannel)
+  , explicitContentFilter :: Int
+  , roles :: SnowflakeMap Role
+  , emojis :: SnowflakeMap Emoji
+  , features :: [Text]
+  , mfaLevel :: Int
+  , applicationID :: Maybe (Snowflake User)
+  , widgetEnabled :: Maybe Bool
+  , widgetChannelID :: Maybe (Snowflake GuildChannel)
+  , systemChannelID :: Maybe (Snowflake GuildChannel)
   }
-  deriving ( Eq, Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric UpdatedGuild
-  deriving ( FromJSON ) via CalamityJSON UpdatedGuild
-  deriving ( HasID Guild ) via HasIDField "id" UpdatedGuild
+  deriving (Eq, Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric UpdatedGuild
+  deriving (FromJSON) via CalamityJSON UpdatedGuild
+  deriving (HasID Guild) via HasIDField "id" UpdatedGuild

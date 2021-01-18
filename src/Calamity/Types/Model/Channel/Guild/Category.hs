@@ -1,33 +1,30 @@
-module Calamity.Types.Model.Channel.Guild.Category
-    ( Category(..) ) where
+module Calamity.Types.Model.Channel.Guild.Category (Category (..)) where
 
-import           Calamity.Internal.AesonThings
-import           Calamity.Internal.SnowflakeMap       ( SnowflakeMap )
-import           Calamity.Internal.Utils              ()
+import Calamity.Internal.AesonThings
+import Calamity.Internal.SnowflakeMap (SnowflakeMap)
+import Calamity.Internal.Utils ()
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
-import           Calamity.Types.Model.Guild.Overwrite
-import           Calamity.Types.Snowflake
-
-import           Data.Aeson
-import           Data.Text.Lazy                       ( Text )
-
-import           GHC.Generics
-
-import           TextShow
-import qualified TextShow.Generic                     as TSG
+import Calamity.Types.Model.Guild.Overwrite
+import Calamity.Types.Snowflake
+import Control.DeepSeq (NFData)
+import Data.Aeson
+import Data.Text.Lazy (Text)
+import GHC.Generics
+import TextShow
+import qualified TextShow.Generic as TSG
 
 data Category = Category
-  { id                   :: Snowflake Category
+  { id :: Snowflake Category
   , permissionOverwrites :: SnowflakeMap Overwrite
-  , name                 :: Text
-  , nsfw                 :: Bool
-  , position             :: Int
-  , guildID              :: Snowflake Guild
+  , name :: Text
+  , nsfw :: Bool
+  , position :: Int
+  , guildID :: Snowflake Guild
   }
-  deriving ( Show, Eq, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric Category
-  deriving ( ToJSON ) via CalamityJSON Category
-  deriving ( FromJSON ) via WithSpecialCases '[IfNoneThen "nsfw" DefaultToFalse] Category
-  deriving ( HasID Category ) via HasIDField "id" Category
-  deriving ( HasID Channel ) via HasIDFieldCoerce' "id" Category
+  deriving (Show, Eq, Generic, NFData)
+  deriving (TextShow) via TSG.FromGeneric Category
+  deriving (ToJSON) via CalamityJSON Category
+  deriving (FromJSON) via WithSpecialCases '[IfNoneThen "nsfw" DefaultToFalse] Category
+  deriving (HasID Category) via HasIDField "id" Category
+  deriving (HasID Channel) via HasIDFieldCoerce' "id" Category

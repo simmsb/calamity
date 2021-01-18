@@ -326,11 +326,11 @@ clientLoop :: BotC r => P.Sem r ()
 clientLoop = do
   outc <- P.asks (^. #eventsOut)
   whileMFinalIO $ do
-    evt' <- P.embed $ readChan outc
+    !evt' <- P.embed $ readChan outc
     case evt' of
-      Dispatch sid evt -> handleEvent sid evt >> pure True
-      Custom s d       -> handleCustomEvent s d >> pure True
-      ShutDown         -> pure False
+      Dispatch !sid !evt -> handleEvent sid evt >> pure True
+      Custom !s !d       -> handleCustomEvent s d >> pure True
+      ShutDown           -> pure False
   debug "leaving client loop"
 
 handleCustomEvent :: forall r. BotC r => TypeRep -> Dynamic -> P.Sem r ()
@@ -671,9 +671,9 @@ updateCache (GuildRoleUpdate GuildRoleData { guildID, role }) =
 updateCache (GuildRoleDelete GuildRoleDeleteData { guildID, roleID }) =
   updateGuild guildID (#roles %~ sans roleID)
 
-updateCache (MessageCreate msg user) = do
+updateCache (MessageCreate !msg !user) = do
   setMessage msg
-  forM_ user setUser
+  for_ user setUser
 
 updateCache (MessageUpdate msg) =
   updateMessage (getID msg) (update msg)

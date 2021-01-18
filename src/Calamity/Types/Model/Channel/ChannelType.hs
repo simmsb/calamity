@@ -25,7 +25,7 @@ instance ToJSON ChannelType where
 
 instance FromJSON ChannelType where
   parseJSON = withScientific "ChannelType" $ \n -> case toBoundedInteger @Int n of
-    Just v  -> case v of
+    Just !v  -> case v of
       0 -> pure GuildTextType
       1 -> pure DMType
       2 -> pure GuildVoiceType

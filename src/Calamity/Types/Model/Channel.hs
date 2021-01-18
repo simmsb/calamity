@@ -59,7 +59,7 @@ instance FromJSON Channel where
 data instance Partial Channel = PartialChannel
   { id       :: Snowflake Channel
   , name     :: Text
-  , type_    :: ChannelType
+  , type_    :: !ChannelType
   , parentID :: Maybe (Snowflake Category)
   }
   deriving ( Show, Eq, Generic )

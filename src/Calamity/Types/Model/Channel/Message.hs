@@ -36,13 +36,13 @@ data Message = Message
   , mentions        :: UV.Vector (Snowflake User)
   , mentionRoles    :: UV.Vector (Snowflake Role)
   , mentionChannels :: Maybe (UV.Vector (Snowflake Channel))
-  , attachments     :: [Attachment]
-  , embeds          :: [Embed]
-  , reactions       :: [Reaction]
+  , attachments     :: ![Attachment]
+  , embeds          :: ![Embed]
+  , reactions       :: ![Reaction]
   , nonce           :: Maybe (Snowflake Message)
   , pinned          :: Bool
   , webhookID       :: Maybe (Snowflake ())
-  , type_           :: MessageType
+  , type_           :: !MessageType
   }
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Message
@@ -77,7 +77,7 @@ data MessageType
 
 instance FromJSON MessageType where
   parseJSON = withScientific "MessageType" $ \n -> case toBoundedInteger @Int n of
-    Just v  -> case v of
+    Just !v  -> case v of
       0 -> pure Default
       1 -> pure RecipientAdd
       2 -> pure RecipientRemove

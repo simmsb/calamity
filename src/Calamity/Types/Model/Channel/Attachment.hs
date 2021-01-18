@@ -4,29 +4,26 @@ module Calamity.Types.Model.Channel.Attachment
 
 import           Calamity.Internal.AesonThings ()
 import           Calamity.Types.Snowflake
-
 import           Data.Aeson
 import           Data.Text.Lazy                ( Text )
 import           Data.Word
-
 import           GHC.Generics
-
 import           TextShow
 import qualified TextShow.Generic              as TSG
 
 fuseTup2 :: Monad f => (f a, f b) -> f (a, b)
 fuseTup2 (a, b) = do
-  a' <- a
-  b' <- b
+  !a' <- a
+  !b' <- b
   pure (a', b')
 
 data Attachment = Attachment
   { id         :: Snowflake Attachment
-  , filename   :: Text
+  , filename   :: !Text
   , size       :: Word64
-  , url        :: Text
-  , proxyUrl   :: Text
-  , dimensions :: Maybe (Word64, Word64)
+  , url        :: !Text
+  , proxyUrl   :: !Text
+  , dimensions :: !(Maybe (Word64, Word64))
   }
   deriving ( Eq, Show, Generic )
   deriving ( TextShow ) via TSG.FromGeneric Attachment
