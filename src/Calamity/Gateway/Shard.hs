@@ -15,7 +15,6 @@ import Calamity.Internal.Utils
 import Calamity.Metrics.Eff
 import Calamity.Types.LogEff
 import Calamity.Types.Token
-
 import Control.Concurrent
 import Control.Concurrent.Async
 import qualified Control.Concurrent.Chan.Unagi as UC
@@ -26,17 +25,18 @@ import qualified Control.Exception.Safe as Ex
 import Control.Lens
 import Control.Monad
 import Control.Monad.State.Lazy
-
 import qualified Data.Aeson as A
+import qualified Data.ByteString.Lazy as LBS
+import Data.Default.Class (def)
 import Data.Functor
 import Data.IORef
 import Data.Maybe
 import qualified Data.Text.Lazy as L
-
 import DiPolysemy hiding (debug, error, info)
-
 import Fmt
-
+import qualified Network.Connection as NC
+import qualified Network.TLS as NT
+import qualified Network.TLS.Extra as NT
 import Network.WebSockets (
   Connection,
   ConnectionException (..),
@@ -44,24 +44,17 @@ import Network.WebSockets (
   sendCloseCode,
   sendTextData,
  )
-
+import qualified Network.WebSockets as NW
+import qualified Network.WebSockets.Stream as NW
 import Polysemy (Sem)
 import qualified Polysemy as P
 import qualified Polysemy.Async as P
 import qualified Polysemy.AtomicState as P
 import qualified Polysemy.Error as P
 import qualified Polysemy.Resource as P
-
-import Prelude hiding (error)
-
-import qualified Data.ByteString.Lazy as LBS
-import Data.Default.Class (def)
-import qualified Network.Connection as NC
-import qualified Network.TLS as NT
-import qualified Network.TLS.Extra as NT
-import qualified Network.WebSockets as NW
-import qualified Network.WebSockets.Stream as NW
 import qualified System.X509 as X509
+import TextShow (showtl)
+import Prelude hiding (error)
 
 runWebsocket ::
   P.Members '[P.Final IO, P.Embed IO] r =>
@@ -171,8 +164,8 @@ shardLoop = do
   handleWSException :: SomeException -> IO (Either (ControlMessage, Maybe L.Text) a)
   handleWSException e = pure $ case fromException e of
     Just (CloseRequest code _)
-      | code `elem` [1000, 4004, 4010, 4011] ->
-        Left (ShutDownShard, Nothing)
+      | code `elem` [4004, 4010, 4011, 4012, 4013, 4014] ->
+        Left (ShutDownShard, Just . showtl $ code)
     e -> Left (RestartShard, Just . L.pack . show $ e)
 
   discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
