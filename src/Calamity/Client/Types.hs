@@ -25,6 +25,7 @@ import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Channel.UpdatedMessage
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
+import           Calamity.Types.Model.Voice
 import           Calamity.Types.Token
 import           Calamity.Types.UnixTimestamp
 import           Calamity.Types.Snowflake
@@ -152,6 +153,8 @@ data EventType
   -- ^ Fired when all reactions are removed from a message.
   | TypingStartEvt
   | UserUpdateEvt
+  | VoiceStateUpdateEvt
+  -- ^ Sent when someone joins/leaves/moves voice channels
   | forall s a. CustomEvt s a
   -- ^ A custom event, @s@ is the name and @a@ is the data sent to the handler
 
@@ -206,6 +209,7 @@ type family EHType (d :: EventType) where
   EHType 'RawMessageReactionRemoveAllEvt = Snowflake Message
   EHType 'TypingStartEvt              = (Channel, Snowflake User, UnixTimestamp)
   EHType 'UserUpdateEvt               = (User, User)
+  EHType 'VoiceStateUpdateEvt         = (Maybe VoiceState, VoiceState)
   EHType ('CustomEvt s a)             = a
 
 type StoredEHType t = EHType t -> IO ()

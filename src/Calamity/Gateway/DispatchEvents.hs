@@ -14,6 +14,7 @@ import           Calamity.Types.Model.Guild.Role
 import           Calamity.Types.Model.Guild.UnavailableGuild
 import           Calamity.Types.Model.Presence.Presence
 import           Calamity.Types.Model.User
+import           Calamity.Types.Model.Voice
 import           Calamity.Types.Snowflake
 import           Calamity.Types.UnixTimestamp
 
@@ -69,7 +70,7 @@ data DispatchData
   | PresenceUpdate !PresenceUpdateData
   | TypingStart !TypingStartData
   | UserUpdate !User
-  | VoiceStateUpdate !VoiceStateUpdateData
+  | VoiceStateUpdate !VoiceState
   | VoiceServerUpdate !VoiceServerUpdateData
   | WebhooksUpdate !WebhooksUpdateData
   deriving ( Show, Generic, CtorName )
@@ -219,10 +220,6 @@ data TypingStartData = TypingStartData
   }
   deriving ( Show, Generic )
   deriving FromJSON via CalamityJSON TypingStartData
-
-newtype VoiceStateUpdateData = VoiceStateUpdateData Value
-  deriving newtype ( Show, Generic )
-  deriving newtype ( ToJSON, FromJSON )
 
 newtype VoiceServerUpdateData = VoiceServerUpdateData Value
   deriving newtype ( Show, Generic )
