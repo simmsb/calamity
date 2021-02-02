@@ -31,6 +31,7 @@ import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.Presence     ( Presence(..) )
 import           Calamity.Types.Model.User
+import qualified Calamity.Types.Model.Voice as V
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
 import           Calamity.Types.LogEff
@@ -604,6 +605,11 @@ handleEvent' eh evt@(UserUpdate _) = do
   Just newUser <- getBotUser
   pure $ map ($ (oldUser, newUser)) (getEventHandlers @'UserUpdateEvt eh)
 
+handleEvent' eh evt@(VoiceStateUpdate newVoiceState@V.VoiceState{guildID=Just guildID}) = do
+  oldVoiceState <- join . fmap (find ((==V.sessionID newVoiceState) . V.sessionID) . voiceStates) <$> getGuild guildID
+  updateCache evt
+  pure $ map ($ (oldVoiceState, newVoiceState)) (getEventHandlers @'VoiceStateUpdateEvt eh)
+
 handleEvent' _ e = fail $ "Unhandled event: " <> show e
 
 updateCache :: P.Members '[CacheEff, P.Fail] r => DispatchData -> P.Sem r ()
@@ -712,6 +718,14 @@ updateCache (WebhooksUpdate _) = pure ()
 updateCache (InviteCreate _) = pure ()
 updateCache (InviteDelete _) = pure ()
 
--- we don't handle voice state currently
-updateCache (VoiceStateUpdate _) = pure ()
+updateCache (VoiceStateUpdate voiceState@V.VoiceState{guildID=Just guildID}) =
+  updateGuild guildID (#voiceStates %~ updateVoiceStates)
+  where
+    updateVoiceStates [] = [voiceState]
+    updateVoiceStates (x:xs)
+        | V.sessionID x == V.sessionID voiceState = voiceState : xs
+        | otherwise = x : updateVoiceStates xs
+
+  -- we don't handle voice server update and direct voice connections currently
+updateCache (VoiceStateUpdate V.VoiceState{guildID=Nothing}) = pure ()
 updateCache (VoiceServerUpdate _) = pure ()
