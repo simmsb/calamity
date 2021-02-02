@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.1.24.2
+
++ Add event handlers for voice state update events: `'VoiceStateUpdateEvt`
++ Apply some fixes for a few memory leaks
+
 ## 0.1.24.1
 
 + Fix some memory leaks
