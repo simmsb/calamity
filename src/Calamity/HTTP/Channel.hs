@@ -1,14 +1,19 @@
 -- | Channel endpoints
 module Calamity.HTTP.Channel (
-  ChannelRequest (..),
-  CreateMessageOptions (..),
-  ChannelUpdate (..),
-  AllowedMentionType (..),
-  AllowedMentions (..),
-  ChannelMessagesQuery (..),
-  GetReactionsOptions (..),
-  CreateChannelInviteOptions (..),
-  GroupDMAddRecipientOptions (..),
+    ChannelRequest (..),
+    CreateMessageOptions (..),
+    EditMessageData (..),
+    editMessageContent,
+    editMessageEmbed,
+    editMessageFlags,
+    editMessageAllowedMentions,
+    ChannelUpdate (..),
+    AllowedMentionType (..),
+    AllowedMentions (..),
+    ChannelMessagesQuery (..),
+    GetReactionsOptions (..),
+    CreateChannelInviteOptions (..),
+    GroupDMAddRecipientOptions (..),
 ) where
 
 import Calamity.HTTP.Internal.Request
@@ -23,12 +28,14 @@ import Data.Aeson
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
 import Data.Generics.Product.Subtype (upcast)
+import qualified Data.HashMap.Strict as H
 import Data.Text (Text)
 import qualified Data.Text as S
+import Data.Word
 import GHC.Generics
+import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
-import Network.HTTP.Client.MultipartFormData
 import TextShow
 
 data CreateMessageOptions = CreateMessageOptions
@@ -75,6 +82,31 @@ data CreateMessageJson = CreateMessageJson
   }
   deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON CreateMessageJson
+
+-- | Parameters to the Edit Message endpoint.
+--
+-- Use the provided methods (@editMessageX@) to create a value with the
+-- field set, use the Semigroup instance to union the values.
+--
+-- ==== Examples
+--
+-- >>> encode $ editMessageContent (Just "test") <> editMessageFlags Nothing
+-- "{\"nick\":\"test\",\"deaf\":null}"
+newtype EditMessageData = EditMessageData Object
+    deriving (Show, Generic)
+    deriving newtype (ToJSON, Semigroup, Monoid)
+
+editMessageContent :: Maybe Text -> EditMessageData
+editMessageContent v = EditMessageData $ H.fromList [("content", toJSON v)]
+
+editMessageEmbed :: Maybe Embed -> EditMessageData
+editMessageEmbed v = EditMessageData $ H.fromList [("embed", toJSON v)]
+
+editMessageFlags :: Maybe Word64 -> EditMessageData
+editMessageFlags v = EditMessageData $ H.fromList [("flags", toJSON v)]
+
+editMessageAllowedMentions :: Maybe AllowedMentions -> EditMessageData
+editMessageAllowedMentions v = EditMessageData $ H.fromList [("allowed_mentions", toJSON v)]
 
 data ChannelUpdate = ChannelUpdate
   { name :: Maybe Text
@@ -132,7 +164,7 @@ data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions
 data ChannelRequest a where
   CreateMessage :: (HasID Channel c) => c -> CreateMessageOptions -> ChannelRequest Message
   GetMessage :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest Message
-  EditMessage :: (HasID Channel c, HasID Message m) => c -> m -> Maybe Text -> Maybe Embed -> ChannelRequest Message
+  EditMessage :: (HasID Channel c, HasID Message m) => c -> m -> EditMessageData -> ChannelRequest Message
   DeleteMessage :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
   BulkDeleteMessages :: (HasID Channel c, HasID Message m) => c -> [m] -> ChannelRequest ()
   GetChannel :: (HasID Channel c) => c -> ChannelRequest Channel
@@ -203,7 +235,7 @@ instance Request (ChannelRequest a) where
     baseRoute cid // S "messages" // ID @Message // S "reactions"
       & giveID mid
       & buildRoute
-  route (EditMessage (getID -> cid) (getID @Message -> mid) _ _) =
+  route (EditMessage (getID -> cid) (getID @Message -> mid) _) =
     baseRoute cid // S "messages" // ID @Message
       & giveID mid
       & buildRoute
@@ -284,7 +316,7 @@ instance Request (ChannelRequest a) where
           <> "limit" =:? (showt <$> limit)
       )
   action (DeleteAllReactions _ _) = deleteWith
-  action (EditMessage _ _ content embed) = patchWith' (ReqBodyJson $ object ["content" .= content, "embed" .= embed])
+  action (EditMessage _ _ o) = patchWith' (ReqBodyJson o)
   action (DeleteMessage _ _) = deleteWith
   action (BulkDeleteMessages _ (map (getID @Message) -> ids)) = postWith' (ReqBodyJson $ object ["messages" .= ids])
   action (GetChannelInvites _) = getWith

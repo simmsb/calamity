@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.25.0
+
++ Changed how `ModifyGuildMemberData`, and `ModifyGuildRoleData` are implemented
+  to allow for the parameters to be optional and nullable.
++ Changed `EditMessage` to use `EditMessageData` instead of `Maybe Text -> Maybe
+  Embed`, allowing for the parameters to be optional and nullable.
+
 ## 0.1.24.2
 
 + Add event handlers for voice state update events: `'VoiceStateUpdateEvt`
@@ -76,15 +83,15 @@
 * Add raw message events: `RawMessageUpdateEvt`, `RawMessageDeleteEvt`,
   `RawMessageDeleteBulkEvt`, `RawMessageReactionAddEvt`,
   `RawMessageReactionRemoveEvt`, `RawMessageReactionRemoveAllEvt`.
-  
+
 * Fixed bulk message deletes firing a message delete per deleted message,
   instead of a bulk message delete event (I'm not sure how I did that).
-  
+
 * Add `animated` field to `Partial Emoji`s.
 
 * Make show instances for `Partial Emoji` and `RawEmoji` show to their discord
   representation.
-  
+
 ## 0.1.17.2
 
 *2020-07-04*

@@ -58,7 +58,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 --
 -- @
 -- 'hide' '$' do
---   'command' \@'[] "test" \ctx -> 'pure' ()
+--   'command' \@'[] "test" \\ctx -> 'pure' ()
 -- @
 --
 -- In the above block, any command declared inside 'hide' will have it's
@@ -78,7 +78,7 @@ import Data.List.NonEmpty (NonEmpty(..))
 -- 'Calamity.Client.runBotIO' ('Calamity.BotToken' token)
 --   $ 'Calamity.Commands.Utils.addCommands' $ do
 --     'Calamity.Commands.Help.helpCommand'
---     'Calamity.Commands.Dsl.command' \@'[] "test" \ctx ->
+--     'Calamity.Commands.Dsl.command' \@'[] "test" \\ctx ->
 --       'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' \@'L.Text' ctx "hi"
 -- @
 --
