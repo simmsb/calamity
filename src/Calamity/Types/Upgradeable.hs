@@ -87,6 +87,32 @@ instance Upgradeable GuildChannel (Snowflake GuildChannel) where
         insertChannel c
         maybeToAlt (c ^? _Ctor @"GuildChannel'")
 
+instance Upgradeable VoiceChannel (Snowflake VoiceChannel) where
+    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
+            Just (GuildChannel' (GuildVoiceChannel vc)) -> Just vc
+            _ -> Nothing
+
+instance Upgradeable DMChannel (Snowflake DMChannel) where
+    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
+            Just (DMChannel' dc) -> Just dc
+            _ -> Nothing
+
+instance Upgradeable GroupChannel (Snowflake GroupChannel) where
+    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
+            Just (GroupChannel' gc) -> Just gc
+            _ -> Nothing
+
+instance Upgradeable TextChannel (Snowflake TextChannel) where
+    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
+            Just (GuildChannel' (GuildTextChannel tc)) -> Just tc
+            _ -> Nothing
+
+instance Upgradeable Category (Snowflake Category) where
+    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
+            Just (GuildChannel' (GuildCategory c)) -> Just c
+            _ -> Nothing
+
+
 instance Upgradeable Emoji (Snowflake Guild, Snowflake Emoji) where
   upgrade (gid, eid) = P.runNonDetMaybe (getcache <|> gethttp)
     where
