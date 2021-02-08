@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.1.25.1
+
++ Add `Upgradeable` instances for `VoiceChannnel`, `DMChannel`_, `GroupChannel`, 
+  `TextChannel`, and `Category`.
+
 ## 0.1.25.0
 
 + Changed how `ModifyGuildMemberData`, and `ModifyGuildRoleData` are implemented
