@@ -368,6 +368,7 @@ handleEvent shardID data' = do
     Right actions -> for_ actions $ \action -> P.async $ do
       (time, _) <- timeA . catchAllLogging $ P.embed action
       void $ observeHistogram time eventHandleHisto
+    -- pattern match failures are usually stuff like events for uncached guilds, etc
     Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
 
 handleEvent' :: BotC r
