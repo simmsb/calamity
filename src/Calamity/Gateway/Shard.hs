@@ -57,7 +57,7 @@ import TextShow (showtl)
 import Prelude hiding (error)
 
 runWebsocket ::
-  P.Members '[P.Final IO, P.Embed IO] r =>
+  P.Members '[LogEff, P.Final IO, P.Embed IO] r =>
   L.Text ->
   L.Text ->
   (Connection -> P.Sem r a) ->
@@ -67,21 +67,26 @@ runWebsocket host path ma = do
 
   -- We have to do this all ourself I think?
   -- TODO: see if this isn't needed
+  let logExc e = debug $ "runWebsocket raised with " +|| e ||+ ""
+  logExc' <- bindSemToIO logExc
+  let handler e = do
+        void $ logExc' e
+        pure Nothing
 
-  ctx <- P.embed NC.initConnectionContext
-  certStore <- P.embed X509.getSystemCertificateStore
-  let clientParams =
-        (NT.defaultParamsClient (L.unpack host) "443")
-          { NT.clientSupported = def{NT.supportedCiphers = NT.ciphersuite_default}
-          , NT.clientShared =
-              def
-                { NT.sharedCAStore = certStore
-                }
-          }
-  let tlsSettings = NC.TLSSettings clientParams
-      connParams = NC.ConnectionParams (L.unpack host) 443 (Just tlsSettings) Nothing
+  P.embed . Ex.handleAny handler $ do
+    ctx <- NC.initConnectionContext
+    certStore <- X509.getSystemCertificateStore
+    let clientParams =
+          (NT.defaultParamsClient (L.unpack host) "443")
+            { NT.clientSupported = def{NT.supportedCiphers = NT.ciphersuite_default}
+            , NT.clientShared =
+                def
+                  { NT.sharedCAStore = certStore
+                  }
+            }
+    let tlsSettings = NC.TLSSettings clientParams
+        connParams = NC.ConnectionParams (L.unpack host) 443 (Just tlsSettings) Nothing
 
-  P.embed $
     Ex.bracket
       (NC.connectTo ctx connParams)
       NC.connectionClose
@@ -206,7 +211,7 @@ shardLoop = do
       -- we restart normally when we loop
 
       Nothing -> do
-        -- won't happen unless innerloop starts using a non-deterministic effect
+        -- won't happen unless innerloop starts using a non-deterministic effect or connecting to the ws dies
         info "Restarting shard (abnormal reasons?)"
         pure True
 
