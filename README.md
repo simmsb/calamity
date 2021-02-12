@@ -161,3 +161,20 @@ main = do
       react @('CustomEvt "my-event" (L.Text, Message)) $ \(s, m) ->
         void $ tellt m ("Somebody told me to tell you about: " <> s)
 ```
+
+## Disabling library logging
+
+The library logs on debug levels by default, if you wish to disable logging you
+can do something along the lines of:
+
+``` haskell
+Di.new $ \di ->
+-- ...
+  . runDiToIO di
+  -- disable logs emitted inside calamity
+  . DiPolysemy.local (Di.Core.filter (\_ _ _ -> False))
+  . runBotIO -- ...
+  -- re-enable logs emitted inside your bot's code
+  . DiPolysemy.local (const di)
+```
+
