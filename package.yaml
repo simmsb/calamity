@@ -1,8 +1,8 @@
 name:               calamity
 version:            0.1.25.1
-github:             "nitros12/calamity"
-homepage:           https://github.com/nitros12/calamity
-bug-reports:        https://github.com/nitros12/calamity/issues
+github:             "simmsb/calamity"
+homepage:           https://github.com/simmsb/calamity
+bug-reports:        https://github.com/simmsb/calamity/issues
 license:            MIT
 license-file:       LICENSE
 author:             "Ben Simms"
@@ -23,7 +23,7 @@ synopsis:           "A library for writing discord bots in haskell"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
-description:        Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
+description:        Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 
 dependencies:
 - base >= 4.12 && < 5

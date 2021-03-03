@@ -9,10 +9,10 @@ cabal-version: 1.18
 name:           calamity
 version:        0.1.25.1
 synopsis:       A library for writing discord bots in haskell
-description:    Please see the README on GitHub at <https://github.com/nitros12/calamity#readme>
+description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 category:       Network, Web
-homepage:       https://github.com/nitros12/calamity
-bug-reports:    https://github.com/nitros12/calamity/issues
+homepage:       https://github.com/simmsb/calamity
+bug-reports:    https://github.com/simmsb/calamity/issues
 author:         Ben Simms
 maintainer:     ben@bensimms.moe
 copyright:      2020 Ben Simms
@@ -29,7 +29,7 @@ extra-doc-files:
 
 source-repository head
   type: git
-  location: https://github.com/nitros12/calamity
+  location: https://github.com/simmsb/calamity
 
 library
   exposed-modules:

@@ -2,8 +2,8 @@
 
 <p align="center">
   <a href="https://hackage.haskell.org/package/calamity"><img src="https://img.shields.io/hackage/v/calamity" alt="Hackage"></a>
-  <a href="https://gitlab.com/nitros12/calamity/pipelines"><img src="https://img.shields.io/gitlab/pipeline/nitros12/calamity" alt="Gitlab pipeline status"></a>
-  <a href="https://github.com/nitros12/calamity/blob/master/LICENSE"><img src="https://img.shields.io/github/license/nitros12/calamity" alt="License"></a>
+  <a href="https://gitlab.com/simmsb/calamity/pipelines"><img src="https://img.shields.io/gitlab/pipeline/simmsb/calamity" alt="Gitlab pipeline status"></a>
+  <a href="https://github.com/simmsb/calamity/blob/master/LICENSE"><img src="https://img.shields.io/github/license/simmsb/calamity" alt="License"></a>
   <a href="https://hackage.haskell.org/package/calamity"><img src="https://img.shields.io/hackage-deps/v/calamity" alt="Hackage-Deps"></a>
   <a href="https://discord.gg/NGCThCY"><img src="https://discord.com/api/guilds/754446998077178088/widget.png?style=shield" alt="Discord Invite"></a>
 </p>
@@ -12,6 +12,10 @@ Calamity is a Haskell library for writing discord bots, it uses
 [Polysemy](https://hackage.haskell.org/package/polysemy) as the core library for
 handling effects, allowing you to pick and choose how to handle certain features
 of the library.
+
+If you're looking for something with a less complicated interface, you might
+want to take a look at
+[discord-haskell](https://github.com/aquarial/discord-haskell).
 
 The current customisable effects are:
 
@@ -22,7 +26,7 @@ The current customisable effects are:
   useful things, by default these are not used (and cost nothing), but could be
   combined with [Prometheus](https://hackage.haskell.org/package/prometheus). An
   example of using prometheus as the metrics handler can be found
-  [here](https://github.com/nitros12/calamity-example).
+  [here](https://github.com/simmsb/calamity-example).
 
 * Logging: The [di-polysemy](https://hackage.haskell.org/package/di-polysemy)
   library is used to allow the logging effect to be customized, or disabled.
@@ -34,8 +38,8 @@ You can find documentation on hackage at: https://hackage.haskell.org/package/ca
 # Examples
 
 Some example projects can be found at:
-<!-- - [nitros12/calamity-example](https://github.com/nitros12/calamity-example): An extended example of the snippet below, shows use of metrics. -->
-- [nitros12/calamity-bot](https://github.com/nitros12/calamity-bot): Uses a database, showing modularisation of groups/commands.
+<!-- - [simmsb/calamity-example](https://github.com/simmsb/calamity-example): An extended example of the snippet below, shows use of metrics. -->
+- [simmsb/calamity-bot](https://github.com/simmsb/calamity-bot): Uses a database, showing modularisation of groups/commands.
 
 ``` haskell
 {-# LANGUAGE DataKinds #-}

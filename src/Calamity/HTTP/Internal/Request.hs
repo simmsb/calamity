@@ -101,7 +101,7 @@ reqConfig =
 
 defaultRequestOptions :: Option 'Https
 defaultRequestOptions =
-  header "User-Agent" "Calamity (https://github.com/nitros12/calamity)"
+  header "User-Agent" "Calamity (https://github.com/simmsb/calamity)"
     <> header "X-RateLimit-Precision" "millisecond"
 
 requestOptions :: Token -> Option 'Https

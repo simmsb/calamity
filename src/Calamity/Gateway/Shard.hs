@@ -244,8 +244,8 @@ shardLoop = do
                 { token = shard ^. #token
                 , properties =
                     IdentifyProps
-                      { browser = "Calamity: https://github.com/nitros12/calamity"
-                      , device = "Calamity: https://github.com/nitros12/calamity"
+                      { browser = "Calamity: https://github.com/simmsb/calamity"
+                      , device = "Calamity: https://github.com/simmsb/calamity"
                       }
                 , compress = False
                 , largeThreshold = 250
