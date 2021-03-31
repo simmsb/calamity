@@ -33,7 +33,10 @@ hackage:
       sdist
     - stack
       --stack-root ${STACK_ROOT}
-      upload .
+      upload calamity
+    - stack
+      --stack-root ${STACK_ROOT}
+      upload calamity-commands
   only:
     - tags
 
@@ -43,12 +46,20 @@ docs:
   script:
     - cabal new-update
     - cabal new-haddock
-      --haddock-for-hackage
+      --haddock-for-hackage calamity
     - cabal upload
       -d
       -u "${HACKAGE_USERNAME}"
       -p "${HACKAGE_PASSWORD}"
-      "dist-newstyle/$(cabal info . | head -n 1 | grep -oP "(?<=\\* )\S+")-docs.tar.gz"
+      "dist-newstyle/$(cabal info calamity/ | head -n 1 | grep -oP "(?<=\\* )\S+")-docs.tar.gz"
+      --publish
+    - cabal new-haddock
+      --haddock-for-hackage calamity-commands
+    - cabal upload
+      -d
+      -u "${HACKAGE_USERNAME}"
+      -p "${HACKAGE_PASSWORD}"
+      "dist-newstyle/$(cabal info calamity-commands/ | head -n 1 | grep -oP "(?<=\\* )\S+")-docs.tar.gz"
       --publish
   only:
     - tags

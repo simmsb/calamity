@@ -1,5 +1,5 @@
-name:               calamity
-version:            0.1.25.1
+name:               calamity-commands
+version:            0.1.0.0
 github:             "simmsb/calamity"
 homepage:           https://github.com/simmsb/calamity
 bug-reports:        https://github.com/simmsb/calamity/issues
@@ -8,18 +8,17 @@ license-file:       LICENSE
 author:             "Ben Simms"
 maintainer:         "ben@bensimms.moe"
 copyright:          2020 Ben Simms
-category:           Network, Web
-tested-with:        GHC == 8.8.3
+category:           Utils
+tested-with:        GHC == 8.10.4
 
 extra-source-files:
   - README.md
   - ChangeLog.md
-  - cabal.project
 
 extra-doc-files:
   - README.md
 
-synopsis:           "A library for writing discord bots in haskell"
+synopsis:           "A library for declaring, parsing, and invoking text-input based commands"
 # To avoid duplicated efforts in documentation and dealing with the
 # complications of embedding Haddock markup inside cabal files, it is
 # common to point users to the README.md file.
@@ -27,68 +26,14 @@ description:        Please see the README on GitHub at <https://github.com/simms
 
 dependencies:
 - base >= 4.12 && < 5
-- websockets >= 0.12 && < 0.13
-- connection >= 0.2.6 && < 0.4
-- x509-system >= 1.6.6 && < 1.7
-- tls >= 1.4 && < 2
-- req >= 3.1 && < 3.9
-- http-client >= 0.5 && < 0.8
 - lens >= 4.18 && < 5
-- stm >= 2.5 && < 3
-- http-types >= 0.12 && < 0.13
-- aeson >= 1.4 && < 2
-- lens-aeson >= 1.1 && < 2
-- typerep-map >= 0.3 && < 0.4
 - generic-lens >= 2.0 && < 3
 - text >= 1.2 && < 2
-- exceptions >= 0.10 && < 0.11
-- fmt >= 0.6 && < 0.7
-- stm-containers >= 1.1 && < 2
-- stm-chans >= 3.0 && < 4
-- concurrent-extra >= 0.7 && < 0.8
-- focus >= 1.0 && < 2
-- data-default-class >= 0.1 && < 0.2
-- hashable >= 1.2 && < 2
-- time >= 1.8 && < 1.12
-- containers >= 0.6 && < 0.7
 - unordered-containers >= 0.2 && < 0.3
-- http-date >= 0.0.8 && < 0.1
-- bytestring >= 0.10 && < 0.12
-- async >= 2.2 && < 3
-- scientific >= 0.3 && < 0.4
-- deque >= 0.4 && < 0.5
-- vector >= 0.12 && < 0.13
-- reflection >= 2.1 && < 3
 - polysemy >= 1.3 && < 2
-- polysemy-plugin >= 0.2 && < 0.3
-- di-polysemy >= 0.2 && < 0.3
-- df1 >= 0.3 && < 0.5
-- di-core >= 1.0.4 && < 1.1
-- deepseq >= 1.4.4.0 && < 2
+- polysemy-plugin >= 0.2 && < 0.4
 - text-show >= 3.8 && < 4
-- mtl >= 2.2 && < 3
-- safe-exceptions >= 0.1 && < 2
-- unagi-chan >= 0.4 && < 0.5
 - megaparsec >= 8 && < 10
-- data-flags >= 0.0.3 && < 0.1
-- colour >= 2.3.5 && < 2.4
-- mime-types >= 0.1 && < 0.2
-- unboxing-vector >= 0.2 && < 0.3
-
-# executables:
-#   test-calamity-exe:
-#     main: Main.hs
-#     source-dirs: app
-#     ghc-options:
-#       - -fplugin=Polysemy.Plugin
-#       - -funbox-strict-fields
-#       - -flate-specialise
-#       - -threaded
-#       - -rtsopts
-#       - -with-rtsopts=-T
-#       - -O2
-#     dependencies:
-#       - calamity
 
 library:
   ghc-options:
@@ -96,7 +41,7 @@ library:
     - -funbox-strict-fields
     - -Wall
     - -fno-warn-name-shadowing
-  source-dirs: src
+  source-dirs: .
 
 default-extensions:
   - StrictData

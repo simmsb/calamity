@@ -9,12 +9,11 @@ author:             "Ben Simms"
 maintainer:         "ben@bensimms.moe"
 copyright:          2020 Ben Simms
 category:           Network, Web
-tested-with:        GHC == 8.8.3
+tested-with:        GHC == 8.10.4
 
 extra-source-files:
   - README.md
   - ChangeLog.md
-  - cabal.project
 
 extra-doc-files:
   - README.md
@@ -27,11 +26,12 @@ description:        Please see the README on GitHub at <https://github.com/simms
 
 dependencies:
 - base >= 4.12 && < 5
+- calamity-commands >= 0.1 && < 0.2
 - websockets >= 0.12 && < 0.13
 - connection >= 0.2.6 && < 0.4
 - x509-system >= 1.6.6 && < 1.7
 - tls >= 1.4 && < 2
-- req >= 3.1 && < 3.9
+- req >= 3.1 && < 3.10
 - http-client >= 0.5 && < 0.8
 - lens >= 4.18 && < 5
 - stm >= 2.5 && < 3
@@ -60,7 +60,7 @@ dependencies:
 - vector >= 0.12 && < 0.13
 - reflection >= 2.1 && < 3
 - polysemy >= 1.3 && < 2
-- polysemy-plugin >= 0.2 && < 0.3
+- polysemy-plugin >= 0.2 && < 0.4
 - di-polysemy >= 0.2 && < 0.3
 - df1 >= 0.3 && < 0.5
 - di-core >= 1.0.4 && < 1.1
@@ -96,7 +96,7 @@ library:
     - -funbox-strict-fields
     - -Wall
     - -fno-warn-name-shadowing
-  source-dirs: src
+  source-dirs: .
 
 default-extensions:
   - StrictData

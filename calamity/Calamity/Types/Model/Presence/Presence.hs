@@ -11,8 +11,6 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Control.DeepSeq (NFData)
 import Data.Aeson
-import qualified Data.Override as O
-import Data.Override.Aeson ()
 import Data.Text.Lazy (Text)
 import GHC.Generics
 import TextShow
@@ -27,10 +25,6 @@ data Presence = Presence
   }
   deriving (Eq, Show, Generic, NFData)
   deriving (TextShow) via TSG.FromGeneric Presence
-  deriving
-    (ToJSON)
-    via CalamityJSON
-          (O.Override Presence '["user" `O.As` Partial User])
   deriving
     (FromJSON)
     via WithSpecialCases

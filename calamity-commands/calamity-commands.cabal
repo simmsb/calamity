@@ -1,0 +1,68 @@
+cabal-version: 1.18
+
+-- This file has been generated from package.yaml by hpack version 0.33.0.
+--
+-- see: https://github.com/sol/hpack
+--
+-- hash: b48980f203dd33dee1ccd3179f7b322756712c67a8734329a20a52230a7ec005
+
+name:           calamity-commands
+version:        0.1.0.0
+synopsis:       A library for declaring, parsing, and invoking text-input based commands
+description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
+category:       Network, Web
+homepage:       https://github.com/simmsb/calamity
+bug-reports:    https://github.com/simmsb/calamity/issues
+author:         Ben Simms
+maintainer:     ben@bensimms.moe
+copyright:      2020 Ben Simms
+license:        MIT
+license-file:   LICENSE
+tested-with:    GHC == 8.10.4
+build-type:     Simple
+extra-source-files:
+    README.md
+    ChangeLog.md
+extra-doc-files:
+    README.md
+
+source-repository head
+  type: git
+  location: https://github.com/simmsb/calamity
+
+library
+  exposed-modules:
+      CalamityCommands
+      CalamityCommands.AliasType
+      CalamityCommands.Check
+      CalamityCommands.Command
+      CalamityCommands.CommandUtils
+      CalamityCommands.Context
+      CalamityCommands.Dsl
+      CalamityCommands.Error
+      CalamityCommands.Group
+      CalamityCommands.Handler
+      CalamityCommands.Help
+      CalamityCommands.Internal.LocalWriter
+      CalamityCommands.Internal.RunIntoM
+      CalamityCommands.Internal.Utils
+      CalamityCommands.ParsePrefix
+      CalamityCommands.Parser
+      CalamityCommands.Utils
+  other-modules:
+      Paths_calamity_commands
+  hs-source-dirs:
+      ./.
+  default-extensions: StrictData AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
+  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
+  build-depends:
+      base >=4.12 && <5
+    , generic-lens >=2.0 && <3
+    , lens >=4.18 && <5
+    , megaparsec >=8 && <10
+    , polysemy >=1.3 && <2
+    , polysemy-plugin >=0.2 && <0.4
+    , text >=1.2 && <2
+    , text-show >=3.8 && <4
+    , unordered-containers >=0.2 && <0.3
+  default-language: Haskell2010
