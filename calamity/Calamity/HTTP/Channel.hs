@@ -10,7 +10,8 @@ module Calamity.HTTP.Channel (
     ChannelUpdate (..),
     AllowedMentionType (..),
     AllowedMentions (..),
-    ChannelMessagesQuery (..),
+    ChannelMessagesFilter (..),
+    ChannelMessagesLimit (..),
     GetReactionsOptions (..),
     CreateChannelInviteOptions (..),
     GroupDMAddRecipientOptions (..),
@@ -122,7 +123,7 @@ data ChannelUpdate = ChannelUpdate
   deriving (Generic, Show, Default)
   deriving (ToJSON) via CalamityJSON ChannelUpdate
 
-data ChannelMessagesQuery
+data ChannelMessagesFilter
   = ChannelMessagesAround
       { around :: Snowflake Message
       }
@@ -132,11 +133,13 @@ data ChannelMessagesQuery
   | ChannelMessagesAfter
       { after :: Snowflake Message
       }
-  | ChannelMessagesLimit
-      { limit :: Int
-      }
   deriving (Generic, Show)
-  deriving (ToJSON) via CalamityJSON ChannelMessagesQuery
+  deriving (ToJSON) via CalamityJSON ChannelMessagesFilter
+
+newtype ChannelMessagesLimit = ChannelMessagesLimit
+  { limit :: Integer
+  }
+  deriving (Generic, Show)
 
 data GetReactionsOptions = GetReactionsOptions
   { before :: Maybe (Snowflake User)
@@ -170,7 +173,7 @@ data ChannelRequest a where
   GetChannel :: (HasID Channel c) => c -> ChannelRequest Channel
   ModifyChannel :: (HasID Channel c) => c -> ChannelUpdate -> ChannelRequest Channel
   DeleteChannel :: (HasID Channel c) => c -> ChannelRequest ()
-  GetChannelMessages :: (HasID Channel c) => c -> Maybe ChannelMessagesQuery -> ChannelRequest [Message]
+  GetChannelMessages :: (HasID Channel c) => c -> Maybe ChannelMessagesFilter -> Maybe ChannelMessagesLimit -> ChannelRequest [Message]
   CreateReaction :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> ChannelRequest ()
   DeleteOwnReaction :: (HasID Channel c, HasID Message m) => c -> m -> RawEmoji -> ChannelRequest ()
   DeleteUserReaction :: (HasID Channel c, HasID Message m, HasID User u) => c -> m -> RawEmoji -> u -> ChannelRequest ()
@@ -207,7 +210,7 @@ instance Request (ChannelRequest a) where
   route (DeleteChannel (getID -> id)) =
     baseRoute id
       & buildRoute
-  route (GetChannelMessages (getID -> id) _) =
+  route (GetChannelMessages (getID -> id) _ _) =
     baseRoute id // S "messages"
       & buildRoute
   route (GetMessage (getID -> cid) (getID @Message -> mid)) =
@@ -297,14 +300,13 @@ instance Request (ChannelRequest a) where
   action (GetChannel _) = getWith
   action (ModifyChannel _ p) = putWith' (ReqBodyJson p)
   action (DeleteChannel _) = deleteWith
-  action (GetChannelMessages _ (Just (ChannelMessagesAround (showt . fromSnowflake -> a)))) =
-    getWithP ("around" =: a)
-  action (GetChannelMessages _ (Just (ChannelMessagesBefore (showt . fromSnowflake -> a)))) =
-    getWithP ("before" =: a)
-  action (GetChannelMessages _ (Just (ChannelMessagesAfter (showt . fromSnowflake -> a)))) =
-    getWithP ("after" =: a)
-  action (GetChannelMessages _ (Just (ChannelMessagesLimit (showt -> a)))) = getWithP ("around" =: a)
-  action (GetChannelMessages _ Nothing) = getWith
+  action (GetChannelMessages _ (Just (ChannelMessagesAround (showt . fromSnowflake -> a))) l) =
+    getWithP ("around" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
+  action (GetChannelMessages _ (Just (ChannelMessagesBefore (showt . fromSnowflake -> a))) l) =
+    getWithP ("before" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
+  action (GetChannelMessages _ (Just (ChannelMessagesAfter (showt . fromSnowflake -> a))) l) =
+    getWithP ("after" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
+  action (GetChannelMessages _ Nothing _) = getWith
   action (GetMessage _ _) = getWith
   action CreateReaction{} = putEmpty
   action DeleteOwnReaction{} = deleteWith

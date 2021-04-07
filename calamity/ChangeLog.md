@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.1.26.0
+
++ `GetChannelMessages` now has an extra parameter to allow the `limit` option to
+  be applied at the same time as the other filters.
++ `ChannelMessagesQuery` has been renamed to `ChannelMessagesFilter`.
++ The `ChannelMessagesLimit` type has been introduced.
+
 ## 0.1.25.1
 
 + Add `Upgradeable` instances for `VoiceChannnel`, `DMChannel`_, `GroupChannel`, 
