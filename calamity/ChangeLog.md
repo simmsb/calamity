@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.26.1
+
++ Quick fix of GetChannelMessages
+
 ## 0.1.26.0
 
 + `GetChannelMessages` now has an extra parameter to allow the `limit` option to

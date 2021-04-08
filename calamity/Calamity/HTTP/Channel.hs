@@ -1,20 +1,20 @@
 -- | Channel endpoints
 module Calamity.HTTP.Channel (
-    ChannelRequest (..),
-    CreateMessageOptions (..),
-    EditMessageData (..),
-    editMessageContent,
-    editMessageEmbed,
-    editMessageFlags,
-    editMessageAllowedMentions,
-    ChannelUpdate (..),
-    AllowedMentionType (..),
-    AllowedMentions (..),
-    ChannelMessagesFilter (..),
-    ChannelMessagesLimit (..),
-    GetReactionsOptions (..),
-    CreateChannelInviteOptions (..),
-    GroupDMAddRecipientOptions (..),
+  ChannelRequest (..),
+  CreateMessageOptions (..),
+  EditMessageData (..),
+  editMessageContent,
+  editMessageEmbed,
+  editMessageFlags,
+  editMessageAllowedMentions,
+  ChannelUpdate (..),
+  AllowedMentionType (..),
+  AllowedMentions (..),
+  ChannelMessagesFilter (..),
+  ChannelMessagesLimit (..),
+  GetReactionsOptions (..),
+  CreateChannelInviteOptions (..),
+  GroupDMAddRecipientOptions (..),
 ) where
 
 import Calamity.HTTP.Internal.Request
@@ -84,18 +84,19 @@ data CreateMessageJson = CreateMessageJson
   deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON CreateMessageJson
 
--- | Parameters to the Edit Message endpoint.
---
--- Use the provided methods (@editMessageX@) to create a value with the
--- field set, use the Semigroup instance to union the values.
---
--- ==== Examples
---
--- >>> encode $ editMessageContent (Just "test") <> editMessageFlags Nothing
--- "{\"nick\":\"test\",\"deaf\":null}"
+{- | Parameters to the Edit Message endpoint.
+
+ Use the provided methods (@editMessageX@) to create a value with the
+ field set, use the Semigroup instance to union the values.
+
+ ==== Examples
+
+ >>> encode $ editMessageContent (Just "test") <> editMessageFlags Nothing
+ "{\"nick\":\"test\",\"deaf\":null}"
+-}
 newtype EditMessageData = EditMessageData Object
-    deriving (Show, Generic)
-    deriving newtype (ToJSON, Semigroup, Monoid)
+  deriving (Show, Generic)
+  deriving newtype (ToJSON, Semigroup, Monoid)
 
 editMessageContent :: Maybe Text -> EditMessageData
 editMessageContent v = EditMessageData $ H.fromList [("content", toJSON v)]
@@ -306,7 +307,7 @@ instance Request (ChannelRequest a) where
     getWithP ("before" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
   action (GetChannelMessages _ (Just (ChannelMessagesAfter (showt . fromSnowflake -> a))) l) =
     getWithP ("after" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
-  action (GetChannelMessages _ Nothing _) = getWith
+  action (GetChannelMessages _ Nothing l) = getWithP ("limit" =:? (showt . (^. #limit) <$> l))
   action (GetMessage _ _) = getWith
   action CreateReaction{} = putEmpty
   action DeleteOwnReaction{} = deleteWith
