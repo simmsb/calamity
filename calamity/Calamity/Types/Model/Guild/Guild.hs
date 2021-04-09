@@ -20,6 +20,8 @@ import Calamity.Types.Snowflake
 import Control.DeepSeq
 import Control.Lens ((^.))
 import Data.Aeson
+import Data.Aeson.Types
+import Data.Maybe
 import Data.Generics.Product.Fields
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as LH
@@ -72,23 +74,22 @@ instance FromJSON Guild where
   parseJSON = withObject "Guild" $ \v -> do
     id <- v .: "id"
 
+    -- sadly we have now way of logging members/channels/presences' that failed to parser here
     members' <- do
       members' <- v .: "members"
-      SM.fromList <$> traverse (\m -> parseJSON $ Object (m <> "guild_id" .= id)) members'
+      pure . SM.fromList . mapMaybe (parseMaybe @Object @Member (\m -> parseJSON $ Object (m <> "guild_id" .= id))) $ members'
 
     channels' <- do
       channels' <- v .: "channels"
-      SM.fromList <$> traverse (\m -> parseJSON $ Object (m <> "guild_id" .= id)) channels'
+      pure . SM.fromList . mapMaybe (parseMaybe @Object @GuildChannel (\m -> parseJSON $ Object (m <> "guild_id" .= id))) $ channels'
 
     presences' <- do
       presences' <- v .: "presences"
-      LH.fromList
-        <$> traverse
+      pure . LH.fromList . mapMaybe (parseMaybe @Object @(Snowflake User, Presence)
           ( \m -> do
               p <- parseJSON $ Object (m <> "guild_id" .= id)
               pure (getID $ p ^. field @"user", p)
-          )
-          presences'
+          )) $ presences'
 
     Guild id
       <$> v .: "name"

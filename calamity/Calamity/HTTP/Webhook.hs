@@ -26,7 +26,6 @@ import GHC.Generics
 import Network.HTTP.Req
 
 import Network.HTTP.Client.MultipartFormData
-import TextShow
 
 data CreateWebhookData = CreateWebhookData
   { username :: Maybe Text
