@@ -49,6 +49,7 @@ extra-deps:
   - polysemy-plugin-0.3.0.0@sha256:22e7553d0fddb48d9484ba1c71d2ed825213fcb214866d9b502ee02bfb960cb4,3121
   - di-df1-1.2.1@sha256:6be994f4d6acc4e9b498af00367d09e71fe6da42c6c2eb947ab49e19a6ba6e15,999
   - di-handle-1.0.1@sha256:642ce26cc3b166e14782fb3d3acc4a15533e1021bcd6712704531f71c9483d24,720
+  - http-api-data-0.4.3@sha256:31005a0514d795d38574239910fcc94810f16b2254a0d9ded7cc08bb8e211fc6,3812
 #  - git: https://github.com/polysemy-research/polysemy
 #    commit: 478c86e080f38334f7ea5b0259f900916db58c33 
 #    subdirs:

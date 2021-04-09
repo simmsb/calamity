@@ -1,32 +1,21 @@
 -- | Message reactions
-module Calamity.Types.Model.Channel.Reaction
-    ( Reaction(..) ) where
+module Calamity.Types.Model.Channel.Reaction (Reaction (..)) where
 
-import           Calamity.Internal.AesonThings
-import {-# SOURCE #-} Calamity.Types.Model.Channel
-import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
-import           Calamity.Types.Model.Guild.Emoji
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
-import           Calamity.Types.Model.User
-import           Calamity.Types.Snowflake
+import Calamity.Internal.AesonThings
+import Calamity.Types.Model.Guild.Emoji
 
-import           Data.Aeson
+import Data.Aeson
 
-import           GHC.Generics
+import GHC.Generics
 
-import           TextShow
-import qualified TextShow.Generic                     as TSG
+import TextShow
+import qualified TextShow.Generic as TSG
 
 data Reaction = Reaction
-  { userID    :: Snowflake User
-  , channelID :: Snowflake Channel
-  , messageID :: Snowflake Message
-  , guildID   :: Maybe (Snowflake Guild)
-  , emoji     :: RawEmoji
+  { count :: Integer
+  , me :: Bool
+  , emoji :: RawEmoji
   }
-  deriving ( Eq, Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric Reaction
-  deriving ( ToJSON, FromJSON ) via CalamityJSON Reaction
-  deriving ( HasID User ) via HasIDField "userID" Reaction
-  deriving ( HasID Channel ) via HasIDField "channelID" Reaction
-  deriving ( HasID Message ) via HasIDField "messageID" Reaction
+  deriving (Eq, Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric Reaction
+  deriving (ToJSON, FromJSON) via CalamityJSON Reaction

@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.26.1
+version:            0.1.27.0
 github:             "simmsb/calamity"
 homepage:           https://github.com/simmsb/calamity
 bug-reports:        https://github.com/simmsb/calamity/issues
@@ -74,6 +74,7 @@ dependencies:
 - colour >= 2.3.5 && < 2.4
 - mime-types >= 0.1 && < 0.2
 - unboxing-vector >= 0.2 && < 0.3
+- http-api-data >= 0.4.3 && < 0.5
 
 # executables:
 #   test-calamity-exe:

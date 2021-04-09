@@ -17,8 +17,6 @@ import Data.Default.Class
 
 import GHC.Generics
 
-import TextShow (showt)
-
 data GetAuditLogOptions = GetAuditLogOptions
   { userID :: Maybe (Snowflake User)
   , actionType :: Maybe AuditLogAction
@@ -40,8 +38,8 @@ instance Request (AuditLogRequest a) where
 
   action (GetAuditLog _ GetAuditLogOptions{userID, actionType, before, limit}) =
     getWithP
-      ( "user_id" =:? (showt <$> userID)
-          <> "action_type" =:? (showt . fromEnum <$> actionType)
-          <> "before" =:? (showt <$> before)
-          <> "limit" =:? (showt <$> limit)
+      ( "user_id" =:? (fromSnowflake <$> userID)
+          <> "action_type" =:? (fromEnum <$> actionType)
+          <> "before" =:? (fromSnowflake <$> before)
+          <> "limit" =:? limit
       )

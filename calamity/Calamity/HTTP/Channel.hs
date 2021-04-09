@@ -301,22 +301,22 @@ instance Request (ChannelRequest a) where
   action (GetChannel _) = getWith
   action (ModifyChannel _ p) = putWith' (ReqBodyJson p)
   action (DeleteChannel _) = deleteWith
-  action (GetChannelMessages _ (Just (ChannelMessagesAround (showt . fromSnowflake -> a))) l) =
-    getWithP ("around" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
-  action (GetChannelMessages _ (Just (ChannelMessagesBefore (showt . fromSnowflake -> a))) l) =
-    getWithP ("before" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
-  action (GetChannelMessages _ (Just (ChannelMessagesAfter (showt . fromSnowflake -> a))) l) =
-    getWithP ("after" =: a <> "limit" =:? (showt . (^. #limit) <$> l))
-  action (GetChannelMessages _ Nothing l) = getWithP ("limit" =:? (showt . (^. #limit) <$> l))
+  action (GetChannelMessages _ (Just (ChannelMessagesAround (fromSnowflake -> a))) l) =
+    getWithP ("around" =: a <> "limit" =:? (l ^? _Just . #limit))
+  action (GetChannelMessages _ (Just (ChannelMessagesBefore (fromSnowflake -> a))) l) =
+    getWithP ("before" =: a <> "limit" =:? (l ^? _Just . #limit))
+  action (GetChannelMessages _ (Just (ChannelMessagesAfter (fromSnowflake -> a))) l) =
+    getWithP ("after" =: a <> "limit" =:? (l ^? _Just . #limit))
+  action (GetChannelMessages _ Nothing l) = getWithP ("limit" =:? (l ^? _Just . #limit))
   action (GetMessage _ _) = getWith
   action CreateReaction{} = putEmpty
   action DeleteOwnReaction{} = deleteWith
   action DeleteUserReaction{} = deleteWith
   action (GetReactions _ _ _ GetReactionsOptions{before, after, limit}) =
     getWithP
-      ( "before" =:? (showt <$> before)
-          <> "after" =:? (showt <$> after)
-          <> "limit" =:? (showt <$> limit)
+      ( "before" =:? (fromSnowflake <$> before)
+          <> "after" =:? (fromSnowflake <$> after)
+          <> "limit" =:? limit
       )
   action (DeleteAllReactions _ _) = deleteWith
   action (EditMessage _ _ o) = patchWith' (ReqBodyJson o)

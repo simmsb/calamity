@@ -1,5 +1,16 @@
 # Changelog for Calamity
 
+## 0.1.27.0
+
++ Change the structure of `Reaction` to be `(count, me, emoji)`
++ The previous structure of `Reaction` is now known as `ReactionEvtData`
++ The type of `MessageReactionAddEvt` and `MessageReactionRemoveEvt` events has
+  been changed from `(Message, Reaction)` to `(Message, User, Channel,
+  RawEmoji)`
++ The type of `RawMessageReactionAddEvt` and `RawMessageReactionRemoveEvt`
+  events has been changed from `Reaction` to `ReactionEvtData`
++ More fixes to HTTP
+
 ## 0.1.26.1
 
 + Quick fix of GetChannelMessages

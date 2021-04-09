@@ -1,41 +1,45 @@
 -- | module containing all dispatch events
 module Calamity.Gateway.DispatchEvents where
 
-import           Calamity.Internal.AesonThings
-import           Calamity.Internal.ConstructorName
-import           Calamity.Internal.Utils                     ()
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Channel.UpdatedMessage
-import           Calamity.Types.Model.Guild.Ban
-import           Calamity.Types.Model.Guild.Emoji
-import           Calamity.Types.Model.Guild.Guild
-import           Calamity.Types.Model.Guild.Member
-import           Calamity.Types.Model.Guild.Role
-import           Calamity.Types.Model.Guild.UnavailableGuild
-import           Calamity.Types.Model.Presence.Presence
-import           Calamity.Types.Model.User
-import           Calamity.Types.Model.Voice
-import           Calamity.Types.Snowflake
-import           Calamity.Types.UnixTimestamp
+import Calamity.Internal.AesonThings
+import Calamity.Internal.ConstructorName
+import Calamity.Internal.Utils ()
+import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Channel.UpdatedMessage
+import Calamity.Types.Model.Guild.Ban
+import Calamity.Types.Model.Guild.Emoji
+import Calamity.Types.Model.Guild.Guild
+import Calamity.Types.Model.Guild.Member
+import Calamity.Types.Model.Guild.Role
+import Calamity.Types.Model.Guild.UnavailableGuild
+import Calamity.Types.Model.Presence.Presence
+import Calamity.Types.Model.User
+import Calamity.Types.Model.Voice
+import Calamity.Types.Snowflake
+import Calamity.Types.UnixTimestamp
 
-import           Data.Aeson
-import           Data.Dynamic
-import           Data.Text.Lazy                              ( Text )
-import           Data.Time
-import           Data.Typeable
-import           Data.Vector.Unboxing                        ( Vector )
+import Data.Aeson
+import Data.Dynamic
+import Data.Text.Lazy (Text)
+import Data.Time
+import Data.Typeable
+import Data.Vector.Unboxing (Vector)
 
-import           GHC.Generics
+import GHC.Generics
 
 data CalamityEvent
   = Dispatch
-    Int -- ^ The shard that pushed this event
-    DispatchData -- ^ The attached data
+      Int
+      -- ^ The shard that pushed this event
+      DispatchData
+      -- ^ The attached data
   | Custom
-    TypeRep -- ^ The name of the custom event
-    Dynamic -- ^ The data sent to the custom event
+      TypeRep
+      -- ^ The name of the custom event
+      Dynamic
+      -- ^ The data sent to the custom event
   | ShutDown
-  deriving ( Show, Generic )
+  deriving (Show, Generic)
 
 data DispatchData
   = Ready !ReadyData
@@ -64,8 +68,8 @@ data DispatchData
   | MessageUpdate !UpdatedMessage
   | MessageDelete !MessageDeleteData
   | MessageDeleteBulk !MessageDeleteBulkData
-  | MessageReactionAdd !Reaction
-  | MessageReactionRemove !Reaction
+  | MessageReactionAdd !ReactionEvtData
+  | MessageReactionRemove !ReactionEvtData
   | MessageReactionRemoveAll !MessageReactionRemoveAllData
   | PresenceUpdate !PresenceUpdateData
   | TypingStart !TypingStartData
@@ -73,58 +77,58 @@ data DispatchData
   | VoiceStateUpdate !VoiceState
   | VoiceServerUpdate !VoiceServerUpdateData
   | WebhooksUpdate !WebhooksUpdateData
-  deriving ( Show, Generic, CtorName )
+  deriving (Show, Generic, CtorName)
 
 data ReadyData = ReadyData
-  { v         :: Integer
-  , user      :: User
-  , guilds    :: [UnavailableGuild]
+  { v :: Integer
+  , user :: User
+  , guilds :: [UnavailableGuild]
   , sessionID :: Text
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON ReadyData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON ReadyData
 
 data ChannelPinsUpdateData = ChannelPinsUpdateData
-  { channelID        :: Snowflake Channel
+  { channelID :: Snowflake Channel
   , lastPinTimestamp :: Maybe UTCTime
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON ChannelPinsUpdateData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON ChannelPinsUpdateData
 
 data GuildEmojisUpdateData = GuildEmojisUpdateData
   { guildID :: Snowflake Guild
-  , emojis  :: [Emoji]
+  , emojis :: [Emoji]
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON GuildEmojisUpdateData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON GuildEmojisUpdateData
 
 newtype GuildIntegrationsUpdateData = GuildIntegrationsUpdateData
   { guildID :: Snowflake Guild
   }
-  deriving newtype ( Show, Generic )
-  deriving FromJSON via CalamityJSON GuildIntegrationsUpdateData
+  deriving newtype (Show, Generic)
+  deriving (FromJSON) via CalamityJSON GuildIntegrationsUpdateData
 
 data GuildMemberRemoveData = GuildMemberRemoveData
   { guildID :: Snowflake Guild
-  , user    :: User
+  , user :: User
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON GuildMemberRemoveData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON GuildMemberRemoveData
 
 data GuildMemberUpdateData = GuildMemberUpdateData
-  { guildID  :: Snowflake Guild
-  , roles    :: Vector (Snowflake Role)
-  , user     :: User
-  , nick     :: Maybe Text
+  { guildID :: Snowflake Guild
+  , roles :: Vector (Snowflake Role)
+  , user :: User
+  , nick :: Maybe Text
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON GuildMemberUpdateData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON GuildMemberUpdateData
 
 data GuildMembersChunkData = GuildMembersChunkData
   { guildID :: Snowflake Guild
   , members :: [Member]
   }
-  deriving ( Show, Generic )
+  deriving (Show, Generic)
 
 instance FromJSON GuildMembersChunkData where
   parseJSON = withObject "GuildMembersChunkData" $ \v -> do
@@ -138,73 +142,75 @@ instance FromJSON GuildMembersChunkData where
 
 data GuildRoleData = GuildRoleData
   { guildID :: Snowflake Guild
-  , role    :: Role
+  , role :: Role
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON GuildRoleData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON GuildRoleData
 
 data GuildRoleDeleteData = GuildRoleDeleteData
   { guildID :: Snowflake Guild
-  , roleID  :: Snowflake Role
+  , roleID :: Snowflake Role
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON GuildRoleDeleteData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON GuildRoleDeleteData
 
 data InviteCreateData = InviteCreateData
-  { channelID      :: Snowflake Channel
-  , code           :: Text
-  , createdAt      :: UTCTime
-  , guildID        :: Maybe (Snowflake Guild)
-  , inviter        :: Maybe (Snowflake User)
-  , maxAge         :: Int
-  , maxUses        :: Int
-  , targetUser     :: Maybe (Snowflake User)
+  { channelID :: Snowflake Channel
+  , code :: Text
+  , createdAt :: UTCTime
+  , guildID :: Maybe (Snowflake Guild)
+  , inviter :: Maybe (Snowflake User)
+  , maxAge :: Int
+  , maxUses :: Int
+  , targetUser :: Maybe (Snowflake User)
   , targetUserType :: Maybe Integer
-  , temporary      :: Bool
-  , uses           :: Integer
+  , temporary :: Bool
+  , uses :: Integer
   }
-  deriving ( Show, Generic )
-  deriving ( FromJSON ) via WithSpecialCases
-      '["inviter" `ExtractFieldFrom` "id", "targetUser" `ExtractFieldFrom` "id"]
-      InviteCreateData
+  deriving (Show, Generic)
+  deriving
+    (FromJSON)
+    via WithSpecialCases
+          '["inviter" `ExtractFieldFrom` "id", "targetUser" `ExtractFieldFrom` "id"]
+          InviteCreateData
 
 data InviteDeleteData = InviteDeleteData
   { channelID :: Snowflake Channel
-  , guildID   :: Maybe (Snowflake Guild)
-  , code      :: Text
+  , guildID :: Maybe (Snowflake Guild)
+  , code :: Text
   }
-  deriving ( Show, Generic )
-  deriving ( FromJSON ) via CalamityJSON InviteDeleteData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON InviteDeleteData
 
 data MessageDeleteData = MessageDeleteData
-  { id        :: Snowflake Message
+  { id :: Snowflake Message
   , channelID :: Snowflake Channel
-  , guildID   :: Snowflake Guild
+  , guildID :: Snowflake Guild
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON MessageDeleteData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON MessageDeleteData
 
 data MessageDeleteBulkData = MessageDeleteBulkData
-  { guildID   :: Snowflake Guild
+  { guildID :: Snowflake Guild
   , channelID :: Snowflake Channel
-  , ids       :: [Snowflake Message]
+  , ids :: [Snowflake Message]
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON MessageDeleteBulkData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON MessageDeleteBulkData
 
 data MessageReactionRemoveAllData = MessageReactionRemoveAllData
   { channelID :: Snowflake Channel
   , messageID :: Snowflake Message
-  , guildID   :: Maybe (Snowflake Guild)
+  , guildID :: Maybe (Snowflake Guild)
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON MessageReactionRemoveAllData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON MessageReactionRemoveAllData
 
 data PresenceUpdateData = PresenceUpdateData
-  { userID   :: Snowflake User
+  { userID :: Snowflake User
   , presence :: Presence
   }
-  deriving ( Show, Generic )
+  deriving (Show, Generic)
 
 instance FromJSON PresenceUpdateData where
   parseJSON = withObject "PresenceUpdate" $ \v -> do
@@ -214,17 +220,30 @@ instance FromJSON PresenceUpdateData where
 
 data TypingStartData = TypingStartData
   { channelID :: Snowflake Channel
-  , guildID   :: Maybe (Snowflake Guild)
-  , userID    :: Snowflake User
+  , guildID :: Maybe (Snowflake Guild)
+  , userID :: Snowflake User
   , timestamp :: UnixTimestamp
   }
-  deriving ( Show, Generic )
-  deriving FromJSON via CalamityJSON TypingStartData
+  deriving (Show, Generic)
+  deriving (FromJSON) via CalamityJSON TypingStartData
 
 newtype VoiceServerUpdateData = VoiceServerUpdateData Value
-  deriving newtype ( Show, Generic )
-  deriving newtype ( ToJSON, FromJSON )
+  deriving newtype (Show, Generic)
+  deriving newtype (ToJSON, FromJSON)
 
 newtype WebhooksUpdateData = WebhooksUpdateData Value
-  deriving newtype ( Show, Generic )
-  deriving newtype ( ToJSON, FromJSON )
+  deriving newtype (Show, Generic)
+  deriving newtype (ToJSON, FromJSON)
+
+data ReactionEvtData = ReactionEvtData
+  { userID :: Snowflake User
+  , channelID :: Snowflake Channel
+  , messageID :: Snowflake Message
+  , guildID :: Maybe (Snowflake Guild)
+  , emoji :: RawEmoji
+  }
+  deriving (Eq, Show, Generic)
+  deriving (ToJSON, FromJSON) via CalamityJSON ReactionEvtData
+  deriving (HasID User) via HasIDField "userID" ReactionEvtData
+  deriving (HasID Channel) via HasIDField "channelID" ReactionEvtData
+  deriving (HasID Message) via HasIDField "messageID" ReactionEvtData

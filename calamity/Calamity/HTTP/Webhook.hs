@@ -130,7 +130,7 @@ instance Request (WebhookRequest a) where
   action (ExecuteWebhook _ _ o@ExecuteWebhookOptions{file = Nothing}) =
     postWithP'
       (ReqBodyJson . upcast @ExecuteWebhookJson $ o)
-      ("wait" =:? (showt <$> o ^. #wait))
+      ("wait" =:? (o ^. #wait))
   action (ExecuteWebhook _ _ wh@ExecuteWebhookOptions{file = Just f}) = \u o -> do
     body <- reqBodyMultipart [partLBS @IO "file" f, partLBS "payload_json" (encode . upcast @ExecuteWebhookJson $ wh)]
-    postWithP' body ("wait" =:? (showt <$> wh ^. #wait)) u o
+    postWithP' body ("wait" =:? (wh ^. #wait)) u o

@@ -35,6 +35,7 @@ import qualified Data.Text.Lazy as TL
 import DiPolysemy hiding (debug, error, info)
 
 import Network.HTTP.Req
+import Web.HttpApiData
 
 import Polysemy (Sem)
 import qualified Polysemy as P
@@ -140,6 +141,6 @@ getWithP o u o' = req GET u NoReqBody lbsResponse (o <> o')
 deleteWith :: Url 'Https -> Option 'Https -> Req LbsResponse
 deleteWith u = req DELETE u NoReqBody lbsResponse
 
-(=:?) :: T.Text -> Maybe T.Text -> Option 'Https
+(=:?) :: ToHttpApiData a => T.Text -> Maybe a -> Option 'Https
 n =:? (Just x) = n =: x
 n =:? Nothing = mempty

@@ -23,8 +23,6 @@ import GHC.Generics
 
 import Network.HTTP.Req
 
-import TextShow
-
 data ModifyUserData = ModifyUserData
   { username :: Maybe Text
   , -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
@@ -80,8 +78,8 @@ instance Request (UserRequest a) where
   action (ModifyCurrentUser o) = patchWith' $ ReqBodyJson o
   action (GetCurrentUserGuilds GetCurrentUserGuildsOptions{before, after, limit}) =
     getWithP
-      ( "before" =:? (showt <$> before) <> "after" =:? (showt <$> after)
-          <> "limit" =:? (showt <$> limit)
+      ( "before" =:? (fromSnowflake <$> before) <> "after" =:? (fromSnowflake <$> after)
+          <> "limit" =:? limit
       )
   action (LeaveGuild _) = deleteWith
   action (CreateDM (getID @User -> uid)) = postWith' $ ReqBodyJson (object ["recipient_id" .= uid])

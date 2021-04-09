@@ -328,7 +328,7 @@ instance Request (GuildRequest a) where
   action (GetGuildMember _ _) = getWith
   action (ListGuildMembers _ ListMembersOptions{limit, after}) =
     getWithP
-      ("limit" =:? (showt <$> limit) <> "after" =:? (showt <$> after))
+      ("limit" =:? limit <> "after" =:? (fromSnowflake <$> after))
   action (AddGuildMember _ _ o) = putWith' (ReqBodyJson o)
   action (ModifyGuildMember _ _ o) = patchWith' (ReqBodyJson o)
   action (ModifyCurrentUserNick _ nick) = patchWith' (ReqBodyJson $ object ["nick" .= nick])
@@ -339,7 +339,7 @@ instance Request (GuildRequest a) where
   action (GetGuildBan _ _) = getWith
   action (CreateGuildBan _ _ CreateGuildBanData{deleteMessageDays, reason}) =
     putEmptyP
-      ("delete-message-days" =:? (showt <$> deleteMessageDays) <> "reason" =:? (showt <$> reason))
+      ("delete-message-days" =:? deleteMessageDays <> "reason" =:? reason)
   action (RemoveGuildBan _ _) = deleteWith
   action (GetGuildRoles _) = getWith
   action (CreateGuildRole _ o) = postWith' (ReqBodyJson o)

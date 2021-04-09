@@ -550,20 +550,36 @@ handleEvent' eh evt@(MessageDeleteBulk MessageDeleteBulkData { ids }) = do
 handleEvent' eh evt@(MessageReactionAdd reaction) = do
   updateCache evt
   msg <- getMessage (getID reaction)
+  user <- getUser (getID reaction)
+  chan <- case reaction ^. #guildID of
+    Just _ -> do
+      chan <- getGuildChannel (coerceSnowflake $ getID @Channel reaction)
+      pure (GuildChannel' <$> chan)
+    Nothing -> do
+      chan <- getDM (coerceSnowflake $ getID @Channel reaction)
+      pure (DMChannel' <$> chan)
   let rawActions = map ($ reaction) (getEventHandlers @'RawMessageReactionAddEvt eh)
-  let actions = case msg of
-        Just msg' ->
-          map ($ (msg', reaction)) (getEventHandlers @'MessageReactionAddEvt eh)
+  let actions = case (msg, user, chan) of
+        (Just msg', Just user', Just chan') ->
+          map ($ (msg', user', chan', reaction ^. #emoji)) (getEventHandlers @'MessageReactionAddEvt eh)
         _ -> []
   pure $ rawActions <> actions
 
 handleEvent' eh evt@(MessageReactionRemove reaction) = do
   msg <- getMessage (getID reaction)
   updateCache evt
+  user <- getUser (getID reaction)
+  chan <- case reaction ^. #guildID of
+    Just _ -> do
+      chan <- getGuildChannel (coerceSnowflake $ getID @Channel reaction)
+      pure (GuildChannel' <$> chan)
+    Nothing -> do
+      chan <- getDM (coerceSnowflake $ getID @Channel reaction)
+      pure (DMChannel' <$> chan)
   let rawActions = map ($ reaction) (getEventHandlers @'RawMessageReactionRemoveEvt eh)
-  let actions = case msg of
-        Just msg' ->
-          map ($ (msg', reaction)) (getEventHandlers @'MessageReactionRemoveEvt eh)
+  let actions = case (msg, user, chan) of
+        (Just msg', Just user', Just chan') ->
+          map ($ (msg', user', chan', reaction ^. #emoji)) (getEventHandlers @'MessageReactionRemoveEvt eh)
         _ -> []
   pure $ rawActions <> actions
 
@@ -607,7 +623,7 @@ handleEvent' eh evt@(UserUpdate _) = do
   pure $ map ($ (oldUser, newUser)) (getEventHandlers @'UserUpdateEvt eh)
 
 handleEvent' eh evt@(VoiceStateUpdate newVoiceState@V.VoiceState{guildID=Just guildID}) = do
-  oldVoiceState <- join . fmap (find ((==V.sessionID newVoiceState) . V.sessionID) . voiceStates) <$> getGuild guildID
+  oldVoiceState <- ((find ((== V.sessionID newVoiceState) . V.sessionID) . voiceStates) =<<) <$> getGuild guildID
   updateCache evt
   pure $ map ($ (oldVoiceState, newVoiceState)) (getEventHandlers @'VoiceStateUpdateEvt eh)
 
@@ -690,11 +706,27 @@ updateCache (MessageDelete MessageDeleteData { id }) = delMessage id
 updateCache (MessageDeleteBulk MessageDeleteBulkData { ids }) =
   for_ ids delMessage
 
-updateCache (MessageReactionAdd reaction) =
-  updateMessage (getID reaction) (#reactions %~ cons reaction)
-
-updateCache (MessageReactionRemove reaction) =
-  updateMessage (getID reaction) (#reactions %~ filter (\r -> r ^. #emoji /= reaction ^. #emoji))
+updateCache (MessageReactionAdd reaction) = do
+  isMe <- (\u -> Just (getID @User reaction) == (getID @User <$> u)) <$> getBotUser
+  updateMessage
+    (getID reaction)
+    ( \m ->
+        case m ^. #reactions & filter ((== (reaction ^. #emoji)) . (^. #emoji)) of
+          [] -> m & #reactions <>~ [Reaction 1 isMe (reaction ^. #emoji)]
+          _ ->
+            m & #reactions . traverse . filtered ((== (reaction ^. #emoji)) . (^. #emoji))
+              %~ (#count +~ 1) . (#me ||~ isMe)
+    )
+updateCache (MessageReactionRemove reaction) = do
+  isMe <- (\u -> Just (getID @User reaction) == (getID @User <$> u)) <$> getBotUser
+  updateMessage
+    (getID reaction)
+    ( \m ->
+        m
+          & #reactions . traverse . filtered ((== (reaction ^. #emoji)) . (^. #emoji))
+            %~ (#count -~ 1) . (#me &&~ not isMe)
+          & #reactions %~ filter (\r -> r ^. #count /= 0)
+    )
 
 updateCache (MessageReactionRemoveAll MessageReactionRemoveAllData { messageID }) =
   updateMessage messageID (#reactions .~ mempty)
