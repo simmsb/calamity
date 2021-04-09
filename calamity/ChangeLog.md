@@ -10,6 +10,8 @@
 + The type of `RawMessageReactionAddEvt` and `RawMessageReactionRemoveEvt`
   events has been changed from `Reaction` to `ReactionEvtData`
 + More fixes to HTTP
++ When parsing guilds, channels/members/ and presences that cannot be parsed are
+  (silently) ignored instead of causing parsing of the guild to fail.
 
 ## 0.1.26.1
 
