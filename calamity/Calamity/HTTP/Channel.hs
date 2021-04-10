@@ -46,6 +46,7 @@ data CreateMessageOptions = CreateMessageOptions
   , file :: Maybe (Text, ByteString)
   , embed :: Maybe Embed
   , allowedMentions :: Maybe AllowedMentions
+  , messageReference :: Maybe MessageReference
   }
   deriving (Show, Generic, Default)
 
@@ -64,13 +65,17 @@ data AllowedMentions = AllowedMentions
   { parse :: [AllowedMentionType]
   , roles :: [Snowflake Role]
   , users :: [Snowflake User]
+  , repliedUser :: Bool
   }
-  deriving (Show, Generic, Default)
+  deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON AllowedMentions
 
+instance Default AllowedMentions where
+  def = AllowedMentions def def def False
+
 instance Semigroup AllowedMentions where
-  AllowedMentions p0 r0 u0 <> AllowedMentions p1 r1 u1 =
-    AllowedMentions (p0 <> p1) (r0 <> r1) (u0 <> u1)
+  AllowedMentions p0 r0 u0 ru0 <> AllowedMentions p1 r1 u1 ru1 =
+    AllowedMentions (p0 <> p1) (r0 <> r1) (u0 <> u1) (ru0 || ru1)
 
 instance Monoid AllowedMentions where
   mempty = def
@@ -80,6 +85,8 @@ data CreateMessageJson = CreateMessageJson
   , nonce :: Maybe Text
   , tts :: Maybe Bool
   , embed :: Maybe Embed
+  , allowedMentions :: Maybe AllowedMentions
+  , messageReference :: Maybe MessageReference
   }
   deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON CreateMessageJson
@@ -167,6 +174,7 @@ data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions
 
 data ChannelRequest a where
   CreateMessage :: (HasID Channel c) => c -> CreateMessageOptions -> ChannelRequest Message
+  CrosspostMessage :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest Message
   GetMessage :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest Message
   EditMessage :: (HasID Channel c, HasID Message m) => c -> m -> EditMessageData -> ChannelRequest Message
   DeleteMessage :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest ()
@@ -201,6 +209,10 @@ instance Request (ChannelRequest a) where
 
   route (CreateMessage (getID -> id) _) =
     baseRoute id // S "messages"
+      & buildRoute
+  route (CrosspostMessage (getID -> id) (getID @Message -> mid)) =
+    baseRoute id // S "messages" // ID @Message
+      & giveID mid
       & buildRoute
   route (GetChannel (getID -> id)) =
     baseRoute id
@@ -298,6 +310,7 @@ instance Request (ChannelRequest a) where
             }
     body <- reqBodyMultipart [filePart, partLBS "payload_json" (encode . upcast @CreateMessageJson $ cm)]
     postWith' body u o
+  action (CrosspostMessage _ _) = postEmpty
   action (GetChannel _) = getWith
   action (ModifyChannel _ p) = putWith' (ReqBodyJson p)
   action (DeleteChannel _) = deleteWith

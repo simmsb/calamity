@@ -1,48 +1,54 @@
 -- | Things that are messageable
-module Calamity.Types.Tellable
-    ( ToMessage(..)
-    , Tellable(..)
-    , TFile(..)
-    , TMention(..)
-    , tell ) where
+module Calamity.Types.Tellable (
+  ToMessage (..),
+  Tellable (..),
+  TFile (..),
+  TMention (..),
+  tell,
+  reply,
+) where
 
-import           Calamity.Client.Types
-import           Calamity.HTTP
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild
-import           Calamity.Types.Model.User
-import           Calamity.Types.Snowflake
+import Calamity.Client.Types
+import Calamity.HTTP
+import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Guild
+import Calamity.Types.Model.User
+import Calamity.Types.Snowflake
 
-import           Control.Lens
+import Control.Lens
 
-import           Data.ByteString.Lazy         ( ByteString )
-import           Data.Default.Class
-import           Data.Monoid
-import qualified Data.Text                    as S
-import qualified Data.Text.Lazy               as L
+import Data.ByteString.Lazy (ByteString)
+import Data.Default.Class
+import Data.Monoid
+import qualified Data.Text as S
+import qualified Data.Text.Lazy as L
 
-import           GHC.Generics
+import GHC.Generics
 
-import qualified Polysemy                     as P
-import qualified Polysemy.Error               as P
+import qualified Polysemy as P
+import qualified Polysemy.Error as P
 
 -- | A wrapper type for sending files
-data TFile = TFile
-             S.Text -- ^ The filename
-             ByteString -- ^ The content
-  deriving ( Show, Generic )
+data TFile
+  = TFile
+      S.Text
+      -- ^ The filename
+      ByteString
+      -- ^ The content
+  deriving (Show, Generic)
 
 -- | A wrapper type for allowing mentions
 newtype TMention a = TMention (Snowflake a)
-  deriving ( Show, Generic )
+  deriving (Show, Generic)
 
--- | Things that can be used to send a message
---
--- Can be used to compose text, embeds, and files. /e.g./
---
--- @
--- 'intoMsg' @'L.Text' "A message" '<>' 'intoMsg' @'Embed' ('def' '&' #description '?~' "Embed description")
--- @
+{- | Things that can be used to send a message
+
+ Can be used to compose text, embeds, and files. /e.g./
+
+ @
+ 'intoMsg' @'L.Text' "A message" '<>' 'intoMsg' @'Embed' ('def' '&' #description '?~' "Embed description")
+ @
+-}
 class ToMessage a where
   -- | Turn @a@ into a 'CreateMessageOptions' builder
   intoMsg :: a -> Endo CreateMessageOptions
@@ -83,6 +89,10 @@ instance ToMessage (TMention Member) where
 instance ToMessage (TMention Role) where
   intoMsg (TMention s) = intoMsg (def @AllowedMentions & #roles <>~ [s])
 
+-- | Set a 'MessageReference' as the message to reply to
+instance ToMessage MessageReference where
+  intoMsg ref = Endo (#messageReference ?~ ref)
+
 instance ToMessage (Endo CreateMessageOptions) where
   intoMsg = Prelude.id
 
@@ -98,22 +108,42 @@ class Tellable a where
 runToMessage :: ToMessage a => a -> CreateMessageOptions
 runToMessage = flip appEndo def . intoMsg
 
--- | Send a message to something that is messageable
---
--- To send a string literal you'll probably want to use @TypeApplication@ to
--- specify the type of @msg@
---
--- ==== Examples
---
--- Sending a string:
---
--- @
--- 'void' $ 'tell' @'Text' m ("Somebody told me to tell you about: " '<>' s)
--- @
+{- | Send a message to something that is messageable
+
+ To send a string literal you'll probably want to use @TypeApplication@ to
+ specify the type of @msg@
+
+ ==== Examples
+
+ Sending a string:
+
+ @
+ 'void' $ 'tell' @'Text' m ("Somebody told me to tell you about: " '<>' s)
+ @
+-}
 tell :: forall msg r t. (BotC r, ToMessage msg, Tellable t) => t -> msg -> P.Sem r (Either RestError Message)
 tell target (runToMessage -> msg) = P.runError $ do
   cid <- getChannel target
   r <- invoke $ CreateMessage cid msg
+  P.fromEither r
+
+{- | Create a reply to an existing message in the same channel
+
+ To send a string literal you'll probably want to use @TypeApplication@ to
+ specify the type of @msg@
+
+ ==== Examples
+
+ Sending a string:
+
+ @
+ 'void' $ 'reply' @'Text' msgToReplyTo ("Somebody told me to tell you about: " '<>' s)
+ @
+-}
+reply :: forall msg r t. (BotC r, ToMessage msg, HasID Channel t, HasID Message t) => t -> msg -> P.Sem r (Either RestError Message)
+reply target msg = P.runError $ do
+  let msg' = runToMessage (intoMsg msg <> intoMsg (MessageReference (Just $ getID @Message target) (Just $ getID @Channel target) Nothing False))
+  r <- invoke $ CreateMessage (getID @Channel target) msg'
   P.fromEither r
 
 instance Tellable DMChannel where

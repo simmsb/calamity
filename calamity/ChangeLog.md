@@ -1,5 +1,21 @@
 # Changelog for Calamity
 
+## 0.1.28.0
+
++ Added support for message types 19 (reply) and 20 (application command)
++ Added the `MessageReference` type
++ Changed the type of `Message.webhookID` to `Snowflake Webhook`
++ Added the `activity`, `application`, `messageReference`, `flags`, `stickers`,
+  `referencedMessage`, and `interaction` fields to messages.
++ Added `messageReference` as a parameter of `CreateMessageOptions`
++ Added `repliedUser` as a parameter of `AllowedMentions`
++ Fixed `CreateMessage` not actually sending the `allowedMentions` key
++ Added the `CrosspostMessage` route
++ Added a `ToMessage` instance for `MessageReference`
++ Added a `reply` function to `Calamity.Types.Tellable` that replies to a given
+  message in the same channel as the message
++ Added an `asReference` function to `Calamity.Utils.Message`
+
 ## 0.1.27.0
 
 + Change the structure of `Reaction` to be `(count, me, emoji)`

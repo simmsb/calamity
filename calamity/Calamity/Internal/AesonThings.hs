@@ -8,6 +8,7 @@ module Calamity.Internal.AesonThings
     , DefaultToEmptyArray
     , DefaultToZero
     , DefaultToFalse
+    , DefaultToTrue
     , CalamityJSON(..)
     , CalamityJSONKeepNothing(..)
     , jsonOptions
@@ -106,6 +107,11 @@ data DefaultToFalse
 
 instance Reifies DefaultToFalse Value where
   reflect _ = Bool False
+
+data DefaultToTrue
+
+instance Reifies DefaultToTrue Value where
+  reflect _ = Bool True
 
 newtype CalamityJSON a = CalamityJSON
   { unCalamityJSON :: a

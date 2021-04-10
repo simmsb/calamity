@@ -1,39 +1,48 @@
 -- | Things for formatting things
-module Calamity.Utils.Message
-  ( codeblock,
-    codeblock',
-    codeline,
-    escapeCodeblocks,
-    escapeCodelines,
-    escapeBold,
-    escapeStrike,
-    escapeUnderline,
-    escapeSpoilers,
-    escapeFormatting,
-    bold,
-    strike,
-    underline,
-    quote,
-    quoteAll,
-    spoiler,
-    zws,
-    fmtEmoji,
-    displayUser,
-    Mentionable (..),
-  )
-where
+module Calamity.Utils.Message (
+  codeblock,
+  codeblock',
+  codeline,
+  escapeCodeblocks,
+  escapeCodelines,
+  escapeBold,
+  escapeStrike,
+  escapeUnderline,
+  escapeSpoilers,
+  escapeFormatting,
+  bold,
+  strike,
+  underline,
+  quote,
+  quoteAll,
+  spoiler,
+  zws,
+  fmtEmoji,
+  displayUser,
+  Mentionable (..),
+  asReference,
+) where
 
-import Calamity.Types.Model.Channel (Category, Channel, DMChannel, GuildChannel, TextChannel, VoiceChannel)
-import Calamity.Types.Model.Guild (Emoji(..), Member, Role)
+import Calamity.Types.Model.Channel (
+  Category,
+  Channel,
+  DMChannel,
+  GuildChannel,
+  Message,
+  MessageReference(MessageReference),
+  TextChannel,
+  VoiceChannel,
+ )
+import Calamity.Types.Model.Guild (Emoji (..), Member, Role)
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
 import Control.Lens
+import Data.Foldable (Foldable (foldl'))
 import Data.Generics.Product.Fields
 import Data.Maybe (fromMaybe)
 import Data.String (IsString, fromString)
 import qualified Data.Text.Lazy as L
 import TextShow (TextShow (showtl))
-import Data.Foldable (Foldable(foldl'))
 
 zws :: IsString s => s
 zws = fromString "\x200b"
@@ -66,50 +75,63 @@ escapeSpoilers = L.replace "||" (L.intercalate zws $ replicate 2 "|")
 escapeFormatting :: L.Text -> L.Text
 escapeFormatting = foldl' (.) Prelude.id [escapeCodelines, escapeCodeblocks, escapeBold, escapeStrike, escapeUnderline, escapeSpoilers, escapeFormatting]
 
--- | Formats a lang and content into a codeblock
---
--- >>> codeblock "hs" "x = y"
--- "```hs\nx = y\n```"
---
--- Any codeblocks in the @content@ are escaped
-codeblock :: L.Text -- ^ language
-          -> L.Text -- ^ content
-          -> L.Text
+{- | Formats a lang and content into a codeblock
+
+ >>> codeblock "hs" "x = y"
+ "```hs\nx = y\n```"
+
+ Any codeblocks in the @content@ are escaped
+-}
+codeblock ::
+  -- | language
+  L.Text ->
+  -- | content
+  L.Text ->
+  L.Text
 codeblock lang = codeblock' (Just lang)
 
--- | Formats an optional lang and content into a codeblock
---
--- Any codeblocks in the @content@ are escaped
-codeblock' :: Maybe L.Text -- ^ language
-          -> L.Text -- ^ content
-          -> L.Text
-codeblock' lang content = "```" <> fromMaybe "" lang <> "\n" <>
-                         escapeCodeblocks content <>
-                         "\n```"
+{- | Formats an optional lang and content into a codeblock
 
--- | Formats some content into a code line
---
--- This always uses @``@ code lines as they can be escaped
---
--- Any code lines in the content are escaped
+ Any codeblocks in the @content@ are escaped
+-}
+codeblock' ::
+  -- | language
+  Maybe L.Text ->
+  -- | content
+  L.Text ->
+  L.Text
+codeblock' lang content =
+  "```" <> fromMaybe "" lang <> "\n"
+    <> escapeCodeblocks content
+    <> "\n```"
+
+{- | Formats some content into a code line
+
+ This always uses @``@ code lines as they can be escaped
+
+ Any code lines in the content are escaped
+-}
 codeline :: L.Text -> L.Text
 codeline content = "``" <> escapeCodelines content <> "``"
 
--- | Formats some text into it's bolded form
---
--- Any existing bolded text is escaped
+{- | Formats some text into it's bolded form
+
+ Any existing bolded text is escaped
+-}
 bold :: L.Text -> L.Text
 bold content = "**" <> escapeBold content <> "**"
 
--- | Formats some text into it's striked form
---
--- Any existing striked text is escaped
+{- | Formats some text into it's striked form
+
+ Any existing striked text is escaped
+-}
 strike :: L.Text -> L.Text
 strike content = "~~" <> escapeStrike content <> "~~"
 
--- | Formats some text into it's underlined form
---
--- Any existing underlined text is escaped
+{- | Formats some text into it's underlined form
+
+ Any existing underlined text is escaped
+-}
 underline :: L.Text -> L.Text
 underline content = "__" <> escapeUnderline content <> "__"
 
@@ -121,15 +143,17 @@ quote = ("> " <>)
 quoteAll :: L.Text -> L.Text
 quoteAll = (">> " <>)
 
--- | Formats some text into it's spoilered form
---
--- Any existing spoilers are escaped
+{- | Formats some text into it's spoilered form
+
+ Any existing spoilers are escaped
+-}
 spoiler :: L.Text -> L.Text
 spoiler content = "||" <> escapeSpoilers content <> "||"
 
 fmtEmoji :: Emoji -> L.Text
-fmtEmoji Emoji { id, name, animated } = "<" <> ifanim <> ":" <> name <> ":" <> showtl id <> ">"
-  where ifanim = if animated then "a" else ""
+fmtEmoji Emoji{id, name, animated} = "<" <> ifanim <> ":" <> name <> ":" <> showtl id <> ">"
+ where
+  ifanim = if animated then "a" else ""
 
 -- | Format a 'User' or 'Member' into the format of @username#discriminator@
 displayUser :: (HasField' "username" a L.Text, HasField' "discriminator" a L.Text) => a -> L.Text
@@ -195,3 +219,16 @@ instance Mentionable DMChannel where
 
 instance Mentionable Role where
   mention = mentionSnowflake "@&" . getID @Role
+
+-- | Turn a regular 'Message' into a 'MessageReference'
+asReference :: Message
+  -- ^ The message to reply to
+  -> Bool
+  -- ^ If discord should error when replying to deleted messages
+  -> MessageReference
+asReference msg failIfNotExists =
+  MessageReference
+    (Just $ getID @Message msg)
+    (Just $ getID @Channel msg)
+    (msg ^. #guildID)
+    failIfNotExists

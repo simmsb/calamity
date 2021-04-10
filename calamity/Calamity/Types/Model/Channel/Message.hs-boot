@@ -1,7 +1,8 @@
 -- | A message from a channel
 module Calamity.Types.Model.Channel.Message
     ( Message
-    , MessageType ) where
+    , MessageType
+    , MessageReference ) where
 
 data Message
 
@@ -12,3 +13,8 @@ data MessageType
 
 instance Show MessageType
 instance Eq MessageType
+
+data MessageReference
+
+instance Show MessageReference
+instance Eq MessageReference

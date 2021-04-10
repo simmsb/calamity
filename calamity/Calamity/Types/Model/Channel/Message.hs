@@ -1,59 +1,92 @@
 -- | A message from a channel
-module Calamity.Types.Model.Channel.Message
-    ( Message(..)
-    , MessageType(..) ) where
+module Calamity.Types.Model.Channel.Message (
+  Message (..),
+  MessageType (..),
+  MessageReference (..),
+) where
 
-import           Calamity.Internal.AesonThings
-import           Calamity.Internal.Utils          ()
-import           Calamity.Types.Model.Channel
+import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils ()
+import {-# SOURCE #-} Calamity.Types.Model.Channel
+import Calamity.Types.Model.Channel.Attachment
+import Calamity.Types.Model.Channel.Embed
+import Calamity.Types.Model.Channel.Reaction
+import Calamity.Types.Model.Channel.Webhook
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
-import           Calamity.Types.Model.Guild.Role
-import           Calamity.Types.Model.User
-import           Calamity.Types.Snowflake
+import Calamity.Types.Model.Guild.Role
+import Calamity.Types.Model.User
+import Calamity.Types.Snowflake
 
-import           Data.Aeson
-import           Data.Scientific
-import           Data.Text.Lazy                   ( Text )
-import           Data.Time
-import qualified Data.Vector.Unboxing             as UV
+import Data.Aeson
+import Data.Scientific
+import Data.Text.Lazy (Text)
+import Data.Time
+import qualified Data.Vector.Unboxing as UV
 
-import           GHC.Generics
+import GHC.Generics
 
-import           TextShow
-import qualified TextShow.Generic                 as TSG
+import Data.Word (Word64)
+import TextShow
+import qualified TextShow.Generic as TSG
 
--- NOTE: make sure we fill in the guildID field when retrieving from REST
 data Message = Message
-  { id              :: Snowflake Message
-  , channelID       :: Snowflake Channel
-  , guildID         :: Maybe (Snowflake Guild)
-  , author          :: Snowflake User
-  , content         :: Text
-  , timestamp       :: UTCTime
+  { id :: Snowflake Message
+  , channelID :: Snowflake Channel
+  , guildID :: Maybe (Snowflake Guild)
+  , author :: Snowflake User
+  , content :: Text
+  , timestamp :: UTCTime
   , editedTimestamp :: Maybe UTCTime
-  , tts             :: Bool
+  , tts :: Bool
   , mentionEveryone :: Bool
-  , mentions        :: UV.Vector (Snowflake User)
-  , mentionRoles    :: UV.Vector (Snowflake Role)
+  , mentions :: UV.Vector (Snowflake User)
+  , mentionRoles :: UV.Vector (Snowflake Role)
   , mentionChannels :: Maybe (UV.Vector (Snowflake Channel))
-  , attachments     :: ![Attachment]
-  , embeds          :: ![Embed]
-  , reactions       :: ![Reaction]
-  , nonce           :: Maybe (Snowflake Message)
-  , pinned          :: Bool
-  , webhookID       :: Maybe (Snowflake ())
-  , type_           :: !MessageType
+  , attachments :: ![Attachment]
+  , embeds :: ![Embed]
+  , reactions :: ![Reaction]
+  , nonce :: Maybe (Snowflake Message)
+  , pinned :: Bool
+  , webhookID :: Maybe (Snowflake Webhook)
+  , type_ :: !MessageType
+  , activity :: Maybe Object
+  , application :: Maybe Object
+  , messageReference :: Maybe MessageReference
+  , flags :: Word64
+  , stickers :: Maybe [Object]
+  , referencedMessage :: Maybe Message
+  , interaction :: Maybe Object
   }
-  deriving ( Eq, Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric Message
-  deriving ( FromJSON ) via WithSpecialCases
-      '["author" `ExtractFieldFrom` "id", "mentions" `ExtractArrayField` "id",
-        "mention_channels" `ExtractArrayField` "id",
-        "reactions" `IfNoneThen` DefaultToEmptyArray]
-      Message
-  deriving ( HasID Message ) via HasIDField "id" Message
-  deriving ( HasID Channel ) via HasIDField "channelID" Message
-  deriving ( HasID User ) via HasIDField "author" Message
+  deriving (Eq, Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric Message
+  deriving
+    (FromJSON)
+    via WithSpecialCases
+          '[ "author" `ExtractFieldFrom` "id"
+           , "mentions" `ExtractArrayField` "id"
+           , "mention_channels" `ExtractArrayField` "id"
+           , "reactions" `IfNoneThen` DefaultToEmptyArray
+           ]
+          Message
+  deriving (HasID Message) via HasIDField "id" Message
+  deriving (HasID Channel) via HasIDField "channelID" Message
+  deriving (HasID User) via HasIDField "author" Message
+
+data MessageReference = MessageReference
+  { messageID :: Maybe (Snowflake Message)
+  , channelID :: Maybe (Snowflake Channel)
+  , guildID :: Maybe (Snowflake Guild)
+  , failIfNotExists :: Bool
+  }
+  deriving (Eq, Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric MessageReference
+  deriving
+    (FromJSON)
+    via WithSpecialCases
+          '[ "fail_if_not_exists" `IfNoneThen` DefaultToTrue
+           ]
+          MessageReference
+  deriving (ToJSON) via CalamityJSON MessageReference
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
 data MessageType
@@ -72,12 +105,14 @@ data MessageType
   | ChannelFollowAdd
   | GuildDiscoveryDisqualified
   | GuildDiscoveryRequalified
-  deriving ( Eq, Show, Enum, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric MessageType
+  | Reply
+  | ApplicationCommmand
+  deriving (Eq, Show, Enum, Generic)
+  deriving (TextShow) via TSG.FromGeneric MessageType
 
 instance FromJSON MessageType where
   parseJSON = withScientific "MessageType" $ \n -> case toBoundedInteger @Int n of
-    Just !v  -> case v of
+    Just !v -> case v of
       0 -> pure Default
       1 -> pure RecipientAdd
       2 -> pure RecipientRemove
@@ -91,7 +126,9 @@ instance FromJSON MessageType where
       10 -> pure UserPremiumGuildSubscriptionTier2
       11 -> pure UserPremiumGuildSubscriptionTier3
       12 -> pure ChannelFollowAdd
-      13 -> pure GuildDiscoveryDisqualified
-      14 -> pure GuildDiscoveryRequalified
+      14 -> pure GuildDiscoveryDisqualified
+      15 -> pure GuildDiscoveryRequalified
+      19 -> pure Reply
+      20 -> pure ApplicationCommmand
       _ -> fail $ "Invalid MessageType: " <> show n
     Nothing -> fail $ "Invalid MessageType: " <> show n

@@ -19,7 +19,7 @@ import           Calamity.Types.Model.Channel.DM
 import           Calamity.Types.Model.Channel.Embed
 import           Calamity.Types.Model.Channel.Group
 import           Calamity.Types.Model.Channel.Guild
-import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
+import           Calamity.Types.Model.Channel.Message
 import           Calamity.Types.Model.Channel.Reaction
 import           Calamity.Types.Model.Channel.Webhook
 import           Calamity.Types.Partial
