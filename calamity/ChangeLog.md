@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.1.28.1
+
++ Rework the ratelimit implementation to use X-Ratelimit-Bucket
++ Fix incorrect interpretation of the retry-after for 429s
+
 ## 0.1.28.0
 
 + Added support for message types 19 (reply) and 20 (application command)
