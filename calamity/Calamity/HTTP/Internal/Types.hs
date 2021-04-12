@@ -3,6 +3,8 @@ module Calamity.HTTP.Internal.Types
     ( RestError(..)
     , RateLimitState(..)
     , DiscordResponseType(..)
+    , Bucket(..)
+    , BucketState(..)
     , GatewayResponse
     , BotGatewayResponse ) where
 
@@ -11,9 +13,12 @@ import           Calamity.Internal.AesonThings
 
 import           Control.Concurrent.Event      ( Event )
 import           Control.Concurrent.STM.Lock   ( Lock )
+import           Control.Concurrent.STM.TVar   ( TVar )
 
+import Data.Time
 import           Data.Aeson
 import qualified Data.ByteString.Lazy          as LB
+import qualified Data.ByteString          as B
 import           Data.Text.Lazy
 
 import           GHC.Generics
@@ -30,19 +35,49 @@ data RestError
   | InternalClientError Text
   deriving ( Show, Generic )
 
+data BucketState = BucketState
+  { resetTime :: UTCTime
+    -- ^ The time when the bucket resets, used to heuristically wait out ratelimits
+  , remaining  :: Maybe Int
+    -- ^ The number of uses left in the bucket, used to heuristically wait out ratelimits
+  }
+  deriving ( Generic )
+
+data Bucket = Bucket
+  { lock :: Lock
+  , state :: TVar BucketState
+  }
+  deriving ( Generic )
+
 data RateLimitState = RateLimitState
-  { rateLimits :: SC.Map Route Lock
+  { bucketKeys :: SC.Map Route B.ByteString
+  , buckets    :: SC.Map B.ByteString Bucket
   , globalLock :: Event
   }
   deriving ( Generic )
 
 data DiscordResponseType
-  = Good LB.ByteString -- ^ A good response
-  | ExhaustedBucket -- ^ We got a response but also exhausted the bucket
-      LB.ByteString Int -- ^ Retry after (milliseconds)
-  | Ratelimited -- ^ We hit a 429, no response and ratelimited
-      Int -- ^ Retry after (milliseconds)
-      Bool -- ^ Global ratelimit
+  = Good
+    -- ^ A good response
+    LB.ByteString
+    BucketState
+    B.ByteString
+    -- ^ The bucket the route is in
+  | ExhaustedBucket
+    -- ^ We got a response but also exhausted the bucket
+    LB.ByteString
+    UTCTime
+    -- ^ Retry after
+    BucketState
+    B.ByteString
+    -- ^ The bucket the route is in
+  | Ratelimited
+    -- ^ We hit a 429, no response and ratelimited
+    UTCTime
+    -- ^ Retry after
+    Bool
+    -- ^ Global ratelimit
+    (Maybe (BucketState, B.ByteString))
   | ServerError Int -- ^ Discord's error, we should retry (HTTP 5XX)
   | ClientError Int LB.ByteString -- ^ Our error, we should fail
   | InternalResponseError Text -- ^ Something went wrong with the http client
