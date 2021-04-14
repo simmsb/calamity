@@ -204,6 +204,10 @@ baseRoute id =
   mkRouteBuilder // S "channels" // ID @Channel
     & giveID id
 
+renderEmoji :: RawEmoji -> Text
+renderEmoji (UnicodeEmoji e) = e ^. strict
+renderEmoji (CustomEmoji e) = e ^. #name . strict <> ":" <> showt (e ^. #id)
+
 instance Request (ChannelRequest a) where
   type Result (ChannelRequest a) = a
 
@@ -231,20 +235,20 @@ instance Request (ChannelRequest a) where
       & giveID mid
       & buildRoute
   route (CreateReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (renderEmoji emoji) // S "@me"
       & giveID mid
       & buildRoute
   route (DeleteOwnReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // S "@me"
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (renderEmoji emoji) // S "@me"
       & giveID mid
       & buildRoute
   route (DeleteUserReaction (getID -> cid) (getID @Message -> mid) emoji (getID @User -> uid)) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji) // ID @User
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (renderEmoji emoji) // ID @User
       & giveID mid
       & giveID uid
       & buildRoute
   route (GetReactions (getID -> cid) (getID @Message -> mid) emoji _) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (showt emoji)
+    baseRoute cid // S "messages" // ID @Message // S "reactions" // S (renderEmoji emoji)
       & giveID mid
       & buildRoute
   route (DeleteAllReactions (getID -> cid) (getID @Message -> mid)) =
