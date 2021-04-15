@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.28.2
+
++ Rework the ratelimit implementation more
+
 ## 0.1.28.1
 
 + Rework the ratelimit implementation to use X-Ratelimit-Bucket

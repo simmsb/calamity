@@ -36,12 +36,18 @@ data RestError
   deriving ( Show, Generic )
 
 data BucketState = BucketState
-  { resetTime :: UTCTime
+  { resetTime :: Maybe UTCTime
     -- ^ The time when the bucket resets, used to heuristically wait out ratelimits
-  , remaining  :: Maybe Int
+  , resetKey  :: Int
+    -- ^ The X-Ratelimit-Reset value discord gave us
+  , remaining :: Int
     -- ^ The number of uses left in the bucket, used to heuristically wait out ratelimits
+  , limit :: Int
+    -- ^ The total number of uses for this bucket
+  , ongoing :: Int
+    -- ^ How many ongoing requests
   }
-  deriving ( Generic )
+  deriving ( Generic, Show )
 
 data Bucket = Bucket
   { lock :: Lock
@@ -60,14 +66,6 @@ data DiscordResponseType
   = Good
     -- ^ A good response
     LB.ByteString
-    BucketState
-    B.ByteString
-    -- ^ The bucket the route is in
-  | ExhaustedBucket
-    -- ^ We got a response but also exhausted the bucket
-    LB.ByteString
-    UTCTime
-    -- ^ Retry after
     BucketState
     B.ByteString
     -- ^ The bucket the route is in

@@ -20,8 +20,8 @@ import Control.Monad
 
 import Data.Aeson
 import Data.Aeson.Lens
+import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
-import qualified Data.ByteString          as B
 import Data.Maybe
 import qualified Data.Text.Lazy as LT
 import Data.Time
@@ -35,7 +35,6 @@ import Network.HTTP.Types
 
 import Polysemy (Sem)
 import qualified Polysemy as P
-import qualified Polysemy.Async as P
 
 import Prelude hiding (error)
 import qualified Prelude
@@ -50,22 +49,6 @@ data Ratelimit
   = KnownRatelimit Bucket
   | UnknownRatelimit Route
 
-{- performing rate limits
-  1. try to fetch the lock from the ratelimiter state
-  1.1. if we know the bucket then we retrieve the lock (KnownRatelimit)
-  1.2. if we don't know the bucket, we just store the route (UnknownRatelimit)
-  2.1. wait fot the global event (the global event is set unless we're globally ratelimited)
-  2.2. wait for the local lock (locks are unlocked unless the bucket is exhausted)
-  2.3. try to wait for the ratelimit to expire if it's exhausted
-  3. we then perform the request, after this we'll know the bucket,
-     so we update the ratelimit state with the bucket. if while performing
-     the current request another request completed that made the bucket known,
-     we don't try to overwrite it
-  4.1. if we exceeded the local ratelimit we take the lock and release it after a delay
-  4.2. if we exceeded the global ratelimit, we unset the global rl event,
-       wait for it to expire, and then try again
--}
-
 getRateLimit :: RateLimitState -> Route -> STM Ratelimit
 getRateLimit s h = do
   bucketKey <- SC.lookup h $ bucketKeys s
@@ -76,18 +59,20 @@ getRateLimit s h = do
     Nothing ->
       pure $ UnknownRatelimit h
 
--- | Knowing the bucket for a route, and the ratelimit info, map the route to
--- the bucket key and retrieve the bucket
+{- | Knowing the bucket for a route, and the ratelimit info, map the route to
+ the bucket key and retrieve the bucket
+-}
 updateBucket :: RateLimitState -> Route -> B.ByteString -> BucketState -> STM Bucket
 updateBucket s h b bucketState = do
   bucketKey <- SC.lookup h $ bucketKeys s
   case bucketKey of
     Just bucketKey' -> do
       -- if we know the bucket key here, then the bucket has already been made
+      -- if the given bucket key is different than the known bucket key then oops
       bucket <- SC.lookup bucketKey' $ buckets s
       case bucket of
         Just bucket' -> do
-          modifyTVar' (bucket' ^. #state) (`mergeBucket` bucketState)
+          modifyTVar' (bucket' ^. #state) (`mergeStates` bucketState)
           pure bucket'
         Nothing -> Prelude.error "Not possible"
     Nothing -> do
@@ -98,47 +83,122 @@ updateBucket s h b bucketState = do
       SC.insert bucket b $ buckets s
       SC.insert b h $ bucketKeys s
       pure bucket
-  where
-    mergeBucket :: BucketState -> BucketState -> BucketState
-    mergeBucket old new = new { remaining = new ^. #remaining <|> old ^. #remaining }
+ where
+  mergeStates :: BucketState -> BucketState -> BucketState
+  mergeStates old new =
+    new
+      { ongoing = old ^. #ongoing
+      , -- we only ignore the previous 'remaining' if we've not reset yet and the
+        -- reset time has changed
+        remaining =
+          if (isJust $ old ^. #resetTime) && (old ^. #resetKey /= new ^. #resetKey)
+            then min (old ^. #remaining) (new ^. #remaining)
+            else new ^. #remaining
+      , -- only take the new resetTime if it actually changed
+        resetTime =
+          if old ^. #resetKey /= new ^. #resetKey
+            then new ^. #resetTime
+            else old ^. #resetTime
+      }
 
 resetBucket :: Bucket -> STM ()
-resetBucket bucket = modifyTVar' (bucket ^. #state) (#remaining .~ Nothing)
+resetBucket bucket =
+  modifyTVar'
+    (bucket ^. #state)
+    ( \bs ->
+        bs & #remaining .~ bs ^. #limit
+          & #resetTime .~ Nothing
+    )
+
+canResetBucketNow :: UTCTime -> BucketState -> Bool
+canResetBucketNow _ BucketState{ongoing} | ongoing > 0 = False
+-- don't allow resetting the bucket if there's ongoing requests, we'll wait
+-- until another request finishes and updates the counter
+canResetBucketNow now bs = case bs ^. #resetTime of
+  Just rt -> now > rt
+  Nothing -> False
+
+-- canResetBucket :: BucketState -> Bool
+-- canResetBucket bs = isNothing $ bs ^. #startedWaitingTime
+
+shouldWaitForUnlock :: BucketState -> Bool
+shouldWaitForUnlock BucketState{remaining = 0, ongoing} = ongoing > 0
+shouldWaitForUnlock _ = False
+
+data WaitDelay
+  = WaitUntil UTCTime
+  | WaitRetrySoon
+  | GoNow
+  deriving (Show)
+
+intoWaitDelay :: Maybe UTCTime -> WaitDelay
+intoWaitDelay (Just t) = WaitUntil t
+intoWaitDelay Nothing = WaitRetrySoon
 
 -- | Maybe wait for a bucket, updating its state to say we used it
 useBucketOnce :: Bucket -> IO ()
-useBucketOnce bucket = do
-  now <- getCurrentTime
-  mWaitUntil <- atomically $ do
-    -- first wait on the lock
-    L.wait $ bucket ^. #lock
+useBucketOnce bucket = go 0
+ where
+  go :: Int -> IO ()
+  go tries = do
+    now <- getCurrentTime
+    mWaitDelay <- atomically $ do
+      s <- readTVar $ bucket ^. #state
 
-    -- now try to estimate an expiry
-    s <- readTVar $ bucket ^. #state
+      -- -- [0]
+      -- -- if there are ongoing requests, wait for them to finish and deliver
+      -- -- truth on the current ratelimit state
+      when
+        (shouldWaitForUnlock s)
+        retry
 
-    let remaining = if now > s ^. #resetTime
-          then Nothing
-          else s ^. #remaining
+      -- if there are no ongoing requests, and the bucket reset time has lapsed,
+      -- we can just reset the bucket.
+      --
+      -- if we've already reset the bucket then there should be an ongoing
+      -- request so we'll just end up waiting for that to finish
+      when
+        (canResetBucketNow now s)
+        (resetBucket bucket)
 
-    case remaining of
-      Just n | n > 0 -> do
-        modifyTVar (bucket ^. #state) (#remaining ?~ n - 1)
-        pure Nothing
-      Just _ -> do
-        -- expired, lock and then reset the remaining
-        L.acquire $ bucket ^. #lock
-        modifyTVar (bucket ^. #state) (#remaining .~ Nothing)
-        pure . Just $ s ^. #resetTime
-      Nothing ->
-        -- unknown, just assume we're good
-        pure Nothing
+      s <- readTVar $ bucket ^. #state
 
-  case mWaitUntil of
-    Just when -> do
-      threadDelayUntil when
-      atomically . L.release $ bucket ^. #lock
-    Nothing ->
-      pure ()
+      if s ^. #remaining - s ^. #ongoing > 0
+        then do
+          -- there are tokens remaining for us to use
+          modifyTVar'
+            (bucket ^. #state)
+            ( (#remaining -~ 1)
+                . (#ongoing +~ 1)
+            )
+          pure GoNow
+        else do
+          -- the bucket has expired, there are no ongoing requests because of
+          -- [0] wait and then retry after we can unlock the bucket
+          pure (intoWaitDelay $ s ^. #resetTime)
+
+    -- putStrLn (show now <> ": Using bucket, waiting until: " <> show mWaitDelay <> ", uses: " <> show s <> ", " <> inf)
+
+    case mWaitDelay of
+      WaitUntil waitUntil -> do
+        if waitUntil < now
+          then threadDelayMS 20
+          else -- if the reset is in the past, we're fucked
+            threadDelayUntil waitUntil
+        -- if we needed to sleep, go again so that multiple concurrent requests
+        -- don't exceed the bucket, to ensure we don't sit in a loop if a
+        -- request dies on us, bail out after 50 loops
+        if tries < 50
+          then go (tries + 1)
+          else pure () -- print "bailing after number of retries"
+      WaitRetrySoon -> do
+        threadDelayMS 20
+        if tries < 50
+          then go (tries + 1)
+          else pure () -- print "bailing after number of retries"
+      GoNow -> do
+        -- print "ok going forward with request"
+        pure ()
 
 doDiscordRequest :: BotC r => IO LbsResponse -> Sem r DiscordResponseType
 doDiscordRequest r = do
@@ -151,19 +211,12 @@ doDiscordRequest r = do
             let resp = responseBody r'
             debug $ "Got good response from discord: " +|| status ||+ ""
             now <- P.embed getCurrentTime
-            if isExhausted r'
-              then case (parseRateLimitHeader now r', buildBucketState now r') of
-                (Just !when, Just (!bs, !key)) ->
-                  pure $ ExhaustedBucket resp when bs key
-                _ ->
-                  pure $ ServerError (statusCode status)
-              else case buildBucketState now r' of
-                Just (!bs, !key) ->
-                  pure $ Good resp bs key
-                Nothing ->
-                  pure $ ServerError (statusCode status)
+            case buildBucketState now r' of
+              Just (!bs, !key) ->
+                pure $ Good resp bs key
+              Nothing ->
+                pure $ ServerError (statusCode status)
           | status == status429 -> do
-            debug "Got 429 from discord, retrying."
             now <- P.embed getCurrentTime
             let resp = responseBody r'
             case (resp ^? _Value, buildBucketState now r') of
@@ -185,32 +238,33 @@ doDiscordRequest r = do
 -- | Parse a ratelimit header returning when it unlocks
 parseRateLimitHeader :: HttpResponse r => UTCTime -> r -> Maybe UTCTime
 parseRateLimitHeader now r = computedEnd <|> end
-  where
-    computedEnd :: Maybe UTCTime
-    computedEnd = flip addUTCTime now <$> resetAfter
+ where
+  computedEnd :: Maybe UTCTime
+  computedEnd = flip addUTCTime now <$> resetAfter
 
-    resetAfter :: Maybe NominalDiffTime
-    resetAfter = realToFrac <$> responseHeader r "X-Ratelimit-Reset-After" ^? _Just . _Double
+  resetAfter :: Maybe NominalDiffTime
+  resetAfter = realToFrac <$> responseHeader r "X-Ratelimit-Reset-After" ^? _Just . _Double
 
-    end :: Maybe UTCTime
-    end = posixSecondsToUTCTime . realToFrac <$>
-      responseHeader r "X-Ratelimit-Reset" ^? _Just . _Double
+  end :: Maybe UTCTime
+  end =
+    posixSecondsToUTCTime . realToFrac
+      <$> responseHeader r "X-Ratelimit-Reset" ^? _Just . _Double
 
 buildBucketState :: HttpResponse r => UTCTime -> r -> Maybe (BucketState, B.ByteString)
-buildBucketState now r = (bs,) <$> bucketKey
-  where
-    remaining = responseHeader r "X-RateLimit-Remaining" ^? _Just . _Integral
-    bs = BucketState now remaining
-    bucketKey = responseHeader r "X-RateLimit-Bucket"
-
-isExhausted :: HttpResponse r => r -> Bool
-isExhausted r = responseHeader r "X-RateLimit-Remaining" == Just "0"
+buildBucketState now r = (,) <$> bs <*> bucketKey
+ where
+  remaining = responseHeader r "X-RateLimit-Remaining" ^? _Just . _Integral
+  limit = responseHeader r "X-RateLimit-Limit" ^? _Just . _Integral
+  resetKey = ceiling <$> responseHeader r "X-RateLimit-Reset" ^? _Just . _Double
+  resetTime = parseRateLimitHeader now r
+  bs = BucketState resetTime <$> resetKey <*> remaining <*> limit <*> pure 0
+  bucketKey = responseHeader r "X-RateLimit-Bucket"
 
 -- | Parse the retry after field, returning when to retry
 parseRetryAfter :: UTCTime -> Value -> UTCTime
 parseRetryAfter now r = addUTCTime retryAfter now
-  where
-    retryAfter = realToFrac $ r ^?! key "retry_after" . _Double
+ where
+  retryAfter = realToFrac $ r ^?! key "retry_after" . _Double
 
 isGlobal :: Value -> Bool
 isGlobal r = r ^? key "global" . _Bool == Just True
@@ -247,10 +301,14 @@ retryRequest maxRetries action = retryInner 0
 threadDelayMS :: Int -> IO ()
 threadDelayMS ms = threadDelay (1000 * ms)
 
+tenMS :: NominalDiffTime
+tenMS = 0.01
+
 threadDelayUntil :: UTCTime -> IO ()
 threadDelayUntil when = do
+  let when' = addUTCTime tenMS when -- lol
   now <- getCurrentTime
-  let msUntil = round . (* 1000) . realToFrac @_ @Double $ diffUTCTime when now
+  let msUntil = ceiling . (* 1000) . realToFrac @_ @Double $ diffUTCTime when' now
   threadDelayMS msUntil
 
 -- Run a single request
@@ -271,79 +329,81 @@ doSingleRequest rlstate route gl r = do
   case rl of
     KnownRatelimit bucket ->
       P.embed $ useBucketOnce bucket
-
-    _ -> pure ()
+    _ -> debug "unknown ratelimit"
 
   r' <- doDiscordRequest r
 
   case r' of
     Good v bs bk -> do
-      void . P.embed . atomically $ updateBucket rlstate route bk bs
+      void . P.embed . atomically $ do
+        case rl of
+          KnownRatelimit bucket ->
+            modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+          _ -> pure ()
+        updateBucket rlstate route bk bs
       pure $ RGood v
-
-    ExhaustedBucket v unlockWhen bs bk -> do
-      debug $ "Exhausted bucket, unlocking at" +| unlockWhen |+ ""
-
-      bucket <- P.embed . atomically $ do
-        bucket <- updateBucket rlstate route bk bs
-        L.acquire $ bucket ^. #lock
-        pure bucket
-
-      void . P.async $ do
-        P.embed $ do
-          threadDelayUntil unlockWhen
-          atomically $ do
-            L.release $ bucket ^. #lock
-            resetBucket bucket
-        debug "unlocking bucket"
-
-      pure $ RGood v
-
     Ratelimited unlockWhen False (Just (bs, bk)) -> do
       debug $ "429 ratelimited on route, retrying at " +| unlockWhen |+ ""
 
-      bucket <- P.embed . atomically $ do
-        bucket <- updateBucket rlstate route bk bs
-        L.acquire $ bucket ^. #lock
-        pure bucket
+      P.embed . atomically $ do
+        case rl of
+          KnownRatelimit bucket ->
+            modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+          _ -> pure ()
+        void $ updateBucket rlstate route bk bs
 
       P.embed $ do
         threadDelayUntil unlockWhen
-        atomically $ do
-          L.release $ bucket ^. #lock
-          resetBucket bucket
 
       pure $ Retry (HTTPError 429 Nothing)
-
     Ratelimited unlockWhen False _ -> do
       debug "Internal error (ratelimited but no headers), retrying"
+      case rl of
+        KnownRatelimit bucket ->
+          void . P.embed . atomically $ modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+        _ -> pure ()
+
       P.embed $ threadDelayUntil unlockWhen
       pure $ Retry (HTTPError 429 Nothing)
-
     Ratelimited unlockWhen True bs -> do
       debug "429 ratelimited globally"
 
       P.embed $ do
-        case bs of
-          Just (bs', bk) ->
-            void . atomically $ updateBucket rlstate route bk bs'
-          Nothing ->
-            pure ()
+        atomically $ do
+          case rl of
+            KnownRatelimit bucket ->
+              modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+            _ -> pure ()
+          case bs of
+            Just (bs', bk) ->
+              void $ updateBucket rlstate route bk bs'
+            Nothing ->
+              pure ()
 
         E.clear gl
         threadDelayUntil unlockWhen
         E.set gl
       pure $ Retry (HTTPError 429 Nothing)
-
     ServerError c -> do
       debug "Server failed, retrying"
+      case rl of
+        KnownRatelimit bucket ->
+          P.embed $ useBucketOnce bucket
+        _ -> debug "unknown ratelimit"
       pure $ Retry (HTTPError c Nothing)
-
     InternalResponseError c -> do
       debug "Internal error, retrying"
+      case rl of
+        KnownRatelimit bucket ->
+          P.embed $ useBucketOnce bucket
+        _ -> debug "unknown ratelimit"
       pure $ Retry (InternalClientError c)
-
-    ClientError c v -> pure $ RFail (HTTPError c $ decode v)
+    ClientError c v -> do
+      case rl of
+        KnownRatelimit bucket ->
+          P.embed $ useBucketOnce bucket
+        _ -> debug "unknown ratelimit"
+      pure $ RFail (HTTPError c $ decode v)
 
 doRequest :: BotC r => RateLimitState -> Route -> IO LbsResponse -> Sem r (Either RestError LB.ByteString)
 doRequest rlstate route action =
