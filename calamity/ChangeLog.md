@@ -2,6 +2,7 @@
 
 ## 0.1.28.2
 
++ Correct the emoji HTTP endpoints to work with `CustomEmoji`s
 + Rework the ratelimit implementation more
 
 ## 0.1.28.1
