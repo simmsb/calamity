@@ -66,9 +66,8 @@ data DiscordResponseType
   = Good
     -- ^ A good response
     LB.ByteString
-    BucketState
-    B.ByteString
-    -- ^ The bucket the route is in
+    (Maybe (BucketState, B.ByteString))
+    -- ^ The ratelimit headers if we got them
   | Ratelimited
     -- ^ We hit a 429, no response and ratelimited
     UTCTime

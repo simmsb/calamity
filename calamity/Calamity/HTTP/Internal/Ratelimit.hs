@@ -211,11 +211,8 @@ doDiscordRequest r = do
             let resp = responseBody r'
             debug $ "Got good response from discord: " +|| status ||+ ""
             now <- P.embed getCurrentTime
-            case buildBucketState now r' of
-              Just (!bs, !key) ->
-                pure $ Good resp bs key
-              Nothing ->
-                pure $ ServerError (statusCode status)
+            let rlHeaders = buildBucketState now r'
+            pure $ Good resp rlHeaders
           | status == status429 -> do
             now <- P.embed getCurrentTime
             let resp = responseBody r'
@@ -334,13 +331,16 @@ doSingleRequest rlstate route gl r = do
   r' <- doDiscordRequest r
 
   case r' of
-    Good v bs bk -> do
+    Good v rlHeaders -> do
       void . P.embed . atomically $ do
         case rl of
           KnownRatelimit bucket ->
             modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
           _ -> pure ()
-        updateBucket rlstate route bk bs
+        case rlHeaders of
+          Just (bs, bk) ->
+            void $ updateBucket rlstate route bk bs
+          Nothing -> pure ()
       pure $ RGood v
     Ratelimited unlockWhen False (Just (bs, bk)) -> do
       debug $ "429 ratelimited on route, retrying at " +| unlockWhen |+ ""
