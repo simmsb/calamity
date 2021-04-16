@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.1.28.3
+
++ Fix HTTP responses from discord that don't have ratelimit info being treated
+  as errors.
+
 ## 0.1.28.2
 
 + Correct the emoji HTTP endpoints to work with `CustomEmoji`s
