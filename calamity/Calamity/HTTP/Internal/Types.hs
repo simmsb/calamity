@@ -12,7 +12,6 @@ import           Calamity.HTTP.Internal.Route
 import           Calamity.Internal.AesonThings
 
 import           Control.Concurrent.Event      ( Event )
-import           Control.Concurrent.STM.Lock   ( Lock )
 import           Control.Concurrent.STM.TVar   ( TVar )
 
 import Data.Time
@@ -49,9 +48,8 @@ data BucketState = BucketState
   }
   deriving ( Generic, Show )
 
-data Bucket = Bucket
-  { lock :: Lock
-  , state :: TVar BucketState
+newtype Bucket = Bucket
+  { state :: TVar BucketState
   }
   deriving ( Generic )
 

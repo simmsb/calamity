@@ -14,7 +14,6 @@ import Control.Concurrent
 import Control.Concurrent.Event (Event)
 import qualified Control.Concurrent.Event as E
 import Control.Concurrent.STM
-import qualified Control.Concurrent.STM.Lock as L
 import Control.Lens
 import Control.Monad
 
@@ -77,12 +76,10 @@ updateBucket s h b bucketState = do
         Nothing -> Prelude.error "Not possible"
     Nothing -> do
       -- the bucket key wasn't known, make a new bucket and insert it
-      lock <- L.new
-      bs <- newTVar bucketState
-      let bucket = Bucket lock bs
-      SC.insert bucket b $ buckets s
+      bs <- Bucket <$> newTVar bucketState
+      SC.insert bs b $ buckets s
       SC.insert b h $ bucketKeys s
-      pure bucket
+      pure bs
  where
   mergeStates :: BucketState -> BucketState -> BucketState
   mergeStates old new =
