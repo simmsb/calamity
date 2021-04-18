@@ -54,7 +54,7 @@ newtype Bucket = Bucket
   deriving ( Generic )
 
 data RateLimitState = RateLimitState
-  { bucketKeys :: SC.Map Route B.ByteString
+  { bucketKeys :: SC.Map RouteKey B.ByteString
   , buckets    :: SC.Map B.ByteString Bucket
   , globalLock :: Event
   }

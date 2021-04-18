@@ -22,10 +22,12 @@ instance Request (InviteRequest a) where
   type Result (InviteRequest a) = a
 
   route (GetInvite c) =
-    baseRoute // S c
+    baseRoute // PS @"invite"
+      & giveParam @"invite" c
       & buildRoute
   route (DeleteInvite c) =
-    baseRoute // S c
+    baseRoute // PS @"invite"
+      & giveParam @"invite" c
       & buildRoute
 
   action (GetInvite _) = getWithP ("with_counts" =: True)

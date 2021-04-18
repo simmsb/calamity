@@ -5,11 +5,15 @@
 module Calamity.HTTP.Internal.Route
     ( mkRouteBuilder
     , giveID
+    , giveParam
     , buildRoute
+    , routeKey
+    , RouteKey
     , RouteBuilder
     , RouteRequirement
     , Route(path)
     , S(..)
+    , PS(..)
     , ID(..)
     , RouteFragmentable(..) ) where
 
@@ -31,14 +35,24 @@ import           Network.HTTP.Req
 import           GHC.Generics                 hiding ( S )
 
 import           TextShow
+import GHC.TypeLits (Symbol, KnownSymbol, symbolVal)
 
 data RouteFragment
   = S' Text
+    -- ^ Static string fragment
+  | PS' String
+    -- ^ Parameterised string fragment
   | ID' TypeRep
+    -- ^ ID fragment
   deriving ( Generic, Show, Eq )
 
+-- | A static string fragment of a route
 newtype S = S Text
 
+-- | A parameterised string fragment of a route
+data PS (s :: Symbol) = PS
+
+-- | An id fragment of a route
 data ID a = ID
 
 instance Hashable RouteFragment
@@ -49,22 +63,36 @@ data RouteRequirement
   | Satisfied
   deriving ( Generic, Show, Eq )
 
-data RouteBuilder (idState :: [(Type, RouteRequirement)]) = UnsafeMkRouteBuilder
+data RequirementType
+  = IDRequirement Type
+  | PSRequirement Symbol
+
+data RouteBuilder (reqstate :: [(RequirementType, RouteRequirement)]) = UnsafeMkRouteBuilder
   { route :: [RouteFragment]
   , ids   :: [(TypeRep, Word64)]
+  , params :: [(String, Text)]
   }
 
 mkRouteBuilder :: RouteBuilder '[]
-mkRouteBuilder = UnsafeMkRouteBuilder [] []
+mkRouteBuilder = UnsafeMkRouteBuilder [] [] []
 
 giveID
-  :: forall k ids
-   . Typeable k
-  => Snowflake k
-  -> RouteBuilder ids
-  -> RouteBuilder ('(k, 'Satisfied) ': ids)
-giveID (Snowflake id) (UnsafeMkRouteBuilder route ids) =
-  UnsafeMkRouteBuilder route ((typeRep (Proxy @k), id) : ids)
+  :: forall t reqs
+   . Typeable t
+  => Snowflake t
+  -> RouteBuilder reqs
+  -> RouteBuilder ('( 'IDRequirement t, 'Satisfied) ': reqs)
+giveID (Snowflake id) (UnsafeMkRouteBuilder route ids params) =
+  UnsafeMkRouteBuilder route ((typeRep $ Proxy @t, id) : ids) params
+
+giveParam
+  :: forall (s :: Symbol) reqs
+   . KnownSymbol s
+  => Text
+  -> RouteBuilder reqs
+  -> RouteBuilder ('( 'PSRequirement s, 'Satisfied) ': reqs)
+giveParam value (UnsafeMkRouteBuilder route ids params) =
+  UnsafeMkRouteBuilder route ids ((symbolVal $ Proxy @s, value) : params)
 
 type family (&&) (a :: Bool) (b :: Bool) :: Bool where
   'True && 'True = 'True
@@ -80,17 +108,17 @@ type family IsElem (x :: k) (l :: [k]) :: Bool where
   IsElem k (k : _)  = 'True
   IsElem k (_ : xs) = IsElem k xs
 
-type family EnsureFulfilled (ids :: [(k, RouteRequirement)]) :: Constraint where
-  EnsureFulfilled ids = EnsureFulfilledInner ids '[] 'True
+type family EnsureFulfilled (reqs :: [(RequirementType, RouteRequirement)]) :: Constraint where
+  EnsureFulfilled reqs = EnsureFulfilledInner reqs '[] 'True
 
-type family EnsureFulfilledInner (ids :: [(k, RouteRequirement)]) (seen :: [k]) (ok :: Bool) :: Constraint where
+type family EnsureFulfilledInner (reqs :: [(RequirementType, RouteRequirement)]) (seen :: [RequirementType]) (ok :: Bool) :: Constraint where
   EnsureFulfilledInner '[]                      _    'True = ()
   EnsureFulfilledInner ('(k, 'NotNeeded) ': xs) seen ok    = EnsureFulfilledInner xs (k ': seen) ok
   EnsureFulfilledInner ('(k, 'Satisfied) ': xs) seen ok    = EnsureFulfilledInner xs (k ': seen) ok
   EnsureFulfilledInner ('(k, 'Required)  ': xs) seen ok    = EnsureFulfilledInner xs (k ': seen) (IsElem k seen && ok)
 
-type family AddRequired k (ids :: [(Type, RouteRequirement)]) :: [(Type, RouteRequirement)] where
-  AddRequired k ids = '(k, AddRequiredInner (Lookup k ids)) ': ids
+type family AddRequired k (reqs :: [(RequirementType, RouteRequirement)]) :: [(RequirementType, RouteRequirement)] where
+  AddRequired k reqs = '(k, AddRequiredInner (Lookup k reqs)) ': reqs
 
 type family AddRequiredInner (k :: Maybe RouteRequirement) :: RouteRequirement where
   AddRequiredInner ('Just 'Required)  = 'Required
@@ -98,22 +126,29 @@ type family AddRequiredInner (k :: Maybe RouteRequirement) :: RouteRequirement w
   AddRequiredInner ('Just 'NotNeeded) = 'Required
   AddRequiredInner 'Nothing           = 'Required
 
-class Typeable a => RouteFragmentable a ids where
-  type ConsRes a ids
+class Typeable a => RouteFragmentable a reqs where
+  type ConsRes a reqs
 
-  (//) :: RouteBuilder ids -> a -> ConsRes a ids
+  (//) :: RouteBuilder reqs -> a -> ConsRes a reqs
 
-instance RouteFragmentable S ids where
-  type ConsRes S ids = RouteBuilder ids
+instance RouteFragmentable S reqs where
+  type ConsRes S reqs = RouteBuilder reqs
 
-  (UnsafeMkRouteBuilder r ids) // (S t) =
-    UnsafeMkRouteBuilder (r <> [S' t]) ids
+  (UnsafeMkRouteBuilder r ids params) // (S t) =
+    UnsafeMkRouteBuilder (r <> [S' t]) ids params
 
-instance Typeable a => RouteFragmentable (ID (a :: Type)) (ids :: [(Type, RouteRequirement)]) where
-  type ConsRes (ID a) ids = RouteBuilder (AddRequired a ids)
+instance Typeable a => RouteFragmentable (ID (a :: Type)) (reqs :: [(RequirementType, RouteRequirement)]) where
+  type ConsRes (ID a) reqs = RouteBuilder (AddRequired ('IDRequirement a) reqs)
 
-  (UnsafeMkRouteBuilder r ids) // ID =
-    UnsafeMkRouteBuilder (r <> [ID' (typeRep (Proxy @a))]) ids
+  (UnsafeMkRouteBuilder r ids params) // ID =
+    UnsafeMkRouteBuilder (r <> [ID' $ typeRep $ Proxy @a]) ids params
+
+instance KnownSymbol s => RouteFragmentable (PS s) (reqs :: [(RequirementType, RouteRequirement)]) where
+  type ConsRes (PS s) reqs = RouteBuilder (AddRequired ('PSRequirement s) reqs)
+
+  (UnsafeMkRouteBuilder r ids params) // PS =
+    UnsafeMkRouteBuilder (r <> [PS' $ symbolVal $ Proxy @s]) ids params
+
 
 infixl 5 //
 
@@ -122,27 +157,31 @@ data Route = Route
   , key       :: Text
   , channelID :: Maybe (Snowflake Channel)
   , guildID   :: Maybe (Snowflake Guild)
-  } deriving (Generic, Show, Eq)
+  } deriving (Generic, Show)
 
-instance Hashable Route where
-  hashWithSalt s (Route _ ident c g) = hashWithSalt s (ident, c, g)
+type RouteKey = (Text, Maybe (Snowflake Channel), Maybe (Snowflake Guild))
+
+routeKey :: Route -> RouteKey
+routeKey Route {key, channelID, guildID} = (key, channelID, guildID)
 
 baseURL :: Url 'Https
 baseURL = https "discord.com" /: "api" /: "v8"
 
 buildRoute
-  :: forall (ids :: [(Type, RouteRequirement)])
-   . EnsureFulfilled ids
-  => RouteBuilder ids
+  :: forall (reqs :: [(RequirementType, RouteRequirement)])
+   . EnsureFulfilled reqs
+  => RouteBuilder reqs
   -> Route
-buildRoute (UnsafeMkRouteBuilder route ids) = Route
+buildRoute (UnsafeMkRouteBuilder route ids params) = Route
   (foldl' (/:) baseURL $ map goR route)
   (T.concat (map goIdent route))
   (Snowflake <$> lookup (typeRep (Proxy @Channel)) ids)
   (Snowflake <$> lookup (typeRep (Proxy @Guild)) ids)
  where
   goR (S'  t) = t
+  goR (PS' t) = fromJust $ lookup t params
   goR (ID' t) = showt . fromJust $ lookup t ids
 
   goIdent (S'  t) = t
+  goIdent (PS' s) = T.pack s
   goIdent (ID' t) = showt t

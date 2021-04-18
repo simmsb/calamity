@@ -46,9 +46,9 @@ newRateLimitState = RateLimitState <$> SC.newIO <*> SC.newIO <*> E.newSet
 
 data Ratelimit
   = KnownRatelimit Bucket
-  | UnknownRatelimit Route
+  | UnknownRatelimit RouteKey
 
-getRateLimit :: RateLimitState -> Route -> STM Ratelimit
+getRateLimit :: RateLimitState -> RouteKey -> STM Ratelimit
 getRateLimit s h = do
   bucketKey <- SC.lookup h $ bucketKeys s
   bucket <- join <$> sequenceA (flip SC.lookup (buckets s) <$> bucketKey)
@@ -61,7 +61,7 @@ getRateLimit s h = do
 {- | Knowing the bucket for a route, and the ratelimit info, map the route to
  the bucket key and retrieve the bucket
 -}
-updateBucket :: RateLimitState -> Route -> B.ByteString -> BucketState -> STM Bucket
+updateBucket :: RateLimitState -> RouteKey -> B.ByteString -> BucketState -> STM Bucket
 updateBucket s h b bucketState = do
   bucketKey <- SC.lookup h $ bucketKeys s
   case bucketKey of
@@ -318,7 +318,7 @@ doSingleRequest ::
 doSingleRequest rlstate route gl r = do
   P.embed $ E.wait (globalLock rlstate)
 
-  rl <- P.embed . atomically $ getRateLimit rlstate route
+  rl <- P.embed . atomically $ getRateLimit rlstate (routeKey route)
 
   case rl of
     KnownRatelimit bucket ->
@@ -336,7 +336,7 @@ doSingleRequest rlstate route gl r = do
           _ -> pure ()
         case rlHeaders of
           Just (bs, bk) ->
-            void $ updateBucket rlstate route bk bs
+            void $ updateBucket rlstate (routeKey route) bk bs
           Nothing -> pure ()
       pure $ RGood v
     Ratelimited unlockWhen False (Just (bs, bk)) -> do
@@ -347,7 +347,7 @@ doSingleRequest rlstate route gl r = do
           KnownRatelimit bucket ->
             modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
           _ -> pure ()
-        void $ updateBucket rlstate route bk bs
+        void $ updateBucket rlstate (routeKey route) bk bs
 
       P.embed $ do
         threadDelayUntil unlockWhen
@@ -373,7 +373,7 @@ doSingleRequest rlstate route gl r = do
             _ -> pure ()
           case bs of
             Just (bs', bk) ->
-              void $ updateBucket rlstate route bk bs'
+              void $ updateBucket rlstate (routeKey route) bk bs'
             Nothing ->
               pure ()
 
