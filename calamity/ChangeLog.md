@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.1.28.5
+
++ Use the correct HTTP method for `ModifyChannel`
+
 ## 0.1.28.4
 
 + Rework the route handling so that the bucket keys for emoji routes work
