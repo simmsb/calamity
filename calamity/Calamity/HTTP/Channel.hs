@@ -320,7 +320,7 @@ instance Request (ChannelRequest a) where
     postWith' body u o
   action (CrosspostMessage _ _) = postEmpty
   action (GetChannel _) = getWith
-  action (ModifyChannel _ p) = putWith' (ReqBodyJson p)
+  action (ModifyChannel _ p) = patchWith' (ReqBodyJson p)
   action (DeleteChannel _) = deleteWith
   action (GetChannelMessages _ (Just (ChannelMessagesAround (fromSnowflake -> a))) l) =
     getWithP ("around" =: a <> "limit" =:? (l ^? _Just . #limit))
