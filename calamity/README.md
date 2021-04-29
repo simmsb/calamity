@@ -35,6 +35,10 @@ The current customisable effects are:
 
 You can find documentation on hackage at: https://hackage.haskell.org/package/calamity
 
+There's also a good blog post that covers the fundamentals of writing a bot with
+the library, you can read it here:
+https://morrowm.github.io/posts/2021-04-29-calamity.html
+
 # Examples
 
 Some example projects can be found at:
