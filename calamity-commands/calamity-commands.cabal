@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: efa7c0a34e41b94807050c0309b01aea7095875f76d50844ed236969e6be2d29
+-- hash: 0508f370ede88abe465df7380f23caef218624cb929cf6e863dc48cfc6d7c09d
 
 name:           calamity-commands
-version:        0.1.0.0
+version:        0.1.1.0
 synopsis:       A library for declaring, parsing, and invoking text-input based commands
 description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 category:       Utils
@@ -56,7 +56,7 @@ library
   default-extensions: StrictData AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
-      base >=4.12 && <5
+      base >=4.13 && <5
     , generic-lens >=2.0 && <3
     , lens >=4.18 && <5
     , megaparsec >=8 && <10

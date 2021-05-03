@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.28.5
+version:            0.1.29.0
 github:             "simmsb/calamity"
 homepage:           https://github.com/simmsb/calamity
 bug-reports:        https://github.com/simmsb/calamity/issues
@@ -25,7 +25,7 @@ synopsis:           "A library for writing discord bots in haskell"
 description:        Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 
 dependencies:
-- base >= 4.12 && < 5
+- base >= 4.13 && < 5
 # - calamity-commands >= 0.1 && < 0.2
 - websockets >= 0.12 && < 0.13
 - connection >= 0.2.6 && < 0.4
