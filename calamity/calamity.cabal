@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 00e02190303e5f4d6a47d43a95dd10ef3252c33eaeb053a193ce34b47128a451
+-- hash: 8ad43f74a24db538cc3ff9c3c7ccf8de0c679793f5e2028d4b4cc2fc26f12091
 
 name:           calamity
 version:        0.1.29.0
@@ -148,7 +148,7 @@ library
     , data-flags >=0.0.3 && <0.1
     , deepseq >=1.4.4.0 && <2
     , deque >=0.4 && <0.5
-    , df1 >=0.3 && <0.5
+    , df1 >=0.4 && <0.5
     , di-core >=1.0.4 && <1.1
     , di-polysemy >=0.2 && <0.3
     , exceptions >=0.10 && <0.11
@@ -160,13 +160,13 @@ library
     , http-client >=0.5 && <0.8
     , http-date >=0.0.8 && <0.1
     , http-types >=0.12 && <0.13
-    , lens >=4.18 && <5
+    , lens >=4.18 && <6
     , lens-aeson >=1.1 && <2
     , megaparsec >=8 && <10
     , mime-types >=0.1 && <0.2
     , mtl >=2.2 && <3
-    , polysemy >=1.3 && <2
-    , polysemy-plugin >=0.2 && <0.4
+    , polysemy (>=1.5 && <1.6) && <2
+    , polysemy-plugin >=0.3 && <0.4
     , reflection >=2.1 && <3
     , req >=3.1 && <3.10
     , safe-exceptions >=0.1 && <2

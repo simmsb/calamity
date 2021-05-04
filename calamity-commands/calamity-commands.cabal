@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 0508f370ede88abe465df7380f23caef218624cb929cf6e863dc48cfc6d7c09d
+-- hash: d17b097b7481b77c55ba13052f69950fec4cd0809ca7f49be4f52b1a6fc2ad28
 
 name:           calamity-commands
 version:        0.1.1.0
@@ -58,10 +58,10 @@ library
   build-depends:
       base >=4.13 && <5
     , generic-lens >=2.0 && <3
-    , lens >=4.18 && <5
+    , lens >=4.18 && <6
     , megaparsec >=8 && <10
-    , polysemy >=1.3 && <2
-    , polysemy-plugin >=0.2 && <0.4
+    , polysemy >=1.5 && <2
+    , polysemy-plugin >=0.3 && <0.4
     , text >=1.2 && <2
     , text-show >=3.8 && <4
     , unordered-containers >=0.2 && <0.3

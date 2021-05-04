@@ -5,6 +5,13 @@
 
 packages:
 - completed:
+    hackage: lens-5.0.1@sha256:d44156c542b1630337a07cac5824f1846badeb59043adbe8c4e9ed1da89cc13d,15026
+    pantry-tree:
+      size: 8291
+      sha256: 017fcde6fd1f792bc7509375c8aacbbd09b62f16b215e1ae3a261aa642b564b0
+  original:
+    hackage: lens-5.0.1
+- completed:
     hackage: data-flags-0.0.3.4@sha256:a133f2912e0e22f03419dc89a04b1e117ff6290f1777f5b7f037f683b80ed2cf,1097
     pantry-tree:
       size: 383

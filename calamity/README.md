@@ -41,11 +41,36 @@ https://morrowm.github.io/posts/2021-04-29-calamity.html
 
 # Examples
 
-Some example projects can be found at:
+Here's a list of projects that use calamity:
 <!-- - [simmsb/calamity-example](https://github.com/simmsb/calamity-example): An extended example of the snippet below, shows use of metrics. -->
-- [simmsb/calamity-bot](https://github.com/simmsb/calamity-bot): Uses a database, showing modularisation of groups/commands.
+- [simmsb/calamity-bot](https://github.com/simmsb/calamity-bot): Uses a database, showing modularization of groups/commands.
+- [MorrowM/pandabot-discord](https://github.com/MorrowM/pandabot-discord): Uses a database, performs member role management, etc.
+- [MorrowM/calamity-tutorial](https://github.com/MorrowM/calamity-tutorial): A bare minimum bot.
+
+(Feel free to contact me via the discord server, or email me via
+ben@bensimms.moe if you've written a bot using calamity, or don't want your
+project listed here)
 
 ``` haskell
+#!/usr/bin/env cabal
+{- cabal:
+  build-depends:
+     base >= 4.13 && < 5
+     , calamity >= 0.1.28
+     , text >= 1.2 && < 2
+     , lens >= 4.18 && < 5
+     , di-polysemy ^>= 0.2
+     , di >= 1.3 && < 2
+     , df1 >= 0.3 && < 0.5
+     , di-core ^>= 1.0.4
+     , polysemy ^>= 1.5
+     , polysemy-plugin ^>= 0.3
+     , stm ^>= 2.5
+     , text-show ^>= 3.9
+-}
+
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
@@ -65,7 +90,7 @@ module Main where
 import           Calamity
 import           Calamity.Cache.InMemory
 import           Calamity.Commands
-import qualified Calamity.Commands.Context                  as CommandContext
+import qualified Calamity.Commands.Context   as CommandContext
 import           Calamity.Metrics.Noop
 
 import           Control.Concurrent
@@ -73,8 +98,7 @@ import           Control.Concurrent.STM.TVar
 import           Control.Lens
 import           Control.Monad
 
-import           Data.Text.Lazy              ( Text, fromStrict )
-import           Data.Text.Strict.Lens
+import qualified Data.Text.Lazy as L
 
 import qualified Di
 import qualified DiPolysemy                  as DiP
@@ -86,6 +110,8 @@ import qualified Polysemy.Embed              as P
 import qualified Polysemy.Fail               as P
 
 import           Prelude                     hiding ( error )
+
+import           System.Environment          (getEnv)
 
 import           TextShow
 
@@ -103,19 +129,19 @@ runCounterAtomic m = do
 handleFailByLogging m = do
   r <- P.runFail m
   case r of
-    Left e -> DiP.error (e ^. packed)
+    Left e -> DiP.error $ L.pack e
     _      -> pure ()
 
-info, debug :: BotC r => Text -> P.Sem r ()
+info, debug :: BotC r => L.Text -> P.Sem r ()
 info = DiP.info
 debug = DiP.info
 
-tellt :: (BotC r, Tellable t) => t -> Text -> P.Sem r (Either RestError Message)
+tellt :: (BotC r, Tellable t) => t -> L.Text -> P.Sem r (Either RestError Message)
 tellt t m = tell t $ L.toStrict m
 
 main :: IO ()
 main = do
-  token <- view packed <$> getEnv "BOT_TOKEN"
+  token <- L.pack <$> getEnv "BOT_TOKEN"
   Di.new $ \di ->
     void . P.runFinal . P.embedToFinal . DiP.runDiToIO di . runCounterAtomic . runCacheInMemory . runMetricsNoop . useConstantPrefix "!"
       $ runBotIO (BotToken token) defaultIntents $ do
@@ -126,7 +152,7 @@ main = do
         command @'[Named "u" User, Named "u1" User] "utest2" $ \ctx u u1 -> do
           void $ tellt ctx $ "got user: " <> showtl u <> "\nand: " <> showtl u1
         command @'[L.Text, Snowflake User] "test" $ \ctx something aUser -> do
-          info $ "something = " <> showt something <> ", aUser = " <> showt aUser
+          info $ "something = " <> showtl something <> ", aUser = " <> showtl aUser
         command @'[] "hello" $ \ctx -> do
           void $ tellt ctx "heya"
         group "testgroup" $ do
@@ -159,11 +185,11 @@ main = do
           info "sleeping"
           P.embed $ threadDelay (5 * 1000 * 1000)
           info "slept"
-          void . invoke $ EditMessage (msg ^. #channelID) msg' (Just "lol") Nothing
+          void . invoke $ EditMessage (msg ^. #channelID) msg' (editMessageContent $ Just "lol")
           info "edited"
         _ -> pure ()
       react @('CustomEvt "command-error" (CommandContext.Context, CommandError)) $ \(ctx, e) -> do
-        info $ "Command failed with reason: " <> showt e
+        info $ "Command failed with reason: " <> showtl e
         case e of
           ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
       react @('CustomEvt "my-event" (L.Text, Message)) $ \(s, m) ->
