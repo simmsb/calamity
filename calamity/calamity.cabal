@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 8ad43f74a24db538cc3ff9c3c7ccf8de0c679793f5e2028d4b4cc2fc26f12091
+-- hash: 89740b43cb19ef8c4833319daf4096283256327512903f70f9f82463297c7d07
 
 name:           calamity
 version:        0.1.29.0
@@ -165,7 +165,7 @@ library
     , megaparsec >=8 && <10
     , mime-types >=0.1 && <0.2
     , mtl >=2.2 && <3
-    , polysemy (>=1.5 && <1.6) && <2
+    , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.4
     , reflection >=2.1 && <3
     , req >=3.1 && <3.10
