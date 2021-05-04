@@ -202,13 +202,20 @@ The library logs on debug levels by default, if you wish to disable logging you
 can do something along the lines of:
 
 ``` haskell
+import qualified Di
+import qualified Df1
+import qualified Di.Core
+import qualified DiPolysemy
+
+filterDi :: Di.Core.Di l Di.Path m -> Di.Core.Di l Di.Path m
+filterDi = Di.Core.filter (\_ p _ -> Df1.Push "calamity" `notElem` p)
+
 Di.new $ \di ->
 -- ...
   . runDiToIO di
-  -- disable logs emitted inside calamity
-  . DiPolysemy.local (Di.Core.filter (\_ _ _ -> False))
-  . runBotIO -- ...
-  -- re-enable logs emitted inside your bot's code
-  . DiPolysemy.local (const di)
+  -- disable logs emitted by calamity
+  . DiPolysemy.local filterDi
+  . runBotIO
+  -- ...
 ```
 
