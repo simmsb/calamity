@@ -88,7 +88,7 @@ invoke a = do
   let r = action a (route' ^. #path) (requestOptions token')
       act = runReq reqConfig r
 
-  resp <- attr "route" (renderUrl $ route' ^. #path) $ doRequest rlState' route' act
+  resp <- push "calamity" . attr "route" (renderUrl $ route' ^. #path) $ doRequest rlState' route' act
 
   void $ modifyGauge (subtract 1) inFlightRequests
 
