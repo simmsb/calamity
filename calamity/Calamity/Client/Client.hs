@@ -486,7 +486,8 @@ handleEvent' eh evt@(GuildMemberUpdate GuildMemberUpdateData { user, guildID }) 
 handleEvent' eh evt@(GuildMembersChunk GuildMembersChunkData { members, guildID }) = do
   updateCache evt
   Just guild <- getGuild guildID
-  let members' = guild ^.. #members . foldMap (at . getID) members . _Just
+  let memberIDs = map (getID @Member) members
+  let members' = catMaybes $ map (\mid -> guild ^. #members . at mid) memberIDs
   pure $ map ($ (guild, members')) (getEventHandlers @'GuildMembersChunkEvt eh)
 
 handleEvent' eh evt@(GuildRoleCreate GuildRoleData { guildID, role }) = do
