@@ -42,17 +42,18 @@ import           Calamity.Commands.Context ( Context )
 --
 -- The event handler registered by 'addCommands' will fire the following custom events:
 --
---     1. @"command-error" ('Context', 'CommandError')@
+--     1. 'Calamity.Commands.Utils.CtxCommandError'
 --
 --         Fired when a command returns an error.
 --
---     2. @"command-not-found" ('Calamity.Types.Model.Channel.Message', ['Data.Text.Lazy.Text'])@
+--     2. 'Calamity.Commands.Utils.CommandNotFound'
 --
 --         Fired when a valid prefix is used, but the command is not found.
 --
---     3. @"command-invoked" 'Context'@
+--     3. 'Calamity.Commands.Utils.CommandInvoked'
 --
 --         Fired when a command is successfully invoked.
+--
 --
 -- ==== Registered Metrics
 --

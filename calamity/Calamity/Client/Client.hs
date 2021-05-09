@@ -52,7 +52,6 @@ import           Data.Maybe
 import           Data.Proxy
 import qualified Data.Text                         as S
 import           Data.Time.Clock.POSIX
-import           Data.Typeable
 
 import qualified Di.Core                           as DC
 import qualified Df1
@@ -156,7 +155,9 @@ runBotIO' token intents status setup = do
 -- Reacting to a custom event:
 --
 -- @
--- 'react' @(\''CustomEvt' "my-event" ('Data.Text.Text', 'Message')) $ \\(s, m) ->
+-- data MyCustomEvt = MyCustomEvt 'Data.Text.Text' 'Message'
+--
+-- 'react' @(\''CustomEvt' MyCustomEvt) $ \\(MyCustomEvt s m) ->
 --    'void' $ 'Calamity.Types.Tellable.tell' @'Data.Text.Text' m ("Somebody told me to tell you about: " '<>' s)
 -- @
 --
@@ -196,20 +197,15 @@ fire e = do
 
 -- | Build a Custom CalamityEvent
 --
--- You'll probably want @TypeApplications@ to specify the type of @s@.
---
--- The types of @s@ and @a@ must match up with the event handler you want to
--- receive it.
+-- The type of @a@ must match up with the event handler you want to receive it.
 --
 -- ==== Examples
 --
--- Building an event named \"my-event\":
---
 -- @
--- 'customEvt' @"my-event" ("aha" :: 'Data.Text.Text', msg)
+-- 'customEvt' (MyCustomEvent "lol")
 -- @
-customEvt :: forall s a. (Typeable s, Typeable a) => a -> CalamityEvent
-customEvt x = Custom (typeRep $ Proxy @s) (toDyn x)
+customEvt :: forall a. Typeable a => a -> CalamityEvent
+customEvt = Custom
 
 -- | Get a copy of the event stream.
 events :: BotC r => P.Sem r (OutChan CalamityEvent)
@@ -330,16 +326,15 @@ clientLoop = do
     !evt' <- P.embed $ readChan outc
     case evt' of
       Dispatch !sid !evt -> handleEvent sid evt >> pure True
-      Custom !s !d       -> handleCustomEvent s d >> pure True
+      Custom d           -> handleCustomEvent d >> pure True
       ShutDown           -> pure False
   debug "leaving client loop"
 
-handleCustomEvent :: forall r. BotC r => TypeRep -> Dynamic -> P.Sem r ()
-handleCustomEvent s d = do
-  debug $ "handling a custom event, s: " +|| s ||+ ", d: " +|| d ||+ ""
+handleCustomEvent :: forall a r. (Typeable a, BotC r) => a -> P.Sem r ()
+handleCustomEvent d = do
   eventHandlers <- P.atomicGet
 
-  let handlers = getCustomEventHandlers s (dynTypeRep d) eventHandlers
+  let handlers = getCustomEventHandlers @a eventHandlers
 
   for_ handlers (\h -> P.async . P.embed $ h d)
 

@@ -38,14 +38,12 @@ import Control.Concurrent.STM.TVar
 
 import Data.Default.Class
 import Data.Dynamic
-import qualified Data.HashMap.Lazy as LH
 import Data.IORef
 import Data.Maybe
 import Data.Time
 import Data.TypeRepMap (TypeRepMap, WrapTypeable (..))
 import qualified Data.TypeRepMap as TM
 import Data.Typeable
-import Data.Void
 
 import GHC.Exts (fromList)
 import GHC.Generics
@@ -55,10 +53,12 @@ import qualified Polysemy.Async as P
 import qualified Polysemy.AtomicState as P
 import qualified Polysemy.Reader as P
 
-import qualified Df1 as Df1
+import qualified Df1
 import qualified Di.Core as DC
 import TextShow
 import qualified TextShow.Generic as TSG
+import Data.Kind (Type)
+import Data.Void (Void)
 
 data Client = Client
   { shards :: TVar [(InChan ControlMessage, Async (Maybe ()))]
@@ -72,6 +72,7 @@ data Client = Client
   }
   deriving (Generic)
 
+-- | Constraints required by the bot client
 type BotC r =
   ( P.Members
       '[ LogEff
@@ -167,8 +168,9 @@ data EventType
   | UserUpdateEvt
   | -- | Sent when someone joins/leaves/moves voice channels
     VoiceStateUpdateEvt
-  | -- | A custom event, @s@ is the name and @a@ is the data sent to the handler
-    forall s a. CustomEvt s a
+  | -- | A custom event, @a@ is the data sent to the handler and should probably
+    -- be a newtype to disambiguate events
+    forall (a :: Type). CustomEvt a
 
 data GuildCreateStatus
   = -- | The guild was just joined
@@ -227,19 +229,24 @@ type family EHType (d :: EventType) where
   EHType 'TypingStartEvt = (Channel, Snowflake User, UnixTimestamp)
   EHType 'UserUpdateEvt = (User, User)
   EHType 'VoiceStateUpdateEvt = (Maybe VoiceState, VoiceState)
-  EHType ( 'CustomEvt s a) = a
+  EHType ( 'CustomEvt a) = a
 
 type StoredEHType t = EHType t -> IO ()
 
 newtype EventHandlers = EventHandlers (TypeRepMap EventHandler)
 
-data EventHandlerWithID a = EventHandlerWithID
+data EventHandlerWithID (a :: Type) = EventHandlerWithID
   { ehID :: Integer
   , eh :: a
   }
 
+newtype CustomEHTypeStorage (a :: Type) = CustomEHTypeStorage
+  { unwrapCustomEHTypeStorage :: [EventHandlerWithID (a -> IO ())]
+  }
+  deriving newtype ( Monoid, Semigroup )
+
 type family EHStorageType (t :: EventType) where
-  EHStorageType ( 'CustomEvt s a) = LH.HashMap TypeRep (LH.HashMap TypeRep [EventHandlerWithID (StoredEHType ( 'CustomEvt s a))])
+  EHStorageType ( 'CustomEvt _) = TypeRepMap CustomEHTypeStorage
   EHStorageType t = [EventHandlerWithID (StoredEHType t)]
 
 newtype EventHandler (t :: EventType) = EH
@@ -284,7 +291,7 @@ instance Default EventHandlers where
         , WrapTypeable $ EH @'MessageReactionRemoveAllEvt []
         , WrapTypeable $ EH @'TypingStartEvt []
         , WrapTypeable $ EH @'UserUpdateEvt []
-        , WrapTypeable $ EH @('CustomEvt Void Dynamic) LH.empty
+        , WrapTypeable $ EH @('CustomEvt Void) TM.empty
         ]
 
 instance Semigroup EventHandlers where
@@ -296,18 +303,13 @@ instance Monoid EventHandlers where
 -- not sure what to think of this
 
 type family EHInstanceSelector (d :: EventType) :: Bool where
-  EHInstanceSelector ( 'CustomEvt _ _) = 'True
+  EHInstanceSelector ( 'CustomEvt _) = 'True
   EHInstanceSelector _ = 'False
-
-fromDynamicJust :: forall a. Typeable a => Dynamic -> a
-fromDynamicJust d = case fromDynamic d of
-  Just x -> x
-  Nothing -> error $ "Extracting dynamic failed, wanted: " <> (show . typeRep $ Proxy @a) <> ", got: " <> (show $ dynTypeRep d)
 
 {- | A helper typeclass that is used to decide how to register regular
  events, and custom events which require storing in a map at runtime.
 -}
-class InsertEventHandler a where
+class InsertEventHandler (a :: EventType) where
   makeEventHandlers :: Proxy a -> Integer -> StoredEHType a -> EventHandlers
 
 instance (EHInstanceSelector a ~ flag, InsertEventHandler' flag a) => InsertEventHandler a where
@@ -316,17 +318,11 @@ instance (EHInstanceSelector a ~ flag, InsertEventHandler' flag a) => InsertEven
 class InsertEventHandler' (flag :: Bool) a where
   makeEventHandlers' :: Proxy flag -> Proxy a -> Integer -> StoredEHType a -> EventHandlers
 
-intoDynFn :: forall a. Typeable a => (a -> IO ()) -> (Dynamic -> IO ())
-intoDynFn fn = \d -> fn $ fromDynamicJust d
-
-instance
-  (Typeable a, Typeable s, Typeable (StoredEHType ( 'CustomEvt s a)), (EHType ( 'CustomEvt s a) -> IO ()) ~ (a -> IO ())) =>
-  InsertEventHandler' 'True ( 'CustomEvt s a)
-  where
+instance forall (x :: Type). (Typeable (EHType ('CustomEvt x))) => InsertEventHandler' 'True ( 'CustomEvt x) where
   makeEventHandlers' _ _ id' handler =
     EventHandlers . TM.one $
-      EH @( 'CustomEvt Void Dynamic)
-        (LH.singleton (typeRep $ Proxy @s) (LH.singleton (typeRep $ Proxy @a) [EventHandlerWithID id' (intoDynFn handler)]))
+      EH @( 'CustomEvt Void)
+        (TM.one @x $ CustomEHTypeStorage [EventHandlerWithID id' handler])
 
 instance (Typeable s, EHStorageType s ~ [EventHandlerWithID (StoredEHType s)], Typeable (StoredEHType s)) => InsertEventHandler' 'False s where
   makeEventHandlers' _ _ id' handler = EventHandlers . TM.one $ EH @s [EventHandlerWithID id' handler]
@@ -340,7 +336,7 @@ instance (EHInstanceSelector a ~ flag, GetEventHandlers' flag a) => GetEventHand
 class GetEventHandlers' (flag :: Bool) a where
   getEventHandlers' :: Proxy a -> Proxy flag -> EventHandlers -> [StoredEHType a]
 
-instance GetEventHandlers' 'True ( 'CustomEvt s a) where
+instance GetEventHandlers' 'True ( 'CustomEvt a) where
   getEventHandlers' _ _ _ = error "use getCustomEventHandlers instead"
 
 instance (Typeable s, Typeable (StoredEHType s), EHStorageType s ~ [EventHandlerWithID (StoredEHType s)]) => GetEventHandlers' 'False s where
@@ -357,15 +353,14 @@ instance (EHInstanceSelector a ~ flag, RemoveEventHandler' flag a) => RemoveEven
 class RemoveEventHandler' (flag :: Bool) a where
   removeEventHandler' :: Proxy flag -> Proxy a -> Integer -> EventHandlers -> EventHandlers
 
-instance (Typeable s, Typeable a) => RemoveEventHandler' 'True ( 'CustomEvt s a) where
+instance forall (a :: Type). (Typeable a) => RemoveEventHandler' 'True ( 'CustomEvt a) where
   removeEventHandler' _ _ id' (EventHandlers handlers) =
     EventHandlers $
-      TM.adjust @( 'CustomEvt Void Dynamic)
+      TM.adjust @( 'CustomEvt Void)
         ( \(EH ehs) ->
             EH
-              ( LH.update
-                  (Just . LH.update (Just . filter ((/= id') . ehID)) (typeRep $ Proxy @a))
-                  (typeRep $ Proxy @s)
+              ( TM.adjust @a
+                  (CustomEHTypeStorage . filter ((/= id') . ehID) . unwrapCustomEHTypeStorage)
                   ehs
               )
         )
@@ -381,11 +376,9 @@ instance
         (\(EH ehs) -> EH $ filter ((/= id') . ehID) ehs)
         handlers
 
-getCustomEventHandlers :: TypeRep -> TypeRep -> EventHandlers -> [Dynamic -> IO ()]
-getCustomEventHandlers s a (EventHandlers handlers) =
+getCustomEventHandlers :: forall a. Typeable a => EventHandlers -> [a -> IO ()]
+getCustomEventHandlers (EventHandlers handlers) =
   let handlerMap =
-        unwrapEventHandler @( 'CustomEvt Void Dynamic) $
-          fromMaybe
-            mempty
-            (TM.lookup handlers :: Maybe (EventHandler ( 'CustomEvt Void Dynamic)))
-   in map eh . concat $ LH.lookup s handlerMap >>= LH.lookup a
+        unwrapEventHandler @( 'CustomEvt Void) $
+          fromMaybe mempty (TM.lookup handlers :: Maybe (EventHandler ( 'CustomEvt Void)))
+   in maybe mempty (map eh . unwrapCustomEHTypeStorage) $ TM.lookup @a handlerMap

@@ -19,13 +19,13 @@ import Calamity.Types.Snowflake
 import Calamity.Types.UnixTimestamp
 
 import Data.Aeson
-import Data.Dynamic
 import Data.Text.Lazy (Text)
 import Data.Time
-import Data.Typeable
 import Data.Vector.Unboxing (Vector)
 
 import GHC.Generics
+import Data.Kind (Type)
+import Data.Typeable (Typeable)
 
 data CalamityEvent
   = Dispatch
@@ -33,13 +33,9 @@ data CalamityEvent
       -- ^ The shard that pushed this event
       DispatchData
       -- ^ The attached data
-  | Custom
-      TypeRep
-      -- ^ The name of the custom event
-      Dynamic
+  | forall (a :: Type). Typeable a => Custom a
       -- ^ The data sent to the custom event
   | ShutDown
-  deriving (Show, Generic)
 
 data DispatchData
   = Ready !ReadyData

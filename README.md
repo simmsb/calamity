@@ -139,6 +139,8 @@ debug = DiP.info
 tellt :: (BotC r, Tellable t) => t -> L.Text -> P.Sem r (Either RestError Message)
 tellt t m = tell t $ L.toStrict m
 
+data MyCustomEvt = MyCustomEvt L.Text Message
+
 main :: IO ()
 main = do
   token <- L.pack <$> getEnv "BOT_TOKEN"
@@ -173,7 +175,7 @@ main = do
           void $ tellt ctx "bye!"
           stopBot
         command @'[] "fire-evt" $ \ctx -> do
-          fire $ customEvt @"my-event" ("aha" :: L.Text, ctx ^. #message)
+          fire . customEvt $ MyCustomEvt "aha" (ctx ^. #message)
         command @'[L.Text] "wait-for" $ \ctx s -> do
           void $ tellt ctx ("waiting for !" <> s)
           waitUntil @'MessageCreateEvt (\msg -> msg ^. #content == ("!" <> s))
@@ -188,11 +190,11 @@ main = do
           void . invoke $ EditMessage (msg ^. #channelID) msg' (editMessageContent $ Just "lol")
           info "edited"
         _ -> pure ()
-      react @('CustomEvt "command-error" (CommandContext.Context, CommandError)) $ \(ctx, e) -> do
+      react @('CustomEvt CtxCommandError) $ \(CtxCommandError ctx e) -> do
         info $ "Command failed with reason: " <> showtl e
         case e of
           ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
-      react @('CustomEvt "my-event" (L.Text, Message)) $ \(s, m) ->
+      react @('CustomEvt MyCustomEvt) $ \(MyCustomEvt s m) ->
         void $ tellt m ("Somebody told me to tell you about: " <> s)
 ```
 

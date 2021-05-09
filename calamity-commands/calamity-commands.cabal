@@ -1,10 +1,10 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: d17b097b7481b77c55ba13052f69950fec4cd0809ca7f49be4f52b1a6fc2ad28
+-- hash: 1a518a87400f77c3c98372909d5c1c120d0d1a075910b0216017d585e8b46990
 
 name:           calamity-commands
 version:        0.1.1.0
@@ -18,7 +18,8 @@ maintainer:     ben@bensimms.moe
 copyright:      2020 Ben Simms
 license:        MIT
 license-file:   LICENSE
-tested-with:    GHC == 8.10.4
+tested-with:
+    GHC == 8.10.4
 build-type:     Simple
 extra-source-files:
     README.md
@@ -52,8 +53,57 @@ library
   other-modules:
       Paths_calamity_commands
   hs-source-dirs:
-      ./.
-  default-extensions: StrictData AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
+      ./
+  default-extensions:
+      StrictData
+      AllowAmbiguousTypes
+      BlockArguments
+      NoMonomorphismRestriction
+      BangPatterns
+      BinaryLiterals
+      UndecidableInstances
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveTraversable
+      DoAndIfThenElse
+      EmptyDataDecls
+      ExistentialQuantification
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      DerivingVia
+      DerivingStrategies
+      GeneralizedNewtypeDeriving
+      StandaloneDeriving
+      DeriveAnyClass
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      OverloadedStrings
+      OverloadedLabels
+      PartialTypeSignatures
+      PatternGuards
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeFamilies
+      TypeSynonymInstances
+      ViewPatterns
+      DuplicateRecordFields
+      TypeOperators
+      TypeApplications
+      RoleAnnotations
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       base >=4.13 && <5
@@ -61,8 +111,8 @@ library
     , lens >=4.18 && <6
     , megaparsec >=8 && <10
     , polysemy >=1.5 && <2
-    , polysemy-plugin >=0.3 && <0.4
+    , polysemy-plugin ==0.3.*
     , text >=1.2 && <2
     , text-show >=3.8 && <4
-    , unordered-containers >=0.2 && <0.3
+    , unordered-containers ==0.2.*
   default-language: Haskell2010

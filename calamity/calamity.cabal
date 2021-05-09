@@ -1,13 +1,13 @@
 cabal-version: 1.18
 
--- This file has been generated from package.yaml by hpack version 0.33.0.
+-- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 89740b43cb19ef8c4833319daf4096283256327512903f70f9f82463297c7d07
+-- hash: 4ec13e4305dd3bf7252e149d17272bcf9a85da957f05057d39f6b8da84cf9ccb
 
 name:           calamity
-version:        0.1.29.0
+version:        0.1.30.0
 synopsis:       A library for writing discord bots in haskell
 description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 category:       Network, Web
@@ -18,7 +18,8 @@ maintainer:     ben@bensimms.moe
 copyright:      2020 Ben Simms
 license:        MIT
 license-file:   LICENSE
-tested-with:    GHC == 8.10.4
+tested-with:
+    GHC == 8.10.4
 build-type:     Simple
 extra-source-files:
     README.md
@@ -132,8 +133,57 @@ library
   other-modules:
       Paths_calamity
   hs-source-dirs:
-      ./.
-  default-extensions: StrictData AllowAmbiguousTypes BlockArguments NoMonomorphismRestriction BangPatterns BinaryLiterals UndecidableInstances ConstraintKinds DataKinds DefaultSignatures DeriveDataTypeable DeriveFoldable DeriveFunctor DeriveGeneric DeriveTraversable DoAndIfThenElse EmptyDataDecls ExistentialQuantification FlexibleContexts FlexibleInstances FunctionalDependencies GADTs DerivingVia DerivingStrategies GeneralizedNewtypeDeriving StandaloneDeriving DeriveAnyClass InstanceSigs KindSignatures LambdaCase MultiParamTypeClasses MultiWayIf NamedFieldPuns OverloadedStrings OverloadedLabels PartialTypeSignatures PatternGuards PolyKinds RankNTypes RecordWildCards ScopedTypeVariables TupleSections TypeFamilies TypeSynonymInstances ViewPatterns DuplicateRecordFields TypeOperators TypeApplications RoleAnnotations
+      ./
+  default-extensions:
+      StrictData
+      AllowAmbiguousTypes
+      BlockArguments
+      NoMonomorphismRestriction
+      BangPatterns
+      BinaryLiterals
+      UndecidableInstances
+      ConstraintKinds
+      DataKinds
+      DefaultSignatures
+      DeriveDataTypeable
+      DeriveFoldable
+      DeriveFunctor
+      DeriveGeneric
+      DeriveTraversable
+      DoAndIfThenElse
+      EmptyDataDecls
+      ExistentialQuantification
+      FlexibleContexts
+      FlexibleInstances
+      FunctionalDependencies
+      GADTs
+      DerivingVia
+      DerivingStrategies
+      GeneralizedNewtypeDeriving
+      StandaloneDeriving
+      DeriveAnyClass
+      InstanceSigs
+      KindSignatures
+      LambdaCase
+      MultiParamTypeClasses
+      MultiWayIf
+      NamedFieldPuns
+      OverloadedStrings
+      OverloadedLabels
+      PartialTypeSignatures
+      PatternGuards
+      PolyKinds
+      RankNTypes
+      RecordWildCards
+      ScopedTypeVariables
+      TupleSections
+      TypeFamilies
+      TypeSynonymInstances
+      ViewPatterns
+      DuplicateRecordFields
+      TypeOperators
+      TypeApplications
+      RoleAnnotations
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       aeson >=1.4 && <2
@@ -141,36 +191,36 @@ library
     , base >=4.13 && <5
     , bytestring >=0.10 && <0.12
     , colour >=2.3.5 && <2.4
-    , concurrent-extra >=0.7 && <0.8
+    , concurrent-extra ==0.7.*
     , connection >=0.2.6 && <0.4
-    , containers >=0.6 && <0.7
-    , data-default-class >=0.1 && <0.2
+    , containers ==0.6.*
+    , data-default-class ==0.1.*
     , data-flags >=0.0.3 && <0.1
     , deepseq >=1.4.4.0 && <2
-    , deque >=0.4 && <0.5
-    , df1 >=0.4 && <0.5
+    , deque ==0.4.*
+    , df1 ==0.4.*
     , di-core >=1.0.4 && <1.1
-    , di-polysemy >=0.2 && <0.3
-    , exceptions >=0.10 && <0.11
-    , fmt >=0.6 && <0.7
+    , di-polysemy ==0.2.*
+    , exceptions ==0.10.*
+    , fmt ==0.6.*
     , focus >=1.0 && <2
     , generic-lens >=2.0 && <3
     , hashable >=1.2 && <2
     , http-api-data >=0.4.3 && <0.5
     , http-client >=0.5 && <0.8
     , http-date >=0.0.8 && <0.1
-    , http-types >=0.12 && <0.13
+    , http-types ==0.12.*
     , lens >=4.18 && <6
     , lens-aeson >=1.1 && <2
     , megaparsec >=8 && <10
-    , mime-types >=0.1 && <0.2
+    , mime-types ==0.1.*
     , mtl >=2.2 && <3
     , polysemy >=1.5 && <2
-    , polysemy-plugin >=0.3 && <0.4
+    , polysemy-plugin ==0.3.*
     , reflection >=2.1 && <3
     , req >=3.1 && <3.10
     , safe-exceptions >=0.1 && <2
-    , scientific >=0.3 && <0.4
+    , scientific ==0.3.*
     , stm >=2.5 && <3
     , stm-chans >=3.0 && <4
     , stm-containers >=1.1 && <2
@@ -178,11 +228,11 @@ library
     , text-show >=3.8 && <4
     , time >=1.8 && <1.12
     , tls >=1.4 && <2
-    , typerep-map >=0.3 && <0.4
-    , unagi-chan >=0.4 && <0.5
-    , unboxing-vector >=0.2 && <0.3
-    , unordered-containers >=0.2 && <0.3
-    , vector >=0.12 && <0.13
-    , websockets >=0.12 && <0.13
+    , typerep-map ==0.3.*
+    , unagi-chan ==0.4.*
+    , unboxing-vector ==0.2.*
+    , unordered-containers ==0.2.*
+    , vector ==0.12.*
+    , websockets ==0.12.*
     , x509-system >=1.6.6 && <1.7
   default-language: Haskell2010

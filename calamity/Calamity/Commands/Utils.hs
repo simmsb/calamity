@@ -1,4 +1,5 @@
 {-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE DerivingStrategies #-}
 -- | Command handler utilities
 module Calamity.Commands.Utils
     ( addCommands
@@ -6,7 +7,10 @@ module Calamity.Commands.Utils
     , buildContext
     , handleCommands
     , findCommand
-    , CmdInvokeFailReason(..) ) where
+    , CmdInvokeFailReason(..)
+    , CtxCommandError(..)
+    , CommandNotFound(..)
+    , CommandInvoked(..) ) where
 
 import           Calamity.Cache.Eff
 import           Calamity.Metrics.Eff
@@ -41,6 +45,7 @@ import qualified Polysemy.Fail                  as P
 import qualified Polysemy.Tagged                as P
 import qualified Polysemy.Fixpoint              as P
 import qualified Polysemy.Reader                as P
+import GHC.Generics (Generic)
 
 mapLeft :: (e -> e') -> Either e a -> Either e' a
 mapLeft f (Left x)  = Left $ f x
@@ -50,6 +55,24 @@ data CmdInvokeFailReason
   = NoContext
   | NotFound [L.Text]
   | CommandInvokeError Context CommandError
+
+data CtxCommandError = CtxCommandError
+  { ctx :: Context
+  , err :: CommandError
+  }
+  deriving ( Show, Generic )
+
+data CommandNotFound = CommandNotFound
+  { msg :: Message
+  , path :: [L.Text]
+    -- ^ The groups that were successfully parsed
+  }
+  deriving ( Show, Generic )
+
+newtype CommandInvoked = CommandInvoked
+  { ctx :: Context
+  }
+  deriving stock ( Show, Generic )
 
 -- | Construct commands and groups from a command DSL, then registers an event
 -- handler on the bot that manages running those commands.
@@ -72,15 +95,15 @@ data CmdInvokeFailReason
 --
 -- This will fire the following events:
 --
---     1. @"command-error" ('Context', 'CommandError')@
+--     1. 'CtxCommandError'
 --
 --         Fired when a command returns an error.
 --
---     2. @"command-not-found" ('Calamity.Types.Model.Channel.Message', ['Data.Text.Lazy.Text'])@
+--     2. 'CommandNotFound'
 --
 --         Fired when a valid prefix is used, but the command is not found.
 --
---     3. @"command-invoked" 'Context'@
+--     3. 'CommandInvoked'
 --
 --         Fired when a command is successfully invoked.
 --
@@ -92,13 +115,13 @@ addCommands m = do
       Just (prefix, cmd) -> do
         r <- handleCommands handler msg prefix cmd
         case r of
-          Left (CommandInvokeError ctx e) -> fire $ customEvt @"command-error" (ctx, e)
-          Left (NotFound path)            -> fire $ customEvt @"command-not-found" (msg, path)
+          Left (CommandInvokeError ctx e) -> fire . customEvt $ CtxCommandError ctx e
+          Left (NotFound path)            -> fire . customEvt $ CommandNotFound msg path
           Left NoContext                  -> pure () -- ignore if context couldn't be built
           Right ctx        -> do
             cmdInvoke <- registerCounter "commands_invoked" [("name", S.unwords $ commandPath (ctx ^. #command))]
             void $ addCounter 1 cmdInvoke
-            fire $ customEvt @"command-invoked" ctx
+            fire . customEvt $ CommandInvoked ctx
       Nothing -> pure ()
   pure (remove, handler, res)
 
@@ -140,7 +163,7 @@ buildCommands m = P.fixpointToFinal $ mdo
           P.runReader Nothing .
           runLocalWriter @(LH.HashMap S.Text (Group, AliasType)) .
           runLocalWriter @(LH.HashMap S.Text (Command, AliasType))
-        defaultHelp = (const "This command or group has no help.")
+        defaultHelp = const "This command or group has no help."
 
 -- TODO: turn this into an effect
 -- | Attempt to build the context for a command

@@ -1,5 +1,11 @@
 # Changelog for Calamity
 
+## 0.1.30.0
+
++ Removed the `Symbol` parameter of custom events, instead of `'CustomEvt
+  @"command-error" @(Context, CommandError)` it is now `'CustomEvt
+  CtxCommandError`, etc.
+
 ## 0.1.29.0
 
 + The minimum version of `base` has been upped to `4.13` as the library fails to
