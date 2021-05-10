@@ -25,6 +25,7 @@ import           Calamity.Commands.AliasType
 import           Calamity.Commands.Check
 import           Calamity.Commands.Command     hiding ( help )
 import           Calamity.Commands.CommandUtils
+import           Calamity.Commands.ParameterInfo
 import           Calamity.Commands.Context     hiding ( command )
 import           Calamity.Commands.Error
 import           Calamity.Commands.Group       hiding ( help )
@@ -111,8 +112,8 @@ command'
   :: P.Member (P.Final IO) r
   => S.Text
   -- ^ The name of the command
-  -> [S.Text]
-  -- ^ The names of the command's parameters
+  -> [ParameterInfo]
+  -- ^ The command's parameters
   -> (Context -> P.Sem r (Either CommandError a))
   -- ^ The parser for this command
   -> ((Context, a) -> P.Sem (P.Fail ': r) ())
@@ -132,8 +133,8 @@ commandA'
   -- ^ The name of the command
   -> [S.Text]
   -- ^ The aliases for the command
-  -> [S.Text]
-  -- ^ The names of the command's parameters
+  -> [ParameterInfo]
+  -- ^ The command's parameters
   -> (Context -> P.Sem r (Either CommandError a))
   -- ^ The parser for this command
   -> ((Context, a) -> P.Sem (P.Fail ': r) ())

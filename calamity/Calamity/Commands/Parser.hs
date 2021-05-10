@@ -5,10 +5,15 @@ module Calamity.Commands.Parser
     , KleeneStarConcat
     , KleenePlusConcat
     , ParserEffs
-    , runCommandParser ) where
+    , runCommandParser
+    -- * Utilities for writing your own parsers
+    , parseMP
+    , ParserCtxE
+    , SpannedError(..) ) where
 
 import           Calamity.Cache.Eff
 import           Calamity.Commands.Context
+import           Calamity.Commands.ParameterInfo
 import           Calamity.Types.Model.Channel  ( Channel, GuildChannel )
 import           Calamity.Types.Model.Guild    ( Emoji, RawEmoji(..), Partial(PartialEmoji), Guild, Member, Role )
 import           Calamity.Types.Model.User     ( User )
@@ -22,7 +27,7 @@ import           Control.Monad.Trans           ( lift )
 import           Data.Char                     ( isSpace )
 import           Data.Kind
 import           Data.List.NonEmpty            ( NonEmpty(..) )
-import           Data.Maybe                    ( isJust )
+import           Data.Maybe                    ( isJust, fromMaybe )
 import           Data.Semigroup
 import qualified Data.Text                     as S
 import qualified Data.Text.Lazy                as L
@@ -45,9 +50,6 @@ import Numeric.Natural (Natural)
 data SpannedError = SpannedError L.Text !Int !Int
   deriving ( Show, Eq, Ord )
 
-showTypeOf :: forall a. Typeable a => String
-showTypeOf = show . typeRep $ Proxy @a
-
 data ParserState = ParserState
   { off :: Int
   , msg :: L.Text
@@ -65,9 +67,11 @@ class Typeable a => Parser (a :: Type) r where
 
   type ParserResult a = a
 
-  parserName :: S.Text
-  default parserName :: S.Text
-  parserName = ":" <> S.pack (showTypeOf @a)
+  parameterInfo :: ParameterInfo
+  default parameterInfo :: ParameterInfo
+  parameterInfo = ParameterInfo Nothing (typeRep $ Proxy @a) (parameterDescription @a @r)
+
+  parameterDescription :: S.Text
 
   parse :: P.Sem (ParserEffs r) (ParserResult a)
 
@@ -78,14 +82,28 @@ data Named (s :: Symbol) (a :: Type)
 instance (KnownSymbol s, Parser a r) => Parser (Named s a) r where
   type ParserResult (Named s a) = ParserResult a
 
-  parserName = (S.pack . symbolVal $ Proxy @s) <> parserName @a @r
+  parameterInfo =
+    let ParameterInfo _ type_ typeDescription = parameterInfo @a @r
+    in ParameterInfo (Just . S.pack . symbolVal $ Proxy @s) type_ typeDescription
+
+  parameterDescription = parameterDescription @a @r
 
   parse = mapE (_1 .~ parserName @(Named s a) @r) $ parse @a @r
+
+parserName :: forall a r. Parser a r => S.Text
+parserName = let ParameterInfo (fromMaybe "" -> name) type_ _ = parameterInfo @a @r
+              in name <> ":" <> S.pack (show type_)
 
 mapE :: P.Member (P.Error e) r => (e -> e) -> P.Sem r a -> P.Sem r a
 mapE f m = P.catch m (P.throw . f)
 
-parseMP :: S.Text -> ParsecT SpannedError L.Text (P.Sem (ParserCtxE r)) a -> P.Sem (ParserEffs r) a
+-- | Use a megaparsec parser to parse a parameter
+parseMP ::
+  -- | The name of this parser
+  S.Text ->
+  -- | The megaparsec parser
+  ParsecT SpannedError L.Text (P.Sem (ParserCtxE r)) a
+  -> P.Sem (ParserEffs r) a
 parseMP n m = do
   s <- P.get
   res <- P.raise . P.raise $ runParserT (skipN (s ^. #off) *> trackOffsets (space *> m)) "" (s ^. #msg)
@@ -97,29 +115,37 @@ parseMP n m = do
 
 instance Parser L.Text r where
   parse = parseMP (parserName @L.Text) item
+  parameterDescription = "word or quoted string"
 
 instance Parser S.Text r where
   parse = parseMP (parserName @S.Text) (L.toStrict <$> item)
+  parameterDescription = "word or quoted string"
 
 instance Parser Integer r where
   parse = parseMP (parserName @Integer) (signed mempty decimal)
+  parameterDescription = "number"
 
 instance Parser Natural r where
   parse = parseMP (parserName @Natural) decimal
+  parameterDescription = "number"
 
 instance Parser Int r where
   parse = parseMP (parserName @Int) (signed mempty decimal)
+  parameterDescription = "number"
 
 instance Parser Word r where
   parse = parseMP (parserName @Word) decimal
+  parameterDescription = "number"
 
 instance Parser Float r where
   parse = parseMP (parserName @Float) (signed mempty (try float <|> decimal))
+  parameterDescription = "number"
 
 instance Parser a r => Parser (Maybe a) r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
 
   parse = P.catch (Just <$> parse @a) (const $ pure Nothing)
+  parameterDescription = "optional " <> parameterDescription @a @r
 
 
 instance (Parser a r, Parser b r) => Parser (Either a b) r where
@@ -131,6 +157,7 @@ instance (Parser a r, Parser b r) => Parser (Either a b) r where
       Just l' -> pure (Left l')
       Nothing ->
         Right <$> parse @b @r
+  parameterDescription = "either '" <> parameterDescription @a @r <> "' or '" <> parameterDescription @b @r <> "'"
 
 instance Parser a r => Parser [a] r where
   type ParserResult [a] = [ParserResult a]
@@ -138,8 +165,10 @@ instance Parser a r => Parser [a] r where
   parse = go []
     where go :: [ParserResult a] -> P.Sem (ParserEffs r) [ParserResult a]
           go l = P.catch (Just <$> parse @a) (const $ pure Nothing) >>= \case
-            Just a -> go $ l ++ [a]
+            Just a -> go $ l <> [a]
             Nothing -> pure l
+
+  parameterDescription = "zero or more '" <> parameterDescription @a @r <> "'"
 
 instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
   type ParserResult (NonEmpty a) = NonEmpty (ParserResult a)
@@ -148,6 +177,8 @@ instance (Parser a r, Typeable a) => Parser (NonEmpty a) r where
     a <- parse @a
     as <- parse @[a]
     pure $ a :| as
+
+  parameterDescription = "one or more '" <> parameterDescription @a @r <> "'"
 
 -- | A parser that consumes zero or more of @a@ then concatenates them together.
 --
@@ -158,18 +189,21 @@ instance (Monoid (ParserResult a), Parser a r) => Parser (KleeneStarConcat a) r 
   type ParserResult (KleeneStarConcat a) = ParserResult a
 
   parse = mconcat <$> parse @[a]
+  parameterDescription = "zero or more '" <> parameterDescription @a @r <> "'"
 
 instance {-# OVERLAPS #-}Parser (KleeneStarConcat L.Text) r where
   type ParserResult (KleeneStarConcat L.Text) = ParserResult L.Text
 
-  -- consume rest on text just takes everything remaining
+  -- | consume rest on text just takes everything remaining
   parse = parseMP (parserName @(KleeneStarConcat L.Text)) manySingle
+  parameterDescription = "the remaining input"
 
 instance {-# OVERLAPS #-}Parser (KleeneStarConcat S.Text) r where
   type ParserResult (KleeneStarConcat S.Text) = ParserResult S.Text
 
-  -- consume rest on text just takes everything remaining
+  -- | consume rest on text just takes everything remaining
   parse = parseMP (parserName @(KleeneStarConcat S.Text)) (L.toStrict <$> manySingle)
+  parameterDescription = "the remaining input"
 
 -- | A parser that consumes one or more of @a@ then concatenates them together.
 --
@@ -180,41 +214,50 @@ instance (Semigroup (ParserResult a), Parser a r) => Parser (KleenePlusConcat a)
   type ParserResult (KleenePlusConcat a) = ParserResult a
 
   parse = sconcat <$> parse @(NonEmpty a)
+  parameterDescription = "one or more '" <> parameterDescription @a @r <> "'"
 
 instance {-# OVERLAPS #-}Parser (KleenePlusConcat L.Text) r where
   type ParserResult (KleenePlusConcat L.Text) = ParserResult L.Text
 
   -- consume rest on text just takes everything remaining
   parse = parseMP (parserName @(KleenePlusConcat L.Text)) someSingle
+  parameterDescription = "the remaining input"
 
 instance {-# OVERLAPS #-}Parser (KleenePlusConcat S.Text) r where
   type ParserResult (KleenePlusConcat S.Text) = ParserResult S.Text
 
   -- consume rest on text just takes everything remaining
   parse = parseMP (parserName @(KleenePlusConcat S.Text)) (L.toStrict <$> someSingle)
+  parameterDescription = "the remaining input"
 
 instance Typeable (Snowflake a) => Parser (Snowflake a) r where
   parse = parseMP (parserName @(Snowflake a)) snowflake
+  parameterDescription = "discord id"
 
 -- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake User) r where
   parse = parseMP (parserName @(Snowflake User)) (try (ping "@") <|> snowflake)
+  parameterDescription = "user mention or id"
 
 -- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake Member) r where
   parse = parseMP (parserName @(Snowflake Member)) (try (ping "@") <|> snowflake)
+  parameterDescription = "user mention or id"
 
 -- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake Channel) r where
   parse = parseMP (parserName @(Snowflake Channel)) (try (ping "#") <|> snowflake)
+  parameterDescription = "channel mention or id"
 
 -- | Accepts both plain IDs and mentions
 instance {-# OVERLAPS #-}Parser (Snowflake Role) r where
   parse = parseMP (parserName @(Snowflake Role)) (try (ping "@&") <|> snowflake)
+  parameterDescription = "role mention or id"
 
 -- | Accepts both plain IDs and uses of emoji
 instance {-# OVERLAPS #-}Parser (Snowflake Emoji) r where
   parse = parseMP (parserName @(Snowflake Emoji)) (try emoji <|> snowflake)
+  parameterDescription = "emoji or id"
 
 -- mapParserMaybe :: Stream s => ParsecT SpannedError s m a -> Text -> (a -> Maybe b) -> ParsecT SpannedError s m b
 -- mapParserMaybe m e f = do
@@ -243,6 +286,7 @@ instance Parser Member r where
           (\mid -> do
               ctx <- P.ask
               pure $ ctx ^? #guild . _Just . #members . ix mid)
+  parameterDescription = "user mention or id"
 
 -- | Parser for users, this only looks in the cache. Use @'Snowflake'
 -- 'User'@ and use 'Calamity.Types.Upgradeable.upgrade' if you want to allow
@@ -251,6 +295,7 @@ instance P.Member CacheEff r => Parser User r where
   parse = parseMP (parserName @User @r) $ mapParserMaybeM (try (ping "@") <|> snowflake)
           "Couldn't find a User with this id"
           getUser
+  parameterDescription = "user mention or id"
 
 -- | Parser for channels in the guild the command was invoked in, this only
 -- looks in the cache. Use @'Snowflake' 'Channel'@ and use
@@ -261,6 +306,7 @@ instance Parser GuildChannel r where
           (\cid -> do
               ctx <- P.ask
               pure $ ctx ^? #guild . _Just . #channels . ix cid)
+  parameterDescription = "channel mention or id"
 
 -- | Parser for guilds, this only looks in the cache. Use @'Snowflake' 'Guild'@
 -- and use 'Calamity.Types.Upgradeable.upgrade' if you want to allow fetching
@@ -269,6 +315,7 @@ instance P.Member CacheEff r => Parser Guild r where
   parse = parseMP (parserName @Guild @r) $ mapParserMaybeM snowflake
           "Couldn't find a Guild with this id"
           getGuild
+  parameterDescription = "guild id"
 
 -- | Parser for emojis in the guild the command was invoked in, this only
 -- looks in the cache. Use @'Snowflake' 'Emoji'@ and use
@@ -279,11 +326,13 @@ instance Parser Emoji r where
           (\eid -> do
               ctx <- P.ask
               pure $ ctx ^? #guild . _Just . #emojis . ix eid)
+  parameterDescription = "emoji or id"
 
 -- | Parses both discord emojis, and unicode emojis
 instance Parser RawEmoji r where
   parse = parseMP (parserName @RawEmoji) (try parseCustomEmoji <|> (UnicodeEmoji <$> takeP (Just "A unicode emoji") 1))
     where parseCustomEmoji = CustomEmoji <$> partialEmoji
+  parameterDescription = "emoji"
 
 -- | Parser for roles in the guild the command was invoked in, this only
 -- looks in the cache. Use @'Snowflake' 'Role'@ and use
@@ -294,6 +343,7 @@ instance Parser Role r where
           (\rid -> do
               ctx <- P.ask
               pure $ ctx ^? #guild . _Just . #roles . ix rid)
+  parameterDescription = "role mention or id"
 
 instance (Parser a r, Parser b r) => Parser (a, b) r where
   type ParserResult (a, b) = (ParserResult a, ParserResult b)
@@ -303,8 +353,11 @@ instance (Parser a r, Parser b r) => Parser (a, b) r where
     b <- parse @b
     pure (a, b)
 
+  parameterDescription = "'" <> parameterDescription @a @r <> "' then '" <> parameterDescription @b @r <> "'"
+
 instance Parser () r where
   parse = parseMP (parserName @()) space
+  parameterDescription = "whitespace"
 
 instance ShowErrorComponent SpannedError where
   showErrorComponent (SpannedError t _ _) = L.unpack t

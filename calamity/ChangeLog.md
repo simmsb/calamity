@@ -10,6 +10,8 @@
 + Added `Default` instances for `EmbedAuthor`.
 + Corrected the nullability of `EmbedImage`, `EmbedThumbnail`, `EmbedVideo`, and
   `EmbedProvider`.
++ Changed the command parameter machinery to hold more info about parameters.
++ Added a 'type cheatsheet' thing to command help in the default help command.
   
 ## 0.1.29.0
 

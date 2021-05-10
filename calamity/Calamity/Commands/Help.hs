@@ -12,6 +12,7 @@ import           Calamity.Commands.Context
 import           Calamity.Commands.Dsl
 import           Calamity.Commands.Group
 import           Calamity.Commands.Handler
+import           Calamity.Commands.ParameterInfo
 import           Calamity.Internal.LocalWriter
 import           Calamity.Types.Tellable
 
@@ -38,18 +39,27 @@ data CommandOrGroup
 helpCommandHelp :: Context -> L.Text
 helpCommandHelp _ = "Show help for a command or group."
 
+parameterTypeHelp :: [ParameterInfo] -> L.Text
+parameterTypeHelp pinfo =
+  let dedup = LH.toList . LH.fromList $ map (\(ParameterInfo _ t d) -> (t, d)) pinfo
+      typeDescs = L.unlines ["- " <> L.pack (show t) <> ": " <> L.fromStrict d | (t, d) <- dedup]
+  in "Types:\n" <> typeDescs <> "\n"
+
 helpForCommand :: Context -> Command -> L.Text
-helpForCommand ctx (cmd@Command { names, checks, help }) = "```\nUsage: " <> prefix' <> path' <> " " <> params' <> "\n" <>
-                                                           aliasesFmt <>
-                                                           checksFmt <>
-                                                           help ctx <> "\n```"
-  where prefix' = ctx ^. #prefix
-        path'   = L.unwords . map L.fromStrict $ commandPath cmd
-        params' = commandParams cmd
-        aliases = map L.fromStrict $ NE.tail names
-        checks' = map L.fromStrict . map (^. #name) $ checks
-        aliasesFmt = if null aliases then "" else  "Aliases: " <> L.unwords aliases <> "\n"
-        checksFmt = if null checks' then "" else "Checks: " <> L.unwords checks' <> "\n\n"
+helpForCommand ctx (cmd@Command{names, checks, help, params}) =
+  "Usage: " <> prefix' <> path' <> " " <> params' <> "\n"
+    <> aliasesFmt
+    <> checksFmt
+    <> parameterTypeHelp params
+    <> help ctx
+ where
+  prefix' = ctx ^. #prefix
+  path' = L.unwords . map L.fromStrict $ commandPath cmd
+  params' = commandParams cmd
+  aliases = map L.fromStrict $ NE.tail names
+  checks' = map L.fromStrict . map (^. #name) $ checks
+  aliasesFmt = if null aliases then "" else "Aliases: " <> L.unwords aliases <> "\n"
+  checksFmt = if null checks' then "" else "Checks: " <> L.unwords checks' <> "\n\n"
 
 fmtCommandWithParams :: Command -> L.Text
 fmtCommandWithParams cmd@Command { names } = formatWithAliases names <> " " <> commandParams cmd
@@ -73,11 +83,11 @@ onlyVisibleG :: [Group] -> [Group]
 onlyVisibleG = catMaybes . map notHiddenG
 
 helpForGroup :: Context -> Group -> L.Text
-helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n" <>
+helpForGroup ctx grp = "Group: " <> path' <> "\n" <>
                        aliasesFmt <>
                        checksFmt <>
                        (grp ^. #help) ctx <> "\n" <>
-                       groupsMsg <> commandsMsg <> "\n```"
+                       groupsMsg <> commandsMsg
   where path' = L.fromStrict . S.unwords $ groupPath grp
         groups =  onlyVisibleG . onlyOriginals . LH.elems $ grp ^. #children
         commands = onlyVisibleC .onlyOriginals . LH.elems $ grp ^. #commands
@@ -90,7 +100,7 @@ helpForGroup ctx grp = "```\nGroup: " <> path' <> "\n" <>
         checksFmt = if null checks' then "" else "Checks: " <> L.unwords checks' <> "\n\n"
 
 rootHelp :: CommandHandler -> L.Text
-rootHelp handler = "```\n" <> groupsMsg <> commandsMsg <> "\n```"
+rootHelp handler = groupsMsg <> commandsMsg
   where groups =  onlyVisibleG . onlyOriginals . LH.elems $ handler ^. #groups
         commands = onlyVisibleC . onlyOriginals . LH.elems $ handler ^. #commands
         groupsFmt = map formatWithAliases (groups ^.. traverse . #names)
