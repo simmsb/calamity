@@ -5,7 +5,12 @@
 + Removed the `Symbol` parameter of custom events, instead of `'CustomEvt
   @"command-error" @(Context, CommandError)` it is now `'CustomEvt
   CtxCommandError`, etc.
-
++ Added `embedFooter`, `embedImage`, `embedThumbnail`, `embedAuthor`, and
+  `embedField` utility functions.
++ Added `Default` instances for `EmbedAuthor`.
++ Corrected the nullability of `EmbedImage`, `EmbedThumbnail`, `EmbedVideo`, and
+  `EmbedProvider`.
+  
 ## 0.1.29.0
 
 + The minimum version of `base` has been upped to `4.13` as the library fails to
