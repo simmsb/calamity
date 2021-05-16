@@ -30,6 +30,7 @@ import CalamityCommands.Context
 import CalamityCommands.Error
 import CalamityCommands.Group hiding (help)
 import CalamityCommands.Handler
+import CalamityCommands.ParameterInfo
 import CalamityCommands.Internal.LocalWriter
 
 import qualified Data.HashMap.Lazy as LH
@@ -103,8 +104,8 @@ command' ::
     (Monad m, P.Member (P.Final m) r) =>
     -- | The name of the command
     S.Text ->
-    -- | The names of the command's parameters
-    [S.Text] ->
+    -- | The command's parameter metadata
+    [ParameterInfo] ->
     -- | The parser for this command
     (c -> P.Sem r (Either CommandError p)) ->
     -- | The callback for this command
@@ -126,8 +127,8 @@ commandA' ::
     S.Text ->
     -- | The aliases for the command
     [S.Text] ->
-    -- | The names of the command's parameters
-    [S.Text] ->
+    -- | The command's parameter metadata
+    [ParameterInfo] ->
     -- | The parser for this command
     (c -> P.Sem r (Either CommandError p)) ->
     -- | The callback for this command

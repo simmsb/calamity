@@ -20,6 +20,7 @@ import CalamityCommands.Error
 import CalamityCommands.Group
 import CalamityCommands.Internal.RunIntoM
 import CalamityCommands.Internal.Utils
+import CalamityCommands.ParameterInfo
 import CalamityCommands.Parser
 
 import Control.Lens hiding (Context, (<.>))
@@ -30,8 +31,8 @@ import Data.Kind
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
-import Data.Text as S
-import Data.Text.Lazy as L
+import qualified Data.Text as S
+import qualified Data.Text.Lazy as L
 
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
@@ -45,7 +46,14 @@ commandPath Command{names, parent} = foldMap groupPath parent <> [NE.head names]
 
 -- | Format a command's parameters
 commandParams :: Command m c a -> L.Text
-commandParams Command{params} = L.fromStrict $ S.intercalate ", " params
+commandParams Command{params} =
+  let formatted =
+        map
+          ( \(ParameterInfo (fromMaybe "" -> name) type_ _) ->
+              "`" <> name <> ":" <> S.pack (show type_) <> "`"
+          )
+          params
+   in L.fromStrict $ S.intercalate ", " formatted
 
 {- | Given the properties of a 'Command' with the @parser@ and @callback@ in the
  'P.Sem' monad, build a command by transforming the Polysemy actions into @m@
@@ -62,8 +70,8 @@ buildCommand' ::
   Bool ->
   -- | The checks for the command
   [Check m c] ->
-  -- | The names of the command's parameters
-  [S.Text] ->
+  -- | The command's parameter metadata
+  [ParameterInfo] ->
   -- | The help generator for this command
   (c -> L.Text) ->
   -- | The parser for this command
@@ -108,7 +116,7 @@ buildCommand ::
   P.Sem r (Command m c a)
 buildCommand names parent hidden checks help command =
   let (parser, cb) = buildTypedCommand @ps command
-   in buildCommand' names parent hidden checks (paramNames @ps @r) help parser cb
+   in buildCommand' names parent hidden checks (parameterInfos @ps @r) help parser cb
 
 {- | Given the name of the command the parser is for and a parser function in
  the 'P.Sem' monad, build a parser by transforming the Polysemy action into an
@@ -130,7 +138,7 @@ buildParser name cb = do
 buildCallback ::
   (Monad m, P.Member (P.Final m) r) => ((c, p) -> P.Sem (P.Fail ': r) a) -> P.Sem r ((c, p) -> m (Either L.Text a))
 buildCallback cb = do
-  cb' <- bindSemToM ( \x -> P.runFail (cb x) <&> mapLeft L.pack)
+  cb' <- bindSemToM (\x -> P.runFail (cb x) <&> mapLeft L.pack)
   let cb'' = fromMaybe (Left "failed internally") <.> cb'
   pure cb''
 
@@ -156,7 +164,7 @@ type TypedCommandC ps a r =
   ( ApplyTupRes (ParserResult (ListToTup ps)) (CommandSemType r a) ~ CommandForParsers ps r a
   , ParameterParser (ListToTup ps) r
   , ApplyTup (ParserResult (ListToTup ps)) (CommandSemType r a)
-  , ParamNamesForParsers ps r
+  , ParameterInfoForParsers ps r
   )
 
 buildTypedCommand ::
@@ -171,14 +179,14 @@ buildTypedCommand cmd =
       consumer (ctx, r) = applyTup (cmd ctx) r
    in (parser, consumer)
 
-class ParamNamesForParsers (ps :: [Type]) r where
-  paramNames :: [S.Text]
+class ParameterInfoForParsers (ps :: [Type]) r where
+  parameterInfos :: [ParameterInfo]
 
-instance ParamNamesForParsers '[] r where
-  paramNames = []
+instance ParameterInfoForParsers '[] r where
+  parameterInfos = []
 
-instance (ParameterParser x r, ParamNamesForParsers xs r) => ParamNamesForParsers (x : xs) r where
-  paramNames = parserName @x @r : paramNames @xs @r
+instance (ParameterParser x r, ParameterInfoForParsers xs r) => ParameterInfoForParsers (x : xs) r where
+  parameterInfos = parameterInfo @x @r : parameterInfos @xs @r
 
 class ApplyTup a b where
   type ApplyTupRes a b

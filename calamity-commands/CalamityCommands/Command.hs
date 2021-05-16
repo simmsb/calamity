@@ -6,6 +6,7 @@ module CalamityCommands.Command (Command (..)) where
 import CalamityCommands.Check
 import CalamityCommands.Error
 import CalamityCommands.Group
+import CalamityCommands.ParameterInfo
 
 import Control.Lens hiding (Context, (<.>))
 
@@ -29,9 +30,8 @@ data Command (m :: Type -> Type) (c :: Type) (a :: Type) = forall p.
     hidden :: Bool
   , -- | A list of checks that must pass for this command to be invoked
     checks :: [Check m c]
-  , -- | A list of the parameters the command takes, only used for constructing
-    -- help messages.
-    params :: [S.Text]
+  , -- | A list of parameter metadata
+    params :: [ParameterInfo]
   , -- | A function producing the \'help\' for the command.
     help :: c -> L.Text
   , -- | A function that parses the context for the command, producing the input
@@ -44,7 +44,7 @@ data Command (m :: Type -> Type) (c :: Type) (a :: Type) = forall p.
 
 data CommandS = CommandS
   { names :: NonEmpty S.Text
-  , params :: [S.Text]
+  , params :: [ParameterInfo]
   , parent :: Maybe S.Text
   , checks :: [S.Text]
   , hidden :: Bool

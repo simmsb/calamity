@@ -12,6 +12,7 @@ import CalamityCommands.Context
 import CalamityCommands.Dsl
 import CalamityCommands.Group
 import CalamityCommands.Handler
+import CalamityCommands.ParameterInfo
 import CalamityCommands.Internal.LocalWriter
 
 import Control.Applicative
@@ -32,16 +33,22 @@ data CommandOrGroup m c a
   = Command' (Command m c a)
   | Group' (Group m c a) [S.Text]
 
+parameterTypeHelp :: [ParameterInfo] -> L.Text
+parameterTypeHelp pinfo =
+  let dedup = LH.toList . LH.fromList $ map (\(ParameterInfo _ t d) -> (t, d)) pinfo
+      typeDescs = L.unlines ["- " <> L.pack (show t) <> ": " <> L.fromStrict d | (t, d) <- dedup]
+  in "Types:\n" <> typeDescs <> "\n"
+
 helpCommandHelp :: c -> L.Text
 helpCommandHelp _ = "Show help for a command or group."
 
 helpForCommand :: CommandContext m c a => c -> Command m c a -> L.Text
-helpForCommand ctx cmd@Command{names, checks, help} =
-  "```\nUsage: " <> prefix' <> path' <> " " <> params' <> "\n"
+helpForCommand ctx cmd@Command{names, checks, help, params} =
+  "Usage: " <> prefix' <> path' <> " " <> params' <> "\n"
     <> aliasesFmt
     <> checksFmt
+    <> parameterTypeHelp params
     <> help ctx
-    <> "\n```"
  where
   prefix' = ctxPrefix ctx
   path' = L.unwords . map L.fromStrict $ commandPath cmd
@@ -81,14 +88,13 @@ onlyVisibleG = mapMaybe notHiddenG
 
 helpForGroup :: CommandContext m c a => c -> Group m c a -> L.Text
 helpForGroup ctx grp =
-  "```\nGroup: " <> path' <> "\n"
+  "Group: " <> path' <> "\n"
     <> aliasesFmt
     <> checksFmt
     <> (grp ^. #help) ctx
     <> "\n"
     <> groupsMsg
     <> commandsMsg
-    <> "\n```"
  where
   path' = L.fromStrict . S.unwords $ groupPath grp
   groups = onlyVisibleG . onlyOriginals . LH.elems $ grp ^. #children
@@ -114,7 +120,7 @@ helpForGroup ctx grp =
       else "Checks: " <> L.unwords checks' <> "\n\n"
 
 rootHelp :: CommandHandler m c a -> L.Text
-rootHelp handler = "```\n" <> groupsMsg <> commandsMsg <> "\n```"
+rootHelp handler = groupsMsg <> commandsMsg
  where
   groups = onlyVisibleG . onlyOriginals . LH.elems $ handler ^. #groups
   commands = onlyVisibleC . onlyOriginals . LH.elems $ handler ^. #commands

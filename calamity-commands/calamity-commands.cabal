@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 1a518a87400f77c3c98372909d5c1c120d0d1a075910b0216017d585e8b46990
+-- hash: 962098e7be30e39345aaa5a511635824c3654c1f199212a575271f3d7e6f5c60
 
 name:           calamity-commands
-version:        0.1.1.0
+version:        0.1.2.0
 synopsis:       A library for declaring, parsing, and invoking text-input based commands
 description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 category:       Utils
@@ -47,6 +47,7 @@ library
       CalamityCommands.Internal.LocalWriter
       CalamityCommands.Internal.RunIntoM
       CalamityCommands.Internal.Utils
+      CalamityCommands.ParameterInfo
       CalamityCommands.ParsePrefix
       CalamityCommands.Parser
       CalamityCommands.Utils

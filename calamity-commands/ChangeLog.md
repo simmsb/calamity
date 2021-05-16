@@ -1,5 +1,10 @@
 # Changelog for Calamity Commands
 
+## 0.1.2.0
+
++ Changed the command parameter machinery to hold more info about parameters.
++ Added a 'type cheatsheet' thing to command help in the default help command.
+
 ## 0.1.1.0
 
 + The minimum version of `base` has been upped to `4.13` as the library fails to
