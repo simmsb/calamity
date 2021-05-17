@@ -89,8 +89,8 @@ module Main where
 
 import           Calamity
 import           Calamity.Cache.InMemory
-import           Calamity.Commands
-import qualified Calamity.Commands.Context   as CommandContext
+import Calamity.Commands hiding (FullContext(..), LightContext(..))
+import Calamity.Commands.Context (FullContext)
 import           Calamity.Metrics.Noop
 
 import           Control.Concurrent
@@ -145,7 +145,8 @@ main :: IO ()
 main = do
   token <- L.pack <$> getEnv "BOT_TOKEN"
   Di.new $ \di ->
-    void . P.runFinal . P.embedToFinal . DiP.runDiToIO di . runCounterAtomic . runCacheInMemory . runMetricsNoop . useConstantPrefix "!"
+    void . P.runFinal . P.embedToFinal . DiP.runDiToIO di . runCounterAtomic 
+         . runCacheInMemory . runMetricsNoop . useConstantPrefix "!" . useFullContext
       $ runBotIO (BotToken token) defaultIntents $ do
       addCommands $ do
         helpCommand
@@ -190,7 +191,7 @@ main = do
           void . invoke $ EditMessage (msg ^. #channelID) msg' (editMessageContent $ Just "lol")
           info "edited"
         _ -> pure ()
-      react @('CustomEvt CtxCommandError) $ \(CtxCommandError ctx e) -> do
+      react @('CustomEvt (CtxCommandError FullContext)) \(CtxCommandError ctx e) -> do
         info $ "Command failed with reason: " <> showtl e
         case e of
           ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
