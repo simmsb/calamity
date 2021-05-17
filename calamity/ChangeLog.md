@@ -3,8 +3,8 @@
 ## 0.1.30.0
 
 + Removed the `Symbol` parameter of custom events, instead of `'CustomEvt
-  @"command-error" @(Context, CommandError)` it is now `'CustomEvt
-  CtxCommandError`, etc.
+  @"command-error" @(FullContext, CommandError)` it is now `'CustomEvt
+  (CtxCommandError FullContext)`, etc.
 + Added `embedFooter`, `embedImage`, `embedThumbnail`, `embedAuthor`, and
   `embedField` utility functions.
 + Added `Default` instances for `EmbedAuthor`.

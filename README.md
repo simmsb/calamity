@@ -89,8 +89,8 @@ module Main where
 
 import           Calamity
 import           Calamity.Cache.InMemory
-import Calamity.Commands hiding (FullContext(..), LightContext(..))
-import Calamity.Commands.Context (FullContext)
+import Calamity.Commands
+import Calamity.Commands.Context (FullContext, useFullContext)
 import           Calamity.Metrics.Noop
 
 import           Control.Concurrent

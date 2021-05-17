@@ -9,14 +9,12 @@ module Calamity.Commands (
     module CalamityCommands.ParsePrefix,
     module CalamityCommands.Parser,
     module Calamity.Commands.Utils,
-    module Calamity.Commands.Context,
 
     -- * Commands
     -- $commandDocs
 ) where
 
 import Calamity.Commands.CalamityParsers ()
-import Calamity.Commands.Context
 import Calamity.Commands.Dsl
 import Calamity.Commands.Help
 import Calamity.Commands.Utils
