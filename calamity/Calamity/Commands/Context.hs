@@ -1,42 +1,136 @@
 -- | Command invokation context
-module Calamity.Commands.Context
-    ( Context(..) ) where
+module Calamity.Commands.Context (
+  CalamityCommandContext (..),
+  FullContext (..),
+  useFullContext,
+  LightContext (..),
+  useLightContext,
+) where
 
-import {-# SOURCE #-} Calamity.Commands.Command
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild
-import           Calamity.Types.Model.User
-import           Calamity.Types.Snowflake
-import           Calamity.Types.Tellable
+import Calamity.Cache.Eff
+import Calamity.Commands.Types
+import Calamity.Internal.Utils
+import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Guild
+import Calamity.Types.Model.User
+import Calamity.Types.Snowflake
+import Calamity.Types.Tellable
+import qualified CalamityCommands.Context as CC
+import Control.Lens hiding (Context)
+import Control.Monad
+import qualified Data.Text.Lazy as L
+import GHC.Generics
+import qualified Polysemy as P
+import qualified Polysemy.Fail as P
+import TextShow
+import qualified TextShow.Generic as TSG
 
-import qualified Data.Text.Lazy               as L
+class CommandContext c => CalamityCommandContext c where
+  -- | The id of the channel that invoked this command
+  ctxChannelID :: c -> Snowflake Channel
 
-import           GHC.Generics
+  -- | The id of the guild the command was invoked in, if in a guild
+  ctxGuildID :: c -> Maybe (Snowflake Guild)
 
-import           TextShow
-import qualified TextShow.Generic             as TSG
+  -- | The id of the user that invoked this command
+  ctxUserID :: c -> Snowflake User
+
+  -- | The message that triggered this command
+  ctxMessage :: c -> Message
 
 -- | Invokation context for commands
-data Context = Context
-  { message        :: Message
-    -- ^ The message that the command was invoked from
-  , guild          :: Maybe Guild
-    -- ^ If the command was sent in a guild, this will be present
-  , member         :: Maybe Member
-    -- ^ The member that invoked the command, if in a guild
-  , channel        :: Channel
-    -- ^ The channel the command was invoked from
-  , user           :: User
-    -- ^ The user that invoked the command
-  , command        :: Command
-    -- ^ The command that was invoked
-  , prefix         :: L.Text
-    -- ^ The prefix that was used to invoke the command
-  , unparsedParams :: L.Text
-    -- ^ The message remaining after consuming the prefix
+data FullContext = FullContext
+  { -- | The message that the command was invoked from
+    message :: Message
+  , -- | If the command was sent in a guild, this will be present
+    guild :: Maybe Guild
+  , -- | The member that invoked the command, if in a guild
+    member :: Maybe Member
+  , -- | The channel the command was invoked from
+    channel :: Channel
+  , -- | The user that invoked the command
+    user :: User
+  , -- | The command that was invoked
+    command :: Command FullContext
+  , -- | The prefix that was used to invoke the command
+    prefix :: L.Text
+  , -- | The message remaining after consuming the prefix
+    unparsedParams :: L.Text
   }
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric Context
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric FullContext
 
-instance Tellable Context where
-  getChannel Context { channel } = pure . getID $ channel
+instance CC.CommandContext IO FullContext () where
+  ctxPrefix = (^. #prefix)
+  ctxCommand = (^. #command)
+  ctxUnparsedParams = (^. #unparsedParams)
+
+instance CalamityCommandContext FullContext where
+  ctxChannelID = getID . (^. #channel)
+  ctxGuildID c = getID <$> c ^. #guild
+  ctxUserID = getID . (^. #user)
+  ctxMessage = (^. #message)
+
+instance Tellable FullContext where
+  getChannel = pure . ctxChannelID
+
+useFullContext :: P.Member CacheEff r => P.Sem (CC.ConstructContext Message FullContext IO () ': r) a -> P.Sem r a
+useFullContext =
+  P.interpret
+    ( \case
+        CC.ConstructContext (pre, cmd, up) msg -> buildContext msg pre cmd up
+    )
+
+buildContext :: P.Member CacheEff r => Message -> L.Text -> Command FullContext -> L.Text -> P.Sem r (Maybe FullContext)
+buildContext msg prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
+  guild <- join <$> getGuild `traverse` (msg ^. #guildID)
+  let member = guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
+  let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
+  Just channel <- case gchan of
+    Just chan -> pure . pure $ GuildChannel' chan
+    Nothing -> DMChannel' <<$>> getDM (coerceSnowflake $ getID @Channel msg)
+  Just user <- getUser $ getID msg
+
+  pure $ FullContext msg guild member channel user command prefix unparsed
+
+-- | A lightweight context that doesn't need any cache information
+data LightContext = LightContext
+  { -- | The message that the command was invoked from
+    message :: Message
+  , -- | If the command was sent in a guild, this will be present
+    guildID :: Maybe (Snowflake Guild)
+  , -- | The channel the command was invoked from
+    channelID :: Snowflake Channel
+  , -- | The user that invoked the command
+    userID :: Snowflake User
+  , -- | The command that was invoked
+    command :: Command LightContext
+  , -- | The prefix that was used to invoke the command
+    prefix :: L.Text
+  , -- | The message remaining after consuming the prefix
+    unparsedParams :: L.Text
+  }
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric LightContext
+
+instance CC.CommandContext IO LightContext () where
+  ctxPrefix = (^. #prefix)
+  ctxCommand = (^. #command)
+  ctxUnparsedParams = (^. #unparsedParams)
+
+instance CalamityCommandContext LightContext where
+  ctxChannelID = (^. #channelID)
+  ctxGuildID = (^. #guildID)
+  ctxUserID = (^. #userID)
+  ctxMessage = (^. #message)
+
+instance Tellable LightContext where
+  getChannel = pure . ctxChannelID
+
+useLightContext :: P.Sem (CC.ConstructContext Message LightContext IO () ': r) a -> P.Sem r a
+useLightContext =
+  P.interpret
+    ( \case
+        CC.ConstructContext (pre, cmd, up) msg ->
+          pure . Just $ LightContext msg (msg ^. #guildID) (msg ^. #channelID) (msg ^. #author) cmd pre up
+    )

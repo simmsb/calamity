@@ -168,7 +168,7 @@ command ::
     forall ps c a m r.
     ( Monad m
     , P.Member (P.Final m) r
-    , TypedCommandC ps a r
+    , TypedCommandC ps c a r
     , CommandContext m c a
     ) =>
     -- | The name of the command
@@ -198,7 +198,7 @@ commandA ::
     forall ps c a m r.
     ( Monad m
     , P.Member (P.Final m) r
-    , TypedCommandC ps a r
+    , TypedCommandC ps c a r
     , CommandContext m c a
     ) =>
     -- | The name of the command

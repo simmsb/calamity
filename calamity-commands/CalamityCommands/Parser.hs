@@ -77,14 +77,14 @@ runCommandParser ctx t = P.runReader ctx . P.runError . P.evalState (ParserState
  parameter @ps@ of 'CalamityCommands.Dsl.command',
  'CalamityCommands.CommandUtils.buildCommand', etc.
 -}
-class Typeable a => ParameterParser (a :: Type) r where
+class Typeable a => ParameterParser (a :: Type) c r where
   type ParserResult a
 
   type ParserResult a = a
 
   parameterInfo :: ParameterInfo
   default parameterInfo :: ParameterInfo
-  parameterInfo = ParameterInfo Nothing (typeRep $ Proxy @a) (parameterDescription @a @r)
+  parameterInfo = ParameterInfo Nothing (typeRep $ Proxy @a) (parameterDescription @a @c @r)
 
   parameterDescription :: S.Text
 
@@ -95,20 +95,20 @@ class Typeable a => ParameterParser (a :: Type) r where
 -}
 data Named (s :: Symbol) (a :: Type)
 
-instance (KnownSymbol s, ParameterParser a r) => ParameterParser (Named s a) r where
+instance (KnownSymbol s, ParameterParser a c r) => ParameterParser (Named s a) c r where
   type ParserResult (Named s a) = ParserResult a
 
   parameterInfo =
-    let ParameterInfo _ type_ typeDescription = parameterInfo @a @r
+    let ParameterInfo _ type_ typeDescription = parameterInfo @a @c @r
      in ParameterInfo (Just . S.pack . symbolVal $ Proxy @s) type_ typeDescription
 
-  parameterDescription = parameterDescription @a @r
+  parameterDescription = parameterDescription @a @c @r
 
-  parse = mapE (_1 .~ parserName @(Named s a) @r) $ parse @a @r
+  parse = mapE (_1 .~ parserName @(Named s a) @c @r) $ parse @a @c @r
 
-parserName :: forall a r. ParameterParser a r => S.Text
+parserName :: forall a c r. ParameterParser a c r => S.Text
 parserName =
-  let ParameterInfo (fromMaybe "" -> name) type_ _ = parameterInfo @a @r
+  let ParameterInfo (fromMaybe "" -> name) type_ _ = parameterInfo @a @c @r
    in name <> ":" <> S.pack (show type_)
 
 mapE :: P.Member (P.Error e) r => (e -> e) -> P.Sem r a -> P.Sem r a
@@ -133,52 +133,52 @@ parseMP n m = do
       pure a
     Left s -> P.throw (n, L.pack $ errorBundlePretty s)
 
-instance ParameterParser L.Text r where
+instance ParameterParser L.Text c r where
   parse = parseMP (parserName @L.Text) item
   parameterDescription = "word or quoted string"
 
-instance ParameterParser S.Text r where
+instance ParameterParser S.Text c r where
   parse = parseMP (parserName @S.Text) (L.toStrict <$> item)
   parameterDescription = "word or quoted string"
 
-instance ParameterParser Integer r where
+instance ParameterParser Integer c r where
   parse = parseMP (parserName @Integer) (signed mempty decimal)
   parameterDescription = "number"
 
-instance ParameterParser Natural r where
+instance ParameterParser Natural c r where
   parse = parseMP (parserName @Natural) decimal
   parameterDescription = "number"
 
-instance ParameterParser Int r where
+instance ParameterParser Int c r where
   parse = parseMP (parserName @Int) (signed mempty decimal)
   parameterDescription = "number"
 
-instance ParameterParser Word r where
+instance ParameterParser Word c r where
   parse = parseMP (parserName @Word) decimal
   parameterDescription = "number"
 
-instance ParameterParser Float r where
+instance ParameterParser Float c r where
   parse = parseMP (parserName @Float) (signed mempty (try float <|> decimal))
   parameterDescription = "number"
 
-instance ParameterParser a r => ParameterParser (Maybe a) r where
+instance ParameterParser a c r => ParameterParser (Maybe a) c r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
 
   parse = P.catch (Just <$> parse @a) (const $ pure Nothing)
-  parameterDescription = "optional " <> parameterDescription @a @r
+  parameterDescription = "optional " <> parameterDescription @a @c @r
 
-instance (ParameterParser a r, ParameterParser b r) => ParameterParser (Either a b) r where
+instance (ParameterParser a c r, ParameterParser b c r) => ParameterParser (Either a b) c r where
   type ParserResult (Either a b) = Either (ParserResult a) (ParserResult b)
 
   parse = do
-    l <- parse @(Maybe a) @r
+    l <- parse @(Maybe a) @c @r
     case l of
       Just l' -> pure (Left l')
       Nothing ->
-        Right <$> parse @b @r
-  parameterDescription = "either '" <> parameterDescription @a @r <> "' or '" <> parameterDescription @b @r <> "'"
+        Right <$> parse @b @c @r
+  parameterDescription = "either '" <> parameterDescription @a @c @r <> "' or '" <> parameterDescription @b @c @r <> "'"
 
-instance ParameterParser a r => ParameterParser [a] r where
+instance ParameterParser a c r => ParameterParser [a] c r where
   type ParserResult [a] = [ParserResult a]
 
   parse = go []
@@ -189,9 +189,9 @@ instance ParameterParser a r => ParameterParser [a] r where
         Just a -> go $ l <> [a]
         Nothing -> pure l
 
-  parameterDescription = "zero or more '" <> parameterDescription @a @r <> "'"
+  parameterDescription = "zero or more '" <> parameterDescription @a @c @r <> "'"
 
-instance (ParameterParser a r, Typeable a) => ParameterParser (NonEmpty a) r where
+instance (ParameterParser a c r, Typeable a) => ParameterParser (NonEmpty a) c r where
   type ParserResult (NonEmpty a) = NonEmpty (ParserResult a)
 
   parse = do
@@ -199,7 +199,7 @@ instance (ParameterParser a r, Typeable a) => ParameterParser (NonEmpty a) r whe
     as <- parse @[a]
     pure $ a :| as
 
-  parameterDescription = "one or more '" <> parameterDescription @a @r <> "'"
+  parameterDescription = "one or more '" <> parameterDescription @a @c @r <> "'"
 
 {- | A parser that consumes zero or more of @a@ then concatenates them together.
 
@@ -207,20 +207,20 @@ instance (ParameterParser a r, Typeable a) => ParameterParser (NonEmpty a) r whe
 -}
 data KleeneStarConcat (a :: Type)
 
-instance (Monoid (ParserResult a), ParameterParser a r) => ParameterParser (KleeneStarConcat a) r where
+instance (Monoid (ParserResult a), ParameterParser a c r) => ParameterParser (KleeneStarConcat a) c r where
   type ParserResult (KleeneStarConcat a) = ParserResult a
 
   parse = mconcat <$> parse @[a]
-  parameterDescription = "zero or more '" <> parameterDescription @a @r <> "'"
+  parameterDescription = "zero or more '" <> parameterDescription @a @c @r <> "'"
 
-instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat L.Text) r where
+instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat L.Text) c r where
   type ParserResult (KleeneStarConcat L.Text) = ParserResult L.Text
 
   -- consume rest on text just takes everything remaining
   parse = parseMP (parserName @(KleeneStarConcat L.Text)) manySingle
   parameterDescription = "the remaining input"
 
-instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat S.Text) r where
+instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat S.Text) c r where
   type ParserResult (KleeneStarConcat S.Text) = ParserResult S.Text
 
   -- consume rest on text just takes everything remaining
@@ -233,36 +233,36 @@ instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat S.Text) r where
 -}
 data KleenePlusConcat (a :: Type)
 
-instance (Semigroup (ParserResult a), ParameterParser a r) => ParameterParser (KleenePlusConcat a) r where
+instance (Semigroup (ParserResult a), ParameterParser a c r) => ParameterParser (KleenePlusConcat a) c r where
   type ParserResult (KleenePlusConcat a) = ParserResult a
 
   parse = sconcat <$> parse @(NonEmpty a)
-  parameterDescription = "one or more '" <> parameterDescription @a @r <> "'"
+  parameterDescription = "one or more '" <> parameterDescription @a @c @r <> "'"
 
-instance {-# OVERLAPS #-} ParameterParser (KleenePlusConcat L.Text) r where
+instance {-# OVERLAPS #-} ParameterParser (KleenePlusConcat L.Text) c r where
   type ParserResult (KleenePlusConcat L.Text) = ParserResult L.Text
 
   -- consume rest on text just takes everything remaining
   parse = parseMP (parserName @(KleenePlusConcat L.Text)) someSingle
   parameterDescription = "the remaining input"
 
-instance {-# OVERLAPS #-} ParameterParser (KleenePlusConcat S.Text) r where
+instance {-# OVERLAPS #-} ParameterParser (KleenePlusConcat S.Text) c r where
   type ParserResult (KleenePlusConcat S.Text) = ParserResult S.Text
 
   -- consume rest on text just takes everything remaining
   parse = parseMP (parserName @(KleenePlusConcat S.Text)) (L.toStrict <$> someSingle)
   parameterDescription = "the remaining input"
 
-instance (ParameterParser a r, ParameterParser b r) => ParameterParser (a, b) r where
+instance (ParameterParser a c r, ParameterParser b c r) => ParameterParser (a, b) c r where
   type ParserResult (a, b) = (ParserResult a, ParserResult b)
 
   parse = do
     a <- parse @a
     b <- parse @b
     pure (a, b)
-  parameterDescription = "'" <> parameterDescription @a @r <> "' then '" <> parameterDescription @b @r <> "'"
+  parameterDescription = "'" <> parameterDescription @a @c @r <> "' then '" <> parameterDescription @b @c @r <> "'"
 
-instance ParameterParser () r where
+instance ParameterParser () c r where
   parse = parseMP (parserName @()) space
   parameterDescription = "whitespace"
 

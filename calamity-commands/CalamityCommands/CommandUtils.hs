@@ -100,7 +100,7 @@ buildCommand' names@(name :| _) parent hidden checks params help parser cb = do
 -}
 buildCommand ::
   forall ps c m a r.
-  (Monad m, P.Member (P.Final m) r, TypedCommandC ps a r, CommandContext m c a) =>
+  (Monad m, P.Member (P.Final m) r, TypedCommandC ps c a r, CommandContext m c a) =>
   -- | The name (and aliases) of the command
   NonEmpty S.Text ->
   -- | The parent group of the command
@@ -160,16 +160,16 @@ invokeCommand ctx cmd@Command{checks} = P.runError $ do
 type CommandSemType r a = P.Sem (P.Fail ': r) a
 
 -- | Some constraints used for making parameter typed commands work
-type TypedCommandC ps a r =
+type TypedCommandC ps c a r =
   ( ApplyTupRes (ParserResult (ListToTup ps)) (CommandSemType r a) ~ CommandForParsers ps r a
-  , ParameterParser (ListToTup ps) r
+  , ParameterParser (ListToTup ps) c r
   , ApplyTup (ParserResult (ListToTup ps)) (CommandSemType r a)
   , ParameterInfoForParsers ps r
   )
 
 buildTypedCommand ::
   forall (ps :: [Type]) c m a p r.
-  (TypedCommandC ps a r, p ~ ParserResult (ListToTup ps), CommandContext m c a) =>
+  (TypedCommandC ps c a r, p ~ ParserResult (ListToTup ps), CommandContext m c a) =>
   (c -> CommandForParsers ps r a) ->
   ( c -> P.Sem r (Either CommandError p)
   , (c, p) -> P.Sem (P.Fail ': r) a
@@ -185,8 +185,8 @@ class ParameterInfoForParsers (ps :: [Type]) r where
 instance ParameterInfoForParsers '[] r where
   parameterInfos = []
 
-instance (ParameterParser x r, ParameterInfoForParsers xs r) => ParameterInfoForParsers (x : xs) r where
-  parameterInfos = parameterInfo @x @r : parameterInfos @xs @r
+instance (ParameterParser x c r, ParameterInfoForParsers xs r) => ParameterInfoForParsers (x : xs) r where
+  parameterInfos = parameterInfo @x @c @r : parameterInfos @xs @r
 
 class ApplyTup a b where
   type ApplyTupRes a b
@@ -205,12 +205,12 @@ instance ApplyTup () b where
 
 buildTypedCommandParser ::
   forall (ps :: [Type]) c r.
-  ParameterParser (ListToTup ps) r =>
+  ParameterParser (ListToTup ps) c r =>
   c ->
   L.Text ->
   P.Sem r (Either CommandError (ParserResult (ListToTup ps)))
 buildTypedCommandParser ctx t =
-  runCommandParser ctx t (parse @(ListToTup ps) @r) <&> \case
+  runCommandParser ctx t (parse @(ListToTup ps) @c @r) <&> \case
     Right r -> Right r
     Left (n, e) -> Left $ ParseError n e
 
@@ -218,7 +218,7 @@ type family ListToTup (ps :: [Type]) where
   ListToTup '[] = ()
   ListToTup (x ': xs) = (x, ListToTup xs)
 
-{- | Transform a type level list of types implementing the 'Parser' typeclass into
+{- | Transform a type level list of types implementing the 'ParameterParser' typeclass into
  the type a command callback matching those parameters should be.
 
  As an example:

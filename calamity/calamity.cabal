@@ -4,7 +4,7 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: c2a1e0b3e5f84855cf6ec5766fec2ee4b3d12c91dd3721f64471234d1c7ae0a8
+-- hash: 154662ee222dbfe7a26afc26afaa4243ceb89b1cccf3a71624f5b4c865436e46
 
 name:           calamity
 version:        0.1.30.0
@@ -41,19 +41,11 @@ library
       Calamity.Client.ShardManager
       Calamity.Client.Types
       Calamity.Commands
-      Calamity.Commands.AliasType
-      Calamity.Commands.Check
-      Calamity.Commands.Command
-      Calamity.Commands.CommandUtils
+      Calamity.Commands.CalamityParsers
       Calamity.Commands.Context
       Calamity.Commands.Dsl
-      Calamity.Commands.Error
-      Calamity.Commands.Group
-      Calamity.Commands.Handler
       Calamity.Commands.Help
-      Calamity.Commands.ParameterInfo
-      Calamity.Commands.ParsePrefix
-      Calamity.Commands.Parser
+      Calamity.Commands.Types
       Calamity.Commands.Utils
       Calamity.Gateway
       Calamity.Gateway.DispatchEvents
@@ -191,6 +183,7 @@ library
     , async >=2.2 && <3
     , base >=4.13 && <5
     , bytestring >=0.10 && <0.12
+    , calamity-commands >=0.1.2 && <0.2
     , colour >=2.3.5 && <2.4
     , concurrent-extra ==0.7.*
     , connection >=0.2.6 && <0.4

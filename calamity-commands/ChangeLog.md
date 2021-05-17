@@ -4,6 +4,10 @@
 
 + Changed the command parameter machinery to hold more info about parameters.
 + Added a 'type cheatsheet' thing to command help in the default help command.
++ The `render` parameter of `helpCommand` and `helpCommand'` is now passed the
+  context.
++ `ParameterParser` now has an extra type variable `c` to parameterise the
+  context type.
 
 ## 0.1.1.0
 

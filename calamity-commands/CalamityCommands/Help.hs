@@ -161,7 +161,7 @@ helpCommand' ::
   CommandHandler m c a ->
   Maybe (Group m c a) ->
   [Check m c] ->
-  (L.Text -> P.Sem (P.Fail ': r) a) ->
+  (c -> L.Text -> P.Sem (P.Fail ': r) a) ->
   P.Sem r (Command m c a)
 helpCommand' handler parent checks render =
   buildCommand @'[[S.Text]]
@@ -170,7 +170,7 @@ helpCommand' handler parent checks render =
     False
     checks
     helpCommandHelp
-    (\ctx path -> render $ renderHelp handler ctx path)
+    (\ctx path -> render ctx $ renderHelp handler ctx path)
 
 {- | Create and register the default help command for all the commands registered
  in the commands DSL this is used in. The @render@ parameter is used so you can
@@ -223,7 +223,7 @@ helpCommand' handler parent checks render =
 helpCommand ::
   forall c m a r.
   (Monad m, P.Member (P.Final m) r, CommandContext m c a) =>
-  (L.Text -> P.Sem (P.Fail ': r) a) ->
+  (c -> L.Text -> P.Sem (P.Fail ': r) a) ->
   P.Sem (DSLState m c a r) (Command m c a)
 helpCommand render = do
   handler <- P.ask @(CommandHandler m c a)

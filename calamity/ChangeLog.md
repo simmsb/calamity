@@ -12,6 +12,12 @@
   `EmbedProvider`.
 + Changed the command parameter machinery to hold more info about parameters.
 + Added a 'type cheatsheet' thing to command help in the default help command.
++ Calamity now uses and re-exports the Calamity-Commands package instead of
+  having all the code duplicated.
++ An extra effect now needs to be handled for commands: `ConstructContext`, this
+  also allows you to change which context your bot uses.
++ `Calamity.Commands.Context.Context` has been removed, instead use
+  `FullContext`, `LightContext`, or make your own.
   
 ## 0.1.29.0
 
