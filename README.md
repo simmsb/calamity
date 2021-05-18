@@ -56,7 +56,7 @@ project listed here)
 {- cabal:
   build-depends:
      base >= 4.13 && < 5
-     , calamity >= 0.1.30
+     , calamity >= 0.1.30.1
      , text >= 1.2 && < 2
      , lens >= 4.18 && < 5
      , di-polysemy ^>= 0.2
@@ -82,6 +82,8 @@ project listed here)
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE TypeApplications #-}
+
+{-# LANGUAGE BlockArguments #-}
 
 {-# LANGUAGE TypeOperators #-}
 
