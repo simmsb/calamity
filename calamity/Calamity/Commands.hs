@@ -6,7 +6,6 @@ module Calamity.Commands (
     module CalamityCommands.Error,
     module CalamityCommands.Handler,
     module Calamity.Commands.Help,
-    module CalamityCommands.ParsePrefix,
     module CalamityCommands.Parser,
     module Calamity.Commands.Utils,
 
@@ -20,7 +19,6 @@ import Calamity.Commands.Help
 import Calamity.Commands.Utils
 import CalamityCommands.Error
 import CalamityCommands.Handler
-import CalamityCommands.ParsePrefix
 import CalamityCommands.Parser
 
 {- $commandDocs
@@ -46,8 +44,8 @@ import CalamityCommands.Parser
 
      1. 'CalamityCommands.ParsePrefix.ParsePrefix'
 
-         Handles parsing prefixes, "CalamityCommands" provides the
-         'CalamityCommands.ParsePrefix.useConstantPrefix' function for constant
+         Handles parsing prefixes, the
+         'Calamity.Commands.Utils.useConstantPrefix' function handles constant
          prefixes.
 
      2. 'CalamityCommands.Context.ConstructContext'

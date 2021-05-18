@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.1.30.1
+
++ Removed the re-export of `CalamityCommands.ParsePrefix` from Calamity.Commands.
++ Added the `Calamity.Commands.Utils.useConstantPrefix` method
+
 ## 0.1.30.0
 
 + Removed the `Symbol` parameter of custom events, instead of `'CustomEvt

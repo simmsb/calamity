@@ -56,7 +56,7 @@ project listed here)
 {- cabal:
   build-depends:
      base >= 4.13 && < 5
-     , calamity >= 0.1.28
+     , calamity >= 0.1.30
      , text >= 1.2 && < 2
      , lens >= 4.18 && < 5
      , di-polysemy ^>= 0.2

@@ -4,6 +4,7 @@
 -- | Command handler utilities
 module Calamity.Commands.Utils (
   addCommands,
+  useConstantPrefix,
   CmdInvokeFailReason (..),
   CtxCommandError (..),
   CommandNotFound (..),
@@ -50,6 +51,11 @@ newtype CommandInvoked c = CommandInvoked
   { ctx :: c
   }
   deriving stock (Show, Generic)
+
+-- | A default interpretation for 'CC.ParsePrefix' that uses a single constant prefix.
+useConstantPrefix :: L.Text -> P.Sem (CC.ParsePrefix Message ': r) a -> P.Sem r a
+useConstantPrefix pre = P.interpret (\case
+                                        CC.ParsePrefix Message { content } -> pure ((pre, ) <$> L.stripPrefix pre content))
 
 -- | Construct commands and groups from a command DSL, then registers an event
 -- handler on the bot that manages running those commands.

@@ -4,10 +4,10 @@ cabal-version: 1.18
 --
 -- see: https://github.com/sol/hpack
 --
--- hash: 154662ee222dbfe7a26afc26afaa4243ceb89b1cccf3a71624f5b4c865436e46
+-- hash: 5d6785177c7a779a3dd4d3fe63a45997bd3697961f2756675e389b2da37cb817
 
 name:           calamity
-version:        0.1.30.0
+version:        0.1.30.1
 synopsis:       A library for writing discord bots in haskell
 description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 category:       Network, Web
