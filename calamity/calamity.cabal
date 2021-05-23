@@ -3,11 +3,9 @@ cabal-version: 1.18
 -- This file has been generated from package.yaml by hpack version 0.34.4.
 --
 -- see: https://github.com/sol/hpack
---
--- hash: 5d6785177c7a779a3dd4d3fe63a45997bd3697961f2756675e389b2da37cb817
 
 name:           calamity
-version:        0.1.30.1
+version:        0.1.30.2
 synopsis:       A library for writing discord bots in haskell
 description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 category:       Network, Web
@@ -18,9 +16,9 @@ maintainer:     ben@bensimms.moe
 copyright:      2020 Ben Simms
 license:        MIT
 license-file:   LICENSE
+build-type:     Simple
 tested-with:
     GHC == 8.10.4
-build-type:     Simple
 extra-source-files:
     README.md
     ChangeLog.md
@@ -71,8 +69,11 @@ library
       Calamity.Internal.ConstructorName
       Calamity.Internal.IntColour
       Calamity.Internal.LocalWriter
+      Calamity.Internal.OverriddenVia
       Calamity.Internal.RunIntoIO
+      Calamity.Internal.ShapeCoerce
       Calamity.Internal.SnowflakeMap
+      Calamity.Internal.UnixTimestamp
       Calamity.Internal.Updateable
       Calamity.Internal.Utils
       Calamity.Metrics.Eff
@@ -117,7 +118,6 @@ library
       Calamity.Types.Snowflake
       Calamity.Types.Tellable
       Calamity.Types.Token
-      Calamity.Types.UnixTimestamp
       Calamity.Types.Upgradeable
       Calamity.Utils
       Calamity.Utils.Colour
@@ -177,9 +177,11 @@ library
       TypeOperators
       TypeApplications
       RoleAnnotations
+      QuasiQuotes
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
-      aeson >=1.4 && <2
+      PyF >=0.9.0.2 && <0.10
+    , aeson >=1.4 && <2
     , async >=2.2 && <3
     , base >=4.13 && <5
     , bytestring >=0.10 && <0.12
@@ -196,7 +198,6 @@ library
     , di-core >=1.0.4 && <1.1
     , di-polysemy ==0.2.*
     , exceptions ==0.10.*
-    , fmt ==0.6.*
     , focus >=1.0 && <2
     , generic-lens >=2.0 && <3
     , hashable >=1.2 && <2

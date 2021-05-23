@@ -1,73 +1,69 @@
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | The client
-module Calamity.Client.Client
-    ( react
-    , runBotIO
-    , runBotIO'
-    , stopBot
-    , sendPresence
-    , events
-    , fire
-    , waitUntil
-    , waitUntilM
-    , CalamityEvent(Dispatch, ShutDown)
-    , customEvt ) where
+module Calamity.Client.Client (
+  react,
+  runBotIO,
+  runBotIO',
+  stopBot,
+  sendPresence,
+  events,
+  fire,
+  waitUntil,
+  waitUntilM,
+  CalamityEvent (Dispatch, ShutDown),
+  customEvt,
+) where
 
-import           Calamity.Cache.Eff
-import           Calamity.Client.ShardManager
-import           Calamity.Client.Types
-import           Calamity.Gateway.DispatchEvents
-import           Calamity.Gateway.Types
-import           Calamity.Gateway.Intents
-import           Calamity.HTTP.Internal.Ratelimit
-import           Calamity.Internal.ConstructorName
-import           Calamity.Internal.RunIntoIO
-import qualified Calamity.Internal.SnowflakeMap    as SM
-import           Calamity.Internal.Updateable
-import           Calamity.Internal.Utils
-import           Calamity.Metrics.Eff
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild
-import           Calamity.Types.Model.Presence     ( Presence(..) )
-import           Calamity.Types.Model.User
+import Calamity.Cache.Eff
+import Calamity.Client.ShardManager
+import Calamity.Client.Types
+import Calamity.Gateway.DispatchEvents
+import Calamity.Gateway.Intents
+import Calamity.Gateway.Types
+import Calamity.HTTP.Internal.Ratelimit
+import Calamity.Internal.ConstructorName
+import Calamity.Internal.RunIntoIO
+import qualified Calamity.Internal.SnowflakeMap as SM
+import Calamity.Internal.UnixTimestamp
+import Calamity.Internal.Updateable
+import Calamity.Internal.Utils
+import Calamity.Metrics.Eff
+import Calamity.Types.LogEff
+import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Guild
+import Calamity.Types.Model.Presence (Presence (..))
+import Calamity.Types.Model.User
 import qualified Calamity.Types.Model.Voice as V
-import           Calamity.Types.Snowflake
-import           Calamity.Types.Token
-import           Calamity.Types.LogEff
-
-import           Control.Concurrent.Chan.Unagi
-import           Control.Concurrent.MVar
-import           Control.Concurrent.STM
-import           Control.Exception                 ( SomeException )
-import           Control.Lens                      hiding ( (<.>) )
-import           Control.Monad
-
-import           Data.Default.Class
-import           Data.Dynamic
-import           Data.Foldable
-import           Data.Generics.Product.Subtype
-import           Data.IORef
-import           Data.Maybe
-import           Data.Proxy
-import qualified Data.Text                         as S
-import           Data.Time.Clock.POSIX
-
-import qualified Di.Core                           as DC
+import Calamity.Types.Snowflake
+import Calamity.Types.Token
+import Control.Concurrent.Chan.Unagi
+import Control.Concurrent.MVar
+import Control.Concurrent.STM
+import Control.Exception (SomeException)
+import Control.Lens hiding ((<.>))
+import Control.Monad
+import Data.Default.Class
+import Data.Dynamic
+import Data.Foldable
+import Data.Generics.Product.Subtype
+import Data.IORef
+import Data.Maybe
+import Data.Proxy
+import qualified Data.Text as S
+import Data.Time.Clock.POSIX
 import qualified Df1
-import qualified DiPolysemy                        as Di
-
-import           Fmt
-
-import qualified Polysemy                          as P
-import qualified Polysemy.Async                    as P
-import qualified Polysemy.AtomicState              as P
-import qualified Polysemy.Error                    as P
-import qualified Polysemy.Fail                     as P
-import qualified Polysemy.Reader                   as P
-import qualified Polysemy.Resource                 as P
-
-import           TextShow                          ( TextShow(showt) )
+import qualified Di.Core as DC
+import qualified DiPolysemy as Di
+import qualified Polysemy as P
+import qualified Polysemy.Async as P
+import qualified Polysemy.AtomicState as P
+import qualified Polysemy.Error as P
+import qualified Polysemy.Fail as P
+import qualified Polysemy.Reader as P
+import qualified Polysemy.Resource as P
+import PyF
+import TextShow (TextShow (showt))
 
 timeA :: P.Member (P.Embed IO) r => P.Sem r a -> P.Sem r (Double, a)
 timeA m = do
@@ -343,7 +339,7 @@ catchAllLogging m = do
   r <- P.errorToIOFinal . P.fromExceptionSem @SomeException $ P.raise m
   case r of
     Right _ -> pure ()
-    Left e -> debug $ "got exception: " +|| e ||+ ""
+    Left e -> debug [fmt|got exception: {e:s}|]
 
 handleEvent :: BotC r => Int -> DispatchData -> P.Sem r ()
 handleEvent shardID data' = do
@@ -364,7 +360,7 @@ handleEvent shardID data' = do
       (time, _) <- timeA . catchAllLogging $ P.embed action
       void $ observeHistogram time eventHandleHisto
     -- pattern match failures are usually stuff like events for uncached guilds, etc
-    Left err      -> debug $ "Failed handling actions for event: " +| err |+ ""
+    Left err      -> debug [fmt|Failed handling actions for event: {err:s}|]
 
 handleEvent' :: BotC r
               => EventHandlers
@@ -602,7 +598,7 @@ handleEvent' eh evt@(PresenceUpdate PresenceUpdateData { userID, presence = Pres
                     else mempty
   pure $ userUpdates <> map ($ (oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
 
-handleEvent' eh (TypingStart TypingStartData { channelID, guildID, userID, timestamp }) =
+handleEvent' eh (TypingStart TypingStartData { channelID, guildID, userID, timestamp = UnixTimestamp timestamp }) =
   case guildID of
     Just gid -> do
       Just guild <- getGuild gid
@@ -674,7 +670,7 @@ updateCache (GuildMemberAdd member) = do
 updateCache (GuildMemberRemove GuildMemberRemoveData { guildID, user }) =
   updateGuild guildID (#members %~ sans (getID user))
 
-updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles, user, nick }) = do
+updateCache (GuildMemberUpdate GuildMemberUpdateData { guildID, roles = AesonVector roles, user, nick }) = do
   setUser user
   updateGuild guildID (#members . ix (getID user) %~ (#roles .~ roles) . (#nick .~ nick))
 

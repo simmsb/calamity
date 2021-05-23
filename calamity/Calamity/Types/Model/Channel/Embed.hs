@@ -17,11 +17,10 @@ module Calamity.Types.Model.Channel.Embed (
 ) where
 
 import Calamity.Internal.AesonThings
-import Calamity.Internal.IntColour ()
-import Calamity.Internal.Utils ()
-
+import Calamity.Internal.IntColour
+import Calamity.Internal.OverriddenVia
+import Calamity.Internal.Utils
 import Control.Lens
-
 import Data.Aeson
 import Data.Colour (Colour)
 import Data.Default.Class
@@ -30,11 +29,29 @@ import Data.Semigroup
 import Data.Text.Lazy (Text)
 import Data.Time
 import Data.Word
-
 import GHC.Generics
-
 import TextShow
 import qualified TextShow.Generic as TSG
+
+data Embed' = Embed'
+    { title :: Maybe Text
+    , type_ :: Maybe Text
+    , description :: Maybe Text
+    , url :: Maybe Text
+    , timestamp :: Maybe (CalamityFromStringShow UTCTime)
+    , color :: Maybe IntColour
+    , footer :: Maybe EmbedFooter
+    , image :: Maybe EmbedImage
+    , thumbnail :: Maybe EmbedThumbnail
+    , video :: Maybe EmbedVideo
+    , provider :: Maybe EmbedProvider
+    , author :: Maybe EmbedAuthor
+    , fields :: [EmbedField]
+    }
+    deriving (Generic)
+    deriving (FromJSON) via WithSpecialCases '[IfNoneThen "fields" DefaultToEmptyArray] Embed'
+    deriving (ToJSON) via CalamityJSON Embed'
+    deriving (TextShow) via TSG.FromGeneric Embed'
 
 data Embed = Embed
     { title :: Maybe Text
@@ -52,9 +69,7 @@ data Embed = Embed
     , fields :: [EmbedField]
     }
     deriving (Eq, Show, Generic, Default)
-    deriving (TextShow) via TSG.FromGeneric Embed
-    deriving (FromJSON) via WithSpecialCases '[IfNoneThen "fields" DefaultToEmptyArray] Embed
-    deriving (ToJSON) via CalamityJSON Embed
+    deriving (TextShow, FromJSON, ToJSON) via OverriddenVia Embed Embed'
 
 instance Semigroup Embed where
     l <> r =

@@ -67,6 +67,13 @@ packages:
       sha256: 77988800cdcc66b087154c5dce6ad69f2e8a07d7c946fbb5dc167146cae7bdd9
   original:
     hackage: http-api-data-0.4.3@sha256:31005a0514d795d38574239910fcc94810f16b2254a0d9ded7cc08bb8e211fc6,3812
+- completed:
+    hackage: generic-override-0.2.0.0@sha256:9ce04dffd616bc24cccaf425f301af9c47d086347e18429d1cf898b02398bf20,1445
+    pantry-tree:
+      size: 469
+      sha256: 50e6af7c75b129314116aee7b7580143720ad7267a4a9a2fc471f209971029ec
+  original:
+    hackage: generic-override-0.2.0.0@sha256:9ce04dffd616bc24cccaf425f301af9c47d086347e18429d1cf898b02398bf20,1445
 snapshots:
 - completed:
     size: 576102

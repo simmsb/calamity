@@ -6,7 +6,6 @@ module Calamity.Types
     , module Calamity.Types.Token
     , module Calamity.Types.Tellable
     , module Calamity.Types.Upgradeable
-    , module Calamity.Types.UnixTimestamp
     -- * Types
     -- $typesDocs
     ) where
@@ -17,7 +16,6 @@ import           Calamity.Types.Snowflake
 import           Calamity.Types.Token
 import           Calamity.Types.Tellable
 import           Calamity.Types.Upgradeable
-import           Calamity.Types.UnixTimestamp
 
 -- $typesDocs
 --

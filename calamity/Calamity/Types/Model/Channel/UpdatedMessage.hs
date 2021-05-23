@@ -4,7 +4,8 @@ module Calamity.Types.Model.Channel.UpdatedMessage (
 ) where
 
 import Calamity.Internal.AesonThings
-import Calamity.Internal.Utils ()
+import Calamity.Internal.OverriddenVia
+import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
@@ -16,6 +17,32 @@ import qualified Data.Vector.Unboxing as UV
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
+
+data UpdatedMessage' = UpdatedMessage'
+    { id :: Snowflake Message
+    , channelID :: Snowflake Channel
+    , content :: Maybe Text
+    , editedTimestamp :: Maybe (CalamityFromStringShow UTCTime)
+    , tts :: Maybe Bool
+    , mentionEveryone :: Maybe Bool
+    , mentions :: Maybe (AesonVector (Snowflake User))
+    , mentionRoles :: Maybe (AesonVector (Snowflake Role))
+    , mentionChannels :: Maybe (AesonVector (Snowflake Channel))
+    , attachments :: !(Maybe [Attachment])
+    , embeds :: Maybe [Embed]
+    , reactions :: Maybe [Reaction]
+    , pinned :: Maybe Bool
+    }
+    deriving (Generic)
+    deriving (TextShow) via TSG.FromGeneric UpdatedMessage'
+    deriving
+        (FromJSON)
+        via WithSpecialCases
+                '[ "author" `ExtractFieldFrom` "id"
+                 , "mentions" `ExtractArrayField` "id"
+                 , "mention_channels" `ExtractArrayField` "id"
+                 ]
+                UpdatedMessage'
 
 data UpdatedMessage = UpdatedMessage
     { id :: Snowflake Message
@@ -33,14 +60,6 @@ data UpdatedMessage = UpdatedMessage
     , pinned :: Maybe Bool
     }
     deriving (Eq, Show, Generic)
-    deriving (TextShow) via TSG.FromGeneric UpdatedMessage
-    deriving
-        (FromJSON)
-        via WithSpecialCases
-                '[ "author" `ExtractFieldFrom` "id"
-                 , "mentions" `ExtractArrayField` "id"
-                 , "mention_channels" `ExtractArrayField` "id"
-                 ]
-                UpdatedMessage
+    deriving (TextShow, FromJSON) via OverriddenVia UpdatedMessage UpdatedMessage'
     deriving (HasID Message) via HasIDField "id" UpdatedMessage
     deriving (HasID Channel) via HasIDField "channelID" UpdatedMessage

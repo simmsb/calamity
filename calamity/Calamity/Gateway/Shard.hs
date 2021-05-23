@@ -33,7 +33,6 @@ import Data.IORef
 import Data.Maybe
 import qualified Data.Text.Lazy as L
 import DiPolysemy hiding (debug, error, info)
-import Fmt
 import qualified Network.Connection as NC
 import qualified Network.TLS as NT
 import qualified Network.TLS.Extra as NT
@@ -55,6 +54,7 @@ import qualified Polysemy.Resource as P
 import qualified System.X509 as X509
 import TextShow (showtl)
 import Prelude hiding (error)
+import PyF
 
 runWebsocket ::
   P.Members '[LogEff, P.Final IO, P.Embed IO] r =>
@@ -67,7 +67,7 @@ runWebsocket host path ma = do
 
   -- We have to do this all ourself I think?
   -- TODO: see if this isn't needed
-  let logExc e = debug $ "runWebsocket raised with " +|| e ||+ ""
+  let logExc e = debug [fmt|runWebsocket raised with {e:s}|]
   logExc' <- bindSemToIO logExc
   let handler e = do
         void $ logExc' e
@@ -130,7 +130,7 @@ sendToWs data' = do
   case wsConn' of
     Just wsConn -> do
       let encodedData = A.encode data'
-      debug $ "sending " +|| data' ||+ " encoded to " +|| encodedData ||+ " to gateway"
+      debug [fmt|sending {data':s} encoded to {encodedData:s} to gateway|]
       P.embed . sendTextData wsConn $ encodedData
     Nothing -> debug "tried to send to closed WS"
 
@@ -181,7 +181,7 @@ shardLoop = do
 
       case msg of
         Left (c, reason) -> do
-          whenJust reason (\r -> error $ "Shard closed with reason: " <> r)
+          whenJust reason (\r -> error [fmt|Shard closed with reason: {r}|])
           P.embed . atomically $ writeTBMQueue outqueue (Control c)
         Right msg' -> do
           let decoded = A.eitherDecode msg'
@@ -189,7 +189,7 @@ shardLoop = do
             Right a ->
               P.embed . atomically $ tryWriteTBMQueue' outqueue (Discord a)
             Left e -> do
-              error $ "Failed to decode: " +| e |+ ""
+              error [fmt|Failed to decode: {e}|]
               pure True
           when r inner
   outerloop :: ShardC r => Sem r ()
@@ -197,7 +197,7 @@ shardLoop = do
     shard :: Shard <- P.atomicGets (^. #shardS)
     let host = shard ^. #gateway
     let host' = fromMaybe host $ L.stripPrefix "wss://" host
-    info $ "starting up shard " +| (shard ^. #shardID) |+ " of " +| (shard ^. #shardCount) |+ ""
+    info [fmt|starting up shard {shardID shard} of {shardCount shard}|]
 
     innerLoopVal <- runWebsocket host' "/?v=8&encoding=json" innerloop
 
@@ -227,7 +227,7 @@ shardLoop = do
 
     case (seqNum', sessionID') of
       (Just n, Just s) -> do
-        debug $ "Resuming shard (sessionID: " +| s |+ ", seq: " +| n |+ ")"
+        debug [fmt|Resuming shard (sessionID: {s}, seq: {n})|]
         sendToWs
           ( Resume
               ResumeData
@@ -307,14 +307,14 @@ shardLoop = do
           P.embed $ threadDelay (15 * 1000 * 1000)
       P.throw ShardFlowRestart
     Hello interval -> do
-      info $ "Received hello, beginning to heartbeat at an interval of " +| interval |+ "ms"
+      info [fmt|Received hello, beginning to heartbeat at an interval of {interval}ms|]
       startHeartBeatLoop interval
     HeartBeatAck -> do
       debug "Received heartbeat ack"
       P.atomicModify' (#hbResponse .~ True)
   handleMsg (Control msg) = case msg of
     SendPresence data' -> do
-      debug $ "Sending presence: (" +|| data' ||+ ")"
+      debug [fmt|Sending presence: ({data':s})|]
       sendToWs $ StatusUpdate data'
     RestartShard -> P.throw ShardFlowRestart
     ShutDownShard -> P.throw ShardFlowShutDown
@@ -340,7 +340,7 @@ haltHeartBeat = do
 sendHeartBeat :: ShardC r => Sem r ()
 sendHeartBeat = do
   sn <- P.atomicGets (^. #seqNum)
-  debug $ "Sending heartbeat (seq: " +|| sn ||+ ")"
+  debug [fmt|Sending heartbeat (seq: {sn:s})|]
   sendToWs $ HeartBeat sn
   P.atomicModify' (#hbResponse .~ False)
 

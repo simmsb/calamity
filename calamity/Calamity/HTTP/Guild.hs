@@ -26,8 +26,7 @@ module Calamity.HTTP.Guild (
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
 import Calamity.Internal.AesonThings
-import Calamity.Internal.IntColour ()
-import Calamity.Internal.Utils ()
+import Calamity.Internal.IntColour
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
@@ -167,7 +166,7 @@ modifyGuildRolePermissions :: Maybe Permissions -> ModifyGuildRoleData
 modifyGuildRolePermissions v = ModifyGuildRoleData $ H.fromList [("permissions", toJSON v)]
 
 modifyGuildRoleColour :: Maybe (Colour Double) -> ModifyGuildRoleData
-modifyGuildRoleColour v = ModifyGuildRoleData $ H.fromList [("colour", toJSON v)]
+modifyGuildRoleColour v = ModifyGuildRoleData $ H.fromList [("colour", toJSON (IntColour <$> v))]
 
 modifyGuildRoleHoist :: Maybe Bool -> ModifyGuildRoleData
 modifyGuildRoleHoist v = ModifyGuildRoleData $ H.fromList [("hoist", toJSON v)]

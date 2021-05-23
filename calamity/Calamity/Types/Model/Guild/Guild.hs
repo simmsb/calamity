@@ -6,9 +6,10 @@ module Calamity.Types.Model.Guild.Guild (
 ) where
 
 import Calamity.Internal.AesonThings
+import Calamity.Internal.OverriddenVia
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
 import qualified Calamity.Internal.SnowflakeMap as SM
-import Calamity.Internal.Utils ()
+import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild.Emoji
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
@@ -21,16 +22,53 @@ import Control.DeepSeq
 import Control.Lens ((^.))
 import Data.Aeson
 import Data.Aeson.Types
-import Data.Maybe
 import Data.Generics.Product.Fields
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as LH
+import Data.Maybe
 import Data.Text.Lazy (Text)
 import Data.Time
 import Data.Word
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
+
+data Guild' = Guild'
+  { id :: Snowflake Guild
+  , name :: Text
+  , icon :: Maybe Text
+  , splash :: Maybe Text
+  , owner :: Maybe Bool
+  , ownerID :: Snowflake User
+  , permissions :: Word64
+  , region :: Text
+  , afkChannelID :: Maybe (Snowflake GuildChannel)
+  , afkTimeout :: Int
+  , embedEnabled :: Bool
+  , embedChannelID :: Maybe (Snowflake GuildChannel)
+  , verificationLevel :: Int
+  , defaultMessageNotifications :: Int
+  , explicitContentFilter :: Int
+  , roles :: SnowflakeMap Role
+  , emojis :: SnowflakeMap Emoji
+  , features :: [Text]
+  , mfaLevel :: Int
+  , applicationID :: Maybe (Snowflake User)
+  , widgetEnabled :: Bool
+  , widgetChannelID :: Maybe (Snowflake GuildChannel)
+  , systemChannelID :: Maybe (Snowflake GuildChannel)
+  , -- NOTE: Below are only sent on GuildCreate
+    joinedAt :: Maybe (CalamityFromStringShow UTCTime)
+  , large :: Bool
+  , unavailable :: Bool
+  , memberCount :: Int
+  , voiceStates :: [VoiceState]
+  , members :: SnowflakeMap Member
+  , channels :: SnowflakeMap GuildChannel
+  , presences :: CalamityFromStringShow (HashMap (Snowflake User) Presence)
+  }
+  deriving (Generic)
+  deriving (TextShow) via TSG.FromGeneric Guild'
 
 data Guild = Guild
   { id :: Snowflake Guild
@@ -67,7 +105,7 @@ data Guild = Guild
   , presences :: HashMap (Snowflake User) Presence
   }
   deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric Guild
+  deriving (TextShow) via OverriddenVia Guild Guild'
   deriving (HasID Guild) via HasIDField "id" Guild
 
 instance FromJSON Guild where
@@ -85,11 +123,15 @@ instance FromJSON Guild where
 
     presences' <- do
       presences' <- v .: "presences"
-      pure . LH.fromList . mapMaybe (parseMaybe @Object @(Snowflake User, Presence)
-          ( \m -> do
-              p <- parseJSON $ Object (m <> "guild_id" .= id)
-              pure (getID $ p ^. field @"user", p)
-          )) $ presences'
+      pure . LH.fromList
+        . mapMaybe
+          ( parseMaybe @Object @(Snowflake User, Presence)
+              ( \m -> do
+                  p <- parseJSON $ Object (m <> "guild_id" .= id)
+                  pure (getID $ p ^. field @"user", p)
+              )
+          )
+        $ presences'
 
     Guild id
       <$> v .: "name"

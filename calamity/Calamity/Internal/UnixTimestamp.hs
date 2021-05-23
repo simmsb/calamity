@@ -1,32 +1,28 @@
--- | Parsing of unix timestamps
-module Calamity.Types.UnixTimestamp (
+-- | Internal newtype for deserializing timestamps
+module Calamity.Internal.UnixTimestamp (
     UnixTimestamp (..),
     unixToMilliseconds,
     millisecondsToUnix,
 ) where
 
 import Calamity.Internal.Utils ()
-
 import Control.Arrow
-
+import Control.DeepSeq (NFData)
 import Data.Aeson
 import Data.Aeson.Encoding (word64)
 import Data.Time
 import Data.Time.Clock.POSIX
 import Data.Word
-
 import GHC.Generics
-
-import Control.DeepSeq (NFData)
 import TextShow
-import qualified TextShow.Generic as TSG
 
 newtype UnixTimestamp = UnixTimestamp
     { unUnixTimestamp :: UTCTime
     }
-    deriving (Show, Eq, Generic)
-    deriving newtype (NFData)
-    deriving (TextShow) via TSG.FromGeneric UnixTimestamp
+    deriving stock (Generic)
+    deriving anyclass (NFData)
+    deriving (Show) via UTCTime
+    deriving (TextShow) via FromStringShow UTCTime
 
 unixToMilliseconds :: UnixTimestamp -> Word64
 unixToMilliseconds =

@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.30.1
+version:            0.1.30.2
 github:             "simmsb/calamity"
 homepage:           https://github.com/simmsb/calamity
 bug-reports:        https://github.com/simmsb/calamity/issues
@@ -42,7 +42,6 @@ dependencies:
 - generic-lens >= 2.0 && < 3
 - text >= 1.2 && < 2
 - exceptions >= 0.10 && < 0.11
-- fmt >= 0.6 && < 0.7
 - stm-containers >= 1.1 && < 2
 - stm-chans >= 3.0 && < 4
 - concurrent-extra >= 0.7 && < 0.8
@@ -75,6 +74,7 @@ dependencies:
 - mime-types >= 0.1 && < 0.2
 - unboxing-vector >= 0.2 && < 0.3
 - http-api-data >= 0.4.3 && < 0.5
+- PyF >= 0.9.0.2 && < 0.10
 
 # executables:
 #   test-calamity-exe:
@@ -149,3 +149,4 @@ default-extensions:
   - TypeOperators
   - TypeApplications
   - RoleAnnotations
+  - QuasiQuotes

@@ -1,22 +1,21 @@
 -- | Module containing ratelimit stuff
 module Calamity.HTTP.Internal.Ratelimit (
-  newRateLimitState,
-  doRequest,
+    newRateLimitState,
+    doRequest,
 ) where
 
 import Calamity.Client.Types (BotC)
 import Calamity.HTTP.Internal.Route
 import Calamity.HTTP.Internal.Types
 import Calamity.Internal.Utils
-
 import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Event (Event)
 import qualified Control.Concurrent.Event as E
 import Control.Concurrent.STM
+import qualified Control.Exception.Safe as Ex
 import Control.Lens
 import Control.Monad
-
 import Data.Aeson
 import Data.Aeson.Lens
 import qualified Data.ByteString as B
@@ -25,21 +24,15 @@ import Data.Maybe
 import qualified Data.Text.Lazy as LT
 import Data.Time
 import Data.Time.Clock.POSIX
-
-import Fmt
-
 import Network.HTTP.Client (responseStatus)
 import Network.HTTP.Req
 import Network.HTTP.Types
-
 import Polysemy (Sem)
 import qualified Polysemy as P
-
+import PyF
+import qualified StmContainers.Map as SC
 import Prelude hiding (error)
 import qualified Prelude
-
-import qualified Control.Exception.Safe as Ex
-import qualified StmContainers.Map as SC
 
 newRateLimitState :: IO RateLimitState
 newRateLimitState = RateLimitState <$> SC.newIO <*> SC.newIO <*> E.newSet
@@ -88,7 +81,7 @@ updateBucket s h b bucketState = do
       , -- we only ignore the previous 'remaining' if we've not reset yet and the
         -- reset time has changed
         remaining =
-          if (isJust $ old ^. #resetTime) && (old ^. #resetKey /= new ^. #resetKey)
+          if isJust (old ^. #resetTime) && (old ^. #resetKey /= new ^. #resetKey)
             then min (old ^. #remaining) (new ^. #remaining)
             else new ^. #remaining
       , -- only take the new resetTime if it actually changed
@@ -206,7 +199,7 @@ doDiscordRequest r = do
       if
           | statusIsSuccessful status -> do
             let resp = responseBody r'
-            debug $ "Got good response from discord: " +|| status ||+ ""
+            debug [fmt|Got good response from discord: {status:s}|]
             now <- P.embed getCurrentTime
             let rlHeaders = buildBucketState now r'
             pure $ Good resp rlHeaders
@@ -220,13 +213,13 @@ doDiscordRequest r = do
                 pure $ ServerError (statusCode status)
           | statusIsClientError status -> do
             let err = responseBody r'
-            error $ "Something went wrong: " +|| err ||+ " response: " +|| r' ||+ ""
+            error [fmt|Something went wrong: {err:s}, response: {r':s}|]
             pure $ ClientError (statusCode status) err
           | otherwise -> do
-            debug $ "Got server error from discord: " +| statusCode status |+ ""
+            debug [fmt|Got server error from discord: {statusCode status}|]
             pure $ ServerError (statusCode status)
     Left e -> do
-      error $ "Something went wrong with the http client: " +| LT.pack e |+ ""
+      error [fmt|Something went wrong with the http client: {e}|]
       pure . InternalResponseError $ LT.pack e
 
 -- | Parse a ratelimit header returning when it unlocks
@@ -282,12 +275,12 @@ retryRequest maxRetries action = retryInner 0
     res <- action
     case res of
       Retry r | numRetries > maxRetries -> do
-        debug $ "Request failed after " +| maxRetries |+ " retries."
+        debug [fmt|Request failed after {maxRetries} retries|]
         pure $ Left r
       Retry _ ->
         retryInner (numRetries + 1)
       RFail r -> do
-        debug "Request failed due to error response."
+        debug "Request failed due to error response"
         pure $ Left r
       RGood r ->
         pure $ Right r
@@ -340,7 +333,7 @@ doSingleRequest rlstate route gl r = do
           Nothing -> pure ()
       pure $ RGood v
     Ratelimited unlockWhen False (Just (bs, bk)) -> do
-      debug $ "429 ratelimited on route, retrying at " +| unlockWhen |+ ""
+      debug [fmt|429 ratelimited on route, retrying at {unlockWhen:s}|]
 
       P.embed . atomically $ do
         case rl of

@@ -3,7 +3,7 @@ module Calamity.Types.Model.Channel.Guild.Text (TextChannel (..)) where
 
 import Calamity.Internal.AesonThings
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
-import Calamity.Internal.Utils ()
+import Calamity.Internal.Utils
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild.Category
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
@@ -17,6 +17,24 @@ import Data.Time
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
+import Calamity.Internal.OverriddenVia
+
+data TextChannel' = TextChannel'
+  { id :: Snowflake TextChannel
+  , guildID :: Snowflake Guild
+  , position :: Int
+  , permissionOverwrites :: SnowflakeMap Overwrite
+  , name :: Text
+  , topic :: Maybe Text
+  , nsfw :: Bool
+  , lastMessageID :: Maybe (Snowflake Message)
+  , lastPinTimestamp :: Maybe (CalamityFromStringShow UTCTime)
+  , rateLimitPerUser :: Maybe Int
+  , parentID :: Maybe (Snowflake Category)
+  }
+  deriving (Generic)
+  deriving (TextShow) via TSG.FromGeneric TextChannel'
+
 
 data TextChannel = TextChannel
   { id :: Snowflake TextChannel
@@ -32,8 +50,8 @@ data TextChannel = TextChannel
   , parentID :: Maybe (Snowflake Category)
   }
   deriving (Show, Eq, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric TextChannel
   deriving (ToJSON) via CalamityJSON TextChannel
+  deriving (TextShow) via OverriddenVia TextChannel TextChannel
   deriving
     (FromJSON)
     via WithSpecialCases

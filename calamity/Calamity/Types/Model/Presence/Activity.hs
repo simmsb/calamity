@@ -10,13 +10,14 @@ module Calamity.Types.Model.Presence.Activity (
 ) where
 
 import Calamity.Internal.AesonThings
-import Calamity.Internal.Utils
+import Calamity.Internal.OverriddenVia
+import Calamity.Internal.UnixTimestamp
 import Calamity.Types.Snowflake
-import Calamity.Types.UnixTimestamp
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import Data.Scientific
 import Data.Text.Lazy (Text)
+import Data.Time (UTCTime)
 import Data.Word
 import GHC.Generics
 import TextShow
@@ -84,24 +85,20 @@ activity !name !type_ =
     , flags = Nothing
     }
 
-data ActivityTimestamps = ActivityTimestamps
+data ActivityTimestamps' = ActivityTimestamps'
   { start :: !(Maybe UnixTimestamp)
   , end :: !(Maybe UnixTimestamp)
   }
+  deriving (Generic, NFData)
+  deriving (ToJSON, FromJSON) via CalamityJSON ActivityTimestamps'
+  deriving (TextShow) via TSG.FromGeneric ActivityTimestamps'
+
+data ActivityTimestamps = ActivityTimestamps
+  { start :: !(Maybe UTCTime)
+  , end :: !(Maybe UTCTime)
+  }
   deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric ActivityTimestamps
-
-instance ToJSON ActivityTimestamps where
-  toJSON ActivityTimestamps{start, end} =
-    object
-      ["start" .= (unixToMilliseconds <$> start), "end" .= (unixToMilliseconds <$> end)]
-
-instance FromJSON ActivityTimestamps where
-  parseJSON = withObject "ActivityTimestamps" $ \v -> do
-    start <- millisecondsToUnix <<$>> v .:? "start"
-    end <- millisecondsToUnix <<$>> v .:? "end"
-
-    pure $ ActivityTimestamps start end
+  deriving (TextShow, ToJSON, FromJSON) via OverriddenVia ActivityTimestamps ActivityTimestamps'
 
 data ActivityParty = ActivityParty
   { id :: Maybe Text

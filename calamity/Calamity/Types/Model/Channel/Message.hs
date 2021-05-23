@@ -6,7 +6,8 @@ module Calamity.Types.Model.Channel.Message (
 ) where
 
 import Calamity.Internal.AesonThings
-import Calamity.Internal.Utils ()
+import Calamity.Internal.OverriddenVia
+import Calamity.Internal.Utils
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import Calamity.Types.Model.Channel.Attachment
 import Calamity.Types.Model.Channel.Embed
@@ -16,18 +17,55 @@ import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-
 import Data.Aeson
 import Data.Scientific
 import Data.Text.Lazy (Text)
 import Data.Time
 import qualified Data.Vector.Unboxing as UV
-
-import GHC.Generics
-
 import Data.Word (Word64)
+import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
+
+data Message' = Message'
+  { id :: Snowflake Message
+  , channelID :: Snowflake Channel
+  , guildID :: Maybe (Snowflake Guild)
+  , author :: Snowflake User
+  , content :: Text
+  , timestamp :: CalamityFromStringShow UTCTime
+  , editedTimestamp :: Maybe (CalamityFromStringShow UTCTime)
+  , tts :: Bool
+  , mentionEveryone :: Bool
+  , mentions :: AesonVector (Snowflake User)
+  , mentionRoles :: AesonVector (Snowflake Role)
+  , mentionChannels :: Maybe (AesonVector (Snowflake Channel))
+  , attachments :: ![Attachment]
+  , embeds :: ![Embed]
+  , reactions :: ![Reaction]
+  , nonce :: Maybe (Snowflake Message)
+  , pinned :: Bool
+  , webhookID :: Maybe (Snowflake Webhook)
+  , type_ :: !MessageType
+  , activity :: Maybe (CalamityFromStringShow Object)
+  , application :: Maybe (CalamityFromStringShow Object)
+  , messageReference :: Maybe MessageReference
+  , flags :: Word64
+  , stickers :: Maybe [CalamityFromStringShow Object]
+  , referencedMessage :: Maybe Message
+  , interaction :: Maybe (CalamityFromStringShow Object)
+  }
+  deriving (Generic)
+  deriving (TextShow) via TSG.FromGeneric Message'
+  deriving
+    (FromJSON)
+    via WithSpecialCases
+          '[ "author" `ExtractFieldFrom` "id"
+           , "mentions" `ExtractArrayField` "id"
+           , "mention_channels" `ExtractArrayField` "id"
+           , "reactions" `IfNoneThen` DefaultToEmptyArray
+           ]
+          Message'
 
 data Message = Message
   { id :: Snowflake Message
@@ -58,16 +96,7 @@ data Message = Message
   , interaction :: Maybe Object
   }
   deriving (Eq, Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric Message
-  deriving
-    (FromJSON)
-    via WithSpecialCases
-          '[ "author" `ExtractFieldFrom` "id"
-           , "mentions" `ExtractArrayField` "id"
-           , "mention_channels" `ExtractArrayField` "id"
-           , "reactions" `IfNoneThen` DefaultToEmptyArray
-           ]
-          Message
+  deriving (TextShow, FromJSON) via OverriddenVia Message Message'
   deriving (HasID Message) via HasIDField "id" Message
   deriving (HasID Channel) via HasIDField "channelID" Message
   deriving (HasID User) via HasIDField "author" Message

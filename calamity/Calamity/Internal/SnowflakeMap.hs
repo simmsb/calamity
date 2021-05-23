@@ -16,14 +16,13 @@ import Data.Hashable
 import GHC.Exts (IsList)
 import GHC.Generics
 import TextShow
-import qualified TextShow.Generic as TSG
 import Unsafe.Coerce
 
 newtype SnowflakeMap a = SnowflakeMap
   { unSnowflakeMap :: HashMap (Snowflake a) a
   }
-  deriving (Generic, Eq, Data, Ord, Show)
-  deriving (TextShow) via TSG.FromGeneric (SnowflakeMap a)
+  deriving stock (Generic, Eq, Data, Ord, Show)
+  deriving (TextShow) via FromStringShow (SnowflakeMap a)
   deriving newtype (IsList, Semigroup, Monoid)
   deriving newtype (NFData, Hashable)
 

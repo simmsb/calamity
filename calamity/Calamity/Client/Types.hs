@@ -29,7 +29,6 @@ import Calamity.Types.Model.User
 import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
 import Calamity.Types.Token
-import Calamity.Types.UnixTimestamp
 
 import Control.Concurrent.Async
 import Control.Concurrent.Chan.Unagi
@@ -226,7 +225,7 @@ type family EHType (d :: EventType) where
   EHType 'RawMessageReactionAddEvt = ReactionEvtData
   EHType 'RawMessageReactionRemoveEvt = ReactionEvtData
   EHType 'RawMessageReactionRemoveAllEvt = Snowflake Message
-  EHType 'TypingStartEvt = (Channel, Snowflake User, UnixTimestamp)
+  EHType 'TypingStartEvt = (Channel, Snowflake User, UTCTime)
   EHType 'UserUpdateEvt = (User, User)
   EHType 'VoiceStateUpdateEvt = (Maybe VoiceState, VoiceState)
   EHType ( 'CustomEvt a) = a

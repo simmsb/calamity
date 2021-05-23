@@ -3,7 +3,7 @@ module Calamity.Gateway.DispatchEvents where
 
 import Calamity.Internal.AesonThings
 import Calamity.Internal.ConstructorName
-import Calamity.Internal.Utils ()
+import Calamity.Internal.UnixTimestamp
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Channel.UpdatedMessage
 import Calamity.Types.Model.Guild.Ban
@@ -16,16 +16,13 @@ import Calamity.Types.Model.Presence.Presence
 import Calamity.Types.Model.User
 import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
-import Calamity.Types.UnixTimestamp
-
 import Data.Aeson
+import Data.Kind (Type)
 import Data.Text.Lazy (Text)
 import Data.Time
-import Data.Vector.Unboxing (Vector)
-
-import GHC.Generics
-import Data.Kind (Type)
 import Data.Typeable (Typeable)
+import GHC.Generics
+import Calamity.Internal.Utils
 
 data CalamityEvent
   = Dispatch
@@ -33,8 +30,8 @@ data CalamityEvent
       -- ^ The shard that pushed this event
       DispatchData
       -- ^ The attached data
-  | forall (a :: Type). Typeable a => Custom a
-      -- ^ The data sent to the custom event
+  | -- | The data sent to the custom event
+    forall (a :: Type). Typeable a => Custom a
   | ShutDown
 
 data DispatchData
@@ -113,7 +110,7 @@ data GuildMemberRemoveData = GuildMemberRemoveData
 
 data GuildMemberUpdateData = GuildMemberUpdateData
   { guildID :: Snowflake Guild
-  , roles :: Vector (Snowflake Role)
+  , roles :: AesonVector (Snowflake Role)
   , user :: User
   , nick :: Maybe Text
   }
