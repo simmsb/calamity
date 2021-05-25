@@ -1,9 +1,15 @@
 # Changelog for Calamity
 
+## 0.1.30.2
+
++ Removed all the orphan instances from the library.
++ Removed the export of `CalamityCommands.Handler` from `Calamity.Commands`.
++ Added the export of `Calamity.Commands.Types` from `Calamity.Commands`.
+
 ## 0.1.30.1
 
 + Removed the re-export of `CalamityCommands.ParsePrefix` from Calamity.Commands.
-+ Added the `Calamity.Commands.Utils.useConstantPrefix` method
++ Added the `Calamity.Commands.Utils.useConstantPrefix` method.
 
 ## 0.1.30.0
 

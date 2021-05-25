@@ -4,10 +4,10 @@
 module Calamity.Commands (
     module Calamity.Commands.Dsl,
     module CalamityCommands.Error,
-    module CalamityCommands.Handler,
     module Calamity.Commands.Help,
     module CalamityCommands.Parser,
     module Calamity.Commands.Utils,
+    module Calamity.Commands.Types,
 
     -- * Commands
     -- $commandDocs
@@ -17,8 +17,8 @@ import Calamity.Commands.CalamityParsers ()
 import Calamity.Commands.Dsl
 import Calamity.Commands.Help
 import Calamity.Commands.Utils
+import Calamity.Commands.Types
 import CalamityCommands.Error
-import CalamityCommands.Handler
 import CalamityCommands.Parser
 
 {- $commandDocs
