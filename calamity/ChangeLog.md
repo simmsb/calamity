@@ -5,6 +5,8 @@
 + Removed all the orphan instances from the library.
 + Removed the export of `CalamityCommands.Handler` from `Calamity.Commands`.
 + Added the export of `Calamity.Commands.Types` from `Calamity.Commands`.
++ Fixed some parameter parser instances causing type inference to fail
+  ([#48](https://github.com/simmsb/calamity/pull/48)).
 
 ## 0.1.30.1
 
