@@ -116,7 +116,7 @@ buildCommand ::
   P.Sem r (Command m c a)
 buildCommand names parent hidden checks help command =
   let (parser, cb) = buildTypedCommand @ps command
-   in buildCommand' names parent hidden checks (parameterInfos @ps @r) help parser cb
+   in buildCommand' names parent hidden checks (parameterInfos @ps @c @r) help parser cb
 
 {- | Given the name of the command the parser is for and a parser function in
  the 'P.Sem' monad, build a parser by transforming the Polysemy action into an
@@ -164,7 +164,7 @@ type TypedCommandC ps c a r =
   ( ApplyTupRes (ParserResult (ListToTup ps)) (CommandSemType r a) ~ CommandForParsers ps r a
   , ParameterParser (ListToTup ps) c r
   , ApplyTup (ParserResult (ListToTup ps)) (CommandSemType r a)
-  , ParameterInfoForParsers ps r
+  , ParameterInfoForParsers ps c r
   )
 
 buildTypedCommand ::
@@ -179,14 +179,14 @@ buildTypedCommand cmd =
       consumer (ctx, r) = applyTup (cmd ctx) r
    in (parser, consumer)
 
-class ParameterInfoForParsers (ps :: [Type]) r where
+class ParameterInfoForParsers (ps :: [Type]) c r where
   parameterInfos :: [ParameterInfo]
 
-instance ParameterInfoForParsers '[] r where
+instance ParameterInfoForParsers '[] c r where
   parameterInfos = []
 
-instance (ParameterParser x c r, ParameterInfoForParsers xs r) => ParameterInfoForParsers (x : xs) r where
-  parameterInfos = parameterInfo @x @c @r : parameterInfos @xs @r
+instance (ParameterParser x c r, ParameterInfoForParsers xs c r) => ParameterInfoForParsers (x : xs) c r where
+  parameterInfos = parameterInfo @x @c @r : parameterInfos @xs @c @r
 
 class ApplyTup a b where
   type ApplyTupRes a b
