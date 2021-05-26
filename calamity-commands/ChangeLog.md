@@ -1,5 +1,10 @@
 # Changelog for Calamity Commands
 
+## 0.1.3.0
+
++ Fixed some parameter parser instances causing type inference to fail
+  ([#48](https://github.com/simmsb/calamity/pull/48)).
+
 ## 0.1.2.0
 
 + Changed the command parameter machinery to hold more info about parameters.

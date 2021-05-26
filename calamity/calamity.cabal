@@ -185,7 +185,7 @@ library
     , async >=2.2 && <3
     , base >=4.13 && <5
     , bytestring >=0.10 && <0.12
-    , calamity-commands >=0.1.2 && <0.2
+    , calamity-commands >=0.1.3 && <0.2
     , colour >=2.3.5 && <2.4
     , concurrent-extra ==0.7.*
     , connection >=0.2.6 && <0.4
