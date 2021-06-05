@@ -199,7 +199,7 @@ shardLoop = do
     let host' = fromMaybe host $ L.stripPrefix "wss://" host
     info [fmt|starting up shard {shardID shard} of {shardCount shard}|]
 
-    innerLoopVal <- runWebsocket host' "/?v=8&encoding=json" innerloop
+    innerLoopVal <- runWebsocket host' "/?v=9&encoding=json" innerloop
 
     case innerLoopVal of
       Just ShardFlowShutDown -> do

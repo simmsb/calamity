@@ -10,6 +10,7 @@ import Calamity.Internal.OverriddenVia
 import Calamity.Internal.Utils
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import Calamity.Types.Model.Channel.Attachment
+import Calamity.Types.Model.Channel.Component
 import Calamity.Types.Model.Channel.Embed
 import Calamity.Types.Model.Channel.Reaction
 import Calamity.Types.Model.Channel.Webhook
@@ -54,6 +55,7 @@ data Message' = Message'
   , stickers :: Maybe [CalamityFromStringShow Object]
   , referencedMessage :: Maybe Message
   , interaction :: Maybe (CalamityFromStringShow Object)
+  , components :: [Component]
   }
   deriving (Generic)
   deriving (TextShow) via TSG.FromGeneric Message'
@@ -64,6 +66,7 @@ data Message' = Message'
            , "mentions" `ExtractArrayField` "id"
            , "mention_channels" `ExtractArrayField` "id"
            , "reactions" `IfNoneThen` DefaultToEmptyArray
+           , "components" `IfNoneThen` DefaultToEmptyArray
            ]
           Message'
 
@@ -94,8 +97,9 @@ data Message = Message
   , stickers :: Maybe [Object]
   , referencedMessage :: Maybe Message
   , interaction :: Maybe Object
+  , components :: [Component]
   }
-  deriving (Eq, Show, Generic)
+  deriving (Show, Generic)
   deriving (TextShow, FromJSON) via OverriddenVia Message Message'
   deriving (HasID Message) via HasIDField "id" Message
   deriving (HasID Channel) via HasIDField "channelID" Message
@@ -141,7 +145,7 @@ data MessageType
 
 instance FromJSON MessageType where
   parseJSON = withScientific "MessageType" $ \n -> case toBoundedInteger @Int n of
-    Just !v -> case v of
+    Just v -> case v of
       0 -> pure Default
       1 -> pure RecipientAdd
       2 -> pure RecipientRemove

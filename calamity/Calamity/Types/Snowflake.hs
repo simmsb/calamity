@@ -31,7 +31,7 @@ newtype Snowflake (t :: Type) = Snowflake
   { fromSnowflake :: Word64
   }
   deriving ( Generic, Eq, Ord, Data )
-  deriving ( Show, TextShow ) via Word64
+  deriving newtype ( Show, TextShow, FromJSONKey )
   deriving newtype ( NFData, ToJSONKey, U.Unboxable )
 
 -- I'm pretty sure that Word64's hash just being 'fromIntegral' is a bad idea when

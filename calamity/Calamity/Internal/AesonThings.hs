@@ -79,7 +79,7 @@ class RunSpecialCase a where
   runSpecialCases :: Proxy a -> Object -> Parser Object
 
 instance RunSpecialCase '[] where
-  runSpecialCases _ = pure . id
+  runSpecialCases _ = pure
 
 instance (RunSpecialCase xs, PerformAction action) => RunSpecialCase (action : xs) where
   runSpecialCases _ o = do

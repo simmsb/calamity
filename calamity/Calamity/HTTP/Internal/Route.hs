@@ -165,7 +165,7 @@ routeKey :: Route -> RouteKey
 routeKey Route {key, channelID, guildID} = (key, channelID, guildID)
 
 baseURL :: Url 'Https
-baseURL = https "discord.com" /: "api" /: "v8"
+baseURL = https "discord.com" /: "api" /: "v9"
 
 buildRoute
   :: forall (reqs :: [(RequirementType, RouteRequirement)])

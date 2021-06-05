@@ -17,12 +17,14 @@ import qualified Data.Vector.Unboxing as UV
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
+import Data.Word
+import Calamity.Types.Model.Channel.Component
 
 data UpdatedMessage' = UpdatedMessage'
     { id :: Snowflake Message
     , channelID :: Snowflake Channel
     , content :: Maybe Text
-    , editedTimestamp :: Maybe (CalamityFromStringShow UTCTime)
+    , editedTimestamp :: Maybe (MaybeNull (CalamityFromStringShow UTCTime))
     , tts :: Maybe Bool
     , mentionEveryone :: Maybe Bool
     , mentions :: Maybe (AesonVector (Snowflake User))
@@ -32,6 +34,16 @@ data UpdatedMessage' = UpdatedMessage'
     , embeds :: Maybe [Embed]
     , reactions :: Maybe [Reaction]
     , pinned :: Maybe Bool
+    , webhookID :: Maybe (MaybeNull (Snowflake Webhook))
+    , type_ :: Maybe MessageType
+    , activity :: Maybe (MaybeNull (CalamityFromStringShow Object))
+    , application :: Maybe (MaybeNull (CalamityFromStringShow Object))
+    , messageReference :: Maybe (MaybeNull MessageReference)
+    , flags :: Maybe Word64
+    , stickers :: Maybe (MaybeNull [CalamityFromStringShow Object])
+    , referencedMessage :: Maybe (MaybeNull Message)
+    , interaction :: Maybe (MaybeNull (CalamityFromStringShow Object))
+    , components :: Maybe [Component]
     }
     deriving (Generic)
     deriving (TextShow) via TSG.FromGeneric UpdatedMessage'
@@ -48,7 +60,7 @@ data UpdatedMessage = UpdatedMessage
     { id :: Snowflake Message
     , channelID :: Snowflake Channel
     , content :: Maybe Text
-    , editedTimestamp :: Maybe UTCTime
+    , editedTimestamp :: Maybe (MaybeNull UTCTime)
     , tts :: Maybe Bool
     , mentionEveryone :: Maybe Bool
     , mentions :: Maybe (UV.Vector (Snowflake User))
@@ -58,8 +70,18 @@ data UpdatedMessage = UpdatedMessage
     , embeds :: Maybe [Embed]
     , reactions :: Maybe [Reaction]
     , pinned :: Maybe Bool
+    , webhookID :: Maybe (MaybeNull (Snowflake Webhook))
+    , type_ :: Maybe MessageType
+    , activity :: Maybe (MaybeNull Object)
+    , application :: Maybe (MaybeNull Object)
+    , messageReference :: Maybe (MaybeNull MessageReference)
+    , flags :: Maybe Word64
+    , stickers :: Maybe (MaybeNull [Object])
+    , referencedMessage :: Maybe (MaybeNull Message)
+    , interaction :: Maybe (MaybeNull Object)
+    , components :: Maybe [Component]
     }
-    deriving (Eq, Show, Generic)
+    deriving (Show, Generic)
     deriving (TextShow, FromJSON) via OverriddenVia UpdatedMessage UpdatedMessage'
     deriving (HasID Message) via HasIDField "id" UpdatedMessage
     deriving (HasID Channel) via HasIDField "channelID" UpdatedMessage

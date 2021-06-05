@@ -7,7 +7,6 @@ module Calamity.Types.Model.Channel.Message
 data Message
 
 instance Show Message
-instance Eq Message
 
 data MessageType
 

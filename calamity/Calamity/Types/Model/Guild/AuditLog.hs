@@ -185,7 +185,7 @@ instance Enum AuditLogAction where
 
 instance FromJSON AuditLogAction where
   parseJSON = withScientific "AuditLogAction" $ \n -> case toBoundedInteger @Int n of
-    Just !v  -> case v of --  no safe toEnum :S
+    Just v  -> case v of --  no safe toEnum :S
       1  -> pure GUILD_UPDATE
       10 -> pure CHANNEL_CREATE
       11 -> pure CHANNEL_UPDATE

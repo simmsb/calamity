@@ -41,7 +41,7 @@ instance ToJSON ActivityType where
 
 instance FromJSON ActivityType where
   parseJSON = withScientific "ActivityType" $ \n -> case toBoundedInteger @Int n of
-    Just !v -> case v of
+    Just v -> case v of
       0 -> pure Game
       1 -> pure Streaming
       2 -> pure Listening

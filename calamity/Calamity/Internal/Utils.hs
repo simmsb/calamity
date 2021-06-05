@@ -19,12 +19,14 @@ module Calamity.Internal.Utils (
   DefaultingMap (..),
   AesonVector (..),
   CalamityFromStringShow (..),
+  MaybeNull (..),
 ) where
 
 import Calamity.Internal.RunIntoIO
 import Calamity.Types.LogEff
 import Control.Applicative
 import Data.Aeson
+import Data.Aeson.Encoding (null_)
 import Data.Default.Class
 import qualified Data.Map as M
 import Data.Semigroup (Last (..))
@@ -33,6 +35,8 @@ import qualified Data.Vector.Unboxing as VU
 import qualified DiPolysemy as Di
 import qualified Polysemy as P
 import TextShow
+import GHC.Generics
+import qualified TextShow.Generic as TSG
 
 {- | Like whileM, but stateful effects are not preserved to mitigate memory leaks
 
@@ -145,3 +149,22 @@ instance (TextShow a, VU.Unboxable a) => TextShow (AesonVector a) where
 newtype CalamityFromStringShow a = CalamityFromStringShow {unCalamityFromStringShow :: a}
   deriving (FromJSON, ToJSON) via a
   deriving TextShow via FromStringShow a
+
+-- | An alternative 'Maybe' type that allows us to distinguish between parsed
+-- json fields that were null, and fields that didn't exist.
+data MaybeNull a
+  = WasNull
+  | NotNull a
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric (MaybeNull a)
+
+instance FromJSON a => FromJSON (MaybeNull a) where
+  parseJSON Null = pure WasNull
+  parseJSON x = NotNull <$> parseJSON x
+
+instance ToJSON a => ToJSON (MaybeNull a) where
+  toJSON WasNull = Null
+  toJSON (NotNull x) = toJSON x
+
+  toEncoding WasNull = null_
+  toEncoding (NotNull x) = toEncoding x

@@ -85,6 +85,7 @@ library
       Calamity.Types.Model.Channel
       Calamity.Types.Model.Channel.Attachment
       Calamity.Types.Model.Channel.ChannelType
+      Calamity.Types.Model.Channel.Component
       Calamity.Types.Model.Channel.DM
       Calamity.Types.Model.Channel.Embed
       Calamity.Types.Model.Channel.Group
@@ -107,6 +108,7 @@ library
       Calamity.Types.Model.Guild.Permissions
       Calamity.Types.Model.Guild.Role
       Calamity.Types.Model.Guild.UnavailableGuild
+      Calamity.Types.Model.Interaction
       Calamity.Types.Model.Presence
       Calamity.Types.Model.Presence.Activity
       Calamity.Types.Model.Presence.Presence

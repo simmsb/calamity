@@ -29,12 +29,10 @@ import Calamity.Types.Model.User
 import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
 import Calamity.Types.Token
-
 import Control.Concurrent.Async
 import Control.Concurrent.Chan.Unagi
 import Control.Concurrent.MVar
 import Control.Concurrent.STM.TVar
-
 import Data.Default.Class
 import Data.Dynamic
 import Data.IORef
@@ -43,21 +41,19 @@ import Data.Time
 import Data.TypeRepMap (TypeRepMap, WrapTypeable (..))
 import qualified Data.TypeRepMap as TM
 import Data.Typeable
-
 import GHC.Exts (fromList)
 import GHC.Generics
-
 import qualified Polysemy as P
 import qualified Polysemy.Async as P
 import qualified Polysemy.AtomicState as P
 import qualified Polysemy.Reader as P
-
 import qualified Df1
 import qualified Di.Core as DC
 import TextShow
 import qualified TextShow.Generic as TSG
 import Data.Kind (Type)
 import Data.Void (Void)
+import Calamity.Types.Model.Interaction (Interaction)
 
 data Client = Client
   { shards :: TVar [(InChan ControlMessage, Async (Maybe ()))]
@@ -167,6 +163,8 @@ data EventType
   | UserUpdateEvt
   | -- | Sent when someone joins/leaves/moves voice channels
     VoiceStateUpdateEvt
+  | -- | Fired when the bot receives an interaction
+    InteractionEvt
   | -- | A custom event, @a@ is the data sent to the handler and should probably
     -- be a newtype to disambiguate events
     forall (a :: Type). CustomEvt a
@@ -228,6 +226,7 @@ type family EHType (d :: EventType) where
   EHType 'TypingStartEvt = (Channel, Snowflake User, UTCTime)
   EHType 'UserUpdateEvt = (User, User)
   EHType 'VoiceStateUpdateEvt = (Maybe VoiceState, VoiceState)
+  EHType 'InteractionEvt = Interaction
   EHType ( 'CustomEvt a) = a
 
 type StoredEHType t = EHType t -> IO ()
@@ -290,6 +289,7 @@ instance Default EventHandlers where
         , WrapTypeable $ EH @'MessageReactionRemoveAllEvt []
         , WrapTypeable $ EH @'TypingStartEvt []
         , WrapTypeable $ EH @'UserUpdateEvt []
+        , WrapTypeable $ EH @'InteractionEvt []
         , WrapTypeable $ EH @('CustomEvt Void) TM.empty
         ]
 
