@@ -37,7 +37,9 @@ parameterTypeHelp :: [ParameterInfo] -> L.Text
 parameterTypeHelp pinfo =
   let dedup = LH.toList . LH.fromList $ map (\(ParameterInfo _ t d) -> (t, d)) pinfo
       typeDescs = L.unlines ["- " <> L.pack (show t) <> ": " <> L.fromStrict d | (t, d) <- dedup]
-  in "Types:\n" <> typeDescs <> "\n"
+  in if null dedup
+      then ""
+      else "Types:\n" <> typeDescs <> "\n"
 
 helpCommandHelp :: c -> L.Text
 helpCommandHelp _ = "Show help for a command or group."
