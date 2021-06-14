@@ -44,7 +44,7 @@ data Message' = Message'
   , attachments :: ![Attachment]
   , embeds :: ![Embed]
   , reactions :: ![Reaction]
-  , nonce :: Maybe (Snowflake Message)
+  , nonce :: Maybe (CalamityFromStringShow Value)
   , pinned :: Bool
   , webhookID :: Maybe (Snowflake Webhook)
   , type_ :: !MessageType
@@ -86,7 +86,7 @@ data Message = Message
   , attachments :: ![Attachment]
   , embeds :: ![Embed]
   , reactions :: ![Reaction]
-  , nonce :: Maybe (Snowflake Message)
+  , nonce :: Maybe Value 
   , pinned :: Bool
   , webhookID :: Maybe (Snowflake Webhook)
   , type_ :: !MessageType

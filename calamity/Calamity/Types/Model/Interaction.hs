@@ -1,5 +1,3 @@
-{-# OPTIONS_GHC -Wno-deferred-type-errors #-}
-
 -- | Discord Interactions
 module Calamity.Types.Model.Interaction (
     Interaction (..),
