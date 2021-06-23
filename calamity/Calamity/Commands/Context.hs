@@ -59,6 +59,9 @@ data FullContext = FullContext
   }
   deriving (Show, Generic)
   deriving (TextShow) via TSG.FromGeneric FullContext
+  deriving (HasID Channel) via HasIDField "channel" FullContext
+  deriving (HasID Message) via HasIDField "message" FullContext
+  deriving (HasID User) via HasIDField "user" FullContext
 
 instance CC.CommandContext IO FullContext () where
   ctxPrefix = (^. #prefix)
@@ -112,6 +115,9 @@ data LightContext = LightContext
   }
   deriving (Show, Generic)
   deriving (TextShow) via TSG.FromGeneric LightContext
+  deriving (HasID Channel) via HasIDField "channelID" LightContext
+  deriving (HasID Message) via HasIDField "message" LightContext
+  deriving (HasID User) via HasIDField "userID" LightContext
 
 instance CC.CommandContext IO LightContext () where
   ctxPrefix = (^. #prefix)
