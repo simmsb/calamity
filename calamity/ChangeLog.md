@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.30.3
+
++ Added models for interactions and components 
+  (these are still WIP in this version).
++ The 'types' help no longer shows in command help if the command has
+  no parameters.
++ Added a HasID instance for FullContext and LightContext types.
+
 ## 0.1.30.2
 
 + Removed all the orphan instances from the library.
