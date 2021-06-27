@@ -21,7 +21,7 @@ import qualified Data.List.NonEmpty as NE
 import TextShow
 import qualified TextShow.Generic as TSG
 
--- | A command, paremeterised over it's context
+-- | A command, paremeterised over its context
 data Command (m :: Type -> Type) (c :: Type) (a :: Type) = forall p.
   Command
   { names :: NonEmpty S.Text

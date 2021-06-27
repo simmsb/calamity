@@ -110,7 +110,7 @@ resetDi m = do
 
 {- | Create a bot, run your setup action, and then loop until the bot closes.
 
- This version allows you to specify the initial status, and intents.
+ This version allows you to specify the initial status
 -}
 runBotIO' ::
     forall r a.
@@ -217,7 +217,7 @@ events = do
     inc <- P.asks (^. #eventsIn)
     P.embed $ dupChan inc
 
-{- | Wait until an event satisfying a condition happens, then returns it's
+{- | Wait until an event satisfying a condition happens, then returns its
  parameters.
 
  The check function for this command is pure unlike 'waitUntilM'
@@ -260,7 +260,7 @@ waitUntil f = P.resourceToIOFinal $ do
         when (f args) $ do
             P.embed $ putMVar result args
 
-{- | Wait until an event satisfying a condition happens, then returns it's
+{- | Wait until an event satisfying a condition happens, then returns its
  parameters
 
  This is what it would look like with @s ~ \''MessageCreateEvt'@:
@@ -326,7 +326,7 @@ finishUp = do
     debug "bot has stopped"
 
 {- | main loop of the client, handles fetching the next event, processing the
- event and invoking it's handler functions
+ event and invoking its handler functions
 -}
 clientLoop :: BotC r => P.Sem r ()
 clientLoop = do

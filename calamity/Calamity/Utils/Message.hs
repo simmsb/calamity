@@ -114,21 +114,21 @@ codeblock' lang content =
 codeline :: L.Text -> L.Text
 codeline content = "``" <> escapeCodelines content <> "``"
 
-{- | Formats some text into it's bolded form
+{- | Formats some text into its bolded form
 
  Any existing bolded text is escaped
 -}
 bold :: L.Text -> L.Text
 bold content = "**" <> escapeBold content <> "**"
 
-{- | Formats some text into it's striked form
+{- | Formats some text into its striked form
 
  Any existing striked text is escaped
 -}
 strike :: L.Text -> L.Text
 strike content = "~~" <> escapeStrike content <> "~~"
 
-{- | Formats some text into it's underlined form
+{- | Formats some text into its underlined form
 
  Any existing underlined text is escaped
 -}
@@ -143,7 +143,7 @@ quote = ("> " <>)
 quoteAll :: L.Text -> L.Text
 quoteAll = (">> " <>)
 
-{- | Formats some text into it's spoilered form
+{- | Formats some text into its spoilered form
 
  Any existing spoilers are escaped
 -}

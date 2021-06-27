@@ -60,12 +60,12 @@ import qualified Polysemy.Tagged as P
    'Calamity.Commands.Dsl.command' \@'[] "test" \\ctx -> 'pure' ()
  @
 
- In the above block, any command declared inside 'hide' will have it's
+ In the above block, any command declared inside 'hide' will have its
  \'hidden\' flag set and will not be shown by the default help command:
  'Calamity.Commands.Help.helpCommand'
 
  The 'Calamity.Commands.Help.helpCommand' function can be used to create a
- help command for the commands DSL action it is used in, read it's doc page
+ help command for the commands DSL action it is used in, read its doc page
  for more information on how it functions.
 
  The 'Calamity.Commands.Utils.addCommands' function creates the command
@@ -256,7 +256,7 @@ requiresPure = CC.requiresPure
 {- | Construct a group and place any commands registered in the given action
  into the new group.
 
- This also resets the @help@ function back to it's original value, use
+ This also resets the @help@ function back to its original value, use
  'group'' if you don't want that (i.e. your help function is context aware).
 -}
 group ::
@@ -273,7 +273,7 @@ group = CC.group
  The parent group, visibility, checks, and command help are drawn from the
  reader context.
 
- This also resets the @help@ function back to it's original value, use
+ This also resets the @help@ function back to its original value, use
  'group'' if you don't want that (i.e. your help function is context aware).
 -}
 groupA ::
@@ -292,7 +292,7 @@ groupA = CC.groupA
  The parent group, visibility, checks, and command help are drawn from the
  reader context.
 
- Unlike 'help' this doesn't reset the @help@ function back to it's original
+ Unlike 'help' this doesn't reset the @help@ function back to its original
  value.
 -}
 group' ::
@@ -309,7 +309,7 @@ group' = CC.group'
  The parent group, visibility, checks, and command help are drawn from the
  reader context.
 
- Unlike 'help' this doesn't reset the @help@ function back to it's original
+ Unlike 'help' this doesn't reset the @help@ function back to its original
  value.
 -}
 groupA' ::
