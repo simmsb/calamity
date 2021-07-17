@@ -5,6 +5,7 @@ module Calamity.Client.Client (
     react,
     runBotIO,
     runBotIO',
+    runBotIO'',
     stopBot,
     sendPresence,
     events,
@@ -95,7 +96,7 @@ newClient token initialDi = do
 -- | Create a bot, run your setup action, and then loop until the bot closes.
 runBotIO ::
     forall r a.
-    (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r, Typeable (SetupEff r)) =>
+    (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r) =>
     Token ->
     -- | The intents the bot should use
     Intents ->
@@ -106,7 +107,7 @@ runBotIO token intents = runBotIO' token intents Nothing
 resetDi :: BotC r => P.Sem r a -> P.Sem r a
 resetDi m = do
     initialDi <- P.asks (^. #initialDi)
-    Di.local (flip fromMaybe initialDi) m
+    Di.local (`fromMaybe` initialDi) m
 
 {- | Create a bot, run your setup action, and then loop until the bot closes.
 
@@ -114,7 +115,7 @@ resetDi m = do
 -}
 runBotIO' ::
     forall r a.
-    (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r, Typeable (SetupEff r)) =>
+    (P.Members '[P.Embed IO, P.Final IO, CacheEff, MetricEff, LogEff] r) =>
     Token ->
     -- | The intents the bot should use
     Intents ->
@@ -127,6 +128,44 @@ runBotIO' token intents status setup = do
     client <- P.embed $ newClient token initialDi
     handlers <- P.embed $ newTVarIO def
     P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.push "calamity" $ do
+        void $ Di.push "calamity-setup" setup
+        r <- shardBot status intents
+        case r of
+            Left e -> pure (Just e)
+            Right _ -> do
+                Di.push "calamity-loop" clientLoop
+                Di.push "calamity-stop" finishUp
+                pure Nothing
+
+{- | Create a bot, run your setup action, and then loop until the bot closes.
+
+ This version only handles the @'P.Reader' 'Client'@ effect, allowing you to
+ handle the @'P.AtomicState' 'EventHandlers'@ yourself.
+-}
+runBotIO'' ::
+    forall r a.
+    (P.Members
+      '[ LogEff
+       , MetricEff
+       , CacheEff
+       , P.Reader Client
+       , P.AtomicState EventHandlers
+       , P.Embed IO
+       , P.Final IO
+       , P.Async
+       ]
+ r) =>
+    Token ->
+    -- | The intents the bot should use
+    Intents ->
+    -- | The initial status to send to the gateway
+    Maybe StatusUpdateData ->
+    P.Sem (P.Reader Client ': r) a ->
+    P.Sem r (Maybe StartupError)
+runBotIO'' token intents status setup = do
+    initialDi <- Di.fetch
+    client <- P.embed $ newClient token initialDi
+    P.runReader client . Di.push "calamity" $ do
         void $ Di.push "calamity-setup" setup
         r <- shardBot status intents
         case r of

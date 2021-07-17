@@ -1,5 +1,13 @@
 # Changelog for Calamity
 
+## 0.1.30.4
+
++ The `status` field of `StatusUpdateData` has been changed from `Text` to
+  `StatusType`.
++ Removed the redundant `Typeable` constraint from `BotC` and `runBotIO`, etc.
++ Added the `runBotIO''` function which gives more control over the internal
+  state effects.
+
 ## 0.1.30.3
 
 + Added models for interactions and components 

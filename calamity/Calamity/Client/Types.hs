@@ -80,7 +80,6 @@ type BotC r =
        , P.Async
        ]
       r
-  , Typeable r
   )
 
 -- | A concrete effect stack used inside the bot
