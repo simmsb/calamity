@@ -21,7 +21,7 @@ import qualified TextShow.Generic as TSG
 data Button = Button
     { style :: ButtonStyle
     , label :: Maybe L.Text
-    , emoji :: Maybe (Partial Emoji)
+    , emoji :: Maybe RawEmoji
     , customID :: Maybe L.Text
     , url :: Maybe L.Text
     , disabled :: Bool
