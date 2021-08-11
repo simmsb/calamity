@@ -31,7 +31,7 @@ dependencies:
 - text >= 1.2 && < 2
 - unordered-containers >= 0.2 && < 0.3
 - polysemy >= 1.5 && < 2
-- polysemy-plugin >= 0.3 && < 0.4
+- polysemy-plugin >= 0.3 && < 0.5
 - text-show >= 3.8 && < 4
 - megaparsec >= 8 && < 10
 
