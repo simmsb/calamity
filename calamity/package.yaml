@@ -59,7 +59,7 @@ dependencies:
 - vector >= 0.12 && < 0.13
 - reflection >= 2.1 && < 3
 - polysemy >= 1.5 && < 2
-- polysemy-plugin >= 0.3 && < 0.4
+- polysemy-plugin >= 0.3 && < 0.5
 - di-polysemy >= 0.2 && < 0.3
 - df1 >= 0.4 && < 0.5
 - di-core >= 1.0.4 && < 1.1
