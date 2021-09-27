@@ -115,9 +115,20 @@ parseDispatchData INVITE_CREATE data'               = InviteCreate <$> parseJSON
 parseDispatchData INVITE_DELETE data'               = InviteDelete <$> parseJSON data'
 parseDispatchData MESSAGE_CREATE data'              = do
   message <- parseJSON data'
-  let user = parseMaybe parseJSON =<< (data' ^? _Object . ix "author")
-  pure $ MessageCreate message user
-parseDispatchData MESSAGE_UPDATE data'              = MessageUpdate <$> parseJSON data'
+  let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
+                                         userObject :: Object <- o .: "author"
+                                         memberObject :: Object <- o .: "member"
+                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
+  let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
+  pure $ MessageCreate message user member
+parseDispatchData MESSAGE_UPDATE data'              = do
+  message <- parseJSON data'
+  let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
+                                         userObject :: Object <- o .: "author"
+                                         memberObject :: Object <- o .: "member"
+                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
+  let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
+  pure $ MessageUpdate message user member
 parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'
 parseDispatchData MESSAGE_DELETE_BULK data'         = MessageDeleteBulk <$> parseJSON data'
 parseDispatchData MESSAGE_REACTION_ADD data'        = MessageReactionAdd <$> parseJSON data'

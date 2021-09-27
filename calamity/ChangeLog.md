@@ -1,5 +1,23 @@
 # Changelog for Calamity
 
+## 0.1.31.0
+
++ We now pass through the `.member` field of message create/update events to the
+  event handler.
++ The payload type of `MessageCreateEvt` has changed from `Message` to
+  `(Message, Maybe Member)`.
++ The payload type of `MessageUpdateEvt` has changed from `(Message, Message)`
+  to `(Message, Message, Maybe Member)`.
++ The payload type of `RawMessageUpdateEvt` has changed from `UpdatedMessage` to
+  `(UpdatedMessage, Maybe Member)`.
++ The provided `ConstructContext` effect handlers have changed from handling
+  `ConstructContext Message ...` to `ConstructContext (Message, Maybe Member)
+  ...`.
++ `FullContext` now uses the member passed with the message create event if
+  available.
++ `LightContext` now has a `.member` parameter, which is the member passed with
+  the message create event if available.
+
 ## 0.1.30.4
 
 + The `status` field of `StatusUpdateData` has been changed from `Text` to

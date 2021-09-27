@@ -12,7 +12,7 @@ import qualified Calamity.Internal.SnowflakeMap as SM
 import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild.Emoji
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
+import Calamity.Types.Model.Guild.Member
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.Presence.Presence
 import Calamity.Types.Model.User

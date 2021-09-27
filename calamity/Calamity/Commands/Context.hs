@@ -16,6 +16,7 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Calamity.Types.Tellable
 import qualified CalamityCommands.Context as CC
+import Control.Applicative
 import Control.Lens hiding (Context)
 import Control.Monad
 import qualified Data.Text.Lazy as L
@@ -45,6 +46,9 @@ data FullContext = FullContext
   , -- | If the command was sent in a guild, this will be present
     guild :: Maybe Guild
   , -- | The member that invoked the command, if in a guild
+    --
+    -- Note: If discord sent a member with the message, this is used; otherwise
+    -- we try to fetch the member from the cache.
     member :: Maybe Member
   , -- | The channel the command was invoked from
     channel :: Channel
@@ -77,17 +81,17 @@ instance CalamityCommandContext FullContext where
 instance Tellable FullContext where
   getChannel = pure . ctxChannelID
 
-useFullContext :: P.Member CacheEff r => P.Sem (CC.ConstructContext Message FullContext IO () ': r) a -> P.Sem r a
+useFullContext :: P.Member CacheEff r => P.Sem (CC.ConstructContext (Message, Maybe Member) FullContext IO () ': r) a -> P.Sem r a
 useFullContext =
   P.interpret
     ( \case
-        CC.ConstructContext (pre, cmd, up) msg -> buildContext msg pre cmd up
+        CC.ConstructContext (pre, cmd, up) (msg, mem) -> buildContext msg mem pre cmd up
     )
 
-buildContext :: P.Member CacheEff r => Message -> L.Text -> Command FullContext -> L.Text -> P.Sem r (Maybe FullContext)
-buildContext msg prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
+buildContext :: P.Member CacheEff r => Message -> Maybe Member -> L.Text -> Command FullContext -> L.Text -> P.Sem r (Maybe FullContext)
+buildContext msg mem prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)
-  let member = guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
+  let member = mem <|> guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
   let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
   Just channel <- case gchan of
     Just chan -> pure . pure $ GuildChannel' chan
@@ -106,6 +110,10 @@ data LightContext = LightContext
     channelID :: Snowflake Channel
   , -- | The user that invoked the command
     userID :: Snowflake User
+  , -- | The member that triggered the command.
+    --
+    -- Note: Only sent if discord sent the member object with the message.
+    member :: Maybe Member
   , -- | The command that was invoked
     command :: Command LightContext
   , -- | The prefix that was used to invoke the command
@@ -133,10 +141,10 @@ instance CalamityCommandContext LightContext where
 instance Tellable LightContext where
   getChannel = pure . ctxChannelID
 
-useLightContext :: P.Sem (CC.ConstructContext Message LightContext IO () ': r) a -> P.Sem r a
+useLightContext :: P.Sem (CC.ConstructContext (Message, Maybe Member) LightContext IO () ': r) a -> P.Sem r a
 useLightContext =
   P.interpret
     ( \case
-        CC.ConstructContext (pre, cmd, up) msg ->
-          pure . Just $ LightContext msg (msg ^. #guildID) (msg ^. #channelID) (msg ^. #author) cmd pre up
+        CC.ConstructContext (pre, cmd, up) (msg, mem) ->
+          pure . Just $ LightContext msg (msg ^. #guildID) (msg ^. #channelID) (msg ^. #author) mem cmd pre up
     )

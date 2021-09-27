@@ -401,7 +401,7 @@ handleEvent shardID data' = do
         evtCounter <- registerCounter "events_received" [("type", S.pack $ ctorName data'), ("shard", showt shardID)]
         void $ addCounter 1 evtCounter
         cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20 .. 100]
-        (time, res) <- timeA $ resetDi $ handleEvent' eventHandlers data'
+        (time, res) <- timeA . resetDi $ handleEvent' eventHandlers data'
         void $ observeHistogram time cacheUpdateHisto
         pure res
 
@@ -465,7 +465,7 @@ handleEvent' eh evt@(GuildCreate guild) = do
     Just guild <- getGuild (getID guild)
     pure $
         map
-            ($ (guild, (if isNew then GuildCreateNew else GuildCreateAvailable)))
+            ($ (guild, if isNew then GuildCreateNew else GuildCreateAvailable))
             (getEventHandlers @'GuildCreateEvt eh)
 handleEvent' eh evt@(GuildUpdate guild) = do
     Just oldGuild <- getGuild (getID guild)
@@ -479,7 +479,7 @@ handleEvent' eh evt@(GuildDelete UnavailableGuild{id, unavailable}) = do
     updateCache evt
     pure $
         map
-            ($ (oldGuild, (if unavailable then GuildDeleteUnavailable else GuildDeleteRemoved)))
+            ($ (oldGuild, if unavailable then GuildDeleteUnavailable else GuildDeleteRemoved))
             (getEventHandlers @'GuildDeleteEvt eh)
 handleEvent' eh evt@(GuildBanAdd BanData{guildID, user}) = do
     Just guild <- getGuild guildID
@@ -520,7 +520,7 @@ handleEvent' eh evt@(GuildMembersChunk GuildMembersChunkData{members, guildID}) 
     updateCache evt
     Just guild <- getGuild guildID
     let memberIDs = map (getID @Member) members
-    let members' = catMaybes $ map (\mid -> guild ^. #members . at mid) memberIDs
+    let members' = mapMaybe (\mid -> guild ^. #members . at mid) memberIDs
     pure $ map ($ (guild, members')) (getEventHandlers @'GuildMembersChunkEvt eh)
 handleEvent' eh evt@(GuildRoleCreate GuildRoleData{guildID, role}) = do
     updateCache evt
@@ -543,17 +543,17 @@ handleEvent' eh (InviteCreate d) = do
     pure $ map ($ d) (getEventHandlers @'InviteCreateEvt eh)
 handleEvent' eh (InviteDelete d) = do
     pure $ map ($ d) (getEventHandlers @'InviteDeleteEvt eh)
-handleEvent' eh evt@(MessageCreate msg _) = do
+handleEvent' eh evt@(MessageCreate msg _ member) = do
     updateCache evt
-    pure $ map ($ msg) (getEventHandlers @'MessageCreateEvt eh)
-handleEvent' eh evt@(MessageUpdate msg) = do
+    pure $ map ($ (msg, member)) (getEventHandlers @'MessageCreateEvt eh)
+handleEvent' eh evt@(MessageUpdate msg _ member) = do
     oldMsg <- getMessage (getID msg)
     updateCache evt
     newMsg <- getMessage (getID msg)
-    let rawActions = map ($ msg) (getEventHandlers @'RawMessageUpdateEvt eh)
+    let rawActions = map ($ (msg, member)) (getEventHandlers @'RawMessageUpdateEvt eh)
     let actions = case (oldMsg, newMsg) of
             (Just oldMsg', Just newMsg') ->
-                map ($ (oldMsg', newMsg')) (getEventHandlers @'MessageUpdateEvt eh)
+                map ($ (oldMsg', newMsg', member)) (getEventHandlers @'MessageUpdateEvt eh)
             _ -> []
     pure $ rawActions <> actions
 handleEvent' eh evt@(MessageDelete MessageDeleteData{id}) = do
@@ -696,10 +696,11 @@ updateCache (GuildRoleUpdate GuildRoleData{guildID, role}) =
     updateGuild guildID (#roles %~ SM.insert role)
 updateCache (GuildRoleDelete GuildRoleDeleteData{guildID, roleID}) =
     updateGuild guildID (#roles %~ sans roleID)
-updateCache (MessageCreate !msg !user) = do
+updateCache (MessageCreate !msg !_ !_) =
     setMessage msg
-    for_ user setUser
-updateCache (MessageUpdate msg) =
+    -- I think it's for the best not to cache things here, instead the end user
+    -- can just cache manually which users and members they want
+updateCache (MessageUpdate msg !_ !_) =
     updateMessage (getID msg) (update msg)
 updateCache (MessageDelete MessageDeleteData{id}) = delMessage id
 updateCache (MessageDeleteBulk MessageDeleteBulkData{ids}) =

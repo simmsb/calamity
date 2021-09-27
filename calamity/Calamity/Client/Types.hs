@@ -209,14 +209,14 @@ type family EHType (d :: EventType) where
   EHType 'GuildRoleDeleteEvt = (Guild, Role)
   EHType 'InviteCreateEvt = InviteCreateData
   EHType 'InviteDeleteEvt = InviteDeleteData
-  EHType 'MessageCreateEvt = Message
-  EHType 'MessageUpdateEvt = (Message, Message)
+  EHType 'MessageCreateEvt = (Message, Maybe Member)
+  EHType 'MessageUpdateEvt = (Message, Message, Maybe Member)
   EHType 'MessageDeleteEvt = Message
   EHType 'MessageDeleteBulkEvt = [Message]
   EHType 'MessageReactionAddEvt = (Message, User, Channel, RawEmoji)
   EHType 'MessageReactionRemoveEvt = (Message, User, Channel, RawEmoji)
   EHType 'MessageReactionRemoveAllEvt = Message
-  EHType 'RawMessageUpdateEvt = UpdatedMessage
+  EHType 'RawMessageUpdateEvt = (UpdatedMessage, Maybe Member)
   EHType 'RawMessageDeleteEvt = Snowflake Message
   EHType 'RawMessageDeleteBulkEvt = [Snowflake Message]
   EHType 'RawMessageReactionAddEvt = ReactionEvtData

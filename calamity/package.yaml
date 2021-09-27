@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.1.30.4
+version:            0.1.31.0
 github:             "simmsb/calamity"
 homepage:           https://github.com/simmsb/calamity
 bug-reports:        https://github.com/simmsb/calamity/issues
@@ -38,7 +38,7 @@ dependencies:
 - http-types >= 0.12 && < 0.13
 - aeson >= 1.4 && < 2
 - lens-aeson >= 1.1 && < 2
-- typerep-map >= 0.3 && < 0.4
+- typerep-map >= 0.3 && < 0.5
 - generic-lens >= 2.0 && < 3
 - text >= 1.2 && < 2
 - exceptions >= 0.10 && < 0.11
@@ -48,7 +48,7 @@ dependencies:
 - focus >= 1.0 && < 2
 - data-default-class >= 0.1 && < 0.2
 - hashable >= 1.2 && < 2
-- time >= 1.8 && < 1.12
+- time >= 1.8 && < 1.13
 - containers >= 0.6 && < 0.7
 - unordered-containers >= 0.2 && < 0.3
 - http-date >= 0.0.8 && < 0.1

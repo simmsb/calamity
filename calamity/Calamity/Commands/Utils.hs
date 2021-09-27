@@ -13,6 +13,7 @@ module Calamity.Commands.Utils (
 
 import Calamity.Client.Client
 import Calamity.Client.Types
+import Calamity.Types.Model.Guild.Member (Member)
 import CalamityCommands.CommandUtils
 import qualified CalamityCommands.Error as CC
 import Calamity.Commands.Dsl
@@ -90,14 +91,14 @@ useConstantPrefix pre = P.interpret (\case
 --
 --         Fired when a command is successfully invoked.
 --
-addCommands :: (BotC r, Typeable c, CommandContext c, P.Members [CC.ParsePrefix Message, CC.ConstructContext Message c IO ()] r)
+addCommands :: (BotC r, Typeable c, CommandContext c, P.Members [CC.ParsePrefix Message, CC.ConstructContext (Message, Maybe Member) c IO ()] r)
   => P.Sem (DSLState c r) a -> P.Sem r (P.Sem r (), CommandHandler c, a)
 addCommands m = do
   (handler, res) <- CC.buildCommands m
-  remove <- react @'MessageCreateEvt $ \msg -> do
+  remove <- react @'MessageCreateEvt $ \(msg, member) -> do
     CC.parsePrefix msg >>= \case
       Just (prefix, cmd) -> do
-        r <- CC.handleCommands handler msg prefix cmd
+        r <- CC.handleCommands handler (msg, member) prefix cmd
         case r of
           Left (CC.CommandInvokeError ctx e) -> fire . customEvt $ CtxCommandError ctx e
           Left (CC.NotFound path)            -> fire . customEvt $ CommandNotFound msg path

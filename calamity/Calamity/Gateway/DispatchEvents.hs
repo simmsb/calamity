@@ -58,8 +58,8 @@ data DispatchData
     | GuildRoleDelete !GuildRoleDeleteData
     | InviteCreate !InviteCreateData
     | InviteDelete !InviteDeleteData
-    | MessageCreate !Message !(Maybe User)
-    | MessageUpdate !UpdatedMessage
+    | MessageCreate !Message !(Maybe User) !(Maybe Member)
+    | MessageUpdate !UpdatedMessage !(Maybe User) !(Maybe Member)
     | MessageDelete !MessageDeleteData
     | MessageDeleteBulk !MessageDeleteBulkData
     | MessageReactionAdd !ReactionEvtData

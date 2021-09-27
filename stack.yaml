@@ -17,7 +17,7 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
-resolver: nightly-2021-03-27
+resolver: lts-18.11
 
 # docker:
 #   enable: true
@@ -42,16 +42,24 @@ packages:
 # using the same syntax as the packages field.
 # (e.g., acme-missiles-0.3)
 extra-deps:
-  - lens-5.0.1
   - data-flags-0.0.3.4@sha256:a133f2912e0e22f03419dc89a04b1e117ff6290f1777f5b7f037f683b80ed2cf,1097
   - df1-0.4@sha256:b430ee7e0abda6ce9ef03b9fbe532a7384e6de1b4873357cc116db9f614ce398,1104
   - di-polysemy-0.2.0.0@sha256:9da81102b7e5b2782e4f7194189cde552f042c94ac875ef8f542f6620035f885,2160
-  - polysemy-1.5.0.0@sha256:7edb723e7f703fe273a40e43fe33f6e8f7659fe60759e8698def1481262d314d,6246
-  - polysemy-plugin-0.3.0.0@sha256:22e7553d0fddb48d9484ba1c71d2ed825213fcb214866d9b502ee02bfb960cb4,3121
+  - http-api-data-0.4.3@sha256:9607047dbbca75a989dd7e0f4d475f40f431423d805a83262aea8e32971cb142,3812
+  - stm-containers-1.2@sha256:a887f2e7692b7cf20e0b081e2d66e21076e2bd4b57016ec59c484edfa2d29397,3244
   - di-df1-1.2.1@sha256:6be994f4d6acc4e9b498af00367d09e71fe6da42c6c2eb947ab49e19a6ba6e15,999
   - di-handle-1.0.1@sha256:642ce26cc3b166e14782fb3d3acc4a15533e1021bcd6712704531f71c9483d24,720
-  - http-api-data-0.4.3@sha256:31005a0514d795d38574239910fcc94810f16b2254a0d9ded7cc08bb8e211fc6,3812
-  - generic-override-0.2.0.0@sha256:9ce04dffd616bc24cccaf425f301af9c47d086347e18429d1cf898b02398bf20,1445
+  - stm-hamt-1.2.0.6@sha256:fba86ccb4b45c5706c19b0e1315ba63dcac3b5d71de945ec001ba921fae80061,3972
+  # - lens-5.0.1
+  # - data-flags-0.0.3.4@sha256:a133f2912e0e22f03419dc89a04b1e117ff6290f1777f5b7f037f683b80ed2cf,1097
+  # - df1-0.4@sha256:b430ee7e0abda6ce9ef03b9fbe532a7384e6de1b4873357cc116db9f614ce398,1104
+  # - di-polysemy-0.2.0.0@sha256:9da81102b7e5b2782e4f7194189cde552f042c94ac875ef8f542f6620035f885,2160
+  # - polysemy-1.5.0.0@sha256:7edb723e7f703fe273a40e43fe33f6e8f7659fe60759e8698def1481262d314d,6246
+  # - polysemy-plugin-0.3.0.0@sha256:22e7553d0fddb48d9484ba1c71d2ed825213fcb214866d9b502ee02bfb960cb4,3121
+  # - di-df1-1.2.1@sha256:6be994f4d6acc4e9b498af00367d09e71fe6da42c6c2eb947ab49e19a6ba6e15,999
+  # - di-handle-1.0.1@sha256:642ce26cc3b166e14782fb3d3acc4a15533e1021bcd6712704531f71c9483d24,720
+  # - http-api-data-0.4.3@sha256:31005a0514d795d38574239910fcc94810f16b2254a0d9ded7cc08bb8e211fc6,3812
+  # - generic-override-0.2.0.0@sha256:9ce04dffd616bc24cccaf425f301af9c47d086347e18429d1cf898b02398bf20,1445
 #  - git: https://github.com/polysemy-research/polysemy
 #    commit: 478c86e080f38334f7ea5b0259f900916db58c33 
 #    subdirs:
