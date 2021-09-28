@@ -17,6 +17,8 @@
   available.
 + `LightContext` now has a `.member` parameter, which is the member passed with
   the message create event if available.
++ `CommandNotFound` now contains the `Maybe Member` of the message create event
+  that triggered it.
 
 ## 0.1.30.4
 

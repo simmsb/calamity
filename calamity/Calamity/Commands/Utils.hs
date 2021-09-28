@@ -43,6 +43,7 @@ data CtxCommandError c = CtxCommandError
 
 data CommandNotFound = CommandNotFound
   { msg :: Message
+  , member :: Maybe Member
   , -- | The groups that were successfully parsed
     path :: [L.Text]
   }
@@ -101,7 +102,7 @@ addCommands m = do
         r <- CC.handleCommands handler (msg, member) prefix cmd
         case r of
           Left (CC.CommandInvokeError ctx e) -> fire . customEvt $ CtxCommandError ctx e
-          Left (CC.NotFound path)            -> fire . customEvt $ CommandNotFound msg path
+          Left (CC.NotFound path)            -> fire . customEvt $ CommandNotFound msg member path
           Left CC.NoContext                  -> pure () -- ignore if context couldn't be built
           Right (ctx, ())        -> do
             cmdInvoke <- registerCounter "commands_invoked" [("name", S.unwords $ commandPath (CC.ctxCommand ctx))]
