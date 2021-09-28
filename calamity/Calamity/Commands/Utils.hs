@@ -13,22 +13,23 @@ module Calamity.Commands.Utils (
 
 import Calamity.Client.Client
 import Calamity.Client.Types
-import Calamity.Types.Model.Guild.Member (Member)
-import CalamityCommands.CommandUtils
-import qualified CalamityCommands.Error as CC
 import Calamity.Commands.Dsl
 import Calamity.Commands.Types
 import Calamity.Metrics.Eff
 import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Guild.Member (Member)
+import Calamity.Types.Model.User (User)
+import CalamityCommands.CommandUtils
+import qualified CalamityCommands.Context as CC
+import qualified CalamityCommands.Error as CC
+import qualified CalamityCommands.ParsePrefix as CC
 import qualified CalamityCommands.Utils as CC
 import Control.Monad
 import qualified Data.Text as S
 import qualified Data.Text.Lazy as L
+import Data.Typeable
 import GHC.Generics (Generic)
 import qualified Polysemy as P
-import qualified CalamityCommands.Context as CC
-import qualified CalamityCommands.ParsePrefix as CC
-import Data.Typeable
 
 data CmdInvokeFailReason c
   = NoContext
@@ -43,6 +44,7 @@ data CtxCommandError c = CtxCommandError
 
 data CommandNotFound = CommandNotFound
   { msg :: Message
+  , user :: User
   , member :: Maybe Member
   , -- | The groups that were successfully parsed
     path :: [L.Text]
@@ -92,21 +94,24 @@ useConstantPrefix pre = P.interpret (\case
 --
 --         Fired when a command is successfully invoked.
 --
-addCommands :: (BotC r, Typeable c, CommandContext c, P.Members [CC.ParsePrefix Message, CC.ConstructContext (Message, Maybe Member) c IO ()] r)
+addCommands :: (BotC r, Typeable c, CommandContext c, P.Members [CC.ParsePrefix Message, CC.ConstructContext (Message, User, Maybe Member) c IO ()] r)
   => P.Sem (DSLState c r) a -> P.Sem r (P.Sem r (), CommandHandler c, a)
 addCommands m = do
   (handler, res) <- CC.buildCommands m
-  remove <- react @'MessageCreateEvt $ \(msg, member) -> do
-    CC.parsePrefix msg >>= \case
-      Just (prefix, cmd) -> do
-        r <- CC.handleCommands handler (msg, member) prefix cmd
-        case r of
-          Left (CC.CommandInvokeError ctx e) -> fire . customEvt $ CtxCommandError ctx e
-          Left (CC.NotFound path)            -> fire . customEvt $ CommandNotFound msg member path
-          Left CC.NoContext                  -> pure () -- ignore if context couldn't be built
-          Right (ctx, ())        -> do
-            cmdInvoke <- registerCounter "commands_invoked" [("name", S.unwords $ commandPath (CC.ctxCommand ctx))]
-            void $ addCounter 1 cmdInvoke
-            fire . customEvt $ CommandInvoked ctx
-      Nothing -> pure ()
+  remove <- react @'MessageCreateEvt $ \case
+    (msg, Just user, member) -> do
+      CC.parsePrefix msg >>= \case
+        Just (prefix, cmd) -> do
+          r <- CC.handleCommands handler (msg, user, member) prefix cmd
+          case r of
+            Left (CC.CommandInvokeError ctx e) -> fire . customEvt $ CtxCommandError ctx e
+            Left (CC.NotFound path)            -> fire . customEvt $ CommandNotFound msg user member path
+            Left CC.NoContext                  -> pure () -- ignore if context couldn't be built
+            Right (ctx, ())        -> do
+              cmdInvoke <- registerCounter "commands_invoked" [("name", S.unwords $ commandPath (CC.ctxCommand ctx))]
+              void $ addCounter 1 cmdInvoke
+              fire . customEvt $ CommandInvoked ctx
+
+        Nothing -> pure ()
+    _ -> pure ()
   pure (remove, handler, res)

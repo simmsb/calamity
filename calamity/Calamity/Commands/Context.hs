@@ -81,24 +81,23 @@ instance CalamityCommandContext FullContext where
 instance Tellable FullContext where
   getChannel = pure . ctxChannelID
 
-useFullContext :: P.Member CacheEff r => P.Sem (CC.ConstructContext (Message, Maybe Member) FullContext IO () ': r) a -> P.Sem r a
+useFullContext :: P.Member CacheEff r => P.Sem (CC.ConstructContext (Message, User, Maybe Member) FullContext IO () ': r) a -> P.Sem r a
 useFullContext =
   P.interpret
     ( \case
-        CC.ConstructContext (pre, cmd, up) (msg, mem) -> buildContext msg mem pre cmd up
+        CC.ConstructContext (pre, cmd, up) (msg, usr, mem) -> buildContext msg usr mem pre cmd up
     )
 
-buildContext :: P.Member CacheEff r => Message -> Maybe Member -> L.Text -> Command FullContext -> L.Text -> P.Sem r (Maybe FullContext)
-buildContext msg mem prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
+buildContext :: P.Member CacheEff r => Message -> User -> Maybe Member -> L.Text -> Command FullContext -> L.Text -> P.Sem r (Maybe FullContext)
+buildContext msg usr mem prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)
   let member = mem <|> guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
   let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
   Just channel <- case gchan of
     Just chan -> pure . pure $ GuildChannel' chan
     Nothing -> DMChannel' <<$>> getDM (coerceSnowflake $ getID @Channel msg)
-  Just user <- getUser $ getID msg
 
-  pure $ FullContext msg guild member channel user command prefix unparsed
+  pure $ FullContext msg guild member channel usr command prefix unparsed
 
 -- | A lightweight context that doesn't need any cache information
 data LightContext = LightContext
@@ -109,7 +108,7 @@ data LightContext = LightContext
   , -- | The channel the command was invoked from
     channelID :: Snowflake Channel
   , -- | The user that invoked the command
-    userID :: Snowflake User
+    user :: User
   , -- | The member that triggered the command.
     --
     -- Note: Only sent if discord sent the member object with the message.
@@ -125,7 +124,7 @@ data LightContext = LightContext
   deriving (TextShow) via TSG.FromGeneric LightContext
   deriving (HasID Channel) via HasIDField "channelID" LightContext
   deriving (HasID Message) via HasIDField "message" LightContext
-  deriving (HasID User) via HasIDField "userID" LightContext
+  deriving (HasID User) via HasIDField "user" LightContext
 
 instance CC.CommandContext IO LightContext () where
   ctxPrefix = (^. #prefix)
@@ -135,16 +134,16 @@ instance CC.CommandContext IO LightContext () where
 instance CalamityCommandContext LightContext where
   ctxChannelID = (^. #channelID)
   ctxGuildID = (^. #guildID)
-  ctxUserID = (^. #userID)
+  ctxUserID = (^. #user . #id)
   ctxMessage = (^. #message)
 
 instance Tellable LightContext where
   getChannel = pure . ctxChannelID
 
-useLightContext :: P.Sem (CC.ConstructContext (Message, Maybe Member) LightContext IO () ': r) a -> P.Sem r a
+useLightContext :: P.Sem (CC.ConstructContext (Message, User, Maybe Member) LightContext IO () ': r) a -> P.Sem r a
 useLightContext =
   P.interpret
     ( \case
-        CC.ConstructContext (pre, cmd, up) (msg, mem) ->
-          pure . Just $ LightContext msg (msg ^. #guildID) (msg ^. #channelID) (msg ^. #author) mem cmd pre up
+        CC.ConstructContext (pre, cmd, up) (msg, usr, mem) ->
+          pure . Just $ LightContext msg (msg ^. #guildID) (msg ^. #channelID) usr mem cmd pre up
     )

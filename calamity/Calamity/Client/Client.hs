@@ -543,17 +543,17 @@ handleEvent' eh (InviteCreate d) = do
     pure $ map ($ d) (getEventHandlers @'InviteCreateEvt eh)
 handleEvent' eh (InviteDelete d) = do
     pure $ map ($ d) (getEventHandlers @'InviteDeleteEvt eh)
-handleEvent' eh evt@(MessageCreate msg _ member) = do
+handleEvent' eh evt@(MessageCreate msg user member) = do
     updateCache evt
-    pure $ map ($ (msg, member)) (getEventHandlers @'MessageCreateEvt eh)
-handleEvent' eh evt@(MessageUpdate msg _ member) = do
+    pure $ map ($ (msg, user, member)) (getEventHandlers @'MessageCreateEvt eh)
+handleEvent' eh evt@(MessageUpdate msg user member) = do
     oldMsg <- getMessage (getID msg)
     updateCache evt
     newMsg <- getMessage (getID msg)
-    let rawActions = map ($ (msg, member)) (getEventHandlers @'RawMessageUpdateEvt eh)
+    let rawActions = map ($ (msg, user, member)) (getEventHandlers @'RawMessageUpdateEvt eh)
     let actions = case (oldMsg, newMsg) of
             (Just oldMsg', Just newMsg') ->
-                map ($ (oldMsg', newMsg', member)) (getEventHandlers @'MessageUpdateEvt eh)
+                map ($ (oldMsg', newMsg', user, member)) (getEventHandlers @'MessageUpdateEvt eh)
             _ -> []
     pure $ rawActions <> actions
 handleEvent' eh evt@(MessageDelete MessageDeleteData{id}) = do

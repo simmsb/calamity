@@ -5,20 +5,21 @@
 + We now pass through the `.member` field of message create/update events to the
   event handler.
 + The payload type of `MessageCreateEvt` has changed from `Message` to
-  `(Message, Maybe Member)`.
+  `(Message, Maybe User, Maybe Member)`.
 + The payload type of `MessageUpdateEvt` has changed from `(Message, Message)`
-  to `(Message, Message, Maybe Member)`.
+  to `(Message, Message, Maybe User, Maybe Member)`.
 + The payload type of `RawMessageUpdateEvt` has changed from `UpdatedMessage` to
-  `(UpdatedMessage, Maybe Member)`.
+  `(UpdatedMessage, Maybe User, Maybe Member)`.
 + The provided `ConstructContext` effect handlers have changed from handling
-  `ConstructContext Message ...` to `ConstructContext (Message, Maybe Member)
-  ...`.
+  `ConstructContext Message ...` to `ConstructContext (Message, User, Maybe
+  Member) ...`.
 + `FullContext` now uses the member passed with the message create event if
   available.
 + `LightContext` now has a `.member` parameter, which is the member passed with
-  the message create event if available.
-+ `CommandNotFound` now contains the `Maybe Member` of the message create event
-  that triggered it.
+  the message create event if available. The `userID` field has also been
+  replaced with `user :: User`.
++ `CommandNotFound` now contains the `User` and `Maybe Member` of the message
+  create event that triggered it.
 
 ## 0.1.30.4
 
