@@ -46,6 +46,7 @@ Here's a list of projects that use calamity:
 - [simmsb/calamity-bot](https://github.com/simmsb/calamity-bot): Uses a database, showing modularization of groups/commands.
 - [MorrowM/pandabot-discord](https://github.com/MorrowM/pandabot-discord): Uses a database, performs member role management, etc.
 - [MorrowM/calamity-tutorial](https://github.com/MorrowM/calamity-tutorial): A bare minimum bot.
+- [koluacik/gundyr](https://github.com/koluacik/gundyr): An admin bot that does role assignment, etc.
 
 (Feel free to contact me via the discord server, or email me via
 ben@bensimms.moe if you've written a bot using calamity, or don't want your
