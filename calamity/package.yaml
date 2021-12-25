@@ -37,7 +37,7 @@ dependencies:
 - stm >= 2.5 && < 3
 - http-types >= 0.12 && < 0.13
 - aeson >= 2.0 && < 2.1
-- lens-aeson >= 1.1 && < 2
+- lens-aeson >= 1.1.2 && < 2
 - typerep-map >= 0.3 && < 0.5
 - generic-lens >= 2.0 && < 3
 - text >= 1.2 && < 2.1

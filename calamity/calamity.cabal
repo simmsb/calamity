@@ -208,7 +208,7 @@ library
     , http-date >=0.0.8 && <0.1
     , http-types ==0.12.*
     , lens >=5.1 && <6
-    , lens-aeson >=1.1 && <2
+    , lens-aeson >=1.1.2 && <2
     , megaparsec >=8 && <10
     , mime-types ==0.1.*
     , mtl >=2.2 && <3

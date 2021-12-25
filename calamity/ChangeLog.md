@@ -6,6 +6,7 @@
 + Fix a bug that caused http request decoding to never select the `()` instance
   for decoding the response (which meant endpoints that had empty responses
   would always fail to parse).
++ Bumped the minimum version of aeson to 2.0
 
 ## 0.1.31.0
 
