@@ -7,7 +7,7 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 
 import Data.Aeson
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 
 import GHC.Generics
 

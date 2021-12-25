@@ -24,7 +24,7 @@ import Data.Kind
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Semigroup
-import qualified Data.Text as S
+import qualified Data.Text as T
 import qualified Data.Text.Lazy as L
 import Data.Typeable
 
@@ -41,7 +41,7 @@ import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer (decimal, float, signed)
 
-data SpannedError = SpannedError L.Text !Int !Int
+data SpannedError = SpannedError T.Text !Int !Int
   deriving (Show, Eq, Ord)
 
 {- | The current state of the parser, used so that the entire remaining input is
@@ -55,20 +55,20 @@ data ParserState = ParserState
   { -- | The current offset, or where the next parser should start parsing at
     off :: Int
   , -- | The input message ot parse
-    msg :: L.Text
+    msg :: T.Text
   }
   deriving (Show, Generic)
 
 -- |
 type ParserEffs c r =
   ( P.State ParserState
-      ': P.Error (S.Text, L.Text) -- (failing parser name, error reason)
+      ': P.Error (T.Text, T.Text) -- (failing parser name, error reason)
         ': P.Reader c -- the current parser state
           ': r -- context
   )
 
 -- | Run a command parser, @ctx@ is the context, @t@ is the text input
-runCommandParser :: c -> L.Text -> P.Sem (ParserEffs c r) a -> P.Sem r (Either (S.Text, L.Text) a)
+runCommandParser :: c -> T.Text -> P.Sem (ParserEffs c r) a -> P.Sem r (Either (T.Text, T.Text) a)
 runCommandParser ctx t = P.runReader ctx . P.runError . P.evalState (ParserState 0 t)
 
 {- | A typeclass for things that can be parsed as parameters to commands.
@@ -86,7 +86,7 @@ class Typeable a => ParameterParser (a :: Type) c r where
   default parameterInfo :: ParameterInfo
   parameterInfo = ParameterInfo Nothing (typeRep $ Proxy @a) (parameterDescription @a @c @r)
 
-  parameterDescription :: S.Text
+  parameterDescription :: T.Text
 
   parse :: P.Sem (ParserEffs c r) (ParserResult a)
 
@@ -100,16 +100,16 @@ instance (KnownSymbol s, ParameterParser a c r) => ParameterParser (Named s a) c
 
   parameterInfo =
     let ParameterInfo _ type_ typeDescription = parameterInfo @a @c @r
-     in ParameterInfo (Just . S.pack . symbolVal $ Proxy @s) type_ typeDescription
+     in ParameterInfo (Just . T.pack . symbolVal $ Proxy @s) type_ typeDescription
 
   parameterDescription = parameterDescription @a @c @r
 
   parse = mapE (_1 .~ parserName @(Named s a) @c @r) $ parse @a @c @r
 
-parserName :: forall a c r. ParameterParser a c r => S.Text
+parserName :: forall a c r. ParameterParser a c r => T.Text
 parserName =
   let ParameterInfo (fromMaybe "" -> name) type_ _ = parameterInfo @a @c @r
-   in name <> ":" <> S.pack (show type_)
+   in name <> ":" <> T.pack (show type_)
 
 mapE :: P.Member (P.Error e) r => (e -> e) -> P.Sem r a -> P.Sem r a
 mapE f m = P.catch m (P.throw . f)
@@ -120,9 +120,9 @@ mapE f m = P.catch m (P.throw . f)
 -}
 parseMP ::
   -- | The name of the parser
-  S.Text ->
+  T.Text ->
   -- | The megaparsec parser
-  ParsecT SpannedError L.Text (P.Sem (P.Reader c ': r)) a ->
+  ParsecT SpannedError T.Text (P.Sem (P.Reader c ': r)) a ->
   P.Sem (ParserEffs c r) a
 parseMP n m = do
   s <- P.get
@@ -131,14 +131,14 @@ parseMP n m = do
     Right (a, offset) -> do
       P.modify (#off +~ offset)
       pure a
-    Left s -> P.throw (n, L.pack $ errorBundlePretty s)
+    Left s -> P.throw (n, T.pack $ errorBundlePretty s)
 
 instance ParameterParser L.Text c r where
-  parse = parseMP (parserName @L.Text) item
+  parse = parseMP (parserName @L.Text) (L.fromStrict <$> item)
   parameterDescription = "word or quoted string"
 
-instance ParameterParser S.Text c r where
-  parse = parseMP (parserName @S.Text) (L.toStrict <$> item)
+instance ParameterParser T.Text c r where
+  parse = parseMP (parserName @T.Text) item
   parameterDescription = "word or quoted string"
 
 instance ParameterParser Integer c r where
@@ -203,7 +203,7 @@ instance (ParameterParser a c r, Typeable a) => ParameterParser (NonEmpty a) c r
 
 {- | A parser that consumes zero or more of @a@ then concatenates them together.
 
- @'KleeneStarConcat' 'L.Text'@ therefore consumes all remaining input.
+ @'KleeneStarConcat' 'T.Text'@ therefore consumes all remaining input.
 -}
 data KleeneStarConcat (a :: Type)
 
@@ -217,19 +217,19 @@ instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat L.Text) c r where
   type ParserResult (KleeneStarConcat L.Text) = ParserResult L.Text
 
   -- consume rest on text just takes everything remaining
-  parse = parseMP (parserName @(KleeneStarConcat L.Text)) manySingle
+  parse = parseMP (parserName @(KleeneStarConcat T.Text)) (L.fromStrict <$> manySingle)
   parameterDescription = "the remaining input"
 
-instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat S.Text) c r where
-  type ParserResult (KleeneStarConcat S.Text) = ParserResult S.Text
+instance {-# OVERLAPS #-} ParameterParser (KleeneStarConcat T.Text) c r where
+  type ParserResult (KleeneStarConcat T.Text) = ParserResult T.Text
 
   -- consume rest on text just takes everything remaining
-  parse = parseMP (parserName @(KleeneStarConcat S.Text)) (L.toStrict <$> manySingle)
+  parse = parseMP (parserName @(KleeneStarConcat T.Text)) manySingle
   parameterDescription = "the remaining input"
 
 {- | A parser that consumes one or more of @a@ then concatenates them together.
 
- @'KleenePlusConcat' 'L.Text'@ therefore consumes all remaining input.
+ @'KleenePlusConcat' 'T.Text'@ therefore consumes all remaining input.
 -}
 data KleenePlusConcat (a :: Type)
 
@@ -243,14 +243,14 @@ instance {-# OVERLAPS #-} ParameterParser (KleenePlusConcat L.Text) c r where
   type ParserResult (KleenePlusConcat L.Text) = ParserResult L.Text
 
   -- consume rest on text just takes everything remaining
-  parse = parseMP (parserName @(KleenePlusConcat L.Text)) someSingle
+  parse = parseMP (parserName @(KleenePlusConcat L.Text)) (L.fromStrict <$> someSingle)
   parameterDescription = "the remaining input"
 
-instance {-# OVERLAPS #-} ParameterParser (KleenePlusConcat S.Text) c r where
-  type ParserResult (KleenePlusConcat S.Text) = ParserResult S.Text
+instance {-# OVERLAPS #-} ParameterParser (KleenePlusConcat T.Text) c r where
+  type ParserResult (KleenePlusConcat T.Text) = ParserResult T.Text
 
   -- consume rest on text just takes everything remaining
-  parse = parseMP (parserName @(KleenePlusConcat S.Text)) (L.toStrict <$> someSingle)
+  parse = parseMP (parserName @(KleenePlusConcat T.Text)) someSingle
   parameterDescription = "the remaining input"
 
 instance (ParameterParser a c r, ParameterParser b c r) => ParameterParser (a, b) c r where
@@ -267,7 +267,7 @@ instance ParameterParser () c r where
   parameterDescription = "whitespace"
 
 instance ShowErrorComponent SpannedError where
-  showErrorComponent (SpannedError t _ _) = L.unpack t
+  showErrorComponent (SpannedError t _ _) = T.unpack t
   errorComponentLen (SpannedError _ s e) = max 1 $ e - s
 
 skipN :: (Stream s, Ord e) => Int -> ParsecT e s m ()
@@ -280,7 +280,7 @@ trackOffsets m = do
   offe <- getOffset
   pure (a, offe - offs)
 
-item :: MonadParsec e L.Text m => m L.Text
+item :: MonadParsec e T.Text m => m T.Text
 item = try quotedString <|> someNonWS
 
 manySingle :: MonadParsec e s m => m (Tokens s)
@@ -289,7 +289,7 @@ manySingle = takeWhileP (Just "Any character") (const True)
 someSingle :: MonadParsec e s m => m (Tokens s)
 someSingle = takeWhile1P (Just "any character") (const True)
 
-quotedString :: MonadParsec e L.Text m => m L.Text
+quotedString :: MonadParsec e T.Text m => m T.Text
 quotedString =
   try (between (chunk "'") (chunk "'") (takeWhileP (Just "any character") (/= '\'')))
     <|> between (chunk "\"") (chunk "\"") (takeWhileP (Just "any character") (/= '"'))

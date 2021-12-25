@@ -1,72 +1,73 @@
 -- | Audit Log models
-module Calamity.Types.Model.Guild.AuditLog
-    ( AuditLog(..)
-    , AuditLogEntry(..)
-    , AuditLogEntryInfo(..)
-    , AuditLogChange(..)
-    , AuditLogAction(..) ) where
+module Calamity.Types.Model.Guild.AuditLog (
+  AuditLog (..),
+  AuditLogEntry (..),
+  AuditLogEntryInfo (..),
+  AuditLogChange (..),
+  AuditLogAction (..),
+) where
 
-import           Calamity.Internal.AesonThings
-import           Calamity.Internal.SnowflakeMap ( SnowflakeMap )
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.User
-import           Calamity.Types.Snowflake
+import Calamity.Internal.AesonThings
+import Calamity.Internal.SnowflakeMap (SnowflakeMap)
+import Calamity.Types.Model.Channel
+import Calamity.Types.Model.User
+import Calamity.Types.Snowflake
 
-import           Data.Aeson
-import           Data.Scientific
-import           Data.Text.Lazy                 ( Text )
+import Data.Aeson
+import Data.Scientific
+import Data.Text (Text)
 
-import           GHC.Generics
+import GHC.Generics
 
-import           TextShow
-import qualified TextShow.Generic               as TSG
+import TextShow
+import qualified TextShow.Generic as TSG
 
 data AuditLog = AuditLog
-  { webhooks        :: SnowflakeMap Webhook
-  , users           :: SnowflakeMap User
+  { webhooks :: SnowflakeMap Webhook
+  , users :: SnowflakeMap User
   , auditLogEntries :: SnowflakeMap AuditLogEntry
   }
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric AuditLog
-  deriving ( FromJSON ) via CalamityJSON AuditLog
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric AuditLog
+  deriving (FromJSON) via CalamityJSON AuditLog
 
 data AuditLogEntry = AuditLogEntry
-  { targetID   :: Maybe (Snowflake ())
-  , changes    :: [AuditLogChange]
-  , userID     :: Snowflake User
-  , id         :: Snowflake AuditLogEntry
+  { targetID :: Maybe (Snowflake ())
+  , changes :: [AuditLogChange]
+  , userID :: Snowflake User
+  , id :: Snowflake AuditLogEntry
   , actionType :: !AuditLogAction
-  , options    :: Maybe AuditLogEntryInfo
-  , reason     :: Maybe Text
+  , options :: Maybe AuditLogEntryInfo
+  , reason :: Maybe Text
   }
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric AuditLogEntry
-  deriving ( FromJSON ) via CalamityJSON AuditLogEntry
-  deriving ( HasID User ) via HasIDField "userID" AuditLogEntry
-  deriving ( HasID AuditLogEntry ) via HasIDField "id" AuditLogEntry
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric AuditLogEntry
+  deriving (FromJSON) via CalamityJSON AuditLogEntry
+  deriving (HasID User) via HasIDField "userID" AuditLogEntry
+  deriving (HasID AuditLogEntry) via HasIDField "id" AuditLogEntry
 
 data AuditLogEntryInfo = AuditLogEntryInfo
   { deleteMemberDays :: Maybe Text
-  , membersRemoved   :: Maybe Text
-  , channelID        :: Maybe (Snowflake Channel)
-  , messageID        :: Maybe (Snowflake Message)
-  , count            :: Maybe Text
-  , id               :: Maybe (Snowflake ())
-  , type_            :: Maybe Text
-  , roleName         :: Maybe Text
+  , membersRemoved :: Maybe Text
+  , channelID :: Maybe (Snowflake Channel)
+  , messageID :: Maybe (Snowflake Message)
+  , count :: Maybe Text
+  , id :: Maybe (Snowflake ())
+  , type_ :: Maybe Text
+  , roleName :: Maybe Text
   }
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric AuditLogEntryInfo
-  deriving ( FromJSON ) via CalamityJSON AuditLogEntryInfo
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric AuditLogEntryInfo
+  deriving (FromJSON) via CalamityJSON AuditLogEntryInfo
 
 data AuditLogChange = AuditLogChange
   { newValue :: Maybe Value
   , oldValue :: Maybe Value
-  , key      :: Text
+  , key :: Text
   }
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via FromStringShow AuditLogChange
-  deriving ( FromJSON ) via CalamityJSON AuditLogChange
+  deriving (Show, Generic)
+  deriving (TextShow) via FromStringShow AuditLogChange
+  deriving (FromJSON) via CalamityJSON AuditLogChange
 
 data AuditLogAction
   = GUILD_UPDATE
@@ -104,89 +105,89 @@ data AuditLogAction
   | INTEGRATION_CREATE
   | INTEGRATION_UPDATE
   | INTEGRATION_DELETE
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric AuditLogAction
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric AuditLogAction
 
 instance Enum AuditLogAction where
   toEnum v = case v of
-      1  -> GUILD_UPDATE
-      10 -> CHANNEL_CREATE
-      11 -> CHANNEL_UPDATE
-      12 -> CHANNEL_DELETE
-      13 -> CHANNEL_OVERWRITE_CREATE
-      14 -> CHANNEL_OVERWRITE_UPDATE
-      15 -> CHANNEL_OVERWRITE_DELETE
-      20 -> MEMBER_KICK
-      21 -> MEMBER_PRUNE
-      22 -> MEMBER_BAN_ADD
-      23 -> MEMBER_BAN_REMOVE
-      24 -> MEMBER_UPDATE
-      25 -> MEMBER_ROLE_UPDATE
-      26 -> MEMBER_MOVE
-      27 -> MEMBER_DISCONNECT
-      28 -> BOT_ADD
-      30 -> ROLE_CREATE
-      31 -> ROLE_UPDATE
-      32 -> ROLE_DELETE
-      40 -> INVITE_CREATE
-      41 -> INVITE_UPDATE
-      42 -> INVITE_DELETE
-      50 -> WEBHOOK_CREATE
-      51 -> WEBHOOK_UPDATE
-      52 -> WEBHOOK_DELETE
-      60 -> EMOJI_CREATE
-      61 -> EMOJI_UPDATE
-      62 -> EMOJI_DELETE
-      72 -> MESSAGE_DELETE
-      73 -> MESSAGE_BULK_DELETE
-      74 -> MESSAGE_PIN
-      75 -> MESSAGE_UNPIN
-      80 -> INTEGRATION_CREATE
-      81 -> INTEGRATION_UPDATE
-      82 -> INTEGRATION_DELETE
-      _  -> error $ "Invalid AuditLogAction: " <> show v
+    1 -> GUILD_UPDATE
+    10 -> CHANNEL_CREATE
+    11 -> CHANNEL_UPDATE
+    12 -> CHANNEL_DELETE
+    13 -> CHANNEL_OVERWRITE_CREATE
+    14 -> CHANNEL_OVERWRITE_UPDATE
+    15 -> CHANNEL_OVERWRITE_DELETE
+    20 -> MEMBER_KICK
+    21 -> MEMBER_PRUNE
+    22 -> MEMBER_BAN_ADD
+    23 -> MEMBER_BAN_REMOVE
+    24 -> MEMBER_UPDATE
+    25 -> MEMBER_ROLE_UPDATE
+    26 -> MEMBER_MOVE
+    27 -> MEMBER_DISCONNECT
+    28 -> BOT_ADD
+    30 -> ROLE_CREATE
+    31 -> ROLE_UPDATE
+    32 -> ROLE_DELETE
+    40 -> INVITE_CREATE
+    41 -> INVITE_UPDATE
+    42 -> INVITE_DELETE
+    50 -> WEBHOOK_CREATE
+    51 -> WEBHOOK_UPDATE
+    52 -> WEBHOOK_DELETE
+    60 -> EMOJI_CREATE
+    61 -> EMOJI_UPDATE
+    62 -> EMOJI_DELETE
+    72 -> MESSAGE_DELETE
+    73 -> MESSAGE_BULK_DELETE
+    74 -> MESSAGE_PIN
+    75 -> MESSAGE_UNPIN
+    80 -> INTEGRATION_CREATE
+    81 -> INTEGRATION_UPDATE
+    82 -> INTEGRATION_DELETE
+    _ -> error $ "Invalid AuditLogAction: " <> show v
 
   fromEnum v = case v of
-    GUILD_UPDATE             -> 1
-    CHANNEL_CREATE           -> 10
-    CHANNEL_UPDATE           -> 11
-    CHANNEL_DELETE           -> 12
+    GUILD_UPDATE -> 1
+    CHANNEL_CREATE -> 10
+    CHANNEL_UPDATE -> 11
+    CHANNEL_DELETE -> 12
     CHANNEL_OVERWRITE_CREATE -> 13
     CHANNEL_OVERWRITE_UPDATE -> 14
     CHANNEL_OVERWRITE_DELETE -> 15
-    MEMBER_KICK              -> 20
-    MEMBER_PRUNE             -> 21
-    MEMBER_BAN_ADD           -> 22
-    MEMBER_BAN_REMOVE        -> 23
-    MEMBER_UPDATE            -> 24
-    MEMBER_ROLE_UPDATE       -> 25
-    MEMBER_MOVE              -> 26
-    MEMBER_DISCONNECT        -> 27
-    BOT_ADD                  -> 28
-    ROLE_CREATE              -> 30
-    ROLE_UPDATE              -> 31
-    ROLE_DELETE              -> 32
-    INVITE_CREATE            -> 40
-    INVITE_UPDATE            -> 41
-    INVITE_DELETE            -> 42
-    WEBHOOK_CREATE           -> 50
-    WEBHOOK_UPDATE           -> 51
-    WEBHOOK_DELETE           -> 52
-    EMOJI_CREATE             -> 60
-    EMOJI_UPDATE             -> 61
-    EMOJI_DELETE             -> 62
-    MESSAGE_DELETE           -> 72
-    MESSAGE_BULK_DELETE      -> 73
-    MESSAGE_PIN              -> 74
-    MESSAGE_UNPIN            -> 75
-    INTEGRATION_CREATE       -> 80
-    INTEGRATION_UPDATE       -> 81
-    INTEGRATION_DELETE       -> 82
+    MEMBER_KICK -> 20
+    MEMBER_PRUNE -> 21
+    MEMBER_BAN_ADD -> 22
+    MEMBER_BAN_REMOVE -> 23
+    MEMBER_UPDATE -> 24
+    MEMBER_ROLE_UPDATE -> 25
+    MEMBER_MOVE -> 26
+    MEMBER_DISCONNECT -> 27
+    BOT_ADD -> 28
+    ROLE_CREATE -> 30
+    ROLE_UPDATE -> 31
+    ROLE_DELETE -> 32
+    INVITE_CREATE -> 40
+    INVITE_UPDATE -> 41
+    INVITE_DELETE -> 42
+    WEBHOOK_CREATE -> 50
+    WEBHOOK_UPDATE -> 51
+    WEBHOOK_DELETE -> 52
+    EMOJI_CREATE -> 60
+    EMOJI_UPDATE -> 61
+    EMOJI_DELETE -> 62
+    MESSAGE_DELETE -> 72
+    MESSAGE_BULK_DELETE -> 73
+    MESSAGE_PIN -> 74
+    MESSAGE_UNPIN -> 75
+    INTEGRATION_CREATE -> 80
+    INTEGRATION_UPDATE -> 81
+    INTEGRATION_DELETE -> 82
 
 instance FromJSON AuditLogAction where
   parseJSON = withScientific "AuditLogAction" $ \n -> case toBoundedInteger @Int n of
-    Just v  -> case v of --  no safe toEnum :S
-      1  -> pure GUILD_UPDATE
+    Just v -> case v of --  no safe toEnum :S
+      1 -> pure GUILD_UPDATE
       10 -> pure CHANNEL_CREATE
       11 -> pure CHANNEL_UPDATE
       12 -> pure CHANNEL_DELETE
@@ -221,7 +222,7 @@ instance FromJSON AuditLogAction where
       80 -> pure INTEGRATION_CREATE
       81 -> pure INTEGRATION_UPDATE
       82 -> pure INTEGRATION_DELETE
-      _  -> fail $ "Invalid AuditLogAction: " <> show n
+      _ -> fail $ "Invalid AuditLogAction: " <> show n
     Nothing -> fail $ "Invalid AuditLogAction: " <> show n
 
 instance ToJSON AuditLogAction where

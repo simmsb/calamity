@@ -4,7 +4,7 @@ module Calamity.Types.Token
     , formatToken
     , rawToken ) where
 
-import           Data.Text.Lazy
+import           Data.Text
 
 import           GHC.Generics
 

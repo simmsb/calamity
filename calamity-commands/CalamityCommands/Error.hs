@@ -1,21 +1,28 @@
 -- | Command errors
-module CalamityCommands.Error
-    ( CommandError(..) ) where
+module CalamityCommands.Error (CommandError (..)) where
 
-import qualified Data.Text        as S
-import qualified Data.Text.Lazy   as L
+import qualified Data.Text as T
 
-import           GHC.Generics
+import GHC.Generics
 
-import           TextShow
+import TextShow
 import qualified TextShow.Generic as TSG
 
 data CommandError
-  = ParseError S.Text -- ^ The type of the parser
-               L.Text -- ^ The reason that parsing failed
-  | CheckError S.Text -- ^ The name of the check that failed
-               L.Text -- ^ The reason for the check failing
-  | InvokeError S.Text -- ^ The name of the command that failed
-                L.Text -- ^ The reason for failing
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric CommandError
+    = ParseError
+        T.Text
+        -- ^ The type of the parser
+        T.Text
+        -- ^ The reason that parsing failed
+    | CheckError
+        T.Text
+        -- ^ The name of the check that failed
+        T.Text
+        -- ^ The reason for the check failing
+    | InvokeError
+        T.Text
+        -- ^ The name of the command that failed
+        T.Text
+        -- ^ The reason for failing
+    deriving (Show, Generic)
+    deriving (TextShow) via TSG.FromGeneric CommandError

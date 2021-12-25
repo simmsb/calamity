@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.2.0.0
+
++ Remove all usages of lazy Text (except from typeclass instances) 
++ Fix a bug that caused http request decoding to never select the `()` instance
+  for decoding the response (which meant endpoints that had empty responses
+  would always fail to parse).
+
 ## 0.1.31.0
 
 + We now pass through the `.member` field of message create/update events to the

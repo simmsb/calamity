@@ -12,8 +12,7 @@ import Control.Lens hiding (Context, (<.>))
 
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Text as S
-import Data.Text.Lazy as L
+import Data.Text as T
 
 import GHC.Generics
 
@@ -24,7 +23,7 @@ import qualified TextShow.Generic as TSG
 -- | A command, paremeterised over its context
 data Command (m :: Type -> Type) (c :: Type) (a :: Type) = forall p.
   Command
-  { names :: NonEmpty S.Text
+  { names :: NonEmpty T.Text
   , parent :: Maybe (Group m c a)
   , -- | If this command is hidden
     hidden :: Bool
@@ -33,20 +32,20 @@ data Command (m :: Type -> Type) (c :: Type) (a :: Type) = forall p.
   , -- | A list of parameter metadata
     params :: [ParameterInfo]
   , -- | A function producing the \'help\' for the command.
-    help :: c -> L.Text
+    help :: c -> T.Text
   , -- | A function that parses the context for the command, producing the input
     -- @a@ for the command.
     parser :: c -> m (Either CommandError p)
   , -- | A function that given the context and the input (@p@) of the command,
     -- performs the action of the command.
-    callback :: (c, p) -> m (Either L.Text a)
+    callback :: (c, p) -> m (Either T.Text a)
   }
 
 data CommandS = CommandS
-  { names :: NonEmpty S.Text
+  { names :: NonEmpty T.Text
   , params :: [ParameterInfo]
-  , parent :: Maybe S.Text
-  , checks :: [S.Text]
+  , parent :: Maybe T.Text
+  , checks :: [T.Text]
   , hidden :: Bool
   }
   deriving (Generic, Show)

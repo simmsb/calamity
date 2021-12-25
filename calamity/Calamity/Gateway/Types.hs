@@ -33,7 +33,7 @@ import           Data.Aeson
 import qualified Data.Aeson.Types                 as AT
 import           Data.Generics.Labels             ()
 import           Data.Maybe
-import           Data.Text.Lazy                   ( Text )
+import           Data.Text                   ( Text )
 
 import           GHC.Generics
 

@@ -90,7 +90,7 @@ import CalamityCommands.Parser
  'addCommands' $ do
    'helpCommand'
    'command' \@\'['Calamity.Types.Model.User.User'] "utest" $ \\ctx u \-\> do
-     'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx $ "got user: " '<>' 'TextShow.showtl' u
+     'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx $ "got user: " '<>' 'TextShow.showt' u
    'group' "admin" $ do
      'command' \@'[] "bye" $ \\ctx -> do
        'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx "bye!"

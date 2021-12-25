@@ -101,7 +101,7 @@ import           Control.Concurrent.STM.TVar
 import           Control.Lens
 import           Control.Monad
 
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 
 import qualified Di
 import qualified DiPolysemy                  as DiP
@@ -132,21 +132,21 @@ runCounterAtomic m = do
 handleFailByLogging m = do
   r <- P.runFail m
   case r of
-    Left e -> DiP.error $ L.pack e
+    Left e -> DiP.error $ T.pack e
     _      -> pure ()
 
-info, debug :: BotC r => L.Text -> P.Sem r ()
+info, debug :: BotC r => T.Text -> P.Sem r ()
 info = DiP.info
 debug = DiP.info
 
-tellt :: (BotC r, Tellable t) => t -> L.Text -> P.Sem r (Either RestError Message)
-tellt t m = tell t $ L.toStrict m
+tellt :: (BotC r, Tellable t) => t -> T.Text -> P.Sem r (Either RestError Message)
+tellt t m = tell t $ T.toStrict m
 
-data MyCustomEvt = MyCustomEvt L.Text Message
+data MyCustomEvt = MyCustomEvt T.Text Message
 
 main :: IO ()
 main = do
-  token <- L.pack <$> getEnv "BOT_TOKEN"
+  token <- T.pack <$> getEnv "BOT_TOKEN"
   Di.new $ \di ->
     void . P.runFinal . P.embedToFinal . DiP.runDiToIO di . runCounterAtomic 
          . runCacheInMemory . runMetricsNoop . useConstantPrefix "!" . useFullContext
@@ -154,24 +154,24 @@ main = do
       addCommands $ do
         helpCommand
         command @'[User] "utest" $ \ctx u -> do
-          void $ tellt ctx $ "got user: " <> showtl u
+          void $ tellt ctx $ "got user: " <> showt u
         command @'[Named "u" User, Named "u1" User] "utest2" $ \ctx u u1 -> do
-          void $ tellt ctx $ "got user: " <> showtl u <> "\nand: " <> showtl u1
-        command @'[L.Text, Snowflake User] "test" $ \ctx something aUser -> do
-          info $ "something = " <> showtl something <> ", aUser = " <> showtl aUser
+          void $ tellt ctx $ "got user: " <> showt u <> "\nand: " <> showt u1
+        command @'[T.Text, Snowflake User] "test" $ \ctx something aUser -> do
+          info $ "something = " <> showt something <> ", aUser = " <> showt aUser
         command @'[] "hello" $ \ctx -> do
           void $ tellt ctx "heya"
         group "testgroup" $ do
-          command @'[[L.Text]] "test" $ \ctx l -> do
-            void $ tellt ctx ("you sent: " <> showtl l)
+          command @'[[T.Text]] "test" $ \ctx l -> do
+            void $ tellt ctx ("you sent: " <> showt l)
           command @'[] "count" $ \ctx -> do
             val <- getCounter
-            void $ tellt ctx ("The value is: " <> showtl val)
+            void $ tellt ctx ("The value is: " <> showt val)
           group "say" $ do
-            command @'[KleenePlusConcat L.Text] "this" $ \ctx msg -> do
+            command @'[KleenePlusConcat T.Text] "this" $ \ctx msg -> do
               void $ tellt ctx msg
         command @'[Snowflake Emoji] "etest" $ \ctx e -> do
-          void $ tellt ctx $ "got emoji: " <> showtl e
+          void $ tellt ctx $ "got emoji: " <> showt e
         command @'[] "explode" $ \ctx -> do
           Just x <- pure Nothing
           debug "unreachable!"
@@ -180,7 +180,7 @@ main = do
           stopBot
         command @'[] "fire-evt" $ \ctx -> do
           fire . customEvt $ MyCustomEvt "aha" (ctx ^. #message)
-        command @'[L.Text] "wait-for" $ \ctx s -> do
+        command @'[T.Text] "wait-for" $ \ctx s -> do
           void $ tellt ctx ("waiting for !" <> s)
           waitUntil @'MessageCreateEvt (\msg -> msg ^. #content == ("!" <> s))
           void $ tellt ctx ("got !" <> s)
@@ -195,9 +195,9 @@ main = do
           info "edited"
         _ -> pure ()
       react @('CustomEvt (CtxCommandError FullContext)) \(CtxCommandError ctx e) -> do
-        info $ "Command failed with reason: " <> showtl e
+        info $ "Command failed with reason: " <> showt e
         case e of
-          ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> L.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
+          ParseError n r -> void . tellt ctx $ "Failed to parse parameter: `" <> T.fromStrict n <> "`, with reason: ```\n" <> r <> "```"
       react @('CustomEvt MyCustomEvt) $ \(MyCustomEvt s m) ->
         void $ tellt m ("Somebody told me to tell you about: " <> s)
 ```

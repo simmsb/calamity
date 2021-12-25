@@ -31,7 +31,7 @@ import Data.Default.Class (def)
 import Data.Functor
 import Data.IORef
 import Data.Maybe
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 import DiPolysemy hiding (debug, error, info)
 import qualified Network.Connection as NC
 import qualified Network.TLS as NT
@@ -51,15 +51,15 @@ import qualified Polysemy.Async as P
 import qualified Polysemy.AtomicState as P
 import qualified Polysemy.Error as P
 import qualified Polysemy.Resource as P
-import qualified System.X509 as X509
-import TextShow (showtl)
-import Prelude hiding (error)
 import PyF
+import qualified System.X509 as X509
+import TextShow (showt)
+import Prelude hiding (error)
 
 runWebsocket ::
   P.Members '[LogEff, P.Final IO, P.Embed IO] r =>
-  L.Text ->
-  L.Text ->
+  T.Text ->
+  T.Text ->
   (Connection -> P.Sem r a) ->
   P.Sem r (Maybe a)
 runWebsocket host path ma = do
@@ -77,7 +77,7 @@ runWebsocket host path ma = do
     ctx <- NC.initConnectionContext
     certStore <- X509.getSystemCertificateStore
     let clientParams =
-          (NT.defaultParamsClient (L.unpack host) "443")
+          (NT.defaultParamsClient (T.unpack host) "443")
             { NT.clientSupported = def{NT.supportedCiphers = NT.ciphersuite_default}
             , NT.clientShared =
                 def
@@ -85,7 +85,7 @@ runWebsocket host path ma = do
                   }
             }
     let tlsSettings = NC.TLSSettings clientParams
-        connParams = NC.ConnectionParams (L.unpack host) 443 (Just tlsSettings) Nothing
+        connParams = NC.ConnectionParams (T.unpack host) 443 (Just tlsSettings) Nothing
 
     Ex.bracket
       (NC.connectTo ctx connParams)
@@ -95,7 +95,7 @@ runWebsocket host path ma = do
             NW.makeStream
               (Just <$> NC.connectionGetChunk conn)
               (maybe (pure ()) (NC.connectionPut conn . LBS.toStrict))
-          NW.runClientWithStream stream (L.unpack host) (L.unpack path) NW.defaultConnectionOptions [] inner
+          NW.runClientWithStream stream (T.unpack host) (T.unpack path) NW.defaultConnectionOptions [] inner
       )
 
 newShardState :: Shard -> ShardState
@@ -104,7 +104,7 @@ newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Not
 -- | Creates and launches a shard
 newShard ::
   P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r =>
-  L.Text ->
+  T.Text ->
   Int ->
   Int ->
   Token ->
@@ -142,7 +142,7 @@ tryWriteTBMQueue' q v = do
     Just True -> pure True
     Nothing -> pure False
 
-restartUnless :: P.Members '[LogEff, P.Error ShardFlowControl] r => L.Text -> Maybe a -> P.Sem r a
+restartUnless :: P.Members '[LogEff, P.Error ShardFlowControl] r => T.Text -> Maybe a -> P.Sem r a
 restartUnless _ (Just a) = pure a
 restartUnless msg Nothing = do
   error msg
@@ -166,12 +166,12 @@ shardLoop = do
       r <- atomically $ tryWriteTBMQueue' outqueue (Control v)
       when r inner
 
-  handleWSException :: SomeException -> IO (Either (ControlMessage, Maybe L.Text) a)
+  handleWSException :: SomeException -> IO (Either (ControlMessage, Maybe T.Text) a)
   handleWSException e = pure $ case fromException e of
     Just (CloseRequest code _)
       | code `elem` [4004, 4010, 4011, 4012, 4013, 4014] ->
-        Left (ShutDownShard, Just . showtl $ code)
-    e -> Left (RestartShard, Just . L.pack . show $ e)
+        Left (ShutDownShard, Just . showt $ code)
+    e -> Left (RestartShard, Just . T.pack . show $ e)
 
   discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
   discordStream ws outqueue = inner
@@ -196,7 +196,7 @@ shardLoop = do
   outerloop = whileMFinalIO $ do
     shard :: Shard <- P.atomicGets (^. #shardS)
     let host = shard ^. #gateway
-    let host' = fromMaybe host $ L.stripPrefix "wss://" host
+    let host' = fromMaybe host $ T.stripPrefix "wss://" host
     info [fmt|starting up shard {shardID shard} of {shardCount shard}|]
 
     innerLoopVal <- runWebsocket host' "/?v=9&encoding=json" innerloop
@@ -351,5 +351,5 @@ heartBeatLoop interval = untilJustFinalIO . (leftToMaybe <$>) . P.runError $ do
   unlessM (P.atomicGets (^. #hbResponse)) $ do
     debug "No heartbeat response, restarting shard"
     wsConn <- P.note () =<< P.atomicGets (^. #wsConn)
-    P.embed $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: L.Text)
+    P.embed $ sendCloseCode wsConn 4000 ("No heartbeat in time" :: T.Text)
     P.throw ()

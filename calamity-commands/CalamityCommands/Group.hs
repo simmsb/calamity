@@ -10,8 +10,7 @@ import {-# SOURCE #-} CalamityCommands.Command
 import Control.Lens hiding (Context, (<.>))
 
 import qualified Data.HashMap.Lazy as LH
-import qualified Data.Text as S
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 
 import GHC.Generics
 
@@ -22,25 +21,25 @@ import qualified TextShow.Generic as TSG
 
 -- | A group of commands
 data Group m c a = Group
-    { names :: NonEmpty S.Text
+    { names :: NonEmpty T.Text
     , parent :: Maybe (Group m c a)
     , hidden :: Bool
     , -- | Any child commands of this group
-      commands :: LH.HashMap S.Text (Command m c a, AliasType)
+      commands :: LH.HashMap T.Text (Command m c a, AliasType)
     , -- | Any child groups of this group
-      children :: LH.HashMap S.Text (Group m c a, AliasType)
+      children :: LH.HashMap T.Text (Group m c a, AliasType)
     , -- | A function producing the \'help\' for the group
-      help :: c -> L.Text
+      help :: c -> T.Text
     , -- | A list of checks that must pass
       checks :: [Check m c]
     }
     deriving (Generic)
 
 data GroupS m c a = GroupS
-    { names :: NonEmpty S.Text
-    , parent :: Maybe S.Text
-    , commands :: [(S.Text, (Command m c a, AliasType))]
-    , children :: [(S.Text, (Group m c a, AliasType))]
+    { names :: NonEmpty T.Text
+    , parent :: Maybe T.Text
+    , commands :: [(T.Text, (Command m c a, AliasType))]
+    , children :: [(T.Text, (Group m c a, AliasType))]
     , hidden :: Bool
     }
     deriving (Generic, Show)

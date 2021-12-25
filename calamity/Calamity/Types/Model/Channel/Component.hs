@@ -13,17 +13,17 @@ import Calamity.Internal.AesonThings
 import Calamity.Types.Model.Guild.Emoji
 import Data.Aeson
 import Data.Scientific (toBoundedInteger)
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
 
 data Button = Button
     { style :: ButtonStyle
-    , label :: Maybe L.Text
+    , label :: Maybe T.Text
     , emoji :: Maybe RawEmoji
-    , customID :: Maybe L.Text
-    , url :: Maybe L.Text
+    , customID :: Maybe T.Text
+    , url :: Maybe T.Text
     , disabled :: Bool
     }
     deriving (Show, Generic)
@@ -53,7 +53,7 @@ button s = Button s Nothing Nothing Nothing Nothing False
 {- | Constuct a non-disabled 'Button' with the given 'ButtonStyle' and label,
  all other fields are set to 'Nothing'
 -}
-button' :: ButtonStyle -> L.Text -> Button
+button' :: ButtonStyle -> T.Text -> Button
 button' s l = Button s (Just l) Nothing Nothing Nothing False
 
 instance ToJSON ButtonStyle where

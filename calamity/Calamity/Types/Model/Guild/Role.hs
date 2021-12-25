@@ -8,14 +8,14 @@ import Calamity.Types.Snowflake
 
 import Data.Aeson
 import Data.Colour
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 
 import GHC.Generics
 
+import Calamity.Internal.OverriddenVia
 import Control.DeepSeq (NFData (rnf), rwhnf)
 import TextShow
 import qualified TextShow.Generic as TSG
-import Calamity.Internal.OverriddenVia
 
 data Role' = Role'
   { id :: Snowflake Role

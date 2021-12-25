@@ -1,5 +1,9 @@
 # Changelog for Calamity Commands
 
+## 0.2.0.0
+
++ Remove all usages of lazy Text (except from typeclass instances)
+
 ## 0.1.3.0
 
 + Fixed some parameter parser instances causing type inference to fail

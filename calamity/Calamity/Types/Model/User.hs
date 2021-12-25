@@ -9,12 +9,10 @@ import Calamity.Internal.AesonThings
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
 import Calamity.Types.Partial
 import Calamity.Types.Snowflake
-
-import Data.Aeson
-import Data.Text.Lazy (Text)
-import Data.Word
-
 import Control.DeepSeq
+import Data.Aeson
+import Data.Text (Text)
+import Data.Word
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG

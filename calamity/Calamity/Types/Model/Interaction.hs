@@ -19,7 +19,7 @@ import Calamity.Types.Snowflake
 import Data.Aeson
 import qualified Data.HashMap.Strict as H
 import Data.Scientific (toBoundedInteger)
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
@@ -33,7 +33,7 @@ data Interaction = Interaction
     , channelID :: Maybe (Snowflake Channel)
     , member :: Maybe Member
     , user :: Maybe User
-    , token :: L.Text
+    , token :: T.Text
     , version :: Int
     , message :: Maybe Message
     }
@@ -43,11 +43,11 @@ data Interaction = Interaction
 
 data ApplicationCommandInteractionData = ApplicationCommandInteractionData
     { id :: Snowflake () -- no Command type yet
-    , name :: L.Text
+    , name :: T.Text
     , resolved :: Maybe ApplicationCommandInteractionDataResolved
     , -- , options :: [ApplicationCommandInteractionDataOptions]
       -- No commands yet
-      customID :: L.Text
+      customID :: T.Text
     , componentType :: ComponentType
     }
     deriving (Show, Generic)

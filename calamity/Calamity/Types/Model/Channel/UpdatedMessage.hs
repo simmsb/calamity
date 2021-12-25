@@ -7,18 +7,18 @@ import Calamity.Internal.AesonThings
 import Calamity.Internal.OverriddenVia
 import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Channel.Component
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import qualified Data.Vector.Unboxing as UV
+import Data.Word
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
-import Data.Word
-import Calamity.Types.Model.Channel.Component
 
 data UpdatedMessage' = UpdatedMessage'
     { id :: Snowflake Message

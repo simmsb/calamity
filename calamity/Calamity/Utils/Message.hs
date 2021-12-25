@@ -41,38 +41,38 @@ import Data.Foldable (Foldable (foldl'))
 import Data.Generics.Product.Fields
 import Data.Maybe (fromMaybe)
 import Data.String (IsString, fromString)
-import qualified Data.Text.Lazy as L
-import TextShow (TextShow (showtl))
+import qualified Data.Text as T
+import TextShow (TextShow (showt))
 
 zws :: IsString s => s
 zws = fromString "\x200b"
 
 -- | Replaces all occurences of @\`\`\`@ with @\`\<zws\>\`\<zws\>\`@
-escapeCodeblocks :: L.Text -> L.Text
-escapeCodeblocks = L.replace "```" (L.intercalate zws $ replicate 3 "`")
+escapeCodeblocks :: T.Text -> T.Text
+escapeCodeblocks = T.replace "```" (T.intercalate zws $ replicate 3 "`")
 
 -- | Replaces all occurences of @\`\`@ with @\`\<zws\>\`@
-escapeCodelines :: L.Text -> L.Text
-escapeCodelines = L.replace "``" (L.intercalate zws $ replicate 2 "`")
+escapeCodelines :: T.Text -> T.Text
+escapeCodelines = T.replace "``" (T.intercalate zws $ replicate 2 "`")
 
 -- | Replaces all occurences of @\*\*@ with @\*\<zws\>\*@
-escapeBold :: L.Text -> L.Text
-escapeBold = L.replace "**" (L.intercalate zws $ replicate 2 "*")
+escapeBold :: T.Text -> T.Text
+escapeBold = T.replace "**" (T.intercalate zws $ replicate 2 "*")
 
 -- | Replaces all occurences of @\~\~@ with @\~\<zws\>\~@
-escapeStrike :: L.Text -> L.Text
-escapeStrike = L.replace "~~" (L.intercalate zws $ replicate 2 "~")
+escapeStrike :: T.Text -> T.Text
+escapeStrike = T.replace "~~" (T.intercalate zws $ replicate 2 "~")
 
 -- | Replaces all occurences of @\_\_@ with @\_\<zws\>\_@
-escapeUnderline :: L.Text -> L.Text
-escapeUnderline = L.replace "__" (L.intercalate zws $ replicate 2 "_")
+escapeUnderline :: T.Text -> T.Text
+escapeUnderline = T.replace "__" (T.intercalate zws $ replicate 2 "_")
 
 -- | Replaces all occurences of @\|\|@ with @\|\<zws\>\|@
-escapeSpoilers :: L.Text -> L.Text
-escapeSpoilers = L.replace "||" (L.intercalate zws $ replicate 2 "|")
+escapeSpoilers :: T.Text -> T.Text
+escapeSpoilers = T.replace "||" (T.intercalate zws $ replicate 2 "|")
 
 -- | Escape all discord formatting
-escapeFormatting :: L.Text -> L.Text
+escapeFormatting :: T.Text -> T.Text
 escapeFormatting = foldl' (.) Prelude.id [escapeCodelines, escapeCodeblocks, escapeBold, escapeStrike, escapeUnderline, escapeSpoilers, escapeFormatting]
 
 {- | Formats a lang and content into a codeblock
@@ -84,10 +84,10 @@ escapeFormatting = foldl' (.) Prelude.id [escapeCodelines, escapeCodeblocks, esc
 -}
 codeblock ::
   -- | language
-  L.Text ->
+  T.Text ->
   -- | content
-  L.Text ->
-  L.Text
+  T.Text ->
+  T.Text
 codeblock lang = codeblock' (Just lang)
 
 {- | Formats an optional lang and content into a codeblock
@@ -96,10 +96,10 @@ codeblock lang = codeblock' (Just lang)
 -}
 codeblock' ::
   -- | language
-  Maybe L.Text ->
+  Maybe T.Text ->
   -- | content
-  L.Text ->
-  L.Text
+  T.Text ->
+  T.Text
 codeblock' lang content =
   "```" <> fromMaybe "" lang <> "\n"
     <> escapeCodeblocks content
@@ -111,60 +111,60 @@ codeblock' lang content =
 
  Any code lines in the content are escaped
 -}
-codeline :: L.Text -> L.Text
+codeline :: T.Text -> T.Text
 codeline content = "``" <> escapeCodelines content <> "``"
 
 {- | Formats some text into its bolded form
 
  Any existing bolded text is escaped
 -}
-bold :: L.Text -> L.Text
+bold :: T.Text -> T.Text
 bold content = "**" <> escapeBold content <> "**"
 
 {- | Formats some text into its striked form
 
  Any existing striked text is escaped
 -}
-strike :: L.Text -> L.Text
+strike :: T.Text -> T.Text
 strike content = "~~" <> escapeStrike content <> "~~"
 
 {- | Formats some text into its underlined form
 
  Any existing underlined text is escaped
 -}
-underline :: L.Text -> L.Text
+underline :: T.Text -> T.Text
 underline content = "__" <> escapeUnderline content <> "__"
 
 -- | Quotes a section of text
-quote :: L.Text -> L.Text
+quote :: T.Text -> T.Text
 quote = ("> " <>)
 
 -- | Quotes all remaining text
-quoteAll :: L.Text -> L.Text
+quoteAll :: T.Text -> T.Text
 quoteAll = (">> " <>)
 
 {- | Formats some text into its spoilered form
 
  Any existing spoilers are escaped
 -}
-spoiler :: L.Text -> L.Text
+spoiler :: T.Text -> T.Text
 spoiler content = "||" <> escapeSpoilers content <> "||"
 
-fmtEmoji :: Emoji -> L.Text
-fmtEmoji Emoji{id, name, animated} = "<" <> ifanim <> ":" <> name <> ":" <> showtl id <> ">"
+fmtEmoji :: Emoji -> T.Text
+fmtEmoji Emoji{id, name, animated} = "<" <> ifanim <> ":" <> name <> ":" <> showt id <> ">"
  where
   ifanim = if animated then "a" else ""
 
 -- | Format a 'User' or 'Member' into the format of @username#discriminator@
-displayUser :: (HasField' "username" a L.Text, HasField' "discriminator" a L.Text) => a -> L.Text
-displayUser u = (u ^. field' @"username") <> "#" <> (u ^. field' @"discriminator")
+displayUser :: (HasField' "username" a T.Text, HasField' "discriminator" a T.Text) => a -> T.Text
+displayUser u = u ^. field' @"username" <> "#" <> u ^. field' @"discriminator"
 
-mentionSnowflake :: L.Text -> Snowflake a -> L.Text
-mentionSnowflake tag s = "<" <> tag <> showtl s <> ">"
+mentionSnowflake :: T.Text -> Snowflake a -> T.Text
+mentionSnowflake tag s = "<" <> tag <> showt s <> ">"
 
 -- | Things that can be mentioned
 class Mentionable a where
-  mention :: a -> L.Text
+  mention :: a -> T.Text
 
 instance Mentionable (Snowflake User) where
   mention = mentionSnowflake "@"

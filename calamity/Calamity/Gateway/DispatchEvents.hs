@@ -20,7 +20,7 @@ import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
 import Data.Aeson
 import Data.Kind (Type)
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import Data.Typeable (Typeable)
 import GHC.Generics

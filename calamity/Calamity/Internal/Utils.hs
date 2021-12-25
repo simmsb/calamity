@@ -30,7 +30,7 @@ import Data.Aeson.Encoding (null_)
 import Data.Default.Class
 import qualified Data.Map as M
 import Data.Semigroup (Last (..))
-import Data.Text.Lazy
+import Data.Text
 import qualified Data.Vector.Unboxing as VU
 import qualified DiPolysemy as Di
 import qualified Polysemy as P

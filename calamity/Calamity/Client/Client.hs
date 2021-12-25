@@ -51,7 +51,7 @@ import Data.Generics.Product.Subtype
 import Data.IORef
 import Data.Maybe
 import Data.Proxy
-import qualified Data.Text as S
+import qualified Data.Text as T
 import Data.Time.Clock.POSIX
 import qualified Df1
 import qualified Di.Core as DC
@@ -278,7 +278,7 @@ events = do
  Waiting for a message containing the text \"hi\":
 
  @
- f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\\m -> 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content)
+ f = do msg \<\- 'waitUntil' @\''MessageCreateEvt' (\\m -> 'Data.Text.isInfixOf' "hi" $ m ^. #content)
         print $ msg ^. #content
  @
 -}
@@ -319,7 +319,7 @@ waitUntil f = P.resourceToIOFinal $ do
  Waiting for a message containing the text \"hi\":
 
  @
- f = do msg \<\- 'waitUntilM' @\''MessageCreateEvt' (\\m -> ('debug' $ "got message: " <> 'showt' msg) >> ('pure' $ 'Data.Text.Lazy.isInfixOf' "hi" $ m ^. #content))
+ f = do msg \<\- 'waitUntilM' @\''MessageCreateEvt' (\\m -> ('debug' $ "got message: " <> 'showt' msg) >> ('pure' $ 'Data.Text.isInfixOf' "hi" $ m ^. #content))
         print $ msg ^. #content
  @
 -}
@@ -398,7 +398,7 @@ handleEvent shardID data' = do
     debug "handling an event"
     eventHandlers <- P.atomicGet
     actions <- P.runFail $ do
-        evtCounter <- registerCounter "events_received" [("type", S.pack $ ctorName data'), ("shard", showt shardID)]
+        evtCounter <- registerCounter "events_received" [("type", T.pack $ ctorName data'), ("shard", showt shardID)]
         void $ addCounter 1 evtCounter
         cacheUpdateHisto <- registerHistogram "cache_update" mempty [10, 20 .. 100]
         (time, res) <- timeA . resetDi $ handleEvent' eventHandlers data'

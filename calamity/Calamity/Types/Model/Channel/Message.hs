@@ -20,7 +20,7 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson
 import Data.Scientific
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import qualified Data.Vector.Unboxing as UV
 import Data.Word (Word64)
@@ -86,7 +86,7 @@ data Message = Message
   , attachments :: ![Attachment]
   , embeds :: ![Embed]
   , reactions :: ![Reaction]
-  , nonce :: Maybe Value 
+  , nonce :: Maybe Value
   , pinned :: Bool
   , webhookID :: Maybe (Snowflake Webhook)
   , type_ :: !MessageType

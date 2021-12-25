@@ -26,7 +26,7 @@ import Data.Colour (Colour)
 import Data.Default.Class
 import Data.Generics.Labels ()
 import Data.Semigroup
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import Data.Word
 import GHC.Generics

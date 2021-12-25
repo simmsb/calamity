@@ -27,10 +27,10 @@ import Control.Lens
 import Control.Monad
 
 import Data.Aeson hiding (Options)
+import Data.Aeson.Types (parseEither)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TS
-import qualified Data.Text.Lazy as TL
 
 import DiPolysemy hiding (debug, error, info)
 
@@ -42,26 +42,22 @@ import qualified Polysemy as P
 import qualified Polysemy.Error as P
 import qualified Polysemy.Reader as P
 
-fromResult :: P.Member (P.Error RestError) r => Data.Aeson.Result a -> Sem r a
-fromResult (Success a) = pure a
-fromResult (Error e) = P.throw (InternalClientError . TL.pack $ e)
-
-fromJSONDecode :: P.Member (P.Error RestError) r => Either String a -> Sem r a
-fromJSONDecode (Right a) = pure a
-fromJSONDecode (Left e) = P.throw (InternalClientError . TL.pack $ e)
+throwIfLeft :: P.Member (P.Error RestError) r => Either String a -> Sem r a
+throwIfLeft (Right a) = pure a
+throwIfLeft (Left e) = P.throw (InternalClientError . T.pack $ e)
 
 extractRight :: P.Member (P.Error e) r => Either e a -> Sem r a
 extractRight (Left e) = P.throw e
 extractRight (Right a) = pure a
 
 class ReadResponse a where
-  readResp :: LB.ByteString -> Either String a
+  processResp :: LB.ByteString -> (Value -> Value) -> Either String a
+
+instance {-# OVERLAPPABLE #-} FromJSON a => ReadResponse a where
+  processResp s f = eitherDecode s >>= parseEither parseJSON . f
 
 instance ReadResponse () where
-  readResp = const (Right ())
-
-instance {-# OVERLAPS #-} FromJSON a => ReadResponse a where
-  readResp = eitherDecode
+  processResp _ _ = Right ()
 
 class Request a where
   type Result a
@@ -73,7 +69,7 @@ class Request a where
   modifyResponse :: a -> Value -> Value
   modifyResponse _ = id
 
-invoke :: (BotC r, Request a, FromJSON (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
+invoke :: (BotC r, Request a, ReadResponse (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
 invoke a = do
   rlState' <- P.asks (^. #rlState)
   token' <- P.asks (^. #token)
@@ -92,7 +88,9 @@ invoke a = do
 
   void $ modifyGauge (subtract 1) inFlightRequests
 
-  P.runError $ fromResult . fromJSON . modifyResponse a =<< fromJSONDecode . readResp =<< extractRight resp
+  P.runError $ do
+    s <- extractRight resp
+    throwIfLeft $ processResp s (modifyResponse a)
 
 reqConfig :: HttpConfig
 reqConfig =
@@ -106,7 +104,7 @@ defaultRequestOptions =
     <> header "X-RateLimit-Precision" "millisecond"
 
 requestOptions :: Token -> Option 'Https
-requestOptions t = defaultRequestOptions <> header "Authorization" (TS.encodeUtf8 . TL.toStrict $ formatToken t)
+requestOptions t = defaultRequestOptions <> header "Authorization" (TS.encodeUtf8 $ formatToken t)
 
 getWith :: Url 'Https -> Option 'Https -> Req LbsResponse
 getWith u = req GET u NoReqBody lbsResponse

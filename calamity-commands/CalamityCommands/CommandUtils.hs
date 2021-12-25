@@ -32,7 +32,6 @@ import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import qualified Data.Text as S
-import qualified Data.Text.Lazy as L
 
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
@@ -45,7 +44,7 @@ commandPath :: Command m c a -> [S.Text]
 commandPath Command{names, parent} = foldMap groupPath parent <> [NE.head names]
 
 -- | Format a command's parameters
-commandParams :: Command m c a -> L.Text
+commandParams :: Command m c a -> S.Text
 commandParams Command{params} =
   let formatted =
         map
@@ -53,7 +52,7 @@ commandParams Command{params} =
               "`" <> name <> ":" <> S.pack (show type_) <> "`"
           )
           params
-   in L.fromStrict $ S.intercalate ", " formatted
+   in S.intercalate ", " formatted
 
 {- | Given the properties of a 'Command' with the @parser@ and @callback@ in the
  'P.Sem' monad, build a command by transforming the Polysemy actions into @m@
@@ -73,7 +72,7 @@ buildCommand' ::
   -- | The command's parameter metadata
   [ParameterInfo] ->
   -- | The help generator for this command
-  (c -> L.Text) ->
+  (c -> S.Text) ->
   -- | The parser for this command
   (c -> P.Sem r (Either CommandError p)) ->
   -- | The callback for this command
@@ -110,7 +109,7 @@ buildCommand ::
   -- | The checks for the command
   [Check m c] ->
   -- | The help generator for this command
-  (c -> L.Text) ->
+  (c -> S.Text) ->
   -- | The callback foor this command
   (c -> CommandForParsers ps r a) ->
   P.Sem r (Command m c a)
@@ -136,9 +135,9 @@ buildParser name cb = do
  transforming the Polysemy action into an @m@ action.
 -}
 buildCallback ::
-  (Monad m, P.Member (P.Final m) r) => ((c, p) -> P.Sem (P.Fail ': r) a) -> P.Sem r ((c, p) -> m (Either L.Text a))
+  (Monad m, P.Member (P.Final m) r) => ((c, p) -> P.Sem (P.Fail ': r) a) -> P.Sem r ((c, p) -> m (Either S.Text a))
 buildCallback cb = do
-  cb' <- bindSemToM (\x -> P.runFail (cb x) <&> mapLeft L.pack)
+  cb' <- bindSemToM (\x -> P.runFail (cb x) <&> mapLeft S.pack)
   let cb'' = fromMaybe (Left "failed internally") <.> cb'
   pure cb''
 
@@ -207,7 +206,7 @@ buildTypedCommandParser ::
   forall (ps :: [Type]) c r.
   ParameterParser (ListToTup ps) c r =>
   c ->
-  L.Text ->
+  S.Text ->
   P.Sem r (Either CommandError (ParserResult (ListToTup ps)))
 buildTypedCommandParser ctx t =
   runCommandParser ctx t (parse @(ListToTup ps) @c @r) <&> \case
@@ -224,8 +223,8 @@ type family ListToTup (ps :: [Type]) where
  As an example:
 
  @
- 'CommandForParsers' [ 'L.Text', 'Int', 'CalamityCommands.Parser.Named' "something" 'L.Text' ] r a ~
-   ('L.Text' -> 'Int' -> 'L.Text' -> 'P.Sem' r ('P.Fail' ': r) a)
+ 'CommandForParsers' [ 'S.Text', 'Int', 'CalamityCommands.Parser.Named' "something" 'S.Text' ] r a ~
+   ('S.Text' -> 'Int' -> 'S.Text' -> 'P.Sem' r ('P.Fail' ': r) a)
  @
 -}
 type family CommandForParsers (ps :: [Type]) r a where

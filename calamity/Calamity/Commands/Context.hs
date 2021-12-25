@@ -19,7 +19,7 @@ import qualified CalamityCommands.Context as CC
 import Control.Applicative
 import Control.Lens hiding (Context)
 import Control.Monad
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 import GHC.Generics
 import qualified Polysemy as P
 import qualified Polysemy.Fail as P
@@ -57,9 +57,9 @@ data FullContext = FullContext
   , -- | The command that was invoked
     command :: Command FullContext
   , -- | The prefix that was used to invoke the command
-    prefix :: L.Text
+    prefix :: T.Text
   , -- | The message remaining after consuming the prefix
-    unparsedParams :: L.Text
+    unparsedParams :: T.Text
   }
   deriving (Show, Generic)
   deriving (TextShow) via TSG.FromGeneric FullContext
@@ -88,7 +88,7 @@ useFullContext =
         CC.ConstructContext (pre, cmd, up) (msg, usr, mem) -> buildContext msg usr mem pre cmd up
     )
 
-buildContext :: P.Member CacheEff r => Message -> User -> Maybe Member -> L.Text -> Command FullContext -> L.Text -> P.Sem r (Maybe FullContext)
+buildContext :: P.Member CacheEff r => Message -> User -> Maybe Member -> T.Text -> Command FullContext -> T.Text -> P.Sem r (Maybe FullContext)
 buildContext msg usr mem prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)
   let member = mem <|> guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
@@ -116,9 +116,9 @@ data LightContext = LightContext
   , -- | The command that was invoked
     command :: Command LightContext
   , -- | The prefix that was used to invoke the command
-    prefix :: L.Text
+    prefix :: T.Text
   , -- | The message remaining after consuming the prefix
-    unparsedParams :: L.Text
+    unparsedParams :: T.Text
   }
   deriving (Show, Generic)
   deriving (TextShow) via TSG.FromGeneric LightContext

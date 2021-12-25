@@ -15,16 +15,12 @@ import Calamity.Types.Model.Channel.Guild.Voice
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake
-
+import Control.DeepSeq (NFData)
 import Control.Lens
-
 import Data.Aeson
 import Data.Generics.Product.Fields
-import Data.Text.Lazy (Text)
-
+import Data.Text (Text)
 import GHC.Generics
-
-import Control.DeepSeq (NFData)
 import TextShow
 import qualified TextShow.Generic as TSG
 

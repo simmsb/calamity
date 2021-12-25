@@ -25,8 +25,7 @@ import Control.Monad.Fix (MonadFix)
 
 import Data.Char (isSpace)
 import qualified Data.HashMap.Lazy as LH
-import qualified Data.Text as S
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 
 import GHC.Generics (Generic)
 
@@ -42,7 +41,7 @@ mapLeft _ (Right x) = Right x
 
 data CmdInvokeFailReason c
   = NoContext
-  | NotFound [L.Text]
+  | NotFound [T.Text]
   | CommandInvokeError c CommandError
   deriving (Show, Generic)
 
@@ -82,9 +81,9 @@ handleCommands ::
   -- | The message that invoked the command
   msg ->
   -- | The prefix used
-  L.Text ->
+  T.Text ->
   -- | The command string, without a prefix
-  L.Text ->
+  T.Text ->
   P.Sem r (Either (CmdInvokeFailReason c) (c, a))
 handleCommands handler msg prefix cmd = P.runError $ do
   (command, unparsedParams) <- P.fromEither . mapLeft NotFound $ findCommand handler cmd
@@ -108,8 +107,8 @@ buildCommands m = P.fixpointToFinal $ mdo
     P.Sem (DSLState m c a r) x ->
     P.Sem
       (P.Fixpoint ': r)
-      ( LH.HashMap S.Text (Group m c a, AliasType)
-      , (LH.HashMap S.Text (Command m c a, AliasType), x)
+      ( LH.HashMap T.Text (Group m c a, AliasType)
+      , (LH.HashMap T.Text (Command m c a, AliasType), x)
       )
   inner h =
     P.runReader h
@@ -120,12 +119,12 @@ buildCommands m = P.fixpointToFinal $ mdo
       . P.runReader False
       . P.untag @"hidden"
       . P.runReader Nothing
-      . runLocalWriter @(LH.HashMap S.Text (Group m c a, AliasType))
-      . runLocalWriter @(LH.HashMap S.Text (Command m c a, AliasType))
+      . runLocalWriter @(LH.HashMap T.Text (Group m c a, AliasType))
+      . runLocalWriter @(LH.HashMap T.Text (Command m c a, AliasType))
   defaultHelp = const "This command or group has no help."
 
-nextWord :: L.Text -> (L.Text, L.Text)
-nextWord = L.break isSpace . L.stripStart
+nextWord :: T.Text -> (T.Text, T.Text)
+nextWord = T.break isSpace . T.stripStart
 
 {- | Attempt to find what command was used.
 
@@ -139,31 +138,31 @@ nextWord = L.break isSpace . L.stripStart
  This function isn't greedy, if you have a group and a command at the same
  level, this will find the command first and ignore the group.
 -}
-findCommand :: forall c a m. CommandHandler m c a -> L.Text -> Either [L.Text] (Command m c a, L.Text)
+findCommand :: forall c a m. CommandHandler m c a -> T.Text -> Either [T.Text] (Command m c a, T.Text)
 findCommand handler msg = goH $ nextWord msg
  where
-  goH :: (L.Text, L.Text) -> Either [L.Text] (Command m c a, L.Text)
+  goH :: (T.Text, T.Text) -> Either [T.Text] (Command m c a, T.Text)
   goH ("", _) = Left []
   goH (x, xs) =
     attachSoFar
       x
-      ( ((,xs) <$> attachInitial (LH.lookup (L.toStrict x) (handler ^. #commands)))
-          <> (attachInitial (LH.lookup (L.toStrict x) (handler ^. #groups)) >>= goG (nextWord xs))
+      ( ((,xs) <$> attachInitial (LH.lookup x (handler ^. #commands)))
+          <> (attachInitial (LH.lookup x (handler ^. #groups)) >>= goG (nextWord xs))
       )
 
-  goG :: (L.Text, L.Text) -> Group m c a -> Either [L.Text] (Command m c a, L.Text)
+  goG :: (T.Text, T.Text) -> Group m c a -> Either [T.Text] (Command m c a, T.Text)
   goG ("", _) _ = Left []
   goG (x, xs) g =
     attachSoFar
       x
-      ( ((,xs) <$> attachInitial (LH.lookup (L.toStrict x) (g ^. #commands)))
-          <> (attachInitial (LH.lookup (L.toStrict x) (g ^. #children)) >>= goG (nextWord xs))
+      ( ((,xs) <$> attachInitial (LH.lookup x (g ^. #commands)))
+          <> (attachInitial (LH.lookup x (g ^. #children)) >>= goG (nextWord xs))
       )
 
-  attachInitial :: forall a b. Maybe (a, b) -> Either [L.Text] a
+  attachInitial :: forall a b. Maybe (a, b) -> Either [T.Text] a
   attachInitial (Just (a, _)) = Right a
   attachInitial Nothing = Left []
 
-  attachSoFar :: forall a. L.Text -> Either [L.Text] a -> Either [L.Text] a
+  attachSoFar :: forall a. T.Text -> Either [T.Text] a -> Either [T.Text] a
   attachSoFar cmd (Left xs) = Left (cmd : xs)
   attachSoFar _ r = r

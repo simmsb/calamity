@@ -21,7 +21,7 @@ import Data.Aeson.Lens
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import Data.Maybe
-import qualified Data.Text.Lazy as LT
+import qualified Data.Text as T
 import Data.Time
 import Data.Time.Clock.POSIX
 import Network.HTTP.Client (responseStatus)
@@ -220,7 +220,7 @@ doDiscordRequest r = do
             pure $ ServerError (statusCode status)
     Left e -> do
       error [fmt|Something went wrong with the http client: {e}|]
-      pure . InternalResponseError $ LT.pack e
+      pure . InternalResponseError $ T.pack e
 
 -- | Parse a ratelimit header returning when it unlocks
 parseRateLimitHeader :: HttpResponse r => UTCTime -> r -> Maybe UTCTime

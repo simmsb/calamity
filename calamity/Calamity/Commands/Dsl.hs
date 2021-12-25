@@ -30,8 +30,7 @@ import CalamityCommands.ParameterInfo
 
 import Calamity.Commands.Types
 
-import qualified Data.Text as S
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 
 import CalamityCommands.CommandUtils (CommandForParsers, TypedCommandC)
 import qualified CalamityCommands.Context as CC
@@ -78,7 +77,7 @@ import qualified Polysemy.Tagged as P
    $ 'Calamity.Commands.Utils.addCommands' $ do
      'Calamity.Commands.Help.helpCommand'
      'Calamity.Commands.Dsl.command' \@'[] "test" \\ctx ->
-       'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' \@'L.Text' ctx "hi"
+       'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' \@'T.Text' ctx "hi"
  @
 
  The above block will create a command with no parameters named \'test\',
@@ -95,7 +94,7 @@ import qualified Polysemy.Tagged as P
 command' ::
     P.Member (P.Final IO) r =>
     -- | The name of the command
-    S.Text ->
+    T.Text ->
     -- | The command's parameters
     [ParameterInfo] ->
     -- | The parser for this command
@@ -115,9 +114,9 @@ command' = CC.command'
 commandA' ::
     P.Member (P.Final IO) r =>
     -- | The name of the command
-    S.Text ->
+    T.Text ->
     -- | The aliases for the command
-    [S.Text] ->
+    [T.Text] ->
     -- | The command's parameters
     [ParameterInfo] ->
     -- | The parser for this command
@@ -144,12 +143,12 @@ commandA' = CC.commandA'
 
  @
  'Calamity.Commands.Dsl.command' \@\'['CalamityCommands.Parser.Named' "user" ('Calamity.Types.Snowflake' 'Calamity.Types.Model.User'),
-                'CalamityCommands.Parser.Named' "reason" ('CalamityCommands.Parser.KleeneStarConcat' 'S.Text')]
+                'CalamityCommands.Parser.Named' "reason" ('CalamityCommands.Parser.KleeneStarConcat' 'T.Text')]
     "ban" $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
       'Just' guild -> do
         'Control.Monad.void' . 'Calamity.HTTP.invoke' $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid ('Calamity.HTTP.Guild.CreateGuildBanData' 'Nothing' $ 'Just' r)
         'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
-      'Nothing' -> 'void' $ 'Calamity.Types.Tellable.tell' @'L.Text' ctx "Can only ban users from guilds."
+      'Nothing' -> 'void' $ 'Calamity.Types.Tellable.tell' @'T.Text' ctx "Can only ban users from guilds."
  @
 -}
 command ::
@@ -159,7 +158,7 @@ command ::
     , TypedCommandC ps c () r
     ) =>
     -- | The name of the command
-    S.Text ->
+    T.Text ->
     -- | The callback for this command
     (c -> CommandForParsers ps r ()) ->
     P.Sem (DSLState c r) (Command c)
@@ -177,12 +176,12 @@ command = CC.command @ps
 
  @
  'commandA' \@\'['CalamityCommands.Parser.Named' "user" ('Calamity.Types.Snowflake' 'Calamity.Types.Model.User'),
-                'CalamityCommands.Parser.Named' "reason" ('CalamityCommands.Parser.KleeneStarConcat' 'S.Text')]
+                'CalamityCommands.Parser.Named' "reason" ('CalamityCommands.Parser.KleeneStarConcat' 'T.Text')]
     "ban" [] $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
       'Just' guild -> do
         'Control.Monad.void' . 'Calamity.HTTP.invoke' $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid ('Calamity.HTTP.Guild.CreateGuildBanData' 'Nothing' $ 'Just' r)
         'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
-      'Nothing' -> 'void' $ 'Calamity.Types.Tellable.tell' @'L.Text' ctx "Can only ban users from guilds."
+      'Nothing' -> 'void' $ 'Calamity.Types.Tellable.tell' @'T.Text' ctx "Can only ban users from guilds."
  @
 -}
 commandA ::
@@ -192,9 +191,9 @@ commandA ::
     , TypedCommandC ps c () r
     ) =>
     -- | The name of the command
-    S.Text ->
+    T.Text ->
     -- | The aliases for the command
-    [S.Text] ->
+    [T.Text] ->
     -- | The callback for this command
     (c -> CommandForParsers ps r ()) ->
     P.Sem (DSLState c r) (Command c)
@@ -211,8 +210,8 @@ hide = CC.hide
 
 -- | Set the help for any groups or commands registered inside the given action.
 help ::
-    P.Member (P.Reader (c -> L.Text)) r =>
-    (c -> L.Text) ->
+    P.Member (P.Reader (c -> T.Text)) r =>
+    (c -> T.Text) ->
     P.Sem r a ->
     P.Sem r a
 help = CC.help
@@ -234,9 +233,9 @@ requires = CC.requires
 requires' ::
     P.Member (P.Final IO) r =>
     -- | The name of the check
-    S.Text ->
+    T.Text ->
     -- | The callback for the check
-    (c -> P.Sem r (Maybe L.Text)) ->
+    (c -> P.Sem r (Maybe T.Text)) ->
     P.Sem (DSLState c r) a ->
     P.Sem (DSLState c r) a
 requires' = CC.requires'
@@ -247,7 +246,7 @@ requires' = CC.requires'
  Refer to 'CalamityCommands.Check.Check' for more info on checks.
 -}
 requiresPure ::
-    [(S.Text, c -> Maybe L.Text)] ->
+    [(T.Text, c -> Maybe T.Text)] ->
     -- A list of check names and check callbacks
     P.Sem (DSLState c r) a ->
     P.Sem (DSLState c r) a
@@ -262,7 +261,7 @@ requiresPure = CC.requiresPure
 group ::
     P.Member (P.Final IO) r =>
     -- | The name of the group
-    S.Text ->
+    T.Text ->
     P.Sem (DSLState c r) a ->
     P.Sem (DSLState c r) a
 group = CC.group
@@ -279,9 +278,9 @@ group = CC.group
 groupA ::
     P.Member (P.Final IO) r =>
     -- | The name of the group
-    S.Text ->
+    T.Text ->
     -- | The aliases of the group
-    [S.Text] ->
+    [T.Text] ->
     P.Sem (DSLState c r) a ->
     P.Sem (DSLState c r) a
 groupA = CC.groupA
@@ -298,7 +297,7 @@ groupA = CC.groupA
 group' ::
     P.Member (P.Final IO) r =>
     -- | The name of the group
-    S.Text ->
+    T.Text ->
     P.Sem (DSLState c r) a ->
     P.Sem (DSLState c r) a
 group' = CC.group'
@@ -315,9 +314,9 @@ group' = CC.group'
 groupA' ::
     P.Member (P.Final IO) r =>
     -- | The name of the group
-    S.Text ->
+    T.Text ->
     -- | The aliases of the group
-    [S.Text] ->
+    [T.Text] ->
     P.Sem (DSLState c r) a ->
     P.Sem (DSLState c r) a
 groupA' = CC.groupA'

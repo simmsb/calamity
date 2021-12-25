@@ -2,15 +2,14 @@
 module Calamity.Types.Model.Channel.Group (GroupChannel (..)) where
 
 import Calamity.Internal.AesonThings
+import Calamity.Internal.OverriddenVia
 import Calamity.Internal.Utils
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-
-import Calamity.Internal.OverriddenVia
 import Data.Aeson
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import Data.Vector.Unboxing (Vector)
 import GHC.Generics

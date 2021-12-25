@@ -25,15 +25,14 @@ import qualified CalamityCommands.Error as CC
 import qualified CalamityCommands.ParsePrefix as CC
 import qualified CalamityCommands.Utils as CC
 import Control.Monad
-import qualified Data.Text as S
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 import Data.Typeable
 import GHC.Generics (Generic)
 import qualified Polysemy as P
 
 data CmdInvokeFailReason c
   = NoContext
-  | NotFound [L.Text]
+  | NotFound [T.Text]
   | CommandInvokeError c CC.CommandError
 
 data CtxCommandError c = CtxCommandError
@@ -47,7 +46,7 @@ data CommandNotFound = CommandNotFound
   , user :: User
   , member :: Maybe Member
   , -- | The groups that were successfully parsed
-    path :: [L.Text]
+    path :: [T.Text]
   }
   deriving (Show, Generic)
 
@@ -57,9 +56,9 @@ newtype CommandInvoked c = CommandInvoked
   deriving stock (Show, Generic)
 
 -- | A default interpretation for 'CC.ParsePrefix' that uses a single constant prefix.
-useConstantPrefix :: L.Text -> P.Sem (CC.ParsePrefix Message ': r) a -> P.Sem r a
+useConstantPrefix :: T.Text -> P.Sem (CC.ParsePrefix Message ': r) a -> P.Sem r a
 useConstantPrefix pre = P.interpret (\case
-                                        CC.ParsePrefix Message { content } -> pure ((pre, ) <$> L.stripPrefix pre content))
+                                        CC.ParsePrefix Message { content } -> pure ((pre, ) <$> T.stripPrefix pre content))
 
 -- | Construct commands and groups from a command DSL, then registers an event
 -- handler on the bot that manages running those commands.
@@ -108,7 +107,7 @@ addCommands m = do
             Left (CC.NotFound path)            -> fire . customEvt $ CommandNotFound msg user member path
             Left CC.NoContext                  -> pure () -- ignore if context couldn't be built
             Right (ctx, ())        -> do
-              cmdInvoke <- registerCounter "commands_invoked" [("name", S.unwords $ commandPath (CC.ctxCommand ctx))]
+              cmdInvoke <- registerCounter "commands_invoked" [("name", T.unwords $ commandPath (CC.ctxCommand ctx))]
               void $ addCounter 1 cmdInvoke
               fire . customEvt $ CommandInvoked ctx
 

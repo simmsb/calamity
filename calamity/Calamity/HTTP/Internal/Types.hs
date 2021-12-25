@@ -10,18 +10,14 @@ module Calamity.HTTP.Internal.Types
 
 import           Calamity.HTTP.Internal.Route
 import           Calamity.Internal.AesonThings
-
 import           Control.Concurrent.Event      ( Event )
 import           Control.Concurrent.STM.TVar   ( TVar )
-
 import Data.Time
 import           Data.Aeson
 import qualified Data.ByteString.Lazy          as LB
 import qualified Data.ByteString          as B
-import           Data.Text.Lazy
-
+import           Data.Text as T
 import           GHC.Generics
-
 import qualified StmContainers.Map             as SC
 
 data RestError
@@ -31,7 +27,7 @@ data RestError
       , response :: Maybe Value
       }
   -- | Something failed while making the request (after retrying a few times)
-  | InternalClientError Text
+  | InternalClientError T.Text
   deriving ( Show, Generic )
 
 data BucketState = BucketState
@@ -75,16 +71,16 @@ data DiscordResponseType
     (Maybe (BucketState, B.ByteString))
   | ServerError Int -- ^ Discord's error, we should retry (HTTP 5XX)
   | ClientError Int LB.ByteString -- ^ Our error, we should fail
-  | InternalResponseError Text -- ^ Something went wrong with the http client
+  | InternalResponseError T.Text -- ^ Something went wrong with the http client
 
 newtype GatewayResponse = GatewayResponse
-  { url :: Text
+  { url :: T.Text
   }
   deriving ( Generic, Show )
   deriving ( FromJSON ) via CalamityJSON GatewayResponse
 
 data BotGatewayResponse = BotGatewayResponse
-  { url    :: Text
+  { url    :: T.Text
   , shards :: Int
   }
   deriving ( Generic, Show )

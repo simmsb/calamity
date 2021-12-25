@@ -65,7 +65,7 @@ import CalamityCommands.Utils
  handler is generic over the context used:
 
  @
- h' :: 'CommandContext' 'Data.Functor.Identity.Identity' c ('Either' 'Data.Text.Lazy.Text' 'Int') => 'CommandHandler' 'Data.Functor.Identity.Identity' c ('Either' 'Data.Text.Lazy.Text' 'Int')
+ h' :: 'CommandContext' 'Data.Functor.Identity.Identity' c ('Either' 'Data.Text.Text' 'Int') => 'CommandHandler' 'Data.Functor.Identity.Identity' c ('Either' 'Data.Text.Text' 'Int')
  h' = 'Data.Functor.Identity.runIdentity' . 'Polysemy.runFinal' $ do
    (h, _) <- 'buildCommands' $ do
      'command' \@\'[Int, Int] "add" $ \ctx a b -> 'pure' $ 'Right' (a '+' b)
@@ -91,9 +91,9 @@ import CalamityCommands.Utils
  the invoked command and runs it, returning the result.
 
  @
- r :: 'Data.Text.Lazy.Text' -> 'Maybe' ('Either'
-                     ('CmdInvokeFailReason' ('BasicContext' 'Data.Functor.Identity.Identity' ('Either' 'Data.Text.Lazy.Text' 'Int')))
-                     ('BasicContext' 'Data.Functor.Identity.Identity' ('Either' 'Data.Text.Lazy.Text' 'Int'), 'Either' 'Data.Text.Lazy.Text' 'Int'))
+ r :: 'Data.Text.Text' -> 'Maybe' ('Either'
+                     ('CmdInvokeFailReason' ('BasicContext' 'Data.Functor.Identity.Identity' ('Either' 'Data.Text.Text' 'Int')))
+                     ('BasicContext' 'Data.Functor.Identity.Identity' ('Either' 'Data.Text.Text' 'Int'), 'Either' 'Data.Text.Text' 'Int'))
  r = 'Data.Functor.Identity.runIdentity' . 'Polysemy.runFinal' . 'Polysemy.embedToFinal' . 'useBasicContext' . 'useConstantPrefix' "!" . 'processCommands' h'
  @
 
@@ -102,16 +102,16 @@ import CalamityCommands.Utils
  invoked successfully, and prints the error nicely if not.
 
  @
- rm :: 'Data.Text.Lazy.Text' -> IO ()
+ rm :: 'Data.Text.Text' -> IO ()
  rm s = case r s of
              Just (Right (_, Right r)) ->
              print r
 
              Just (Right (_, Left h)) ->
-             'Data.Text.Lazy.IO.putStrLn' h
+             'Data.Text.IO.putStrLn' h
 
              Just (Left ('CommandInvokeError' _ ('ParseError' t r))) ->
-             'Data.Text.Lazy.IO.putStrLn' ("Parsing parameter " '<>' 'Data.Text.Lazy.fromStrict' t '<>' " failed with reason: " '<>' r)
+             'Data.Text.IO.putStrLn' ("Parsing parameter " '<>' t '<>' " failed with reason: " '<>' r)
 
               _ -> pure ()
  @

@@ -10,7 +10,7 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Control.DeepSeq (NFData)
 import Data.Aeson
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import Data.Vector.Unboxing (Vector)
 import Data.Word (Word64)

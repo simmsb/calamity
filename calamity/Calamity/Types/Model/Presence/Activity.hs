@@ -16,7 +16,7 @@ import Calamity.Types.Snowflake
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import Data.Scientific
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.Word
 import GHC.Generics

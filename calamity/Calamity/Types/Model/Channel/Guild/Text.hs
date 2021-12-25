@@ -2,6 +2,7 @@
 module Calamity.Types.Model.Channel.Guild.Text (TextChannel (..)) where
 
 import Calamity.Internal.AesonThings
+import Calamity.Internal.OverriddenVia
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
 import Calamity.Internal.Utils
 import {-# SOURCE #-} Calamity.Types.Model.Channel
@@ -12,12 +13,11 @@ import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake
 import Control.DeepSeq (NFData)
 import Data.Aeson
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
-import Calamity.Internal.OverriddenVia
 
 data TextChannel' = TextChannel'
   { id :: Snowflake TextChannel
@@ -34,7 +34,6 @@ data TextChannel' = TextChannel'
   }
   deriving (Generic)
   deriving (TextShow) via TSG.FromGeneric TextChannel'
-
 
 data TextChannel = TextChannel
   { id :: Snowflake TextChannel

@@ -15,8 +15,7 @@ import Calamity.Types.Snowflake
 import Control.DeepSeq (NFData)
 import Data.Aeson
 import Data.Generics.Product
-import Data.Text.Lazy (Text)
-import qualified Data.Text.Lazy as L
+import qualified Data.Text as T
 import Data.Vector.Unboxing (Vector)
 import GHC.Generics
 import TextShow
@@ -24,7 +23,7 @@ import qualified TextShow.Generic as TSG
 
 data Emoji' = Emoji'
   { id :: Snowflake Emoji
-  , name :: Text
+  , name :: T.Text
   , roles :: AesonVector (Snowflake Role)
   , user :: Maybe (Snowflake User)
   , requireColons :: Bool
@@ -44,7 +43,7 @@ data Emoji' = Emoji'
 
 data Emoji = Emoji
   { id :: Snowflake Emoji
-  , name :: Text
+  , name :: T.Text
   , roles :: Vector (Snowflake Role)
   , user :: Maybe (Snowflake User)
   , requireColons :: Bool
@@ -60,7 +59,7 @@ emojiAsRawEmoji = CustomEmoji . upcast
 
 data instance Partial Emoji = PartialEmoji
   { id :: Snowflake Emoji
-  , name :: Text
+  , name :: T.Text
   , animated :: Bool
   }
   deriving (Eq, Generic)
@@ -74,27 +73,27 @@ data instance Partial Emoji = PartialEmoji
 
 instance Show (Partial Emoji) where
   show PartialEmoji{id, name, animated} =
-    "<" <> a <> ":" <> L.unpack name <> ":" <> show id <> ">"
+    "<" <> a <> ":" <> T.unpack name <> ":" <> show id <> ">"
    where
     a = if animated then "a" else ""
 
 instance TextShow (Partial Emoji) where
   showb PartialEmoji{id, name, animated} =
-    "<" <> a <> ":" <> fromLazyText name <> ":" <> showb id <> ">"
+    "<" <> a <> ":" <> fromText name <> ":" <> showb id <> ">"
    where
     a = if animated then "a" else ""
 
 data RawEmoji
-  = UnicodeEmoji Text
+  = UnicodeEmoji T.Text
   | CustomEmoji (Partial Emoji)
   deriving (Eq, Generic)
 
 instance Show RawEmoji where
-  show (UnicodeEmoji v) = L.unpack v
+  show (UnicodeEmoji v) = T.unpack v
   show (CustomEmoji p) = show p
 
 instance TextShow RawEmoji where
-  showb (UnicodeEmoji v) = fromLazyText v
+  showb (UnicodeEmoji v) = fromText v
   showb (CustomEmoji p) = showb p
 
 instance ToJSON RawEmoji where
@@ -105,7 +104,7 @@ instance FromJSON RawEmoji where
   parseJSON = withObject "RawEmoji" $ \v -> do
     m_id :: Maybe (Snowflake Emoji) <- v .:? "id"
     anim <- v .:? "animated" .!= False
-    name :: Text <- v .: "name"
+    name :: T.Text <- v .: "name"
 
     pure $ case m_id of
       Just id -> CustomEmoji $ PartialEmoji id name anim

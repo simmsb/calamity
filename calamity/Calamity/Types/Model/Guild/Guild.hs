@@ -26,7 +26,7 @@ import Data.Generics.Product.Fields
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as LH
 import Data.Maybe
-import Data.Text.Lazy (Text)
+import Data.Text (Text)
 import Data.Time
 import Data.Word
 import GHC.Generics

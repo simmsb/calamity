@@ -43,13 +43,11 @@ import CalamityCommands.Commands.Context
 import CalamityCommands.Commands.ParsePrefix
 import Data.Functor.Identity
 import qualified Data.Text as T
-import qualified Data.Text.Lazy as LT
 import qualified Data.Text.IO as T
-import qualified Data.Text.Lazy.IO as LT
 
 -- Make a command handler, we don't actually use the context and therefore this
 -- handler is generic over the context used
-h' :: CommandContext Identity c (Either LT.Text Int) => CommandHandler Identity c (Either LT.Text Int)
+h' :: CommandContext Identity c (Either T.Text Int) => CommandHandler Identity c (Either T.Text Int)
 h' = runIdentity . runFinal $ do
   (h, _) <- buildCommands $ do
         command @'[Int, Int] "add" $ \ctx a b -> pure $ Right (a + b)
@@ -71,24 +69,24 @@ h' = runIdentity . runFinal $ do
 --
 -- This function 'r' takes an input string such as "!add 1 2", and then looks up
 -- the invoked command and runs it, returning the result.
-r :: LT.Text -> Maybe (Either
-                       (CmdInvokeFailReason (BasicContext Identity (Either LT.Text Int)))
-                       (BasicContext Identity (Either LT.Text Int), Either LT.Text Int))
+r :: T.Text -> Maybe (Either
+                       (CmdInvokeFailReason (BasicContext Identity (Either T.Text Int)))
+                       (BasicContext Identity (Either T.Text Int), Either T.Text Int))
 r = runIdentity . runFinal . embedToFinal . useBasicContext . useConstantPrefix "!" . processCommands h'
 
 -- Then to display the result of processing the command nicely, we can use a
 -- something like this function, which prints the result of a command if one was
 -- invoked successfully, and prints the error nicely if not.
-rm :: LT.Text -> IO ()
+rm :: T.Text -> IO ()
 rm s = case r s of
             Just (Right (_, Right r)) ->
               print r
 
             Just (Right (_, Left h)) ->
-              LT.putStrLn h
+              T.putStrLn h
 
             Just (Left (CommandInvokeError _ (ParseError t r))) ->
-              LT.putStrLn ("Parsing parameter " <> LT.fromStrict t <> " failed with reason: " <> r)
+              T.putStrLn ("Parsing parameter " <> t <> " failed with reason: " <> r)
 
             _ -> pure ()
 ```

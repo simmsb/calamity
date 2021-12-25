@@ -205,8 +205,8 @@ baseRoute id =
     & giveID id
 
 renderEmoji :: RawEmoji -> Text
-renderEmoji (UnicodeEmoji e) = e ^. strict
-renderEmoji (CustomEmoji e) = e ^. #name . strict <> ":" <> showt (e ^. #id)
+renderEmoji (UnicodeEmoji e) = e
+renderEmoji (CustomEmoji e) = e ^. #name <> ":" <> showt (e ^. #id)
 
 instance Request (ChannelRequest a) where
   type Result (ChannelRequest a) = a
