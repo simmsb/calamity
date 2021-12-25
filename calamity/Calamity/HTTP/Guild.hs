@@ -1,26 +1,26 @@
 -- | Guild endpoints
 module Calamity.HTTP.Guild (
-    GuildRequest (..),
-    CreateGuildData (..),
-    ModifyGuildData (..),
-    ChannelCreateData (..),
-    ChannelPosition (..),
-    ListMembersOptions (..),
-    AddGuildMemberData (..),
-    ModifyGuildMemberData (..),
-    modifyGuildMemberNick,
-    modifyGuildMemberRoles,
-    modifyGuildMemberMute,
-    modifyGuildMemberDeaf,
-    modifyGuildMemberChannelID,
-    CreateGuildBanData (..),
-    ModifyGuildRoleData (..),
-    modifyGuildRoleName,
-    modifyGuildRolePermissions,
-    modifyGuildRoleColour,
-    modifyGuildRoleHoist,
-    modifyGuildRoleMentionable,
-    ModifyGuildRolePositionsData (..),
+  GuildRequest (..),
+  CreateGuildData (..),
+  ModifyGuildData (..),
+  ChannelCreateData (..),
+  ChannelPosition (..),
+  ListMembersOptions (..),
+  AddGuildMemberData (..),
+  ModifyGuildMemberData (..),
+  modifyGuildMemberNick,
+  modifyGuildMemberRoles,
+  modifyGuildMemberMute,
+  modifyGuildMemberDeaf,
+  modifyGuildMemberChannelID,
+  CreateGuildBanData (..),
+  ModifyGuildRoleData (..),
+  modifyGuildRoleName,
+  modifyGuildRolePermissions,
+  modifyGuildRoleColour,
+  modifyGuildRoleHoist,
+  modifyGuildRoleMentionable,
+  ModifyGuildRolePositionsData (..),
 ) where
 
 import Calamity.HTTP.Internal.Request
@@ -34,10 +34,10 @@ import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
 import Control.Lens hiding ((.=))
 import Data.Aeson
+import qualified Data.Aeson.KeyMap as K
 import Data.Aeson.Lens
 import Data.Colour (Colour)
 import Data.Default.Class
-import qualified Data.HashMap.Strict as H
 import Data.Text (Text)
 import GHC.Generics
 import Network.HTTP.Req
@@ -111,33 +111,34 @@ data AddGuildMemberData = AddGuildMemberData
   deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON AddGuildMemberData
 
--- | Parameters to the Modify Guild Member endpoint.
---
--- Use the provided methods (@modifyGuildMemberX@) to create a value with the
--- field set, use the Semigroup instance to union the values.
---
--- ==== Examples
---
--- >>> encode $ modifyGuildMemberNick (Just "test") <> modifyGuildMemberDeaf Nothing
--- "{\"nick\":\"test\",\"deaf\":null}"
+{- | Parameters to the Modify Guild Member endpoint.
+
+ Use the provided methods (@modifyGuildMemberX@) to create a value with the
+ field set, use the Semigroup instance to union the values.
+
+ ==== Examples
+
+ >>> encode $ modifyGuildMemberNick (Just "test") <> modifyGuildMemberDeaf Nothing
+ "{\"nick\":\"test\",\"deaf\":null}"
+-}
 newtype ModifyGuildMemberData = ModifyGuildMemberData Object
-    deriving (Show, Generic)
-    deriving newtype (ToJSON, Semigroup, Monoid)
+  deriving (Show, Generic)
+  deriving newtype (ToJSON, Semigroup, Monoid)
 
 modifyGuildMemberNick :: Maybe Text -> ModifyGuildMemberData
-modifyGuildMemberNick v = ModifyGuildMemberData $ H.fromList [("nick", toJSON v)]
+modifyGuildMemberNick v = ModifyGuildMemberData $ K.fromList [("nick", toJSON v)]
 
 modifyGuildMemberRoles :: Maybe [Snowflake Role] -> ModifyGuildMemberData
-modifyGuildMemberRoles v = ModifyGuildMemberData $ H.fromList [("roles", toJSON v)]
+modifyGuildMemberRoles v = ModifyGuildMemberData $ K.fromList [("roles", toJSON v)]
 
 modifyGuildMemberMute :: Maybe Bool -> ModifyGuildMemberData
-modifyGuildMemberMute v = ModifyGuildMemberData $ H.fromList [("mute", toJSON v)]
+modifyGuildMemberMute v = ModifyGuildMemberData $ K.fromList [("mute", toJSON v)]
 
 modifyGuildMemberDeaf :: Maybe Bool -> ModifyGuildMemberData
-modifyGuildMemberDeaf v = ModifyGuildMemberData $ H.fromList [("deaf", toJSON v)]
+modifyGuildMemberDeaf v = ModifyGuildMemberData $ K.fromList [("deaf", toJSON v)]
 
 modifyGuildMemberChannelID :: Maybe (Snowflake VoiceChannel) -> ModifyGuildMemberData
-modifyGuildMemberChannelID v = ModifyGuildMemberData $ H.fromList [("channel_id", toJSON v)]
+modifyGuildMemberChannelID v = ModifyGuildMemberData $ K.fromList [("channel_id", toJSON v)]
 
 data CreateGuildBanData = CreateGuildBanData
   { deleteMessageDays :: Maybe Integer
@@ -145,34 +146,34 @@ data CreateGuildBanData = CreateGuildBanData
   }
   deriving (Show, Generic, Default)
 
--- | Parameters to the Modify Guild Role endpoint.
---
--- Use the provided methods (@modifyGuildRoleX@) to create a value with the
--- field set, use the Semigroup instance to union the values.
---
--- ==== Examples
---
--- >>> encode $ modifyGuildRoleName (Just "test") <> modifyGuildRolePermissions Nothing
--- "{\"name\":\"test\",\"permissions\":null}"
-newtype ModifyGuildRoleData = ModifyGuildRoleData Object
-    deriving (Show, Generic)
-    deriving newtype (ToJSON, Semigroup, Monoid)
+{- | Parameters to the Modify Guild Role endpoint.
 
+ Use the provided methods (@modifyGuildRoleX@) to create a value with the
+ field set, use the Semigroup instance to union the values.
+
+ ==== Examples
+
+ >>> encode $ modifyGuildRoleName (Just "test") <> modifyGuildRolePermissions Nothing
+ "{\"name\":\"test\",\"permissions\":null}"
+-}
+newtype ModifyGuildRoleData = ModifyGuildRoleData Object
+  deriving (Show, Generic)
+  deriving newtype (ToJSON, Semigroup, Monoid)
 
 modifyGuildRoleName :: Maybe Text -> ModifyGuildRoleData
-modifyGuildRoleName v = ModifyGuildRoleData $ H.fromList [("name", toJSON v)]
+modifyGuildRoleName v = ModifyGuildRoleData $ K.fromList [("name", toJSON v)]
 
 modifyGuildRolePermissions :: Maybe Permissions -> ModifyGuildRoleData
-modifyGuildRolePermissions v = ModifyGuildRoleData $ H.fromList [("permissions", toJSON v)]
+modifyGuildRolePermissions v = ModifyGuildRoleData $ K.fromList [("permissions", toJSON v)]
 
 modifyGuildRoleColour :: Maybe (Colour Double) -> ModifyGuildRoleData
-modifyGuildRoleColour v = ModifyGuildRoleData $ H.fromList [("colour", toJSON (IntColour <$> v))]
+modifyGuildRoleColour v = ModifyGuildRoleData $ K.fromList [("colour", toJSON (IntColour <$> v))]
 
 modifyGuildRoleHoist :: Maybe Bool -> ModifyGuildRoleData
-modifyGuildRoleHoist v = ModifyGuildRoleData $ H.fromList [("hoist", toJSON v)]
+modifyGuildRoleHoist v = ModifyGuildRoleData $ K.fromList [("hoist", toJSON v)]
 
 modifyGuildRoleMentionable :: Maybe Bool -> ModifyGuildRoleData
-modifyGuildRoleMentionable v = ModifyGuildRoleData $ H.fromList [("mentionable", toJSON v)]
+modifyGuildRoleMentionable v = ModifyGuildRoleData $ K.fromList [("mentionable", toJSON v)]
 
 data ModifyGuildRolePositionsData = ModifyGuildRolePositionsData
   { id :: Snowflake Role

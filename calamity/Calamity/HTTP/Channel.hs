@@ -26,10 +26,10 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Control.Lens hiding ((.=))
 import Data.Aeson
+import qualified Data.Aeson.KeyMap as K
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
 import Data.Generics.Product.Subtype (upcast)
-import qualified Data.HashMap.Strict as H
 import Data.Text (Text)
 import qualified Data.Text as S
 import Data.Word
@@ -106,16 +106,16 @@ newtype EditMessageData = EditMessageData Object
   deriving newtype (ToJSON, Semigroup, Monoid)
 
 editMessageContent :: Maybe Text -> EditMessageData
-editMessageContent v = EditMessageData $ H.fromList [("content", toJSON v)]
+editMessageContent v = EditMessageData $ K.fromList [("content", toJSON v)]
 
 editMessageEmbed :: Maybe Embed -> EditMessageData
-editMessageEmbed v = EditMessageData $ H.fromList [("embed", toJSON v)]
+editMessageEmbed v = EditMessageData $ K.fromList [("embed", toJSON v)]
 
 editMessageFlags :: Maybe Word64 -> EditMessageData
-editMessageFlags v = EditMessageData $ H.fromList [("flags", toJSON v)]
+editMessageFlags v = EditMessageData $ K.fromList [("flags", toJSON v)]
 
 editMessageAllowedMentions :: Maybe AllowedMentions -> EditMessageData
-editMessageAllowedMentions v = EditMessageData $ H.fromList [("allowed_mentions", toJSON v)]
+editMessageAllowedMentions v = EditMessageData $ K.fromList [("allowed_mentions", toJSON v)]
 
 data ChannelUpdate = ChannelUpdate
   { name :: Maybe Text

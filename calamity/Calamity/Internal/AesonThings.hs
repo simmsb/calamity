@@ -21,16 +21,15 @@ import           Data.Aeson.Lens
 import           Data.Aeson.Types      ( Parser )
 import           Data.Kind
 import           Data.Reflection       ( Reifies(..) )
-import           Data.Text             ( Text )
-import           Data.Text.Strict.Lens
 import           Data.Typeable
+import           Data.String           ( IsString(fromString) )
 
 import           GHC.Generics
 import           GHC.TypeLits          ( KnownSymbol, symbolVal )
 import           Control.Monad ((>=>))
 
-textSymbolVal :: forall n. KnownSymbol n => Text
-textSymbolVal = symbolVal @n Proxy ^. packed
+textSymbolVal :: forall n s. (KnownSymbol n, IsString s) => s
+textSymbolVal = fromString $ symbolVal @n Proxy
 
 data IfNoneThen label def
 data ExtractFieldInto label field target
