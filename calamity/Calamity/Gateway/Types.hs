@@ -118,7 +118,9 @@ parseDispatchData MESSAGE_CREATE data'              = do
   let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
                                          userObject :: Object <- o .: "author"
                                          memberObject :: Object <- o .: "member"
-                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
+                                         guildID :: String <- o .: "guild_id"
+                                         parseJSON $ Object (memberObject <> "user" .= userObject <> "guild_id" .= guildID)) data'
+
   let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
   pure $ MessageCreate message user member
 parseDispatchData MESSAGE_UPDATE data'              = do
@@ -126,7 +128,8 @@ parseDispatchData MESSAGE_UPDATE data'              = do
   let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
                                          userObject :: Object <- o .: "author"
                                          memberObject :: Object <- o .: "member"
-                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
+                                         guildID :: String <- o .: "guild_id"
+                                         parseJSON $ Object (memberObject <> "user" .= userObject <> "guild_id" .= guildID)) data'
   let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
   pure $ MessageUpdate message user member
 parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'

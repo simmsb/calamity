@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.2.0.1
+
++ Fix a bug causing member objects sent alongside messages to not parse correctly.
+
 ## 0.2.0.0
 
 + Remove all usages of lazy Text (except from typeclass instances) 
