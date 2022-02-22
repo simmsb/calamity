@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.2.0.2
+
++ Dependency bump
+
 ## 0.2.0.1
 
 + Fix a bug causing member objects sent alongside messages to not parse correctly.

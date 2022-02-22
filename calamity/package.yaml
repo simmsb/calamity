@@ -1,5 +1,5 @@
 name:               calamity
-version:            0.2.0.0
+version:            0.2.0.2
 github:             "simmsb/calamity"
 homepage:           https://github.com/simmsb/calamity
 bug-reports:        https://github.com/simmsb/calamity/issues
@@ -31,14 +31,14 @@ dependencies:
 - connection >= 0.2.6 && < 0.4
 - x509-system >= 1.6.6 && < 1.7
 - tls >= 1.4 && < 2
-- req >= 3.9.2 && < 3.10
+- req >= 3.9.2 && < 3.11
 - http-client >= 0.5 && < 0.8
 - lens >= 5.1 && < 6
 - stm >= 2.5 && < 3
 - http-types >= 0.12 && < 0.13
 - aeson >= 2.0 && < 2.1
 - lens-aeson >= 1.1.2 && < 2
-- typerep-map >= 0.3 && < 0.5
+- typerep-map >= 0.3 && < 0.6
 - generic-lens >= 2.0 && < 3
 - text >= 1.2 && < 2.1
 - exceptions >= 0.10 && < 0.11
