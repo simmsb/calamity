@@ -225,3 +225,23 @@ Di.new $ \di ->
   -- ...
 ```
 
+
+## Nix
+
+If you trust me, I have a [cachix](https://www.cachix.org/) cache setup at
+`simmsb-calamity`.
+
+With cachix installed, you should be able to run `cachix use simmsb-calamity` to
+add my cache to your list of caches.
+
+You can also just manually add the substituter and public key:
+
+```
+substituters = https://simmsb-calamity.cachix.org
+trusted-public-keys = simmsb-calamity.cachix.org-1:CQsXXpwKsjSVu0BJFT/JSvy1j6R7rMSW2r3cRQdcuQM= 
+```
+
+After this nix builds should just use the cache (I hope?)
+
+For an example of a bot built using nix, take a look at:
+[simmsb/calamity-bot](https://github.com/simmsb/calamity-bot)

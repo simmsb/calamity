@@ -125,8 +125,6 @@ library
       Calamity.Utils.Colour
       Calamity.Utils.Message
       Calamity.Utils.Permissions
-  other-modules:
-      Paths_calamity
   hs-source-dirs:
       ./
   default-extensions:

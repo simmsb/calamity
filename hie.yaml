@@ -1,7 +1,7 @@
 cradle:
-  stack:
-    - path: "calamity/./."
-      component: "calamity:lib"
+  cabal:
+    - path: "calamity/./"
+      component: "lib:calamity"
 
-    - path: "calamity-commands/./."
-      component: "calamity-commands:lib"
+    - path: "calamity-commands/./"
+      component: "lib:calamity-commands"
