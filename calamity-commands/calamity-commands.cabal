@@ -49,8 +49,6 @@ library
       CalamityCommands.ParsePrefix
       CalamityCommands.Parser
       CalamityCommands.Utils
-  other-modules:
-      Paths_calamity_commands
   hs-source-dirs:
       ./
   default-extensions:

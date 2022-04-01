@@ -2,7 +2,7 @@
 
 <p align="center">
   <a href="https://hackage.haskell.org/package/calamity-commands"><img src="https://img.shields.io/hackage/v/calamity-commands" alt="Hackage"></a>
-  <a href="https://gitlab.com/simmsb/calamity/pipelines"><img src="https://img.shields.io/gitlab/pipeline/simmsb/calamity" alt="Gitlab pipeline status"></a>
+  <a href="https://github.com/simmsb/calamity/actions/workflows/build.yml"><img src="https://github.com/simmsb/calamity/actions/workflows/build.yml/badge.svg" alt="Build Status"></a>
   <a href="https://github.com/simmsb/calamity/blob/master/LICENSE"><img src="https://img.shields.io/github/license/simmsb/calamity" alt="License"></a>
   <a href="https://hackage.haskell.org/package/calamity"><img src="https://img.shields.io/hackage-deps/v/calamity" alt="Hackage-Deps"></a>
   <a href="https://discord.gg/NGCThCY"><img src="https://discord.com/api/guilds/754446998077178088/widget.png?style=shield" alt="Discord Invite"></a>
