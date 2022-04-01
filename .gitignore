@@ -24,3 +24,4 @@ tags
 TAGS
 /cabal.project.freeze
 /.hie/
+/result
