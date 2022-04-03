@@ -4,7 +4,6 @@ module Calamity.Types.Model.Guild.Member (Member (..)) where
 import Calamity.Internal.AesonThings
 import Calamity.Internal.OverriddenVia
 import Calamity.Internal.Utils
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
@@ -29,7 +28,6 @@ data Member' = Member'
   , email :: Maybe Text
   , flags :: Maybe Word64
   , premiumType :: Maybe Word64
-  , guildID :: Snowflake Guild
   , nick :: Maybe Text
   , roles :: AesonVector (Snowflake Role)
   , joinedAt :: CalamityFromStringShow UTCTime
@@ -67,7 +65,6 @@ data Member = Member
   , email :: Maybe Text
   , flags :: Maybe Word64
   , premiumType :: Maybe Word64
-  , guildID :: Snowflake Guild
   , nick :: Maybe Text
   , roles :: Vector (Snowflake Role)
   , joinedAt :: UTCTime
@@ -76,6 +73,5 @@ data Member = Member
   }
   deriving (Eq, Show, Generic, NFData)
   deriving (TextShow, FromJSON) via OverriddenVia Member Member'
-  deriving (HasID Guild) via HasIDField "guildID" Member
   deriving (HasID Member) via HasIDFieldCoerce "id" Member User
   deriving (HasID User) via HasIDField "id" Member

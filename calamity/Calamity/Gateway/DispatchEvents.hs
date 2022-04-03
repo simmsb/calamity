@@ -49,7 +49,7 @@ data DispatchData
     | GuildBanRemove !BanData
     | GuildEmojisUpdate !GuildEmojisUpdateData
     | GuildIntegrationsUpdate !GuildIntegrationsUpdateData
-    | GuildMemberAdd !Member
+    | GuildMemberAdd !(Snowflake Guild) !Member
     | GuildMemberRemove !GuildMemberRemoveData
     | GuildMemberUpdate !GuildMemberUpdateData
     | GuildMembersChunk !GuildMembersChunkData
@@ -131,7 +131,7 @@ instance FromJSON GuildMembersChunkData where
 
         members' <- do
             members' <- v .: "members"
-            traverse (\m -> parseJSON $ Object (m <> "guild_id" .= guildID)) members'
+            traverse (parseJSON . Object) members'
 
         pure $ GuildMembersChunkData guildID members'
 

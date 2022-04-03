@@ -500,9 +500,9 @@ handleEvent' eh evt@(GuildIntegrationsUpdate GuildIntegrationsUpdateData {guildI
   updateCache evt
   Just guild <- getGuild guildID
   pure $ map ($ guild) (getEventHandlers @ 'GuildIntegrationsUpdateEvt eh)
-handleEvent' eh evt@(GuildMemberAdd member) = do
+handleEvent' eh evt@(GuildMemberAdd gid member) = do
   updateCache evt
-  Just guild <- getGuild (getID member)
+  Just guild <- getGuild gid
   Just member <- pure $ guild ^. #members . at (getID member)
   pure $ map ($ member) (getEventHandlers @ 'GuildMemberAddEvt eh)
 handleEvent' eh evt@(GuildMemberRemove GuildMemberRemoveData {user, guildID}) = do
@@ -681,16 +681,16 @@ updateCache (GuildDelete UnavailableGuild {id, unavailable}) =
     else delGuild id
 updateCache (GuildEmojisUpdate GuildEmojisUpdateData {guildID, emojis}) =
   updateGuild guildID (#emojis .~ SM.fromList emojis)
-updateCache (GuildMemberAdd member) = do
+updateCache (GuildMemberAdd gid member) = do
   setUser (member ^. super)
-  updateGuild (getID member) (#members . at (getID member) ?~ member)
+  updateGuild gid (#members . at (getID member) ?~ member)
 updateCache (GuildMemberRemove GuildMemberRemoveData {guildID, user}) =
   updateGuild guildID (#members %~ sans (getID user))
 updateCache (GuildMemberUpdate GuildMemberUpdateData {guildID, roles = AesonVector roles, user, nick}) = do
   setUser user
   updateGuild guildID (#members . ix (getID user) %~ (#roles .~ roles) . (#nick .~ nick))
-updateCache (GuildMembersChunk GuildMembersChunkData {members}) =
-  traverse_ (updateCache . GuildMemberAdd) members
+updateCache (GuildMembersChunk GuildMembersChunkData {guildID, members}) =
+  traverse_ (updateCache . GuildMemberAdd guildID) members
 updateCache (GuildRoleCreate GuildRoleData {guildID, role}) =
   updateGuild guildID (#roles %~ SM.insert role)
 updateCache (GuildRoleUpdate GuildRoleData {guildID, role}) =

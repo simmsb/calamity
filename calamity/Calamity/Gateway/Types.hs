@@ -104,7 +104,9 @@ parseDispatchData GUILD_BAN_ADD data'               = GuildBanAdd <$> parseJSON 
 parseDispatchData GUILD_BAN_REMOVE data'            = GuildBanRemove <$> parseJSON data'
 parseDispatchData GUILD_EMOJIS_UPDATE data'         = GuildEmojisUpdate <$> parseJSON data'
 parseDispatchData GUILD_INTEGRATIONS_UPDATE data'   = GuildIntegrationsUpdate <$> parseJSON data'
-parseDispatchData GUILD_MEMBER_ADD data'            = GuildMemberAdd <$> parseJSON data'
+parseDispatchData GUILD_MEMBER_ADD data'            = do
+  guildID <- withObject "GuildMemberAdd.guild_id" (.: "guild_id") data'
+  GuildMemberAdd guildID <$> parseJSON data'
 parseDispatchData GUILD_MEMBER_REMOVE data'         = GuildMemberRemove <$> parseJSON data'
 parseDispatchData GUILD_MEMBER_UPDATE data'         = GuildMemberUpdate <$> parseJSON data'
 parseDispatchData GUILD_MEMBERS_CHUNK data'         = GuildMembersChunk <$> parseJSON data'
@@ -118,8 +120,7 @@ parseDispatchData MESSAGE_CREATE data'              = do
   let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
                                          userObject :: Object <- o .: "author"
                                          memberObject :: Object <- o .: "member"
-                                         guildID :: String <- o .: "guild_id"
-                                         parseJSON $ Object (memberObject <> "user" .= userObject <> "guild_id" .= guildID)) data'
+                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
 
   let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
   pure $ MessageCreate message user member
@@ -128,8 +129,7 @@ parseDispatchData MESSAGE_UPDATE data'              = do
   let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
                                          userObject :: Object <- o .: "author"
                                          memberObject :: Object <- o .: "member"
-                                         guildID :: String <- o .: "guild_id"
-                                         parseJSON $ Object (memberObject <> "user" .= userObject <> "guild_id" .= guildID)) data'
+                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
   let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
   pure $ MessageUpdate message user member
 parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'

@@ -375,6 +375,4 @@ instance Request (GuildRequest a) where
 
   -- this is a bit of a hack
   -- TODO: add something to allow for contextual parsing
-  modifyResponse (GetGuildMember (getID @Guild -> gid) _) = _Object . at "guild_id" ?~ _String # showt (fromSnowflake gid)
-  modifyResponse (ListGuildMembers (getID @Guild -> gid) _) = values . _Object . at "guild_id" ?~ _String # showt (fromSnowflake gid)
   modifyResponse _ = Prelude.id

@@ -112,14 +112,14 @@ instance FromJSON Guild where
   parseJSON = withObject "Guild" $ \v -> do
     id <- v .: "id"
 
-    -- sadly we have now way of logging members/channels/presences' that failed to parser here
     members' <- do
       members' <- v .: "members"
-      pure . SM.fromList . mapMaybe (parseMaybe @Object @Member (\m -> parseJSON $ Object (m <> "guild_id" .= id))) $ members'
+      pure . SM.fromList . mapMaybe (parseMaybe @Object @Member (parseJSON . Object)) $ members'
 
+    -- sadly we have now way of logging channels/presences' that failed to parse here
     channels' <- do
       channels' <- v .: "channels"
-      pure . SM.fromList . mapMaybe (parseMaybe @Object @GuildChannel (\m -> parseJSON $ Object (m <> "guild_id" .= id))) $ channels'
+      pure . SM.fromList . mapMaybe (parseMaybe @Object @GuildChannel (\c -> parseJSON $ Object (c <> "guild_id" .= id))) $ channels'
 
     presences' <- do
       presences' <- v .: "presences"
