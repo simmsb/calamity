@@ -4,9 +4,10 @@ module Calamity.HTTP.Channel (
   CreateMessageOptions (..),
   EditMessageData (..),
   editMessageContent,
-  editMessageEmbed,
+  editMessageEmbeds,
   editMessageFlags,
   editMessageAllowedMentions,
+  editMessageComponents,
   ChannelUpdate (..),
   AllowedMentionType (..),
   AllowedMentions (..),
@@ -21,7 +22,11 @@ import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
 import Calamity.Internal.AesonThings
 import Calamity.Types.Model.Channel
-import Calamity.Types.Model.Guild
+import Calamity.Types.Model.Channel.Component (Component)
+import Calamity.Types.Model.Guild.Emoji (RawEmoji (..))
+import Calamity.Types.Model.Guild.Invite (Invite)
+import Calamity.Types.Model.Guild.Overwrite (Overwrite)
+import Calamity.Types.Model.Guild.Role (Role)
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Control.Lens hiding ((.=))
@@ -44,11 +49,24 @@ data CreateMessageOptions = CreateMessageOptions
   , nonce :: Maybe Text
   , tts :: Maybe Bool
   , file :: Maybe (Text, ByteString)
-  , embed :: Maybe Embed
+  , embeds :: [Embed]
   , allowedMentions :: Maybe AllowedMentions
   , messageReference :: Maybe MessageReference
+  , components :: [Component]
   }
   deriving (Show, Generic, Default)
+
+data CreateMessageJson = CreateMessageJson
+  { content :: Maybe Text
+  , nonce :: Maybe Text
+  , tts :: Maybe Bool
+  , embeds :: [Embed]
+  , allowedMentions :: Maybe AllowedMentions
+  , messageReference :: Maybe MessageReference
+  , components :: [Component]
+  }
+  deriving (Show, Generic)
+  deriving (ToJSON) via CalamityJSON CreateMessageJson
 
 data AllowedMentionType
   = AllowedMentionRoles
@@ -80,17 +98,6 @@ instance Semigroup AllowedMentions where
 instance Monoid AllowedMentions where
   mempty = def
 
-data CreateMessageJson = CreateMessageJson
-  { content :: Maybe Text
-  , nonce :: Maybe Text
-  , tts :: Maybe Bool
-  , embed :: Maybe Embed
-  , allowedMentions :: Maybe AllowedMentions
-  , messageReference :: Maybe MessageReference
-  }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateMessageJson
-
 {- | Parameters to the Edit Message endpoint.
 
  Use the provided methods (@editMessageX@) to create a value with the
@@ -108,14 +115,17 @@ newtype EditMessageData = EditMessageData Object
 editMessageContent :: Maybe Text -> EditMessageData
 editMessageContent v = EditMessageData $ K.fromList [("content", toJSON v)]
 
-editMessageEmbed :: Maybe Embed -> EditMessageData
-editMessageEmbed v = EditMessageData $ K.fromList [("embed", toJSON v)]
+editMessageEmbeds :: [Embed] -> EditMessageData
+editMessageEmbeds v = EditMessageData $ K.fromList [("embeds", toJSON v)]
 
 editMessageFlags :: Maybe Word64 -> EditMessageData
 editMessageFlags v = EditMessageData $ K.fromList [("flags", toJSON v)]
 
 editMessageAllowedMentions :: Maybe AllowedMentions -> EditMessageData
 editMessageAllowedMentions v = EditMessageData $ K.fromList [("allowed_mentions", toJSON v)]
+
+editMessageComponents :: [Component] -> EditMessageData
+editMessageComponents v = EditMessageData $ K.fromList [("components", toJSON v)]
 
 data ChannelUpdate = ChannelUpdate
   { name :: Maybe Text
@@ -307,10 +317,10 @@ instance Request (ChannelRequest a) where
       & giveID uid
       & buildRoute
 
-  action (CreateMessage _ o@CreateMessageOptions{file = Nothing}) =
+  action (CreateMessage _ o@CreateMessageOptions {file = Nothing}) =
     postWith'
       (ReqBodyJson . upcast @CreateMessageJson $ o)
-  action (CreateMessage _ cm@CreateMessageOptions{file = Just f}) = \u o -> do
+  action (CreateMessage _ cm@CreateMessageOptions {file = Just f}) = \u o -> do
     let filePart =
           (partLBS @IO "file" (snd f))
             { partFilename = Just (S.unpack $ fst f)
@@ -330,10 +340,10 @@ instance Request (ChannelRequest a) where
     getWithP ("after" =: a <> "limit" =:? (l ^? _Just . #limit))
   action (GetChannelMessages _ Nothing l) = getWithP ("limit" =:? (l ^? _Just . #limit))
   action (GetMessage _ _) = getWith
-  action CreateReaction{} = putEmpty
-  action DeleteOwnReaction{} = deleteWith
-  action DeleteUserReaction{} = deleteWith
-  action (GetReactions _ _ _ GetReactionsOptions{before, after, limit}) =
+  action CreateReaction {} = putEmpty
+  action DeleteOwnReaction {} = deleteWith
+  action DeleteUserReaction {} = deleteWith
+  action (GetReactions _ _ _ GetReactionsOptions {before, after, limit}) =
     getWithP
       ( "before" =:? (fromSnowflake <$> before)
           <> "after" =:? (fromSnowflake <$> after)

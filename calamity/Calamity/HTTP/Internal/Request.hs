@@ -141,4 +141,4 @@ deleteWith u = req DELETE u NoReqBody lbsResponse
 
 (=:?) :: ToHttpApiData a => T.Text -> Maybe a -> Option 'Https
 n =:? (Just x) = n =: x
-n =:? Nothing = mempty
+_ =:? Nothing = mempty
