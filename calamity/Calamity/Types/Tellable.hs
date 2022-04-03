@@ -94,25 +94,43 @@ instance ToMessage (TMention Member) where
 instance ToMessage (TMention Role) where
   intoMsg (TMention s) = intoMsg (def @AllowedMentions & #roles <>~ [s])
 
-{- | Add a 'Component' to the message, '(<>)' adds a component to the implicit
- outer action row
--}
-instance ToMessage Component where
-  intoMsg c = Endo (#components %~ (<> [c]))
-
--- | Add an action row of 'Component's to the message
+-- | Add an row of 'Component's to the message
 instance ToMessage [Component] where
   intoMsg c = Endo (#components %~ (<> [ActionRow' c]))
 
+-- | Add an row of 'Button's to the message
+instance ToMessage [Button] where
+  intoMsg c = Endo (#components %~ (<> [ActionRow' . map Button' $ c]))
+
+-- | Add an row of 'LinkButton's to the message
+instance ToMessage [LinkButton] where
+  intoMsg c = Endo (#components %~ (<> [ActionRow' . map LinkButton' $ c]))
+
+-- | Add an row of 'Select's to the message
+instance ToMessage [Select] where
+  intoMsg c = Endo (#components %~ (<> [ActionRow' . map Select' $ c]))
+
+-- | Add an row of 'TextInput's to the message
+instance ToMessage [TextInput] where
+  intoMsg c = Endo (#components %~ (<> [ActionRow' . map TextInput' $ c]))
+
+-- | Add a singleton row containing a 'Component' to the message,
+instance ToMessage Component where
+  intoMsg c = Endo (#components %~ (<> [c]))
+
+-- | Add a singleton row containing a 'Button' to the message,
 instance ToMessage Button where
   intoMsg c = Endo (#components %~ (<> [Button' c]))
 
+-- | Add a singleton row containing a 'LinkButton' to the message,
 instance ToMessage LinkButton where
   intoMsg c = Endo (#components %~ (<> [LinkButton' c]))
 
+-- | Add a singleton row containing a 'Select' to the message,
 instance ToMessage Select where
   intoMsg c = Endo (#components %~ (<> [Select' c]))
 
+-- | Add a singleton row containing a 'TextInput' to the message,
 instance ToMessage TextInput where
   intoMsg c = Endo (#components %~ (<> [TextInput' c]))
 

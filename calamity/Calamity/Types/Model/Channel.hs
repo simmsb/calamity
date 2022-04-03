@@ -11,11 +11,13 @@ module Calamity.Types.Model.Channel (
   module Calamity.Types.Model.Channel.Embed,
   module Calamity.Types.Model.Channel.ChannelType,
   module Calamity.Types.Model.Channel.Message,
+  module Calamity.Types.Model.Channel.Component,
 ) where
 
 import Calamity.Internal.AesonThings
 import Calamity.Types.Model.Channel.Attachment
 import Calamity.Types.Model.Channel.ChannelType
+import Calamity.Types.Model.Channel.Component
 import Calamity.Types.Model.Channel.DM
 import Calamity.Types.Model.Channel.Embed
 import Calamity.Types.Model.Channel.Group
