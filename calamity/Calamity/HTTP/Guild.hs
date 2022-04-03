@@ -101,6 +101,12 @@ data ListMembersOptions = ListMembersOptions
   }
   deriving (Show, Generic, Default)
 
+data SearchMembersOptions = SearchMembersOptions
+  { limit :: Maybe Integer
+  , query :: Text
+  }
+  deriving (Show, Generic)
+
 data AddGuildMemberData = AddGuildMemberData
   { accessToken :: Text
   , nick :: Maybe Text
@@ -139,6 +145,13 @@ modifyGuildMemberDeaf v = ModifyGuildMemberData $ K.fromList [("deaf", toJSON v)
 
 modifyGuildMemberChannelID :: Maybe (Snowflake VoiceChannel) -> ModifyGuildMemberData
 modifyGuildMemberChannelID v = ModifyGuildMemberData $ K.fromList [("channel_id", toJSON v)]
+
+data GetGuildBansOptions = GetGuildBansOptions
+  { limit :: Maybe Int
+  , before :: Maybe Int
+  , after :: Maybe Int
+  }
+  deriving (Show, Generic, Default)
 
 data CreateGuildBanData = CreateGuildBanData
   { deleteMessageDays :: Maybe Integer
@@ -192,13 +205,14 @@ data GuildRequest a where
   ModifyGuildChannelPositions :: HasID Guild g => g -> [ChannelPosition] -> GuildRequest ()
   GetGuildMember :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest Member
   ListGuildMembers :: HasID Guild g => g -> ListMembersOptions -> GuildRequest [Member]
+  SearchGuildMembers :: HasID Guild g => g -> SearchMembersOptions -> GuildRequest [Member]
   AddGuildMember :: (HasID Guild g, HasID User u) => g -> u -> AddGuildMemberData -> GuildRequest (Maybe Member)
   ModifyGuildMember :: (HasID Guild g, HasID User u) => g -> u -> ModifyGuildMemberData -> GuildRequest ()
   ModifyCurrentUserNick :: HasID Guild g => g -> Maybe Text -> GuildRequest ()
   AddGuildMemberRole :: (HasID Guild g, HasID User u, HasID Role r) => g -> u -> r -> GuildRequest ()
   RemoveGuildMemberRole :: (HasID Guild g, HasID User u, HasID Role r) => g -> u -> r -> GuildRequest ()
   RemoveGuildMember :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest ()
-  GetGuildBans :: HasID Guild g => g -> GuildRequest [BanData]
+  GetGuildBans :: HasID Guild g => g -> GetGuildBansOptions -> GuildRequest [BanData]
   GetGuildBan :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest BanData
   CreateGuildBan :: (HasID Guild g, HasID User u) => g -> u -> CreateGuildBanData -> GuildRequest ()
   RemoveGuildBan :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest ()
@@ -248,6 +262,9 @@ instance Request (GuildRequest a) where
   route (ListGuildMembers (getID -> gid) _) =
     baseRoute gid // S "members"
       & buildRoute
+  route (SearchGuildMembers (getID -> gid) _) =
+    baseRoute gid // S "members" // S "search"
+      & buildRoute
   route (AddGuildMember (getID -> gid) (getID @User -> uid) _) =
     baseRoute gid // S "members" // ID @User
       & giveID uid
@@ -273,7 +290,7 @@ instance Request (GuildRequest a) where
     baseRoute gid // S "members" // ID @User
       & giveID uid
       & buildRoute
-  route (GetGuildBans (getID -> gid)) =
+  route (GetGuildBans (getID -> gid) _) =
     baseRoute gid // S "bans"
       & buildRoute
   route (GetGuildBan (getID -> gid) (getID @User -> uid)) =
@@ -326,20 +343,25 @@ instance Request (GuildRequest a) where
   action (CreateGuildChannel _ o) = postWith' (ReqBodyJson o)
   action (ModifyGuildChannelPositions _ o) = postWith' (ReqBodyJson o)
   action (GetGuildMember _ _) = getWith
-  action (ListGuildMembers _ ListMembersOptions{limit, after}) =
+  action (ListGuildMembers _ ListMembersOptions {limit, after}) =
     getWithP
       ("limit" =:? limit <> "after" =:? (fromSnowflake <$> after))
+  action (SearchGuildMembers _ SearchMembersOptions {limit, query}) =
+    getWithP
+      ("limit" =:? limit <> "query" =: query)
   action (AddGuildMember _ _ o) = putWith' (ReqBodyJson o)
   action (ModifyGuildMember _ _ o) = patchWith' (ReqBodyJson o)
   action (ModifyCurrentUserNick _ nick) = patchWith' (ReqBodyJson $ object ["nick" .= nick])
-  action AddGuildMemberRole{} = putEmpty
-  action RemoveGuildMemberRole{} = deleteWith
+  action AddGuildMemberRole {} = putEmpty
+  action RemoveGuildMemberRole {} = deleteWith
   action (RemoveGuildMember _ _) = deleteWith
-  action (GetGuildBans _) = getWith
+  action (GetGuildBans _ GetGuildBansOptions {limit, before, after}) =
+    getWithP
+      ("limit" =:? limit <> "before" =:? before <> "after" =:? after)
   action (GetGuildBan _ _) = getWith
-  action (CreateGuildBan _ _ CreateGuildBanData{deleteMessageDays, reason}) =
+  action (CreateGuildBan _ _ CreateGuildBanData {deleteMessageDays}) =
     putEmptyP
-      ("delete-message-days" =:? deleteMessageDays <> "reason" =:? reason)
+      ("delete_message_days" =:? deleteMessageDays)
   action (RemoveGuildBan _ _) = deleteWith
   action (GetGuildRoles _) = getWith
   action (CreateGuildRole _ o) = postWith' (ReqBodyJson o)

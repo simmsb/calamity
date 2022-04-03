@@ -143,6 +143,7 @@ parseDispatchData USER_UPDATE data'                 = UserUpdate <$> parseJSON d
 parseDispatchData VOICE_STATE_UPDATE data'          = VoiceStateUpdate <$> parseJSON data'
 parseDispatchData VOICE_SERVER_UPDATE data'         = VoiceServerUpdate <$> parseJSON data'
 parseDispatchData WEBHOOKS_UPDATE data'             = WebhooksUpdate <$> parseJSON data'
+parseDispatchData INTERACTION_CREATE data'          = InteractionCreate <$> parseJSON data'
 
 data SentDiscordMessage
   = StatusUpdate StatusUpdateData
@@ -216,6 +217,7 @@ data DispatchType
   | VOICE_STATE_UPDATE
   | VOICE_SERVER_UPDATE
   | WEBHOOKS_UPDATE
+  | INTERACTION_CREATE
   deriving ( Show, Eq, Enum, Generic )
   deriving anyclass ( ToJSON, FromJSON )
 

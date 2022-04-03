@@ -48,6 +48,7 @@ $( bitmaskWrapper
     , ("intentDirectMessages", 1 `shiftL` 12)
     , ("intentDirectMessageReactions", 1 `shiftL` 13)
     , ("intentDirectMessageTyping", 1 `shiftL` 14)
+    , ("intentGuildScheduledEvents", 1 `shiftL` 16)
     ]
  )
 
