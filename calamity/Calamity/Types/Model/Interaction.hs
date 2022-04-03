@@ -44,15 +44,15 @@ data Interaction = Interaction
   deriving (FromJSON) via CalamityJSON Interaction
 
 data InteractionData = InteractionData
-  { id :: Snowflake () -- no Command type yet
-  , name :: T.Text
+  { id :: Maybe (Snowflake ()) -- no Command type yet
+  , name :: Maybe T.Text
   , resolved :: Maybe ResolvedInteractionData
   , -- , options :: [ApplicationCommandInteractionDataOptions]
     -- No commands yet
-    customID :: CustomID
+    customID :: Maybe CustomID
   , componentType :: Maybe ComponentType
   , values :: Maybe [T.Text]
-  , targetID :: Snowflake ()
+  , targetID :: Maybe (Snowflake ())
   , components :: Maybe [Component]
   }
   deriving (Show, Generic)
