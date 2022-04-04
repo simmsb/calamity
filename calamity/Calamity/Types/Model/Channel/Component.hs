@@ -12,6 +12,7 @@ module Calamity.Types.Model.Channel.Component (
   Select (..),
   select,
   TextInput (..),
+  textInput,
   ComponentType (..),
   componentType,
 ) where
@@ -197,6 +198,9 @@ instance FromJSON TextInputStyle where
       2 -> pure TextInputParagraph
       _ -> fail $ "Invalid TextInputStyle: " <> show n
     Nothing -> fail $ "Invalid TextInputStyle: " <> show n
+
+textInput :: TextInputStyle -> T.Text -> CustomID -> TextInput
+textInput s l = TextInput s l Nothing Nothing True Nothing Nothing
 
 data Component
   = ActionRow' [Component]
