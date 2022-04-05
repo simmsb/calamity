@@ -11,6 +11,8 @@ module Calamity.Types.Model.Channel.Component (
   ButtonStyle (..),
   Select (..),
   select,
+  SelectOption (..),
+  sopt,
   TextInput (..),
   TextInputStyle (..),
   textInput,
@@ -156,11 +158,18 @@ data SelectOption = SelectOption
   deriving
     (FromJSON)
     via WithSpecialCases
-          '["disabled" `IfNoneThen` DefaultToFalse]
+          '["default" `IfNoneThen` DefaultToFalse]
           SelectOption
 
 select :: [SelectOption] -> CustomID -> Select
 select o = Select o Nothing Nothing Nothing False
+
+sopt :: T.Text
+  -- ^ Label
+  -> T.Text
+  -- ^ Value
+  -> SelectOption
+sopt l v = SelectOption l v Nothing Nothing False
 
 data TextInput = TextInput
   { style :: TextInputStyle

@@ -110,10 +110,6 @@ instance ToMessage [LinkButton] where
 instance ToMessage [Select] where
   intoMsg c = Endo (#components %~ (<> [ActionRow' . map Select' $ c]))
 
--- | Add an row of 'TextInput's to the message
-instance ToMessage [TextInput] where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' . map TextInput' $ c]))
-
 -- | Add a singleton row containing a 'Component' to the message,
 instance ToMessage Component where
   intoMsg c = Endo (#components %~ (<> [c]))
@@ -129,10 +125,6 @@ instance ToMessage LinkButton where
 -- | Add a singleton row containing a 'Select' to the message,
 instance ToMessage Select where
   intoMsg c = Endo (#components %~ (<> [Select' c]))
-
--- | Add a singleton row containing a 'TextInput' to the message,
-instance ToMessage TextInput where
-  intoMsg c = Endo (#components %~ (<> [TextInput' c]))
 
 -- | Set a 'MessageReference' as the message to reply to
 instance ToMessage MessageReference where
