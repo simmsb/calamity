@@ -12,6 +12,7 @@ module Calamity.Types.Model.Channel.Component (
   Select (..),
   select,
   TextInput (..),
+  TextInputStyle (..),
   textInput,
   ComponentType (..),
   componentType,
