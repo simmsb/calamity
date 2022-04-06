@@ -7,7 +7,6 @@ import Calamity.Internal.AesonThings
 import Calamity.Internal.OverriddenVia
 import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel
-import Calamity.Types.Model.Channel.Component
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
@@ -40,7 +39,6 @@ data UpdatedMessage' = UpdatedMessage'
     , application :: Maybe (MaybeNull (CalamityFromStringShow Object))
     , messageReference :: Maybe (MaybeNull MessageReference)
     , flags :: Maybe Word64
-    , stickers :: Maybe (MaybeNull [CalamityFromStringShow Object])
     , referencedMessage :: Maybe (MaybeNull Message)
     , interaction :: Maybe (MaybeNull (CalamityFromStringShow Object))
     , components :: Maybe [Component]
@@ -76,7 +74,6 @@ data UpdatedMessage = UpdatedMessage
     , application :: Maybe (MaybeNull Object)
     , messageReference :: Maybe (MaybeNull MessageReference)
     , flags :: Maybe Word64
-    , stickers :: Maybe (MaybeNull [Object])
     , referencedMessage :: Maybe (MaybeNull Message)
     , interaction :: Maybe (MaybeNull Object)
     , components :: Maybe [Component]

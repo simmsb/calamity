@@ -112,19 +112,19 @@ instance ToMessage [Select] where
 
 -- | Add a singleton row containing a 'Component' to the message,
 instance ToMessage Component where
-  intoMsg c = Endo (#components %~ (<> [c]))
+  intoMsg c = Endo (#components %~ (<> [ActionRow' [c]]))
 
 -- | Add a singleton row containing a 'Button' to the message,
 instance ToMessage Button where
-  intoMsg c = Endo (#components %~ (<> [Button' c]))
+  intoMsg c = Endo (#components %~ (<> [ActionRow' [Button' c]]))
 
 -- | Add a singleton row containing a 'LinkButton' to the message,
 instance ToMessage LinkButton where
-  intoMsg c = Endo (#components %~ (<> [LinkButton' c]))
+  intoMsg c = Endo (#components %~ (<> [ActionRow' [LinkButton' c]]))
 
 -- | Add a singleton row containing a 'Select' to the message,
 instance ToMessage Select where
-  intoMsg c = Endo (#components %~ (<> [Select' c]))
+  intoMsg c = Endo (#components %~ (<> [ActionRow' [Select' c]]))
 
 -- | Set a 'MessageReference' as the message to reply to
 instance ToMessage MessageReference where

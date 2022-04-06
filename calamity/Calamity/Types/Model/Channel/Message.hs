@@ -3,6 +3,7 @@ module Calamity.Types.Model.Channel.Message (
   Message (..),
   MessageType (..),
   MessageReference (..),
+  Partial (PartialMessage),
 ) where
 
 import Calamity.Internal.AesonThings
@@ -52,7 +53,6 @@ data Message' = Message'
   , application :: Maybe (CalamityFromStringShow Object)
   , messageReference :: Maybe MessageReference
   , flags :: Word64
-  , stickers :: Maybe [CalamityFromStringShow Object]
   , referencedMessage :: Maybe Message
   , interaction :: Maybe (CalamityFromStringShow Object)
   , components :: [Component]
@@ -94,7 +94,6 @@ data Message = Message
   , application :: Maybe Object
   , messageReference :: Maybe MessageReference
   , flags :: Word64
-  , stickers :: Maybe [Object]
   , referencedMessage :: Maybe Message
   , interaction :: Maybe Object
   , components :: [Component]
@@ -104,6 +103,15 @@ data Message = Message
   deriving (HasID Message) via HasIDField "id" Message
   deriving (HasID Channel) via HasIDField "channelID" Message
   deriving (HasID User) via HasIDField "author" Message
+
+data instance Partial Message = PartialMessage
+  { channelID :: Snowflake Channel
+  , guildID :: Maybe (Snowflake Guild)
+  }
+  deriving (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric (Partial Message)
+  deriving (FromJSON) via CalamityJSON (Partial Message)
+  deriving (HasID Channel) via HasIDField "channelID" (Partial Message)
 
 data MessageReference = MessageReference
   { messageID :: Maybe (Snowflake Message)

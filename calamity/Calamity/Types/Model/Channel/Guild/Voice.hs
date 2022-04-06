@@ -5,7 +5,7 @@ import Calamity.Internal.AesonThings
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
 import Calamity.Internal.Utils ()
 import {-# SOURCE #-} Calamity.Types.Model.Channel
-import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild.Category
+import Calamity.Types.Model.Channel.Guild.Category
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake

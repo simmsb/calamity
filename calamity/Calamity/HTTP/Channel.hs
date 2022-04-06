@@ -1,6 +1,7 @@
 -- | Channel endpoints
 module Calamity.HTTP.Channel (
   ChannelRequest (..),
+  CreateMessageAttachment (..),
   CreateMessageOptions (..),
   EditMessageData (..),
   editMessageContent,
@@ -22,7 +23,6 @@ import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
 import Calamity.Internal.AesonThings
 import Calamity.Types.Model.Channel
-import Calamity.Types.Model.Channel.Component (Component)
 import Calamity.Types.Model.Guild.Emoji (RawEmoji (..))
 import Calamity.Types.Model.Guild.Invite (Invite)
 import Calamity.Types.Model.Guild.Overwrite (Overwrite)
@@ -34,27 +34,42 @@ import Data.Aeson
 import qualified Data.Aeson.KeyMap as K
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
-import Data.Generics.Product.Subtype (upcast)
 import Data.Text (Text)
-import qualified Data.Text as S
+import qualified Data.Text as T
 import Data.Word
 import GHC.Generics
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
+import PyF
 import TextShow
+
+data CreateMessageAttachment = CreateMessageAttachment
+  { filename :: Text
+  , description :: Maybe Text
+  , content :: ByteString
+  }
+  deriving (Show, Generic)
 
 data CreateMessageOptions = CreateMessageOptions
   { content :: Maybe Text
   , nonce :: Maybe Text
   , tts :: Maybe Bool
-  , file :: Maybe (Text, ByteString)
+  , attachments :: [CreateMessageAttachment]
   , embeds :: [Embed]
   , allowedMentions :: Maybe AllowedMentions
   , messageReference :: Maybe MessageReference
   , components :: [Component]
   }
   deriving (Show, Generic, Default)
+
+data CreateMessageAttachmentJson = CreateMessageAttachmentJson
+  { id :: Int
+  , filename :: Text
+  , description :: Maybe Text
+  }
+  deriving (Show, Generic)
+  deriving (ToJSON) via CalamityJSON CreateMessageAttachmentJson
 
 data CreateMessageJson = CreateMessageJson
   { content :: Maybe Text
@@ -64,6 +79,7 @@ data CreateMessageJson = CreateMessageJson
   , allowedMentions :: Maybe AllowedMentions
   , messageReference :: Maybe MessageReference
   , components :: [Component]
+  , attachments :: [CreateMessageAttachmentJson]
   }
   deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON CreateMessageJson
@@ -316,17 +332,28 @@ instance Request (ChannelRequest a) where
     baseRoute cid // S "recipients" // ID @User
       & giveID uid
       & buildRoute
-
-  action (CreateMessage _ o@CreateMessageOptions {file = Nothing}) =
-    postWith'
-      (ReqBodyJson . upcast @CreateMessageJson $ o)
-  action (CreateMessage _ cm@CreateMessageOptions {file = Just f}) = \u o -> do
-    let filePart =
-          (partLBS @IO "file" (snd f))
-            { partFilename = Just (S.unpack $ fst f)
-            , partContentType = Just (defaultMimeLookup $ fst f)
+  action (CreateMessage _ cm) = \u o -> do
+    let filePart CreateMessageAttachment {filename, content} n =
+          (partLBS @IO [fmt|file[{n}]|] content)
+            { partFilename = Just (T.unpack filename)
+            , partContentType = Just (defaultMimeLookup filename)
             }
-    body <- reqBodyMultipart [filePart, partLBS "payload_json" (encode . upcast @CreateMessageJson $ cm)]
+        attachmentPart CreateMessageAttachment {filename, description} n =
+          CreateMessageAttachmentJson n filename description
+        files = zipWith filePart (cm ^. #attachments) [(0 :: Int) ..]
+        attachments = zipWith attachmentPart (cm ^. #attachments) [0 ..]
+        jsonBody =
+          CreateMessageJson
+            { content = cm ^. #content
+            , nonce = cm ^. #nonce
+            , tts = cm ^. #tts
+            , embeds = cm ^. #embeds
+            , allowedMentions = cm ^. #allowedMentions
+            , messageReference = cm ^. #messageReference
+            , components = cm ^. #components
+            , attachments = attachments
+            }
+    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonBody) : files)
     postWith' body u o
   action (CrosspostMessage _ _) = postEmpty
   action (GetChannel _) = getWith

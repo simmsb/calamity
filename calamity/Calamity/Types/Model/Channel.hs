@@ -25,9 +25,8 @@ import Calamity.Types.Model.Channel.Guild
 import Calamity.Types.Model.Channel.Message
 import Calamity.Types.Model.Channel.Reaction
 import Calamity.Types.Model.Channel.Webhook
-import Calamity.Types.Partial
+import Calamity.Types.Model.Guild.Permissions (Permissions)
 import Calamity.Types.Snowflake
-
 import Data.Aeson
 import Data.Text (Text)
 import GHC.Generics
@@ -61,6 +60,7 @@ data instance Partial Channel = PartialChannel
   { id :: Snowflake Channel
   , name :: Text
   , type_ :: !ChannelType
+  , permissions :: Maybe Permissions
   , parentID :: Maybe (Snowflake Category)
   }
   deriving (Show, Eq, Generic)

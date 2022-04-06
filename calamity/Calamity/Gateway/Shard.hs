@@ -184,6 +184,7 @@ shardLoop = do
           whenJust reason (\r -> error [fmt|Shard closed with reason: {r}|])
           P.embed . atomically $ writeTBMQueue outqueue (Control c)
         Right msg' -> do
+          -- debug [fmt|Got msg: {msg'}|]
           let decoded = A.eitherDecode msg'
           r <- case decoded of
             Right a ->

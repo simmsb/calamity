@@ -55,6 +55,7 @@ library
       Calamity.HTTP.Channel
       Calamity.HTTP.Emoji
       Calamity.HTTP.Guild
+      Calamity.HTTP.Interaction
       Calamity.HTTP.Internal.Ratelimit
       Calamity.HTTP.Internal.Request
       Calamity.HTTP.Internal.Route
@@ -125,6 +126,7 @@ library
       Calamity.Utils.Colour
       Calamity.Utils.Message
       Calamity.Utils.Permissions
+      Calamity.Views.View
   hs-source-dirs:
       ./
   default-extensions:

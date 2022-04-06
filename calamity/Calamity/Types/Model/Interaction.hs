@@ -1,15 +1,18 @@
 -- | Discord Interactions
 module Calamity.Types.Model.Interaction (
   Interaction (..),
+  InteractionToken (..),
   InteractionData (..),
   ResolvedInteractionData (..),
   InteractionType (..),
+  Application,
+  ApplicationCommand,
 ) where
 
 import Calamity.Internal.AesonThings
 import Calamity.Internal.OverriddenVia
 import Calamity.Internal.Utils
-import Calamity.Types.Model.Channel (Channel)
+import Calamity.Types.Model.Channel (Attachment, Channel, Partial)
 import Calamity.Types.Model.Channel.Component
 import Calamity.Types.Model.Channel.Message (Message)
 import Calamity.Types.Model.Guild (Guild, Role)
@@ -24,16 +27,29 @@ import GHC.Generics
 import TextShow
 import qualified TextShow.Generic as TSG
 
+-- | Empty type to flag application IDs
+data Application
+
+-- | Empty type to flag application command IDs
+data ApplicationCommand
+
+newtype InteractionToken = InteractionToken
+  { fromInteractionToken :: T.Text
+  }
+  deriving stock (Show, Generic)
+  deriving (TextShow) via TSG.FromGeneric InteractionToken
+  deriving (FromJSON, ToJSON) via T.Text
+
 data Interaction = Interaction
   { id :: Snowflake Interaction
-  , applicationID :: Snowflake ()
+  , applicationID :: Snowflake Application
   , type_ :: InteractionType
   , data_ :: Maybe InteractionData
   , guildID :: Maybe (Snowflake Guild)
   , channelID :: Maybe (Snowflake Channel)
   , member :: Maybe Member
   , user :: Maybe User
-  , token :: T.Text
+  , token :: InteractionToken
   , version :: Int
   , message :: Maybe Message
   , locale :: Maybe T.Text
@@ -42,9 +58,11 @@ data Interaction = Interaction
   deriving (Show, Generic)
   deriving (TextShow) via TSG.FromGeneric Interaction
   deriving (FromJSON) via CalamityJSON Interaction
+  deriving (HasID Interaction) via HasIDField "id" Interaction
+  deriving (HasID Application) via HasIDField "applicationID" Interaction
 
 data InteractionData = InteractionData
-  { id :: Maybe (Snowflake ()) -- no Command type yet
+  { id :: Maybe (Snowflake ApplicationCommand)
   , name :: Maybe T.Text
   , resolved :: Maybe ResolvedInteractionData
   , -- , options :: [ApplicationCommandInteractionDataOptions]
@@ -63,7 +81,9 @@ data ResolvedInteractionData' = ResolvedInteractionData'
   { users :: CalamityFromStringShow (H.HashMap (Snowflake User) User)
   , members :: CalamityFromStringShow (H.HashMap (Snowflake Member) Member)
   , roles :: CalamityFromStringShow (H.HashMap (Snowflake Role) Role)
-  , channels :: CalamityFromStringShow (H.HashMap (Snowflake Channel) Channel)
+  , channels :: CalamityFromStringShow (H.HashMap (Snowflake Channel) (Partial Channel))
+  , messages :: CalamityFromStringShow (H.HashMap (Snowflake Message) (Partial Message))
+  , attachments :: CalamityFromStringShow (H.HashMap (Snowflake Attachment) Attachment)
   }
   deriving (Generic)
   deriving (TextShow) via TSG.FromGeneric ResolvedInteractionData'
@@ -73,7 +93,9 @@ data ResolvedInteractionData = ResolvedInteractionData
   { users :: H.HashMap (Snowflake User) User
   , members :: H.HashMap (Snowflake Member) Member
   , roles :: H.HashMap (Snowflake Role) Role
-  , channels :: H.HashMap (Snowflake Channel) Channel
+  , channels :: H.HashMap (Snowflake Channel) (Partial Channel)
+  , messages :: H.HashMap (Snowflake Message) (Partial Message)
+  , attachments :: H.HashMap (Snowflake Attachment) Attachment
   }
   deriving (Show, Generic)
   deriving

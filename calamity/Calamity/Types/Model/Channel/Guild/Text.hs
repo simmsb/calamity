@@ -6,8 +6,8 @@ import Calamity.Internal.OverriddenVia
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
 import Calamity.Internal.Utils
 import {-# SOURCE #-} Calamity.Types.Model.Channel
-import {-# SOURCE #-} Calamity.Types.Model.Channel.Guild.Category
-import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
+import Calamity.Types.Model.Channel.Guild.Category
+import Calamity.Types.Model.Channel.Message
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake

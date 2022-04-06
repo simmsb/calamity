@@ -1,5 +1,8 @@
 cradle:
   cabal:
+    - path: "bot/./"
+      component: "exe:bot"
+
     - path: "calamity/./"
       component: "lib:calamity"
 

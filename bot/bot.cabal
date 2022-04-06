@@ -1,0 +1,94 @@
+cabal-version:   2.0
+name:            bot
+version:         0.0.0
+license:         MIT
+license-file:    LICENSE
+copyright:       2019 Ben Simms
+maintainer:      ben@bensimms.moe
+author:          Ben Simms
+tested-with:     GHC ==8.10.7
+homepage:        https://github.com/nitros12/calamity-bot
+bug-reports:     https://github.com/nitros12/calamity-bot/issues
+synopsis:        A discord bot
+description:     A discord bot
+category:        Bots
+build-type:      Simple
+extra-doc-files:
+  CHANGELOG.md
+  README.md
+
+source-repository head
+  type:     git
+  location: https://github.com/nitros12/calamity-bot
+
+executable bot
+  main-is:            Main.hs
+  hs-source-dirs:     app
+  default-language:   Haskell2010
+  ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
+  build-depends:
+      base                     >=4.12      && <5
+    , calamity
+    , polysemy
+    , polysemy-plugin
+    , text
+    , lens
+    , di-polysemy
+    , di
+    , df1
+    , di-core
+    , pretty-simple
+  default-extensions:
+    NoMonomorphismRestriction
+    AllowAmbiguousTypes
+    BangPatterns
+    BinaryLiterals
+    BlockArguments
+    ConstraintKinds
+    DataKinds
+    DefaultSignatures
+    DeriveAnyClass
+    DeriveDataTypeable
+    DeriveFoldable
+    DeriveFunctor
+    DeriveGeneric
+    DeriveTraversable
+    DerivingStrategies
+    DerivingVia
+    DoAndIfThenElse
+    DuplicateRecordFields
+    EmptyDataDecls
+    ExistentialQuantification
+    FlexibleContexts
+    FlexibleInstances
+    FunctionalDependencies
+    GADTs
+    GeneralizedNewtypeDeriving
+    IncoherentInstances
+    InstanceSigs
+    KindSignatures
+    LambdaCase
+    MultiParamTypeClasses
+    MultiWayIf
+    NamedFieldPuns
+    OverloadedLabels
+    OverloadedStrings
+    PartialTypeSignatures
+    PatternGuards
+    PatternSynonyms
+    PolyKinds
+    RankNTypes
+    RecordWildCards
+    RecursiveDo
+    RoleAnnotations
+    ScopedTypeVariables
+    StandaloneDeriving
+    StrictData
+    TemplateHaskell
+    TupleSections
+    TypeApplications
+    TypeFamilies
+    TypeOperators
+    TypeSynonymInstances
+    UndecidableInstances
+    ViewPatterns

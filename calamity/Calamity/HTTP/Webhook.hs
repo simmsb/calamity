@@ -6,26 +6,23 @@ module Calamity.HTTP.Webhook (
   ExecuteWebhookOptions (..),
 ) where
 
+import Calamity.HTTP.Channel (AllowedMentions, CreateMessageAttachment (..))
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
 import Calamity.Internal.AesonThings
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Snowflake
-
 import Control.Lens hiding ((.=))
-
 import Data.Aeson
-import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
-import Data.Generics.Product.Subtype (upcast)
 import Data.Text (Text)
-
+import qualified Data.Text as T
 import GHC.Generics
-
-import Network.HTTP.Req
-
 import Network.HTTP.Client.MultipartFormData
+import Network.HTTP.Req
+import Network.Mime
+import PyF
 
 data CreateWebhookData = CreateWebhookData
   { username :: Maybe Text
@@ -47,13 +44,23 @@ data ModifyWebhookData = ModifyWebhookData
 data ExecuteWebhookOptions = ExecuteWebhookOptions
   { wait :: Maybe Bool
   , content :: Maybe Text
-  , file :: Maybe ByteString
+  , attachments :: [CreateMessageAttachment]
   , embeds :: Maybe [Embed]
   , username :: Maybe Text
   , avatarUrl :: Maybe Text
+  , allowedMentions :: Maybe AllowedMentions
   , tts :: Maybe Bool
+  , components :: [Component]
   }
   deriving (Show, Generic, Default)
+
+data CreateMessageAttachmentJson = CreateMessageAttachmentJson
+  { id :: Int
+  , filename :: Text
+  , description :: Maybe Text
+  }
+  deriving (Show, Generic)
+  deriving (ToJSON) via CalamityJSON CreateMessageAttachmentJson
 
 data ExecuteWebhookJson = ExecuteWebhookJson
   { content :: Maybe Text
@@ -61,6 +68,9 @@ data ExecuteWebhookJson = ExecuteWebhookJson
   , username :: Maybe Text
   , avatarUrl :: Maybe Text
   , tts :: Maybe Bool
+  , attachments :: [CreateMessageAttachmentJson]
+  , allowedMentions :: Maybe AllowedMentions
+  , components :: [Component]
   }
   deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON ExecuteWebhookJson
@@ -126,10 +136,26 @@ instance Request (WebhookRequest a) where
   action (ModifyWebhookToken _ _ o) = patchWith' $ ReqBodyJson o
   action (DeleteWebhook _) = deleteWith
   action (DeleteWebhookToken _ _) = deleteWith
-  action (ExecuteWebhook _ _ o@ExecuteWebhookOptions{file = Nothing}) =
-    postWithP'
-      (ReqBodyJson . upcast @ExecuteWebhookJson $ o)
-      ("wait" =:? (o ^. #wait))
-  action (ExecuteWebhook _ _ wh@ExecuteWebhookOptions{file = Just f}) = \u o -> do
-    body <- reqBodyMultipart [partLBS @IO "file" f, partLBS "payload_json" (encode . upcast @ExecuteWebhookJson $ wh)]
+  action (ExecuteWebhook _ _ wh) = \u o -> do
+    let filePart CreateMessageAttachment {filename, content} n =
+          (partLBS @IO [fmt|file[{n}]|] content)
+            { partFilename = Just (T.unpack filename)
+            , partContentType = Just (defaultMimeLookup filename)
+            }
+        attachmentPart CreateMessageAttachment {filename, description} n =
+          CreateMessageAttachmentJson n filename description
+        files = zipWith filePart (wh ^. #attachments) [(0 :: Int) ..]
+        attachments = zipWith attachmentPart (wh ^. #attachments) [0 ..]
+        jsonBody =
+          ExecuteWebhookJson
+            { content = wh ^. #content
+            , username = wh ^. #username
+            , avatarUrl = wh ^. #avatarUrl
+            , tts = wh ^. #tts
+            , embeds = wh ^. #embeds
+            , allowedMentions = wh ^. #allowedMentions
+            , components = wh ^. #components
+            , attachments = attachments
+            }
+    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonBody) : files)
     postWithP' body ("wait" =:? (wh ^. #wait)) u o

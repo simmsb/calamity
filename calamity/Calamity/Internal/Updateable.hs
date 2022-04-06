@@ -72,7 +72,6 @@ instance Updateable Message where
       & updateNullableDest @"application" n
       & updateNullableDest @"messageReference" n
       & mergeF @"flags" n
-      & updateNullableDest @"stickers" n
       & updateNullableDest @"referencedMessage" n
       & updateNullableDest @"interaction" n
       & mergeF @"components" n

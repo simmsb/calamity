@@ -1,7 +1,8 @@
 -- | Message attachments
-module Calamity.Types.Model.Channel.Attachment (Attachment (..)) where
+module Calamity.Types.Model.Channel.Attachment (
+  Attachment (..),
+) where
 
-import Calamity.Internal.AesonThings ()
 import Calamity.Types.Snowflake
 import Data.Aeson
 import Data.Text (Text)
@@ -29,7 +30,7 @@ data Attachment = Attachment
   deriving (HasID Attachment) via HasIDField "id" Attachment
 
 instance ToJSON Attachment where
-  toJSON Attachment{id, filename, size, url, proxyUrl, dimensions = Just (width, height)} =
+  toJSON Attachment {id, filename, size, url, proxyUrl, dimensions = Just (width, height)} =
     object
       [ "id" .= id
       , "filename" .= filename
@@ -39,7 +40,7 @@ instance ToJSON Attachment where
       , "width" .= width
       , "height" .= height
       ]
-  toJSON Attachment{id, filename, size, url, proxyUrl} =
+  toJSON Attachment {id, filename, size, url, proxyUrl} =
     object ["id" .= id, "filename" .= filename, "size" .= size, "url" .= url, "proxy_url" .= proxyUrl]
 
 instance FromJSON Attachment where
@@ -50,3 +51,4 @@ instance FromJSON Attachment where
     Attachment <$> v .: "id" <*> v .: "filename" <*> v .: "size" <*> v .: "url" <*> v .: "proxy_url"
       <*> pure
         (fuseTup2 (width, height))
+
