@@ -23,6 +23,7 @@ import Calamity.Gateway.DispatchEvents
 import Calamity.Gateway.Intents
 import Calamity.Gateway.Types
 import Calamity.HTTP.Internal.Ratelimit
+import Calamity.Types.TokenEff
 import Calamity.Internal.ConstructorName
 import Calamity.Internal.RunIntoIO
 import qualified Calamity.Internal.SnowflakeMap as SM
@@ -109,6 +110,20 @@ resetDi m = do
   initialDi <- P.asks (^. #initialDi)
   Di.local (`fromMaybe` initialDi) m
 
+interpretRatelimitViaClient :: P.Member (P.Reader Client) r => P.Sem (RatelimitEff ': r) a -> P.Sem r a
+interpretRatelimitViaClient =
+  P.interpret
+    ( \case
+        GetRatelimitState -> P.asks (^. #rlState)
+    )
+
+interpretTokenViaClient :: P.Member (P.Reader Client) r => P.Sem (TokenEff ': r) a -> P.Sem r a
+interpretTokenViaClient =
+  P.interpret
+    ( \case
+        GetBotToken -> P.asks (^. #token)
+    )
+
 {- | Create a bot, run your setup action, and then loop until the bot closes.
 
  This version allows you to specify the initial status
@@ -127,7 +142,7 @@ runBotIO' token intents status setup = do
   initialDi <- Di.fetch
   client <- P.embed $ newClient token initialDi
   handlers <- P.embed $ newTVarIO def
-  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . Di.push "calamity" $ do
+  P.asyncToIOFinal . P.runAtomicStateTVar handlers . P.runReader client . interpretTokenViaClient . interpretRatelimitViaClient . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup
     r <- shardBot status intents
     case r of
@@ -161,12 +176,12 @@ runBotIO'' ::
   Intents ->
   -- | The initial status to send to the gateway
   Maybe StatusUpdateData ->
-  P.Sem (P.Reader Client ': r) a ->
+  P.Sem (RatelimitEff ': TokenEff ': P.Reader Client ': r) a ->
   P.Sem r (Maybe StartupError)
 runBotIO'' token intents status setup = do
   initialDi <- Di.fetch
   client <- P.embed $ newClient token initialDi
-  P.runReader client . Di.push "calamity" $ do
+  P.runReader client . interpretTokenViaClient . interpretRatelimitViaClient . Di.push "calamity" $ do
     void $ Di.push "calamity-setup" setup
     r <- shardBot status intents
     case r of

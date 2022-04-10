@@ -1,31 +1,37 @@
 -- | Combined http request stuff
-module Calamity.HTTP
-    ( invoke
-    , module Calamity.HTTP.AuditLog
-    , module Calamity.HTTP.Channel
-    , module Calamity.HTTP.Emoji
-    , module Calamity.HTTP.Guild
-    , module Calamity.HTTP.Invite
-    , module Calamity.HTTP.MiscRoutes
-    , module Calamity.HTTP.User
-    , module Calamity.HTTP.Reason
-    , module Calamity.HTTP.Internal.Types
-    , module Calamity.HTTP.Webhook
-    -- * HTTP
-    -- $httpDocs
-    ) where
+module Calamity.HTTP (
+  invoke,
+  module Calamity.HTTP.AuditLog,
+  module Calamity.HTTP.Channel,
+  module Calamity.HTTP.Emoji,
+  module Calamity.HTTP.Guild,
+  module Calamity.HTTP.Invite,
+  module Calamity.HTTP.Interaction,
+  module Calamity.HTTP.MiscRoutes,
+  module Calamity.HTTP.User,
+  module Calamity.HTTP.Reason,
+  module Calamity.HTTP.Webhook,
+  module Calamity.HTTP.Internal.Types,
+  RatelimitEff (..),
+  TokenEff (..),
+  -- * HTTP
+  -- $httpDocs
+) where
 
-import           Calamity.HTTP.AuditLog
-import           Calamity.HTTP.Channel
-import           Calamity.HTTP.Emoji
-import           Calamity.HTTP.Guild
-import           Calamity.HTTP.Internal.Request ( invoke )
-import           Calamity.HTTP.Internal.Types   ( RestError )
-import           Calamity.HTTP.Invite
-import           Calamity.HTTP.MiscRoutes
-import           Calamity.HTTP.Reason
-import           Calamity.HTTP.User
-import           Calamity.HTTP.Webhook
+import Calamity.HTTP.AuditLog
+import Calamity.HTTP.Channel
+import Calamity.HTTP.Emoji
+import Calamity.HTTP.Guild
+import Calamity.HTTP.Interaction
+import Calamity.HTTP.Internal.Ratelimit (RatelimitEff (..))
+import Calamity.HTTP.Internal.Request (invoke)
+import Calamity.HTTP.Internal.Types (RestError)
+import Calamity.HTTP.Invite
+import Calamity.HTTP.MiscRoutes
+import Calamity.HTTP.Reason
+import Calamity.HTTP.User
+import Calamity.HTTP.Webhook
+import Calamity.Types.TokenEff (TokenEff (..))
 
 -- $httpDocs
 --

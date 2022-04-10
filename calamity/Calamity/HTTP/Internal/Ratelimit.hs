@@ -1,13 +1,18 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Module containing ratelimit stuff
 module Calamity.HTTP.Internal.Ratelimit (
-    newRateLimitState,
-    doRequest,
+  newRateLimitState,
+  doRequest,
+  RatelimitEff (..),
+  getRatelimitState,
 ) where
 
-import Calamity.Client.Types (BotC)
 import Calamity.HTTP.Internal.Route
 import Calamity.HTTP.Internal.Types
 import Calamity.Internal.Utils
+import Calamity.Types.LogEff
+import Calamity.Types.TokenEff
 import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Event (Event)
@@ -27,12 +32,17 @@ import Data.Time.Clock.POSIX
 import Network.HTTP.Client (responseStatus)
 import Network.HTTP.Req
 import Network.HTTP.Types
-import Polysemy (Sem)
+import Polysemy (Sem, makeSem)
 import qualified Polysemy as P
 import PyF
 import qualified StmContainers.Map as SC
 import Prelude hiding (error)
 import qualified Prelude
+
+data RatelimitEff m a where
+  GetRatelimitState :: RatelimitEff m RateLimitState
+
+makeSem ''RatelimitEff
 
 newRateLimitState :: IO RateLimitState
 newRateLimitState = RateLimitState <$> SC.newIO <*> SC.newIO <*> E.newSet
@@ -73,23 +83,23 @@ updateBucket s h b bucketState = do
       SC.insert bs b $ buckets s
       SC.insert b h $ bucketKeys s
       pure bs
- where
-  mergeStates :: BucketState -> BucketState -> BucketState
-  mergeStates old new =
-    new
-      { ongoing = old ^. #ongoing
-      , -- we only ignore the previous 'remaining' if we've not reset yet and the
-        -- reset time has changed
-        remaining =
-          if isJust (old ^. #resetTime) && (old ^. #resetKey /= new ^. #resetKey)
-            then min (old ^. #remaining) (new ^. #remaining)
-            else new ^. #remaining
-      , -- only take the new resetTime if it actually changed
-        resetTime =
-          if old ^. #resetKey /= new ^. #resetKey
-            then new ^. #resetTime
-            else old ^. #resetTime
-      }
+  where
+    mergeStates :: BucketState -> BucketState -> BucketState
+    mergeStates old new =
+      new
+        { ongoing = old ^. #ongoing
+        , -- we only ignore the previous 'remaining' if we've not reset yet and the
+          -- reset time has changed
+          remaining =
+            if isJust (old ^. #resetTime) && old ^. #resetKey /= new ^. #resetKey
+              then min (old ^. #remaining) (new ^. #remaining)
+              else new ^. #remaining
+        , -- only take the new resetTime if it actually changed
+          resetTime =
+            if old ^. #resetKey /= new ^. #resetKey
+              then new ^. #resetTime
+              else old ^. #resetTime
+        }
 
 resetBucket :: Bucket -> STM ()
 resetBucket bucket =
@@ -101,7 +111,7 @@ resetBucket bucket =
     )
 
 canResetBucketNow :: UTCTime -> BucketState -> Bool
-canResetBucketNow _ BucketState{ongoing} | ongoing > 0 = False
+canResetBucketNow _ BucketState {ongoing} | ongoing > 0 = False
 -- don't allow resetting the bucket if there's ongoing requests, we'll wait
 -- until another request finishes and updates the counter
 canResetBucketNow now bs = case bs ^. #resetTime of
@@ -112,7 +122,7 @@ canResetBucketNow now bs = case bs ^. #resetTime of
 -- canResetBucket bs = isNothing $ bs ^. #startedWaitingTime
 
 shouldWaitForUnlock :: BucketState -> Bool
-shouldWaitForUnlock BucketState{remaining = 0, ongoing} = ongoing > 0
+shouldWaitForUnlock BucketState {remaining = 0, ongoing} = ongoing > 0
 shouldWaitForUnlock _ = False
 
 data WaitDelay
@@ -128,69 +138,69 @@ intoWaitDelay Nothing = WaitRetrySoon
 -- | Maybe wait for a bucket, updating its state to say we used it
 useBucketOnce :: Bucket -> IO ()
 useBucketOnce bucket = go 0
- where
-  go :: Int -> IO ()
-  go tries = do
-    now <- getCurrentTime
-    mWaitDelay <- atomically $ do
-      s <- readTVar $ bucket ^. #state
+  where
+    go :: Int -> IO ()
+    go tries = do
+      now <- getCurrentTime
+      mWaitDelay <- atomically $ do
+        s <- readTVar $ bucket ^. #state
 
-      -- -- [0]
-      -- -- if there are ongoing requests, wait for them to finish and deliver
-      -- -- truth on the current ratelimit state
-      when
-        (shouldWaitForUnlock s)
-        retry
+        -- -- [0]
+        -- -- if there are ongoing requests, wait for them to finish and deliver
+        -- -- truth on the current ratelimit state
+        when
+          (shouldWaitForUnlock s)
+          retry
 
-      -- if there are no ongoing requests, and the bucket reset time has lapsed,
-      -- we can just reset the bucket.
-      --
-      -- if we've already reset the bucket then there should be an ongoing
-      -- request so we'll just end up waiting for that to finish
-      when
-        (canResetBucketNow now s)
-        (resetBucket bucket)
+        -- if there are no ongoing requests, and the bucket reset time has lapsed,
+        -- we can just reset the bucket.
+        --
+        -- if we've already reset the bucket then there should be an ongoing
+        -- request so we'll just end up waiting for that to finish
+        when
+          (canResetBucketNow now s)
+          (resetBucket bucket)
 
-      s <- readTVar $ bucket ^. #state
+        s <- readTVar $ bucket ^. #state
 
-      if s ^. #remaining - s ^. #ongoing > 0
-        then do
-          -- there are tokens remaining for us to use
-          modifyTVar'
-            (bucket ^. #state)
-            ( (#remaining -~ 1)
-                . (#ongoing +~ 1)
-            )
-          pure GoNow
-        else do
-          -- the bucket has expired, there are no ongoing requests because of
-          -- [0] wait and then retry after we can unlock the bucket
-          pure (intoWaitDelay $ s ^. #resetTime)
+        if s ^. #remaining - s ^. #ongoing > 0
+          then do
+            -- there are tokens remaining for us to use
+            modifyTVar'
+              (bucket ^. #state)
+              ( (#remaining -~ 1)
+                  . (#ongoing +~ 1)
+              )
+            pure GoNow
+          else do
+            -- the bucket has expired, there are no ongoing requests because of
+            -- [0] wait and then retry after we can unlock the bucket
+            pure (intoWaitDelay $ s ^. #resetTime)
 
-    -- putStrLn (show now <> ": Using bucket, waiting until: " <> show mWaitDelay <> ", uses: " <> show s <> ", " <> inf)
+      -- putStrLn (show now <> ": Using bucket, waiting until: " <> show mWaitDelay <> ", uses: " <> show s <> ", " <> inf)
 
-    case mWaitDelay of
-      WaitUntil waitUntil -> do
-        if waitUntil < now
-          then threadDelayMS 20
-          else -- if the reset is in the past, we're fucked
-            threadDelayUntil waitUntil
-        -- if we needed to sleep, go again so that multiple concurrent requests
-        -- don't exceed the bucket, to ensure we don't sit in a loop if a
-        -- request dies on us, bail out after 50 loops
-        if tries < 50
-          then go (tries + 1)
-          else pure () -- print "bailing after number of retries"
-      WaitRetrySoon -> do
-        threadDelayMS 20
-        if tries < 50
-          then go (tries + 1)
-          else pure () -- print "bailing after number of retries"
-      GoNow -> do
-        -- print "ok going forward with request"
-        pure ()
+      case mWaitDelay of
+        WaitUntil waitUntil -> do
+          if waitUntil < now
+            then threadDelayMS 20
+            else -- if the reset is in the past, we're fucked
+              threadDelayUntil waitUntil
+          -- if we needed to sleep, go again so that multiple concurrent requests
+          -- don't exceed the bucket, to ensure we don't sit in a loop if a
+          -- request dies on us, bail out after 50 loops
+          if tries < 50
+            then go (tries + 1)
+            else pure () -- print "bailing after number of retries"
+        WaitRetrySoon -> do
+          threadDelayMS 20
+          if tries < 50
+            then go (tries + 1)
+            else pure () -- print "bailing after number of retries"
+        GoNow -> do
+          -- print "ok going forward with request"
+          pure ()
 
-doDiscordRequest :: BotC r => IO LbsResponse -> Sem r DiscordResponseType
+doDiscordRequest :: P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r => IO LbsResponse -> Sem r DiscordResponseType
 doDiscordRequest r = do
   r'' <- P.embed $ Ex.catchAny (Right <$> r) (pure . Left . Ex.displayException)
   case r'' of
@@ -225,33 +235,33 @@ doDiscordRequest r = do
 -- | Parse a ratelimit header returning when it unlocks
 parseRateLimitHeader :: HttpResponse r => UTCTime -> r -> Maybe UTCTime
 parseRateLimitHeader now r = computedEnd <|> end
- where
-  computedEnd :: Maybe UTCTime
-  computedEnd = flip addUTCTime now <$> resetAfter
+  where
+    computedEnd :: Maybe UTCTime
+    computedEnd = flip addUTCTime now <$> resetAfter
 
-  resetAfter :: Maybe NominalDiffTime
-  resetAfter = realToFrac <$> responseHeader r "X-Ratelimit-Reset-After" ^? _Just . _Double
+    resetAfter :: Maybe NominalDiffTime
+    resetAfter = realToFrac <$> responseHeader r "X-Ratelimit-Reset-After" ^? _Just . _Double
 
-  end :: Maybe UTCTime
-  end =
-    posixSecondsToUTCTime . realToFrac
-      <$> responseHeader r "X-Ratelimit-Reset" ^? _Just . _Double
+    end :: Maybe UTCTime
+    end =
+      posixSecondsToUTCTime . realToFrac
+        <$> responseHeader r "X-Ratelimit-Reset" ^? _Just . _Double
 
 buildBucketState :: HttpResponse r => UTCTime -> r -> Maybe (BucketState, B.ByteString)
 buildBucketState now r = (,) <$> bs <*> bucketKey
- where
-  remaining = responseHeader r "X-RateLimit-Remaining" ^? _Just . _Integral
-  limit = responseHeader r "X-RateLimit-Limit" ^? _Just . _Integral
-  resetKey = ceiling <$> responseHeader r "X-RateLimit-Reset" ^? _Just . _Double
-  resetTime = parseRateLimitHeader now r
-  bs = BucketState resetTime <$> resetKey <*> remaining <*> limit <*> pure 0
-  bucketKey = responseHeader r "X-RateLimit-Bucket"
+  where
+    remaining = responseHeader r "X-RateLimit-Remaining" ^? _Just . _Integral
+    limit = responseHeader r "X-RateLimit-Limit" ^? _Just . _Integral
+    resetKey = ceiling <$> responseHeader r "X-RateLimit-Reset" ^? _Just . _Double
+    resetTime = parseRateLimitHeader now r
+    bs = BucketState resetTime <$> resetKey <*> remaining <*> limit <*> pure 0
+    bucketKey = responseHeader r "X-RateLimit-Bucket"
 
 -- | Parse the retry after field, returning when to retry
 parseRetryAfter :: UTCTime -> Value -> UTCTime
 parseRetryAfter now r = addUTCTime retryAfter now
- where
-  retryAfter = realToFrac $ r ^?! key "retry_after" . _Double
+  where
+    retryAfter = realToFrac $ r ^?! key "retry_after" . _Double
 
 isGlobal :: Value -> Bool
 isGlobal r = r ^? key "global" . _Bool == Just True
@@ -263,27 +273,27 @@ data ShouldRetry a b
   | RGood b
 
 retryRequest ::
-  BotC r =>
+  P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r =>
   -- | number of retries
   Int ->
   -- | action to perform
   Sem r (ShouldRetry a b) ->
   Sem r (Either a b)
 retryRequest maxRetries action = retryInner 0
- where
-  retryInner numRetries = do
-    res <- action
-    case res of
-      Retry r | numRetries > maxRetries -> do
-        debug [fmt|Request failed after {maxRetries} retries|]
-        pure $ Left r
-      Retry _ ->
-        retryInner (numRetries + 1)
-      RFail r -> do
-        debug "Request failed due to error response"
-        pure $ Left r
-      RGood r ->
-        pure $ Right r
+  where
+    retryInner numRetries = do
+      res <- action
+      case res of
+        Retry r | numRetries > maxRetries -> do
+          debug [fmt|Request failed after {maxRetries} retries|]
+          pure $ Left r
+        Retry _ ->
+          retryInner (numRetries + 1)
+        RFail r -> do
+          debug "Request failed due to error response"
+          pure $ Left r
+        RGood r ->
+          pure $ Right r
 
 threadDelayMS :: Int -> IO ()
 threadDelayMS ms = threadDelay (1000 * ms)
@@ -300,7 +310,7 @@ threadDelayUntil when = do
 
 -- Run a single request
 doSingleRequest ::
-  BotC r =>
+  P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r =>
   RateLimitState ->
   Route ->
   -- | Global lock
@@ -395,7 +405,7 @@ doSingleRequest rlstate route gl r = do
         _ -> debug "unknown ratelimit"
       pure $ RFail (HTTPError c $ decode v)
 
-doRequest :: BotC r => RateLimitState -> Route -> IO LbsResponse -> Sem r (Either RestError LB.ByteString)
+doRequest :: P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r => RateLimitState -> Route -> IO LbsResponse -> Sem r (Either RestError LB.ByteString)
 doRequest rlstate route action =
   retryRequest
     5

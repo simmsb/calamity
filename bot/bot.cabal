@@ -38,6 +38,7 @@ executable bot
     , df1
     , di-core
     , pretty-simple
+    , data-default-class
   default-extensions:
     NoMonomorphismRestriction
     AllowAmbiguousTypes

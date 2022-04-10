@@ -108,7 +108,7 @@ data InteractionType
   | MessageComponentType
   | ApplicationCommandAutoCompleteType
   | ModalSubmitType
-  deriving (Show, Generic)
+  deriving (Eq, Show, Generic)
   deriving (TextShow) via TSG.FromGeneric InteractionType
 
 instance FromJSON InteractionType where

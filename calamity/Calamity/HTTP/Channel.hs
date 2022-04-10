@@ -34,6 +34,7 @@ import Data.Aeson
 import qualified Data.Aeson.KeyMap as K
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
+import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word
@@ -55,11 +56,11 @@ data CreateMessageOptions = CreateMessageOptions
   { content :: Maybe Text
   , nonce :: Maybe Text
   , tts :: Maybe Bool
-  , attachments :: [CreateMessageAttachment]
-  , embeds :: [Embed]
+  , attachments :: Maybe [CreateMessageAttachment]
+  , embeds :: Maybe [Embed]
   , allowedMentions :: Maybe AllowedMentions
   , messageReference :: Maybe MessageReference
-  , components :: [Component]
+  , components :: Maybe [Component]
   }
   deriving (Show, Generic, Default)
 
@@ -75,11 +76,11 @@ data CreateMessageJson = CreateMessageJson
   { content :: Maybe Text
   , nonce :: Maybe Text
   , tts :: Maybe Bool
-  , embeds :: [Embed]
+  , embeds :: Maybe [Embed]
   , allowedMentions :: Maybe AllowedMentions
   , messageReference :: Maybe MessageReference
-  , components :: [Component]
-  , attachments :: [CreateMessageAttachmentJson]
+  , components :: Maybe [Component]
+  , attachments :: Maybe [CreateMessageAttachmentJson]
   }
   deriving (Show, Generic)
   deriving (ToJSON) via CalamityJSON CreateMessageJson
@@ -334,14 +335,14 @@ instance Request (ChannelRequest a) where
       & buildRoute
   action (CreateMessage _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO [fmt|file[{n}]|] content)
+          (partLBS @IO [fmt|files[{n}]|] content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }
         attachmentPart CreateMessageAttachment {filename, description} n =
           CreateMessageAttachmentJson n filename description
-        files = zipWith filePart (cm ^. #attachments) [(0 :: Int) ..]
-        attachments = zipWith attachmentPart (cm ^. #attachments) [0 ..]
+        files = zipWith filePart (fromMaybe [] $ cm ^. #attachments) [(0 :: Int) ..]
+        attachments = (\a -> zipWith attachmentPart a [0 ..]) <$> cm ^. #attachments
         jsonBody =
           CreateMessageJson
             { content = cm ^. #content

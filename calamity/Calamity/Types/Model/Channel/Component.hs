@@ -22,17 +22,23 @@ module Calamity.Types.Model.Channel.Component (
 
 import Calamity.Internal.AesonThings
 import Calamity.Types.Model.Guild.Emoji
+import Control.Monad (replicateM)
 import Data.Aeson
 import Data.Scientific (toBoundedInteger)
 import qualified Data.Text as T
 import GHC.Generics
+import System.Random (Uniform)
+import System.Random.Stateful (Uniform (uniformM), UniformRange (uniformRM))
 import TextShow
 import qualified TextShow.Generic as TSG
 
 newtype CustomID = CustomID T.Text
-  deriving (Show, Generic)
+  deriving stock (Eq, Ord, Show, Generic)
   deriving (TextShow) via TSG.FromGeneric CustomID
   deriving (ToJSON, FromJSON) via T.Text
+
+instance Uniform CustomID where
+  uniformM = ((CustomID . T.pack) <$>) . replicateM 16 . uniformRM ('a', 'z')
 
 data Button = Button
   { style :: ButtonStyle
@@ -72,7 +78,7 @@ data ButtonStyle
   | ButtonSuccess
   | ButtonDanger
   | ButtonLink
-  deriving (Show, Generic)
+  deriving (Eq, Show, Generic)
   deriving (TextShow) via TSG.FromGeneric ButtonStyle
 
 instance ToJSON ButtonStyle where
@@ -164,11 +170,12 @@ data SelectOption = SelectOption
 select :: [SelectOption] -> CustomID -> Select
 select o = Select o Nothing Nothing Nothing False
 
-sopt :: T.Text
-  -- ^ Label
-  -> T.Text
-  -- ^ Value
-  -> SelectOption
+sopt ::
+  -- | Label
+  T.Text ->
+  -- | Value
+  T.Text ->
+  SelectOption
 sopt l v = SelectOption l v Nothing Nothing False
 
 data TextInput = TextInput
@@ -260,7 +267,7 @@ data ComponentType
   | ButtonType
   | SelectType
   | TextInputType
-  deriving (Show, Generic)
+  deriving (Eq, Show, Generic)
   deriving (TextShow) via TSG.FromGeneric ComponentType
 
 instance ToJSON ComponentType where

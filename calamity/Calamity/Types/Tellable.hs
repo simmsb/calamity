@@ -2,29 +2,28 @@
 module Calamity.Types.Tellable (
   ToMessage (..),
   Tellable (..),
-  TFile (..),
   TMention (..),
   tell,
   reply,
+  runToMessage,
 ) where
 
 import Calamity.Client.Types
 import Calamity.HTTP.Channel (
   AllowedMentions,
   ChannelRequest (CreateMessage),
+  CreateMessageAttachment,
   CreateMessageOptions,
  )
 import Calamity.HTTP.Internal.Request (invoke)
 import Calamity.HTTP.Internal.Types (RestError)
 import Calamity.HTTP.User (UserRequest (CreateDM))
 import Calamity.Types.Model.Channel
-import Calamity.Types.Model.Channel.Component (Button, Component (..), LinkButton, Select, TextInput)
 import Calamity.Types.Model.Guild.Member (Member)
 import Calamity.Types.Model.Guild.Role (Role)
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Control.Lens
-import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
 import Data.Monoid
 import qualified Data.Text as T
@@ -33,18 +32,9 @@ import GHC.Generics
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
 
--- | A wrapper type for sending files
-data TFile
-  = TFile
-      T.Text
-      -- ^ The filename
-      ByteString
-      -- ^ The content
-  deriving (Show, Generic)
-
 -- | A wrapper type for allowing mentions
 newtype TMention a = TMention (Snowflake a)
-  deriving (Show, Generic)
+  deriving stock (Show, Generic)
 
 {- | Things that can be used to send a message
 
@@ -72,11 +62,11 @@ instance ToMessage String where
 
 -- | Message embed, '(<>)' appends a new embed
 instance ToMessage Embed where
-  intoMsg e = Endo (#embeds %~ (<> [e]))
+  intoMsg e = Endo (#embeds %~ (<> Just [e]))
 
--- | Message file, '(<>)' keeps the last added file
-instance ToMessage TFile where
-  intoMsg (TFile n f) = Endo (#file %~ getLast . (<> Last (Just (n, f))) . Last)
+-- | Message attachments, '(<>)' appends a new file
+instance ToMessage CreateMessageAttachment where
+  intoMsg a = Endo (#attachments %~ (<> Just [a]))
 
 -- | Allowed mentions, '(<>)' combines allowed mentions
 instance ToMessage AllowedMentions where
@@ -94,37 +84,47 @@ instance ToMessage (TMention Member) where
 instance ToMessage (TMention Role) where
   intoMsg (TMention s) = intoMsg (def @AllowedMentions & #roles <>~ [s])
 
--- | Add an row of 'Component's to the message
+fixupActionRow :: Component -> Component
+fixupActionRow r@(ActionRow' _) = r
+fixupActionRow x = ActionRow' [x]
+
+{- | Add many components to a message.
+
+ Each component will be wrapped in a singleton ActionRow if not already
+-}
 instance ToMessage [Component] where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' c]))
+  intoMsg c = Endo (#components %~ (<> Just (map fixupActionRow c)))
 
 -- | Add an row of 'Button's to the message
 instance ToMessage [Button] where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' . map Button' $ c]))
+  intoMsg c = Endo (#components %~ (<> Just [ActionRow' . map Button' $ c]))
 
 -- | Add an row of 'LinkButton's to the message
 instance ToMessage [LinkButton] where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' . map LinkButton' $ c]))
+  intoMsg c = Endo (#components %~ (<> Just [ActionRow' . map LinkButton' $ c]))
 
 -- | Add an row of 'Select's to the message
 instance ToMessage [Select] where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' . map Select' $ c]))
+  intoMsg c = Endo (#components %~ (<> Just [ActionRow' . map Select' $ c]))
 
--- | Add a singleton row containing a 'Component' to the message,
+{- | Add a singleton row containing a 'Component' to the message
+
+ If the component is not already an actionrow, it is wrapped in a singleton row
+-}
 instance ToMessage Component where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' [c]]))
+  intoMsg c = Endo (#components %~ (<> Just [fixupActionRow c]))
 
 -- | Add a singleton row containing a 'Button' to the message,
 instance ToMessage Button where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' [Button' c]]))
+  intoMsg c = Endo (#components %~ (<> Just [ActionRow' [Button' c]]))
 
 -- | Add a singleton row containing a 'LinkButton' to the message,
 instance ToMessage LinkButton where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' [LinkButton' c]]))
+  intoMsg c = Endo (#components %~ (<> Just [ActionRow' [LinkButton' c]]))
 
 -- | Add a singleton row containing a 'Select' to the message,
 instance ToMessage Select where
-  intoMsg c = Endo (#components %~ (<> [ActionRow' [Select' c]]))
+  intoMsg c = Endo (#components %~ (<> Just [ActionRow' [Select' c]]))
 
 -- | Set a 'MessageReference' as the message to reply to
 instance ToMessage MessageReference where

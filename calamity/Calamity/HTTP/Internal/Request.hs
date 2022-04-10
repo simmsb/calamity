@@ -16,37 +16,31 @@ module Calamity.HTTP.Internal.Request (
   (=:?),
 ) where
 
-import Calamity.Client.Types
 import Calamity.HTTP.Internal.Ratelimit
 import Calamity.HTTP.Internal.Route
 import Calamity.HTTP.Internal.Types
 import Calamity.Metrics.Eff
+import Calamity.Types.LogEff (LogEff)
 import Calamity.Types.Token
-
+import Calamity.Types.TokenEff
 import Control.Lens
 import Control.Monad
-
 import Data.Aeson hiding (Options)
 import Data.Aeson.Types (parseEither)
 import qualified Data.ByteString.Lazy as LB
 import qualified Data.Text as T
 import qualified Data.Text.Encoding as TS
-
 import DiPolysemy hiding (debug, error, info)
-
 import Network.HTTP.Req
-import Web.HttpApiData
-
-import Polysemy (Sem)
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
-import qualified Polysemy.Reader as P
+import Web.HttpApiData
 
-throwIfLeft :: P.Member (P.Error RestError) r => Either String a -> Sem r a
+throwIfLeft :: P.Member (P.Error RestError) r => Either String a -> P.Sem r a
 throwIfLeft (Right a) = pure a
 throwIfLeft (Left e) = P.throw (InternalClientError . T.pack $ e)
 
-extractRight :: P.Member (P.Error e) r => Either e a -> Sem r a
+extractRight :: P.Member (P.Error e) r => Either e a -> P.Sem r a
 extractRight (Left e) = P.throw e
 extractRight (Right a) = pure a
 
@@ -69,10 +63,16 @@ class Request a where
   modifyResponse :: a -> Value -> Value
   modifyResponse _ = id
 
-invoke :: (BotC r, Request a, ReadResponse (Calamity.HTTP.Internal.Request.Result a)) => a -> Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
+invoke ::
+  ( P.Members '[RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r
+  , Request a
+  , ReadResponse (Calamity.HTTP.Internal.Request.Result a)
+  ) =>
+  a ->
+  P.Sem r (Either RestError (Calamity.HTTP.Internal.Request.Result a))
 invoke a = do
-  rlState' <- P.asks (^. #rlState)
-  token' <- P.asks (^. #token)
+  rlState' <- getRatelimitState
+  token' <- getBotToken
 
   let route' = route a
 

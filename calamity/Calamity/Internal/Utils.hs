@@ -25,6 +25,7 @@ module Calamity.Internal.Utils (
 import Calamity.Internal.RunIntoIO
 import Calamity.Types.LogEff
 import Control.Applicative
+import Control.Monad (when)
 import Data.Aeson
 import Data.Aeson.Encoding (null_)
 import Data.Default.Class
@@ -33,9 +34,9 @@ import Data.Semigroup (Last (..))
 import Data.Text
 import qualified Data.Vector.Unboxing as VU
 import qualified DiPolysemy as Di
+import GHC.Generics
 import qualified Polysemy as P
 import TextShow
-import GHC.Generics
 import qualified TextShow.Generic as TSG
 
 {- | Like whileM, but stateful effects are not preserved to mitigate memory leaks
@@ -43,18 +44,16 @@ import qualified TextShow.Generic as TSG
  This means Polysemy.Error won't work to break the loop, etc.
  Instead, Error/Alternative will just result in the loop quitting.
 -}
-whileMFinalIO :: P.Member (P.Final IO) r => P.Sem r Bool -> P.Sem r ()
+whileMFinalIO :: P.Sem r Bool -> P.Sem r ()
 whileMFinalIO action = do
-  action' <- runSemToIO action
-  P.embedFinal $ go action'
- where
-  go action' = do
-    r <- action'
-    case r of
-      Just True ->
-        go action'
-      _ ->
-        pure ()
+  go action
+  where
+    go action = do
+      r <- action
+      when r $ go_b action
+    {-# INLINE go #-}
+    go_b = go
+    {-# NOINLINE go_b #-}
 
 {- | Like untilJust, but stateful effects are not preserved to mitigate memory leaks
 
@@ -63,16 +62,18 @@ whileMFinalIO action = do
 -}
 untilJustFinalIO :: P.Member (P.Final IO) r => P.Sem r (Maybe a) -> P.Sem r a
 untilJustFinalIO action = do
-  action' <- runSemToIO action
-  P.embedFinal $ go action'
- where
-  go action' = do
-    r <- action'
-    case r of
-      Just (Just a) ->
-        pure a
-      _ ->
-        go action'
+  go action
+  where
+    go action = do
+      r <- action
+      case r of
+        Just a ->
+          pure a
+        _ ->
+          go_b action
+    {-# INLINE go #-}
+    go_b = go
+    {-# NOINLINE go_b #-}
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
@@ -148,10 +149,11 @@ instance (TextShow a, VU.Unboxable a) => TextShow (AesonVector a) where
 
 newtype CalamityFromStringShow a = CalamityFromStringShow {unCalamityFromStringShow :: a}
   deriving (FromJSON, ToJSON) via a
-  deriving TextShow via FromStringShow a
+  deriving (TextShow) via FromStringShow a
 
--- | An alternative 'Maybe' type that allows us to distinguish between parsed
--- json fields that were null, and fields that didn't exist.
+{- | An alternative 'Maybe' type that allows us to distinguish between parsed
+ json fields that were null, and fields that didn't exist.
+-}
 data MaybeNull a
   = WasNull
   | NotNull a

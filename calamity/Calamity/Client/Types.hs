@@ -19,16 +19,19 @@ module Calamity.Client.Types (
 import Calamity.Cache.Eff
 import Calamity.Gateway.DispatchEvents (CalamityEvent (..), InviteCreateData, InviteDeleteData, ReactionEvtData, ReadyData)
 import Calamity.Gateway.Types (ControlMessage)
+import Calamity.HTTP.Internal.Ratelimit
 import Calamity.HTTP.Internal.Types
 import Calamity.Metrics.Eff
 import Calamity.Types.LogEff
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Channel.UpdatedMessage
 import Calamity.Types.Model.Guild
+import Calamity.Types.Model.Interaction (Interaction)
 import Calamity.Types.Model.User
 import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
 import Calamity.Types.Token
+import Calamity.Types.TokenEff
 import Control.Concurrent.Async
 import Control.Concurrent.Chan.Unagi
 import Control.Concurrent.MVar
@@ -36,24 +39,23 @@ import Control.Concurrent.STM.TVar
 import Data.Default.Class
 import Data.Dynamic
 import Data.IORef
+import Data.Kind (Type)
 import Data.Maybe
 import Data.Time
 import Data.TypeRepMap (TypeRepMap, WrapTypeable (..))
 import qualified Data.TypeRepMap as TM
 import Data.Typeable
+import Data.Void (Void)
+import qualified Df1
+import qualified Di.Core as DC
 import GHC.Exts (fromList)
 import GHC.Generics
 import qualified Polysemy as P
 import qualified Polysemy.Async as P
 import qualified Polysemy.AtomicState as P
 import qualified Polysemy.Reader as P
-import qualified Df1
-import qualified Di.Core as DC
 import TextShow
 import qualified TextShow.Generic as TSG
-import Data.Kind (Type)
-import Data.Void (Void)
-import Calamity.Types.Model.Interaction (Interaction)
 
 data Client = Client
   { shards :: TVar [(InChan ControlMessage, Async (Maybe ()))]
@@ -73,6 +75,8 @@ type BotC r =
       '[ LogEff
        , MetricEff
        , CacheEff
+       , RatelimitEff
+       , TokenEff
        , P.Reader Client
        , P.AtomicState EventHandlers
        , P.Embed IO
@@ -83,7 +87,7 @@ type BotC r =
   )
 
 -- | A concrete effect stack used inside the bot
-type SetupEff r = (P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r)
+type SetupEff r = (RatelimitEff ': TokenEff ': P.Reader Client ': P.AtomicState EventHandlers ': P.Async ': r)
 
 {- | Some constraints that 'Calamity.Client.Client.react' needs to work. Don't
  worry about these since they are satisfied for any type @s@ can be
@@ -94,7 +98,7 @@ type ReactConstraints s =
   )
 
 newtype StartupError = StartupError String
-  deriving (Show)
+  deriving stock (Show)
 
 -- | A Data Kind used to fire custom events
 data EventType
@@ -240,7 +244,7 @@ data EventHandlerWithID (a :: Type) = EventHandlerWithID
 newtype CustomEHTypeStorage (a :: Type) = CustomEHTypeStorage
   { unwrapCustomEHTypeStorage :: [EventHandlerWithID (a -> IO ())]
   }
-  deriving newtype ( Monoid, Semigroup )
+  deriving newtype (Monoid, Semigroup)
 
 type family EHStorageType (t :: EventType) where
   EHStorageType ( 'CustomEvt _) = TypeRepMap CustomEHTypeStorage
@@ -289,7 +293,7 @@ instance Default EventHandlers where
         , WrapTypeable $ EH @'TypingStartEvt []
         , WrapTypeable $ EH @'UserUpdateEvt []
         , WrapTypeable $ EH @'InteractionEvt []
-        , WrapTypeable $ EH @('CustomEvt Void) TM.empty
+        , WrapTypeable $ EH @( 'CustomEvt Void) TM.empty
         ]
 
 instance Semigroup EventHandlers where
@@ -316,7 +320,7 @@ instance (EHInstanceSelector a ~ flag, InsertEventHandler' flag a) => InsertEven
 class InsertEventHandler' (flag :: Bool) a where
   makeEventHandlers' :: Proxy flag -> Proxy a -> Integer -> StoredEHType a -> EventHandlers
 
-instance forall (x :: Type). (Typeable (EHType ('CustomEvt x))) => InsertEventHandler' 'True ( 'CustomEvt x) where
+instance forall (x :: Type). (Typeable (EHType ( 'CustomEvt x))) => InsertEventHandler' 'True ( 'CustomEvt x) where
   makeEventHandlers' _ _ id' handler =
     EventHandlers . TM.one $
       EH @( 'CustomEvt Void)

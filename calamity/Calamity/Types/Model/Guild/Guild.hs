@@ -158,7 +158,7 @@ instance FromJSON Guild where
       <*> v .:? "system_channel_id"
       <*> v .:? "joined_at"
       <*> v .: "large"
-      <*> v .: "unavailable"
+      <*> v .:? "unavailable" .!= False
       <*> v .: "member_count"
       <*> v .: "voice_states"
       <*> pure members'
