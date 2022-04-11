@@ -8,6 +8,7 @@ module Calamity.Interactions.Eff (
   defer,
   deferEphemeral,
   deferComponent,
+  pushModal,
   InteractionEff (..),
   getInteraction,
   getInteractionID,
@@ -18,12 +19,15 @@ module Calamity.Interactions.Eff (
 import Calamity.HTTP
 import Calamity.Metrics.Eff (MetricEff)
 import Calamity.Types.LogEff (LogEff)
+import Calamity.Types.Model.Channel.Component (Component (ActionRow'))
 import Calamity.Types.Model.Interaction
 import Calamity.Types.Snowflake
 import Calamity.Types.Tellable
 import Control.Lens ((^.))
+import Data.Text (Text)
 import Polysemy
 import qualified Polysemy as P
+import System.Random (getStdRandom, uniform)
 
 data InteractionEff m a where
   GetInteraction :: InteractionEff m Interaction
@@ -120,5 +124,15 @@ deferComponent = do
   interactionToken <- getInteractionToken
   invoke $ CreateResponseDeferComponent interactionID interactionToken
 
-pushModal :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => () -> P.Sem r (Either RestError ())
-pushModal = undefined -- TODO when we have views
+fixupActionRow :: Component -> Component
+fixupActionRow r@(ActionRow' _) = r
+fixupActionRow x = ActionRow' [x]
+
+pushModal :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => Text -> [Component] -> P.Sem r (Either RestError ())
+pushModal title c = do
+  -- we don't actually use the custom id of the modal. the custom ids of the
+  -- sub-components are enough to disambiguate
+  cid <- P.embed $ getStdRandom uniform
+  interactionID <- getInteractionID
+  interactionToken <- getInteractionToken
+  invoke . CreateResponseModal interactionID interactionToken $ InteractionCallbackModal cid title (map fixupActionRow c)

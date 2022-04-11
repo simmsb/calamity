@@ -11,7 +11,7 @@ import Calamity.HTTP.Channel (AllowedMentions, CreateMessageAttachment (..))
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
 import Calamity.Internal.AesonThings
-import Calamity.Types.Model.Channel.Component (Component)
+import Calamity.Types.Model.Channel.Component (Component, CustomID)
 import Calamity.Types.Model.Channel.Embed (Embed)
 import Calamity.Types.Model.Channel.Message (Message)
 import Calamity.Types.Model.Interaction
@@ -88,7 +88,7 @@ data InteractionCallbackAutocompleteChoice = InteractionCallbackAutocompleteChoi
   deriving (ToJSON) via CalamityJSON InteractionCallbackAutocompleteChoice
 
 data InteractionCallbackModal = InteractionCallbackModal
-  { customID :: Text
+  { customID :: CustomID
   , title :: Text
   , components :: [Component]
   }
