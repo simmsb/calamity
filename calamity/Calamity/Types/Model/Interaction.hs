@@ -24,8 +24,6 @@ import qualified Data.HashMap.Strict as H
 import Data.Scientific (toBoundedInteger)
 import qualified Data.Text as T
 import GHC.Generics
-import TextShow
-import qualified TextShow.Generic as TSG
 
 -- | Empty type to flag application IDs
 data Application
@@ -37,7 +35,6 @@ newtype InteractionToken = InteractionToken
   { fromInteractionToken :: T.Text
   }
   deriving stock (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric InteractionToken
   deriving (FromJSON, ToJSON) via T.Text
 
 data Interaction = Interaction
@@ -56,7 +53,6 @@ data Interaction = Interaction
   , guildLocale :: Maybe T.Text
   }
   deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric Interaction
   deriving (FromJSON) via CalamityJSON Interaction
   deriving (HasID Interaction) via HasIDField "id" Interaction
   deriving (HasID Application) via HasIDField "applicationID" Interaction
@@ -71,10 +67,9 @@ data InteractionData = InteractionData
   , componentType :: Maybe ComponentType
   , values :: Maybe [T.Text]
   , targetID :: Maybe (Snowflake ())
-  , components :: Maybe [Component]
+  , components :: Maybe [Value]
   }
   deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric InteractionData
   deriving (FromJSON) via CalamityJSON InteractionData
 
 data ResolvedInteractionData' = ResolvedInteractionData'
@@ -86,7 +81,6 @@ data ResolvedInteractionData' = ResolvedInteractionData'
   , attachments :: CalamityFromStringShow (H.HashMap (Snowflake Attachment) Attachment)
   }
   deriving (Generic)
-  deriving (TextShow) via TSG.FromGeneric ResolvedInteractionData'
   deriving (FromJSON) via CalamityJSON ResolvedInteractionData'
 
 data ResolvedInteractionData = ResolvedInteractionData
@@ -99,7 +93,7 @@ data ResolvedInteractionData = ResolvedInteractionData
   }
   deriving (Show, Generic)
   deriving
-    (TextShow, FromJSON)
+    (FromJSON)
     via OverriddenVia ResolvedInteractionData ResolvedInteractionData'
 
 data InteractionType
@@ -109,7 +103,6 @@ data InteractionType
   | ApplicationCommandAutoCompleteType
   | ModalSubmitType
   deriving (Eq, Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric InteractionType
 
 instance FromJSON InteractionType where
   parseJSON = withScientific "InteractionType" $ \n -> case toBoundedInteger @Int n of

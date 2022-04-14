@@ -65,7 +65,9 @@ library
       Calamity.HTTP.Reason
       Calamity.HTTP.User
       Calamity.HTTP.Webhook
+      Calamity.Interactions
       Calamity.Interactions.Eff
+      Calamity.Interactions.Utils
       Calamity.Interactions.View
       Calamity.Internal.AesonThings
       Calamity.Internal.BoundedStore
@@ -129,7 +131,6 @@ library
       Calamity.Utils.Colour
       Calamity.Utils.Message
       Calamity.Utils.Permissions
-      Calamity.Views.View
   hs-source-dirs:
       ./
   default-extensions:

@@ -1,32 +1,33 @@
-module Calamity.Internal.AesonThings
-    ( WithSpecialCases(..)
-    , IfNoneThen
-    , ExtractFieldFrom
-    , ExtractFieldInto
-    , ExtractFields
-    , ExtractArrayField
-    , DefaultToEmptyArray
-    , DefaultToZero
-    , DefaultToFalse
-    , DefaultToTrue
-    , CalamityJSON(..)
-    , CalamityJSONKeepNothing(..)
-    , jsonOptions
-    , jsonOptionsKeepNothing ) where
+module Calamity.Internal.AesonThings (
+  WithSpecialCases (..),
+  IfNoneThen,
+  ExtractFieldFrom,
+  ExtractFieldInto,
+  ExtractFields,
+  ExtractArrayField,
+  DefaultToEmptyArray,
+  DefaultToZero,
+  DefaultToFalse,
+  DefaultToTrue,
+  CalamityJSON (..),
+  CalamityJSONKeepNothing (..),
+  jsonOptions,
+  jsonOptionsKeepNothing,
+) where
 
-import           Control.Lens
+import Control.Lens
 
-import           Data.Aeson
-import           Data.Aeson.Lens
-import           Data.Aeson.Types      ( Parser )
-import           Data.Kind
-import           Data.Reflection       ( Reifies(..) )
-import           Data.Typeable
-import           Data.String           ( IsString(fromString) )
+import Data.Aeson
+import Data.Aeson.Lens
+import Data.Aeson.Types (Parser)
+import Data.Kind
+import Data.Reflection (Reifies (..))
+import Data.String (IsString (fromString))
+import Data.Typeable
 
-import           GHC.Generics
-import           GHC.TypeLits          ( KnownSymbol, symbolVal )
-import           Control.Monad ((>=>))
+import Control.Monad ((>=>))
+import GHC.Generics
+import GHC.TypeLits (KnownSymbol, symbolVal)
 
 textSymbolVal :: forall n s. (KnownSymbol n, IsString s) => s
 textSymbolVal = fromString $ symbolVal @n Proxy
@@ -49,15 +50,18 @@ instance (Reifies d Value, KnownSymbol label) => PerformAction (IfNoneThen label
 instance (KnownSymbol label, KnownSymbol field, KnownSymbol target) => PerformAction (ExtractFieldInto label field target) where
   runAction _ o =
     let v :: Maybe Value = o ^? ix (textSymbolVal @label) . _Object . ix (textSymbolVal @field)
-    in pure $ o & at (textSymbolVal @target) .~ v
+     in pure $ o & at (textSymbolVal @target) .~ v
 
 instance PerformAction (ExtractFields label '[]) where
   runAction _ = pure
 
-instance (KnownSymbol field,
-          PerformAction (ExtractFieldInto label field field),
-          PerformAction (ExtractFields label fields)) =>
-         PerformAction (ExtractFields label (field : fields)) where
+instance
+  ( KnownSymbol field
+  , PerformAction (ExtractFieldInto label field field)
+  , PerformAction (ExtractFields label fields)
+  ) =>
+  PerformAction (ExtractFields label (field : fields))
+  where
   runAction _ = runAction (Proxy @(ExtractFieldInto label field field)) >=> runAction (Proxy @(ExtractFields label fields))
 
 instance (KnownSymbol label, KnownSymbol field) => PerformAction (ExtractArrayField label field) where
@@ -85,12 +89,13 @@ instance (RunSpecialCase xs, PerformAction action) => RunSpecialCase (action : x
     o' <- runSpecialCases (Proxy @xs) o
     runAction (Proxy @action) o'
 
-instance (RunSpecialCase rules, Typeable a, Generic a, GFromJSON Zero (Rep a))
-  => FromJSON (WithSpecialCases rules a) where
+instance
+  (RunSpecialCase rules, Typeable a, Generic a, GFromJSON Zero (Rep a)) =>
+  FromJSON (WithSpecialCases rules a)
+  where
   parseJSON = withObject (show . typeRep $ Proxy @a) $ \o -> do
     o' <- runSpecialCases (Proxy @rules) o
     WithSpecialCases <$> genericParseJSON jsonOptions (Object o')
-
 
 data DefaultToEmptyArray
 
@@ -138,12 +143,17 @@ instance (Typeable a, Generic a, GFromJSON Zero (Rep a)) => FromJSON (CalamityJS
   parseJSON = fmap CalamityJSONKeepNothing . genericParseJSON jsonOptionsKeepNothing
 
 jsonOptions :: Options
-jsonOptions = defaultOptions { sumEncoding        = UntaggedValue
-                             , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
-                             , omitNothingFields  = True }
+jsonOptions =
+  defaultOptions
+    { sumEncoding = UntaggedValue
+    , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
+    , omitNothingFields = True
+    }
 
 jsonOptionsKeepNothing :: Options
-jsonOptionsKeepNothing = defaultOptions { sumEncoding        = UntaggedValue
-                                        , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
-                                        , omitNothingFields  = False }
-
+jsonOptionsKeepNothing =
+  defaultOptions
+    { sumEncoding = UntaggedValue
+    , fieldLabelModifier = camelTo2 '_' . filter (/= '_')
+    , omitNothingFields = False
+    }

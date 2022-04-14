@@ -216,7 +216,12 @@ instance FromJSON TextInputStyle where
       _ -> fail $ "Invalid TextInputStyle: " <> show n
     Nothing -> fail $ "Invalid TextInputStyle: " <> show n
 
-textInput :: TextInputStyle -> T.Text -> CustomID -> TextInput
+textInput ::
+  TextInputStyle ->
+  -- | Label
+  T.Text ->
+  CustomID ->
+  TextInput
 textInput s l = TextInput s l Nothing Nothing True Nothing Nothing
 
 data Component

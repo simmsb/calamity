@@ -4,44 +4,57 @@ module Calamity.Interactions.View (
   ViewEff (..),
   endView,
   replaceView,
+  getSendResponse,
   View,
   row,
   runView,
+  runViewInstance,
   button,
   button',
   select,
   select',
+  textInput,
+  textInput',
+  deleteInitialMsg,
+  instantiateView,
 ) where
 
 import Calamity.Client.Client (react)
 import Calamity.Client.Types (BotC, EventType (InteractionEvt))
+import Calamity.HTTP.Channel (ChannelRequest (DeleteMessage))
 import Calamity.HTTP.Internal.Ratelimit (RatelimitEff)
+import Calamity.HTTP.Internal.Request (invoke)
 import Calamity.Interactions.Eff (InteractionEff (..))
+import Calamity.Internal.AesonThings
 import Calamity.Metrics.Eff (MetricEff)
 import Calamity.Types.LogEff (LogEff)
 import Calamity.Types.Model.Channel.Component (CustomID)
 import qualified Calamity.Types.Model.Channel.Component as C
+import Calamity.Types.Model.Channel.Message (Message)
 import Calamity.Types.Model.Interaction
 import Calamity.Types.TokenEff (TokenEff)
 import qualified Control.Concurrent.STM as STM
-import Control.Lens ((.~), (?~), (^.), (^..), _1, _2, _Just)
-import Control.Monad (guard)
-import Data.Set (Set)
+import Control.Lens ((.~), (?~), (^.), (^..), _1, _2, _3, _Just)
+import Control.Monad (guard, void)
+import qualified Data.Aeson
+import Data.Aeson.Lens (AsValue (_Array), key)
+import qualified Data.List
 import qualified Data.Set as S
 import Data.Text (Text)
+import GHC.Generics (Generic)
+import qualified GHC.TypeLits as E
 import qualified Polysemy as P
 import qualified Polysemy.Resource as P
 import qualified Polysemy.State as P
 import System.Random
-import qualified GHC.TypeLits as E
 
 data ViewComponent a = ViewComponent
   { component :: C.Component
-  , parse :: Interaction -> a
+  , parse :: Interaction -> ExtractResult a
   }
 
 instance Functor ViewComponent where
-  fmap f ViewComponent {component, parse} = ViewComponent {component, parse = f . parse}
+  fmap f ViewComponent {component, parse} = ViewComponent {component, parse = fmap f . parse}
 
 data View a
   = NilView a
@@ -62,29 +75,60 @@ instance Applicative View where
   pure = NilView
   (<*>) = MultView
 
-type MonadViewMessage
-  = 'E.ShowType View 'E.:<>:
-    'E.Text "Calamity.View doesn't have a Monad instance as we need to be able to inspect the contained components" 'E.:$$:
-    'E.Text "If you haven't already, enable ApplicativeDo" 'E.:$$:
-    'E.Text "Also, make sure you use lazy patterns: ~(a, b) instead of (a, b)" 'E.:$$:
-    'E.Text "Refer to https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/applicative_do.html"
+type MonadViewMessage =
+  'E.ShowType View
+    'E.:<>: 'E.Text " doesn't have a Monad instance as we need to be able to inspect the contained components"
+    'E.:$$: 'E.Text "If you haven't already, enable ApplicativeDo"
+    'E.:$$: 'E.Text "Also, make sure you use lazy patterns: ~(a, b) instead of (a, b)"
+    'E.:$$: 'E.Text "Refer to https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/applicative_do.html"
 
 instance E.TypeError MonadViewMessage => Monad View where
   (>>=) = undefined -- unreachable
 
+data ExtractOkType
+  = -- | At least one value has been extracted
+    SomeExtracted
+  | -- | No values have been extracted, we shouldn't trigger the callback
+    NoneExtracted
+  deriving (Show)
+
+instance Semigroup ExtractOkType where
+  SomeExtracted <> _ = SomeExtracted
+  _ <> SomeExtracted = SomeExtracted
+  _ <> _ = NoneExtracted
+
+data ExtractResult a
+  = -- | Extraction succeeded in some way
+    ExtractOk ExtractOkType a
+  | -- | Bail out from parsing this interaction for the current view
+    ExtractFail
+  deriving (Show, Functor)
+
+instance Applicative ExtractResult where
+  pure = ExtractOk SomeExtracted
+
+  ExtractOk ta f <*> ExtractOk tb x = ExtractOk (ta <> tb) $ f x
+  _ <*> _ = ExtractFail
+
 data ViewInstance a = ViewInstance
-  { customIDS :: Set C.CustomID
-  , extract :: Interaction -> a
+  { -- customIDS :: Set C.CustomID ,
+    extract :: Interaction -> ExtractResult a
   , rendered :: [C.Component]
   }
 
-data ViewEff ret inp m a where
-  EndView :: ret -> ViewEff ret inp m ()
+data ViewEff ret inp sendResp m a where
+  -- | Mark the view as finished and set the return value.
+  --
+  -- This doesn't trigger the immediate exit from the code it is used in, the
+  -- view will exit before it would wait for the next event.
+  EndView :: ret -> ViewEff ret inp sendResp m ()
   -- | Given a view and a way to display the rendered view to discord, show the
   -- view and start tracking the new view
   --
   -- This works for both message components and modals
-  ReplaceView :: View inp -> ([C.Component] -> m ()) -> ViewEff ret inp m ()
+  ReplaceView :: View inp -> ([C.Component] -> m ()) -> ViewEff ret inp sendResp m ()
+  -- | Get the result of the action that sent a value
+  GetSendResponse :: ViewEff ret inp sendResp m sendResp
 
 P.makeSem ''ViewEff
 
@@ -94,10 +138,18 @@ extractCustomID Interaction {data_, type_} = do
   data' <- data_
   data' ^. #customID
 
-guardComponentType :: Interaction -> C.ComponentType -> _
+guardComponentType :: Interaction -> C.ComponentType -> Maybe ()
 guardComponentType Interaction {data_} expected = do
   data' <- data_
   guard $ data' ^. #componentType == Just expected
+
+extractOkFromMaybe :: Maybe a -> ExtractResult (Maybe a)
+extractOkFromMaybe (Just a) = ExtractOk SomeExtracted (Just a)
+extractOkFromMaybe Nothing = ExtractOk NoneExtracted Nothing
+
+extractOkFromBool :: Bool -> ExtractResult Bool
+extractOkFromBool True = ExtractOk SomeExtracted True
+extractOkFromBool False = ExtractOk NoneExtracted False
 
 button :: C.ButtonStyle -> Text -> View Bool
 button s l = button' ((#style .~ s) . (#label ?~ l))
@@ -106,13 +158,14 @@ button' :: (C.Button -> C.Button) -> View Bool
 button' f = SingView $ \g ->
   let (cid, g') = uniform g
       comp = C.Button' . f $ C.button C.ButtonPrimary cid
-      parse int =
+      parse' int =
         Just True
           == ( do
                 customID <- extractCustomID int
                 guardComponentType int C.ButtonType
                 pure $ customID == cid
              )
+      parse = extractOkFromBool . parse'
    in (ViewComponent comp parse, g')
 
 select :: [Text] -> View (Maybe Text)
@@ -131,7 +184,7 @@ select' opts f = SingView $ \g ->
   let (cid, g') = uniform g
       comp = f $ C.select opts cid
       finalValues = S.fromList $ comp ^.. #options . traverse . #value
-      parse int = do
+      parse int = extractOkFromMaybe $ do
         customID <- extractCustomID int
         guard $ customID == cid
         guardComponentType int C.SelectType
@@ -141,53 +194,130 @@ select' opts f = SingView $ \g ->
         pure values
    in (ViewComponent (C.Select' comp) parse, g')
 
-componentIDS :: C.Component -> S.Set CustomID
-componentIDS (C.ActionRow' coms) = S.unions $ map componentIDS coms
-componentIDS (C.Button' C.Button {customID}) = S.singleton customID
-componentIDS (C.LinkButton' _) = S.empty
-componentIDS (C.Select' C.Select {customID}) = S.singleton customID
-componentIDS (C.TextInput' C.TextInput {customID}) = S.singleton customID
+data TextInputDecoded = TextInputDecoded
+  { value :: Maybe Text
+  , customID :: CustomID
+  }
+  deriving (Show, Generic)
+  deriving (Data.Aeson.FromJSON) via CalamityJSON TextInputDecoded
+
+parseTextInput :: CustomID -> Interaction -> ExtractResult (Maybe Text)
+parseTextInput cid int = extractOkFromMaybe $ do
+  components <- int ^. #data_ . _Just . #components
+  -- currently, each text input is a singleton actionrow containing a single textinput component
+
+  let textInputs = components ^.. traverse . key "components" . _Array . traverse
+      inputs' :: Data.Aeson.Result [TextInputDecoded] = traverse Data.Aeson.fromJSON textInputs
+
+  inputs <- case inputs' of
+    Data.Aeson.Success x -> pure x
+    Data.Aeson.Error _ -> Nothing
+
+  thisValue <- Data.List.find ((== cid) . (^. #customID)) inputs
+
+  thisValue ^. #value
+
+textInput ::
+  C.TextInputStyle ->
+  -- | Label
+  Text ->
+  View Text
+textInput s l = SingView $ \g ->
+  let (cid, g') = uniform g
+      comp = C.TextInput' $ C.textInput s l cid
+      parse = ensure <$> parseTextInput cid
+   in (ViewComponent comp parse, g')
+  where
+    ensure (ExtractOk v (Just x)) = ExtractOk v x
+    ensure _ = ExtractFail
+
+textInput' ::
+  C.TextInputStyle ->
+  -- | Label
+  Text ->
+  (C.TextInput -> C.TextInput) ->
+  View (Maybe Text)
+textInput' s l f = SingView $ \g ->
+  let (cid, g') = uniform g
+      comp = C.TextInput' . f $ C.textInput s l cid
+      parse = parseTextInput cid
+   in (ViewComponent comp parse, g')
+
+-- componentIDS :: C.Component -> S.Set CustomID
+-- componentIDS (C.ActionRow' coms) = S.unions $ map componentIDS coms
+-- componentIDS (C.Button' C.Button {customID}) = S.singleton customID
+-- componentIDS (C.LinkButton' _) = S.empty
+-- componentIDS (C.Select' C.Select {customID}) = S.singleton customID
+-- componentIDS (C.TextInput' C.TextInput {customID}) = S.singleton customID
 
 instantiateView :: RandomGen g => g -> View a -> (ViewInstance a, g)
 instantiateView g v =
   case v of
-    NilView x -> (ViewInstance S.empty (const x) [], g)
+    NilView x -> (ViewInstance (const $ ExtractOk SomeExtracted x) [], g)
     SingView f ->
       let (ViewComponent c p, g') = f g
-          i = ViewInstance (componentIDS c) p [c]
+          i = ViewInstance p [c]
        in (i, g')
     RowView x ->
       let (v'@ViewInstance {rendered}, g') = instantiateView g x
        in (v' {rendered = [C.ActionRow' rendered]}, g')
     MultView a b ->
-      let (ViewInstance ca ia ra, g') = instantiateView g a
-          (ViewInstance cb ib rb, g'') = instantiateView g' b
-          cab = S.union ca cb
-          inv i = ia i $ ib i
-       in (ViewInstance cab inv (ra <> rb), g'')
+      let (ViewInstance ia ra, g') = instantiateView g a
+          (ViewInstance ib rb, g'') = instantiateView g' b
+          inv i = ia i <*> ib i
+       in (ViewInstance inv (ra <> rb), g'')
 
+-- | Delete the initial message containing components
+deleteInitialMsg :: (BotC r, P.Member (ViewEff a inp (Either e Message)) r) => P.Sem r ()
+deleteInitialMsg = do
+  ini <- getSendResponse
+  case ini of
+    Right m ->
+      void . invoke $ DeleteMessage m m
+    Left _ -> pure ()
+
+-- | Run a view, returning the value passed to @EndView@
 runView ::
   BotC r =>
   -- | The initial view to render
   View inp ->
   -- | A function to send the rendered view (i.e. as a message or a modal)
-  ([C.Component] -> P.Sem r ()) ->
+  ([C.Component] -> P.Sem r sendResp) ->
   -- | Your callback effect.
   --
   -- local state semantics are preserved between calls here, you can keep state around
-  (inp -> P.Sem (InteractionEff ': ViewEff a inp ': r) ()) ->
+  (inp -> P.Sem (InteractionEff ': ViewEff a inp sendResp ': r) ()) ->
   P.Sem r a
-runView v sendRendered m = P.resourceToIOFinal $ do
+runView v sendRendered m = do
+  inst@ViewInstance {rendered} <- getStdRandom (`instantiateView` v)
+  r <- sendRendered rendered
+  runViewInstance r inst m
+
+{- | Run a prerendered view, returning the value passed to @EndView@
+
+ This function won't send the view, you should do that yourself
+-}
+runViewInstance ::
+  BotC r =>
+  -- | An initial value to act as the value of @GetSendResponse@
+  --
+  -- If you just sent a message, probably pass that
+  sendResp ->
+  -- | The initial view to run
+  ViewInstance inp ->
+  -- | Your callback effect.
+  --
+  -- local state semantics are preserved between calls here, you can keep state around
+  (inp -> P.Sem (InteractionEff ': ViewEff a inp sendResp ': r) ()) ->
+  P.Sem r a
+runViewInstance initSendResp inst m = P.resourceToIOFinal $ do
   eventIn <- P.embed STM.newTQueueIO
 
   P.bracket
     (P.raise $ react @'InteractionEvt (P.embed . sender eventIn))
     P.raise
     ( \_ -> do
-        inst@ViewInstance {rendered} <- getStdRandom (`instantiateView` v)
-        P.raise $ do
-          sendRendered rendered
-          innerLoop inst eventIn m
+        P.raise $ innerLoop initSendResp inst eventIn m
     )
   where
     interpretInteraction ::
@@ -202,10 +332,10 @@ runView v sendRendered m = P.resourceToIOFinal $ do
         )
 
     interpretView ::
-      forall r ret inp.
+      forall r ret inp sendResp.
       P.Member (P.Embed IO) r =>
-      P.Sem (ViewEff ret inp ': r) () ->
-      P.Sem (P.State (Maybe ret, ViewInstance inp) ': r) ()
+      P.Sem (ViewEff ret inp sendResp ': r) () ->
+      P.Sem (P.State (Maybe ret, ViewInstance inp, sendResp) ': r) ()
     interpretView =
       P.reinterpretH
         ( \case
@@ -214,27 +344,35 @@ runView v sendRendered m = P.resourceToIOFinal $ do
               inst@ViewInstance {rendered} <- P.embed $ getStdRandom (`instantiateView` v)
               P.modify' (_2 .~ inst)
               P.runTSimple $ m rendered
+            GetSendResponse -> P.gets (^. _3) >>= P.pureT
         )
 
     innerLoop ::
-      forall r ret inp.
+      forall r ret inp sendResp.
       P.Members '[RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r =>
+      sendResp ->
       ViewInstance inp ->
       STM.TQueue Interaction ->
-      (inp -> P.Sem (InteractionEff ': ViewEff ret inp ': r) ()) ->
+      (inp -> P.Sem (InteractionEff ': ViewEff ret inp sendResp ': r) ()) ->
       P.Sem r ret
-    innerLoop initialInst inChan m = P.evalState (Nothing, initialInst) innerLoop'
+    innerLoop initialSendResp initialInst inChan m = P.evalState (Nothing, initialInst, initialSendResp) innerLoop'
       where
-        innerLoop' :: P.Sem (P.State (Maybe ret, ViewInstance inp) ': r) ret
+        innerLoop' :: P.Sem (P.State (Maybe ret, ViewInstance inp, sendResp) ': r) ret
         innerLoop' = do
-          (s, ViewInstance {customIDS, extract}) <- P.get
+          (s, ViewInstance {extract}, _) <- P.get
           case s of
             Just x -> pure x
             Nothing -> do
               int <- P.embed $ STM.atomically (STM.readTQueue inChan)
-              if Just True == ((`S.member` customIDS) <$> extractCustomID int)
-                then interpretView $ interpretInteraction int (m $ extract int)
-                else pure ()
+              case extract int of
+                ExtractOk SomeExtracted x -> interpretView $ interpretInteraction int (m x)
+                _ -> pure ()
+
+              -- if Just True == ((`S.member` customIDS) <$> extractCustomID int)
+              --   then case extract int of
+              --     ExtractOk SomeExtracted x -> interpretView $ interpretInteraction int (m x)
+              --     _ -> pure ()
+              --   else pure ()
               innerLoop'
 
     sender :: STM.TQueue Interaction -> Interaction -> IO ()
