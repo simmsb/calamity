@@ -22,7 +22,7 @@ module Calamity.Internal.Utils (
   MaybeNull (..),
 ) where
 
-import Calamity.Internal.RunIntoIO
+-- import Calamity.Internal.RunIntoIO
 import Calamity.Types.LogEff
 import Control.Applicative
 import Control.Monad (when)

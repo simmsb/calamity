@@ -187,7 +187,7 @@ fixupActionRow x = ActionRow' [x]
 
 {- | Push a modal as a response to an interaction
 
- You should probably use this with @Calamity.Interaction.runView@
+ You should probably use this with 'Calamity.Interaction.View.runView'
 -}
 pushModal :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => Text -> [Component] -> P.Sem r (Either RestError ())
 pushModal title c = do

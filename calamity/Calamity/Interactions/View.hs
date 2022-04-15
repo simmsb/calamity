@@ -56,12 +56,23 @@ data ViewComponent a = ViewComponent
 instance Functor ViewComponent where
   fmap f ViewComponent {component, parse} = ViewComponent {component, parse = fmap f . parse}
 
+{- | A view containing one or more components
+
+ This has an applicative interface to allow for easy composition of
+ components.
+-}
 data View a
   = NilView a
   | SingView (forall g. RandomGen g => g -> (ViewComponent a, g))
   | RowView (View a)
   | forall x. MultView (View (x -> a)) (View x)
 
+{- | Convert a 'View' such that it renders as a row.
+
+ Note: nested rows are not allowed by discord, along with further restrictions
+ listed here:
+ https://discord.com/developers/docs/interactions/message-components
+-}
 row :: View a -> View a
 row = RowView
 
@@ -151,9 +162,19 @@ extractOkFromBool :: Bool -> ExtractResult Bool
 extractOkFromBool True = ExtractOk SomeExtracted True
 extractOkFromBool False = ExtractOk NoneExtracted False
 
+{- | Construct a 'View' containing a 'C.Button' with the given style and label
+
+ Other fields of 'C.Button' default to 'Nothing'
+-}
 button :: C.ButtonStyle -> Text -> View Bool
 button s l = button' ((#style .~ s) . (#label ?~ l))
 
+{- | Construct a 'View' containing a 'C.Button', then modify the component with
+   the passed mapping function
+
+ The 'C.Button' passed to the mapping function will have a style of
+ 'C.ButtonPrimary', other fields will be 'Nothing'
+-}
 button' :: (C.Button -> C.Button) -> View Bool
 button' f = SingView $ \g ->
   let (cid, g') = uniform g
@@ -168,6 +189,12 @@ button' f = SingView $ \g ->
       parse = extractOkFromBool . parse'
    in (ViewComponent comp parse, g')
 
+{- | Construct a 'View' containing a 'C.Select' with the given list of values
+
+ Each element of the passed options list is used as both the display
+ 'C.SelectOption.label' and 'C.SelectOption.value', use 'select'' if you
+ desire more control
+-}
 select :: [Text] -> View (Maybe Text)
 select opts = ensureOne <$> select' (map (\x -> C.sopt x x) opts) Prelude.id
   where
@@ -179,6 +206,9 @@ select opts = ensureOne <$> select' (map (\x -> C.sopt x x) opts) Prelude.id
         [x] -> Just x
         _ -> Nothing
 
+{- | Construct a 'View' containing a 'C.Select' with the given options, then
+ modify the component with the passed mapping function
+-}
 select' :: [C.SelectOption] -> (C.Select -> C.Select) -> View (Maybe [Text])
 select' opts f = SingView $ \g ->
   let (cid, g') = uniform g
@@ -217,6 +247,12 @@ parseTextInput cid int = extractOkFromMaybe $ do
 
   thisValue ^. #value
 
+{- | Construct a 'View' containing a 'C.TextInput' with the given style and label
+
+ All other fields of 'C.TextInput' default to 'Nothing'
+
+ This view ensures that a value was passed for an input
+-}
 textInput ::
   C.TextInputStyle ->
   -- | Label
@@ -231,6 +267,9 @@ textInput s l = SingView $ \g ->
     ensure (ExtractOk v (Just x)) = ExtractOk v x
     ensure _ = ExtractFail
 
+{- | Construct a 'View' containing a 'C.TextInput' with the given style and label,
+   then modify the component with the passed mapping function
+-}
 textInput' ::
   C.TextInputStyle ->
   -- | Label
@@ -250,6 +289,7 @@ textInput' s l f = SingView $ \g ->
 -- componentIDS (C.Select' C.Select {customID}) = S.singleton customID
 -- componentIDS (C.TextInput' C.TextInput {customID}) = S.singleton customID
 
+-- | Generate a 'ViewInstance' of a 'View' by filling in 'CustomID's with random values
 instantiateView :: RandomGen g => g -> View a -> (ViewInstance a, g)
 instantiateView g v =
   case v of
@@ -276,7 +316,14 @@ deleteInitialMsg = do
       void . invoke $ DeleteMessage m m
     Left _ -> pure ()
 
--- | Run a view, returning the value passed to @EndView@
+-- | Run a 'View', returning the value passed to 'endView'
+--
+-- This function will not return until 'endView' is used inside the view.
+-- If you want it to run in the background, consider using "Polysemy.Async".
+--
+-- This is async exception safe, you can use libraries such as
+-- [polysemy-conc](https://hackage.haskell.org/package/polysemy-conc) to stop
+-- views after a timeout.
 runView ::
   BotC r =>
   -- | The initial view to render
@@ -293,7 +340,7 @@ runView v sendRendered m = do
   r <- sendRendered rendered
   runViewInstance r inst m
 
-{- | Run a prerendered view, returning the value passed to @EndView@
+{- | Run a prerendered 'View', returning the value passed to 'endView'
 
  This function won't send the view, you should do that yourself
 -}
@@ -306,6 +353,8 @@ runViewInstance ::
   -- | The initial view to run
   ViewInstance inp ->
   -- | Your callback effect.
+  --
+  -- In here you get access to the 'InteractionEff' and 'ViewEff' effects.
   --
   -- local state semantics are preserved between calls here, you can keep state around
   (inp -> P.Sem (InteractionEff ': ViewEff a inp sendResp ': r) ()) ->

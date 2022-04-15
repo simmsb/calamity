@@ -57,17 +57,17 @@ project listed here)
 {- cabal:
   build-depends:
      base >= 4.13 && < 5
-     , calamity >= 0.1.30.1
-     , text >= 1.2 && < 2
-     , lens >= 4.18 && < 5
+     , calamity >= 0.3.0.0
+     , text >= 1.2 && < 2.1
+     , lens >= 5.1 && < 6
      , di-polysemy ^>= 0.2
      , di >= 1.3 && < 2
      , df1 >= 0.3 && < 0.5
      , di-core ^>= 1.0.4
-     , polysemy ^>= 1.5
-     , polysemy-plugin ^>= 0.3
-     , stm ^>= 2.5
-     , text-show ^>= 3.9
+     , polysemy >= 1.5 && <2
+     , polysemy-plugin >= 0.3 && <0.5
+     , stm >= 2.5 && <3
+     , text-show >= 3.8 && <4
 -}
 
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
@@ -87,6 +87,8 @@ project listed here)
 {-# LANGUAGE BlockArguments #-}
 
 {-# LANGUAGE TypeOperators #-}
+
+{-# LANGUAGE ApplicativeDo #-}
 
 module Main where
 

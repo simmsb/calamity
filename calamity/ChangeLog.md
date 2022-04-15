@@ -1,5 +1,33 @@
 # Changelog for Calamity
 
+## 0.3.0.0
+
++ The discord api version has been moved from v9 to v10.
++ Added support for interactions and views with `Calamity.Interactions`.
++ Some more effects have been put in, `RatelimitEff` and `TokenEff`, causing
+  changes to `BotC`, `SetupEff`.
++ The HTTP client can now be used without a `Client` instance.
++ The `GuildMemberAdd` event now includes the guild id of the member.
++ The `InteractionCreate` event has been added.
++ Adding attachments to messages has now been reworked, and `TFile` has been
+  replaced with `CreateMessageAttachment`.
++ The `file` attribute of `CreateMessageOptions` has been removed and replaced
+  with `attachments :: Maybe [CreateMessageAttachment]`.
++ The `embed` attribute of `CreateMessageOptions` has been replaced with `embeds
+  :: Maybe [Embed]`.
++ The `components :: Maybe [Component]` field has been added to
+  `CreateMessageOptions`.
++ `editMessageEmbed` has been replaced with `editMessageEmbeds`.
++ Added `Calamity.HTTP.Channel.editMessageComponents`.
++ Added `Calamity.HTTP.Guild.SearchGuildMembers`.
++ `Calamity.HTTP.Guild.GetGuildBans` now has a `GetGuildBansOptions` parameter.
++ Added the module `Calamity.HTTP.Interaction`.
++ Added the modules `Calamity.Interactions`,
+  `Calamity.Interactions.{Eff,Utils,View}`.
++ Fully fleshed out `Calamity.Types.Model.Channel.Component`.
++ Removed `stickers` from `Message`.
++ Removed the `guildID` field from `Member`.
+
 ## 0.2.0.2
 
 + Dependency bump
