@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | User activities
 module Calamity.Types.Model.Presence.Activity (
   Activity (..),
@@ -9,19 +11,18 @@ module Calamity.Types.Model.Presence.Activity (
   ActivitySecrets (..),
 ) where
 
-import Calamity.Internal.AesonThings
-import Calamity.Internal.OverriddenVia
 import Calamity.Internal.UnixTimestamp
+import Calamity.Internal.Utils
 import Calamity.Types.Snowflake
-import Control.DeepSeq (NFData)
-import Data.Aeson
+import Data.Aeson ((.:), (.:?))
+import qualified Data.Aeson as Aeson
 import Data.Scientific
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.Word
-import GHC.Generics
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics.TH
+import qualified TextShow
+import TextShow.TH
 
 data ActivityType
   = Game
@@ -29,18 +30,17 @@ data ActivityType
   | Listening
   | Custom
   | Other Int
-  deriving (Eq, Generic, Show, NFData)
-  deriving (TextShow) via TSG.FromGeneric ActivityType
+  deriving (Eq, Show)
 
-instance ToJSON ActivityType where
-  toJSON Game = Number 0
-  toJSON Streaming = Number 1
-  toJSON Listening = Number 2
-  toJSON (Other n) = Number $ fromIntegral n
-  toJSON Custom = Number 4
+instance Aeson.ToJSON ActivityType where
+  toJSON Game = Aeson.Number 0
+  toJSON Streaming = Aeson.Number 1
+  toJSON Listening = Aeson.Number 2
+  toJSON Custom = Aeson.Number 4
+  toJSON (Other n) = Aeson.Number $ fromIntegral n
 
-instance FromJSON ActivityType where
-  parseJSON = withScientific "ActivityType" $ \n -> case toBoundedInteger @Int n of
+instance Aeson.FromJSON ActivityType where
+  parseJSON = Aeson.withScientific "ActivityType" $ \n -> case toBoundedInteger @Int n of
     Just v -> case v of
       0 -> pure Game
       1 -> pure Streaming
@@ -51,7 +51,7 @@ instance FromJSON ActivityType where
 
 data Activity = Activity
   { name :: Text
-  , type_ :: !ActivityType
+  , type_ :: ActivityType
   , url :: Maybe Text
   , timestamps :: Maybe ActivityTimestamps
   , applicationID :: Maybe (Snowflake ())
@@ -63,9 +63,40 @@ data Activity = Activity
   , instance_ :: Maybe Bool
   , flags :: Maybe Word64
   }
-  deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric Activity
-  deriving (ToJSON, FromJSON) via CalamityJSON Activity
+  deriving (Eq, Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON Activity
+
+instance CalamityToJSON' Activity where
+  toPairs Activity {..} =
+    [ "name" .= name
+    , "type" .= type_
+    , "url" .?= url
+    , "timestamps" .?= timestamps
+    , "application_id" .?= applicationID
+    , "details" .?= details
+    , "state" .?= state
+    , "party" .?= party
+    , "assets" .?= assets
+    , "secrets" .?= secrets
+    , "instance" .?= instance_
+    , "flags" .?= flags
+    ]
+
+instance Aeson.FromJSON Activity where
+  parseJSON = Aeson.withObject "Activity" $ \v ->
+    Activity
+      <$> v .: "name"
+      <*> v .: "type"
+      <*> v .:? "url"
+      <*> v .:? "timestamps"
+      <*> v .:? "application_id"
+      <*> v .:? "details"
+      <*> v .:? "state"
+      <*> v .:? "party"
+      <*> v .:? "assets"
+      <*> v .:? "secrets"
+      <*> v .:? "instance"
+      <*> v .:? "flags"
 
 -- | Make an 'Activity' with all optional fields set to Nothing
 activity :: Text -> ActivityType -> Activity
@@ -85,28 +116,44 @@ activity !name !type_ =
     , flags = Nothing
     }
 
-data ActivityTimestamps' = ActivityTimestamps'
-  { start :: !(Maybe UnixTimestamp)
-  , end :: !(Maybe UnixTimestamp)
-  }
-  deriving (Generic, NFData)
-  deriving (ToJSON, FromJSON) via CalamityJSON ActivityTimestamps'
-  deriving (TextShow) via TSG.FromGeneric ActivityTimestamps'
-
 data ActivityTimestamps = ActivityTimestamps
-  { start :: !(Maybe UTCTime)
-  , end :: !(Maybe UTCTime)
+  { start :: Maybe UTCTime
+  , end :: Maybe UTCTime
   }
-  deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow, ToJSON, FromJSON) via OverriddenVia ActivityTimestamps ActivityTimestamps'
+  deriving (Eq, Show)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow ActivityTimestamps
+  deriving (Aeson.ToJSON) via CalamityToJSON ActivityTimestamps
+
+instance CalamityToJSON' ActivityTimestamps where
+  toPairs ActivityTimestamps {..} =
+    [ "start" .?= fmap UnixTimestamp start
+    , "end" .?= fmap UnixTimestamp end
+    ]
+
+instance Aeson.FromJSON ActivityTimestamps where
+  parseJSON = Aeson.withObject "ActivityTimestamps" $ \v ->
+    ActivityTimestamps
+      <$> (fmap unUnixTimestamp <$> v .:? "start")
+      <*> (fmap unUnixTimestamp <$> v .:? "end")
 
 data ActivityParty = ActivityParty
   { id :: Maybe Text
   , size :: Maybe (Int, Int)
   }
-  deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric ActivityParty
-  deriving (ToJSON, FromJSON) via CalamityJSON ActivityParty
+  deriving (Eq, Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ActivityParty
+
+instance CalamityToJSON' ActivityParty where
+  toPairs ActivityParty {..} =
+    [ "id" .?= id
+    , "size" .?= size
+    ]
+
+instance Aeson.FromJSON ActivityParty where
+  parseJSON = Aeson.withObject "ActivityParty" $ \v ->
+    ActivityParty
+      <$> v .:? "id"
+      <*> v .:? "size"
 
 data ActivityAssets = ActivityAssets
   { largeImage :: Maybe Text
@@ -114,15 +161,54 @@ data ActivityAssets = ActivityAssets
   , smallImage :: Maybe Text
   , smallText :: Maybe Text
   }
-  deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric ActivityAssets
-  deriving (ToJSON, FromJSON) via CalamityJSON ActivityAssets
+  deriving (Eq, Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ActivityAssets
+
+instance CalamityToJSON' ActivityAssets where
+  toPairs ActivityAssets {..} =
+    [ "large_image" .?= largeImage
+    , "large_text" .?= largeText
+    , "small_image" .?= smallImage
+    , "small_text" .?= smallText
+    ]
+
+instance Aeson.FromJSON ActivityAssets where
+  parseJSON = Aeson.withObject "ActivityAssets" $ \v ->
+    ActivityAssets
+      <$> v .:? "large_image"
+      <*> v .:? "large_text"
+      <*> v .:? "small_image"
+      <*> v .:? "small_text"
 
 data ActivitySecrets = ActivitySecrets
   { join :: Maybe Text
   , spectate :: Maybe Text
   , match :: Maybe Text
   }
-  deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric ActivitySecrets
-  deriving (ToJSON, FromJSON) via CalamityJSON ActivitySecrets
+  deriving (Eq, Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ActivitySecrets
+
+instance CalamityToJSON' ActivitySecrets where
+  toPairs ActivitySecrets {..} =
+    [ "join" .?= join
+    , "spectate" .?= spectate
+    , "match" .?= match
+    ]
+
+instance Aeson.FromJSON ActivitySecrets where
+  parseJSON = Aeson.withObject "ActivitySecrets" $ \v ->
+    ActivitySecrets
+      <$> v .:? "join"
+      <*> v .:? "spectate"
+      <*> v .:? "match"
+
+$(deriveTextShow ''ActivityType)
+$(deriveTextShow ''Activity)
+$(deriveTextShow ''ActivityParty)
+$(deriveTextShow ''ActivityAssets)
+$(deriveTextShow ''ActivitySecrets)
+$(makeFieldLabelsNoPrefix ''Activity)
+$(makeFieldLabelsNoPrefix ''ActivityTimestamps)
+$(makeFieldLabelsNoPrefix ''ActivityParty)
+$(makeFieldLabelsNoPrefix ''ActivityAssets)
+$(makeFieldLabelsNoPrefix ''ActivitySecrets)

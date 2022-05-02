@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | A 'Cache' handler that operates in memory
 module Calamity.Cache.InMemory (
   runCacheInMemory,
@@ -13,33 +15,29 @@ import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-
-import Control.Lens
+import Control.Applicative
+import Data.Functor.Identity
 import Control.Monad.State.Strict
-
 import Data.Foldable
 import qualified Data.HashMap.Strict as SH
 import qualified Data.HashSet as HS
 import Data.IORef
-
-import Control.DeepSeq
-import GHC.Generics
-
+import Optics
 import qualified Polysemy as P
 import qualified Polysemy.AtomicState as P
+import Optics.State.Operators ((?=), (%=))
 
 data Cache f = Cache
   { user :: Maybe User
-  , guilds :: SM.SnowflakeMap Guild
-  , dms :: SM.SnowflakeMap DMChannel
-  , guildChannels :: SH.HashMap (Snowflake GuildChannel) Guild
-  , users :: SM.SnowflakeMap User
-  , unavailableGuilds :: HS.HashSet (Snowflake Guild)
-  , messages :: f (BS.BoundedStore Message)
+  , guilds :: !(SM.SnowflakeMap Guild)
+  , dms :: !(SM.SnowflakeMap DMChannel)
+  , guildChannels :: !(SH.HashMap (Snowflake GuildChannel) Guild)
+  , users :: !(SM.SnowflakeMap User)
+  , unavailableGuilds :: !(HS.HashSet (Snowflake Guild))
+  , messages :: !(f (BS.BoundedStore Message))
   }
-  deriving (Generic)
 
-instance NFData (f (BS.BoundedStore Message)) => NFData (Cache f)
+$(makeFieldLabelsNoPrefix ''Cache)
 
 type CacheWithMsg = Cache Identity
 type CacheNoMsg = Cache (Const ())
@@ -72,7 +70,7 @@ runCacheInMemory' msgLimit m = do
   P.runAtomicStateIORef var $ P.reinterpret runCache' m
 
 runCache' :: (MessageMod (Cache t), P.Member (P.AtomicState (Cache t)) r) => CacheEff m a -> P.Sem r a
-runCache' act = P.atomicState' ((swap .) . force . runState $ runCache act)
+runCache' act = P.atomicState' ((swap .) . runState $ runCache act)
 
 class MessageMod t where
   setMessage' :: Message -> State t ()
@@ -81,10 +79,10 @@ class MessageMod t where
   delMessage' :: Snowflake Message -> State t ()
 
 instance MessageMod CacheWithMsg where
-  setMessage' m = #messages . _Wrapped %= BS.addItem m
-  getMessage' mid = use (#messages . _Wrapped . at mid)
-  getMessages' = toList <$> use (#messages . _Wrapped)
-  delMessage' mid = #messages . _Wrapped %= sans mid
+  setMessage' m = #messages % _1 %= BS.addItem m
+  getMessage' mid = use (#messages % _1 % at' mid)
+  getMessages' = toList <$> use (#messages % _1)
+  delMessage' mid = #messages % _1 %= sans mid
 
 instance MessageMod CacheNoMsg where
   setMessage' !_ = pure ()
@@ -98,23 +96,23 @@ runCache GetBotUser = use #user
 runCache (SetGuild g) = do
   #guilds %= SM.insert g
   #guildChannels %= SH.filter (\v -> getID @Guild v /= getID @Guild g)
-  #guildChannels %= SH.union (SH.fromList $ map (,g) (SM.keys (g ^. #channels)))
-runCache (GetGuild gid) = use (#guilds . at gid)
-runCache (GetGuildChannel cid) = use (#guildChannels . at cid) <&> (>>= (^. #channels . at cid))
+  #guildChannels %= SH.union (SH.fromList $ map (, g) (SM.keys (g ^. #channels)))
+runCache (GetGuild gid) = use (#guilds % at' gid)
+runCache (GetGuildChannel cid) = use (#guildChannels % at' cid) <&> (>>= (^. #channels % at' cid))
 runCache GetGuilds = SM.elems <$> use #guilds
 runCache (DelGuild gid) = do
   #guilds %= sans gid
   #guildChannels %= SH.filter (\v -> getID @Guild v /= gid)
 runCache (SetDM dm) = #dms %= SM.insert dm
-runCache (GetDM did) = use (#dms . at did)
+runCache (GetDM did) = use (#dms % at' did)
 runCache GetDMs = SM.elems <$> use #dms
 runCache (DelDM did) = #dms %= sans did
 runCache (SetUser u) = #users %= SM.insert u
-runCache (GetUser uid) = use (#users . at uid)
+runCache (GetUser uid) = use (#users % at' uid)
 runCache GetUsers = SM.elems <$> use #users
 runCache (DelUser uid) = #users %= sans uid
 runCache (SetUnavailableGuild gid) = #unavailableGuilds %= HS.insert gid
-runCache (IsUnavailableGuild gid) = use (#unavailableGuilds . contains gid)
+runCache (IsUnavailableGuild gid) = use (#unavailableGuilds % contains gid)
 runCache GetUnavailableGuilds = HS.toList <$> use #unavailableGuilds
 runCache (DelUnavailableGuild gid) = #unavailableGuilds %= sans gid
 runCache (SetMessage m) = setMessage' m

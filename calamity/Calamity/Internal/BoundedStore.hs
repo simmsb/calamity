@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | A thing for storing the last N things with IDs
 module Calamity.Internal.BoundedStore (
   BoundedStore,
@@ -7,17 +9,16 @@ module Calamity.Internal.BoundedStore (
   dropItem,
 ) where
 
-import Calamity.Internal.Utils
-import Calamity.Types.Snowflake
-import Control.Lens
-import Control.Monad.State.Lazy
-import Data.Default.Class
-import Data.Generics.Labels ()
+import Calamity.Internal.Utils ( unlessM, whenM )
+import Calamity.Types.Snowflake ( HasID(getID), Snowflake, HasID' )
+import Control.Monad.State.Lazy ( when, execState )
+import Data.Default.Class ( Default(..) )
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as H
 import Deque.Lazy (Deque)
 import qualified Deque.Lazy as DQ
-import GHC.Generics
+import Optics
+import Optics.State.Operators ((%=), (.=))
 
 data BoundedStore a = BoundedStore
   { itemQueue :: Deque (Snowflake a)
@@ -25,7 +26,9 @@ data BoundedStore a = BoundedStore
   , limit :: Int
   , size :: Int
   }
-  deriving (Show, Generic)
+  deriving (Show)
+
+$(makeFieldLabelsNoPrefix ''BoundedStore)
 
 instance Foldable BoundedStore where
   foldr f i = foldr f i . H.elems . items
@@ -43,19 +46,18 @@ type instance IxValue (BoundedStore a) = a
 instance HasID' a => Ixed (BoundedStore a)
 
 instance HasID' a => At (BoundedStore a) where
-  at k f m =
-    f mv <&> \case
-      Nothing -> maybe m (const (dropItem k m)) mv
-      Just v -> addItem v m
-   where
-    mv = getItem k m
+  at k = lensVL $ \f m ->
+    let mv = getItem k m
+     in f mv <&> \case
+          Nothing -> maybe m (const (dropItem k m)) mv
+          Just v -> addItem v m
   {-# INLINE at #-}
 
 addItem :: HasID' a => a -> BoundedStore a -> BoundedStore a
 addItem m = execState $ do
   unlessM (H.member (getID m) <$> use #items) $ do
     #itemQueue %= DQ.cons (getID m)
-    #size += 1
+    #size %= succ
 
   size <- use #size
   limit <- use #limit
@@ -65,7 +67,7 @@ addItem m = execState $ do
     let Just (rid, q') = DQ.unsnoc q
     #itemQueue .= q'
     #items %= sans rid
-    #size -= 1
+    #size %= pred
 
   #items %= H.insert (getID m) m
 {-# INLINE addItem #-}
@@ -77,7 +79,7 @@ getItem id s = H.lookup id (s ^. #items)
 dropItem :: Snowflake a -> BoundedStore a -> BoundedStore a
 dropItem id = execState $ do
   whenM (H.member id <$> use #items) $ do
-    #size -= 1
+    #size %= pred
 
   #itemQueue %= DQ.filter (/= id)
   #items %= H.delete id

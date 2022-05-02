@@ -4,11 +4,8 @@ module Calamity.HTTP.Invite (InviteRequest (..)) where
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
 import Calamity.Types.Model.Guild
-
-import Control.Lens hiding ((.=))
-
+import Data.Function ((&))
 import Data.Text (Text)
-
 import Network.HTTP.Req
 
 data InviteRequest a where

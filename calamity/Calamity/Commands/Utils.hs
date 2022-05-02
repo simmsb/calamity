@@ -1,5 +1,4 @@
-{-# LANGUAGE DerivingStrategies #-}
-{-# LANGUAGE RecursiveDo #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- | Command handler utilities
 module Calamity.Commands.Utils (
@@ -27,8 +26,8 @@ import qualified CalamityCommands.Utils as CC
 import Control.Monad
 import qualified Data.Text as T
 import Data.Typeable
-import GHC.Generics (Generic)
 import qualified Polysemy as P
+import Optics.TH (makeFieldLabelsNoPrefix)
 
 data CmdInvokeFailReason c
   = NoContext
@@ -39,7 +38,7 @@ data CtxCommandError c = CtxCommandError
   { ctx :: c
   , err :: CC.CommandError
   }
-  deriving (Show, Generic)
+  deriving (Show)
 
 data CommandNotFound = CommandNotFound
   { msg :: Message
@@ -48,12 +47,12 @@ data CommandNotFound = CommandNotFound
   , -- | The groups that were successfully parsed
     path :: [T.Text]
   }
-  deriving (Show, Generic)
+  deriving (Show)
 
 newtype CommandInvoked c = CommandInvoked
   { ctx :: c
   }
-  deriving stock (Show, Generic)
+  deriving stock (Show)
 
 -- | A default interpretation for 'CC.ParsePrefix' that uses a single constant prefix.
 useConstantPrefix :: T.Text -> P.Sem (CC.ParsePrefix Message ': r) a -> P.Sem r a
@@ -114,3 +113,8 @@ addCommands m = do
         Nothing -> pure ()
     _ -> pure ()
   pure (remove, handler, res)
+
+$(makeFieldLabelsNoPrefix ''CmdInvokeFailReason)
+$(makeFieldLabelsNoPrefix ''CtxCommandError)
+$(makeFieldLabelsNoPrefix ''CommandNotFound)
+$(makeFieldLabelsNoPrefix ''CommandInvoked)

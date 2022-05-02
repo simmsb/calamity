@@ -19,21 +19,16 @@ import CalamityCommands.Group
 import CalamityCommands.Handler
 import CalamityCommands.Internal.LocalWriter
 import CalamityCommands.ParsePrefix
-
-import Control.Lens hiding (Context)
 import Control.Monad.Fix (MonadFix)
-
 import Data.Char (isSpace)
 import qualified Data.HashMap.Lazy as LH
 import qualified Data.Text as T
-
-import GHC.Generics (Generic)
-
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
 import qualified Polysemy.Fixpoint as P
 import qualified Polysemy.Reader as P
 import qualified Polysemy.Tagged as P
+import Optics
 
 mapLeft :: (e -> e') -> Either e a -> Either e' a
 mapLeft f (Left x) = Left $ f x
@@ -43,7 +38,7 @@ data CmdInvokeFailReason c
   = NoContext
   | NotFound [T.Text]
   | CommandInvokeError c CommandError
-  deriving (Show, Generic)
+  deriving (Show)
 
 {- | Manages parsing messages and handling commands for a CommandHandler.
 

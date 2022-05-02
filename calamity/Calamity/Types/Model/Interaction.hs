@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Discord Interactions
 module Calamity.Types.Model.Interaction (
   Interaction (..),
@@ -9,9 +11,6 @@ module Calamity.Types.Model.Interaction (
   ApplicationCommand,
 ) where
 
-import Calamity.Internal.AesonThings
-import Calamity.Internal.OverriddenVia
-import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel (Attachment, Channel, Partial)
 import Calamity.Types.Model.Channel.Component
 import Calamity.Types.Model.Channel.Message (Message)
@@ -19,11 +18,14 @@ import Calamity.Types.Model.Guild (Guild, Role)
 import Calamity.Types.Model.Guild.Member (Member)
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
-import Data.Aeson
+import Data.Aeson ((.:), (.:?))
+import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as H
 import Data.Scientific (toBoundedInteger)
 import qualified Data.Text as T
-import GHC.Generics
+import Optics.TH
+import qualified TextShow
+import TextShow.TH
 
 -- | Empty type to flag application IDs
 data Application
@@ -34,8 +36,8 @@ data ApplicationCommand
 newtype InteractionToken = InteractionToken
   { fromInteractionToken :: T.Text
   }
-  deriving stock (Show, Generic)
-  deriving (FromJSON, ToJSON) via T.Text
+  deriving stock (Show)
+  deriving (Aeson.FromJSON, Aeson.ToJSON) via T.Text
 
 data Interaction = Interaction
   { id :: Snowflake Interaction
@@ -52,10 +54,26 @@ data Interaction = Interaction
   , locale :: Maybe T.Text
   , guildLocale :: Maybe T.Text
   }
-  deriving (Show, Generic)
-  deriving (FromJSON) via CalamityJSON Interaction
+  deriving (Show)
   deriving (HasID Interaction) via HasIDField "id" Interaction
   deriving (HasID Application) via HasIDField "applicationID" Interaction
+
+instance Aeson.FromJSON Interaction where
+  parseJSON = Aeson.withObject "Interaction" $ \v ->
+    Interaction
+      <$> v .: "id"
+      <*> v .: "application_id"
+      <*> v .: "type"
+      <*> v .:? "data"
+      <*> v .:? "guild_id"
+      <*> v .:? "channel_id"
+      <*> v .:? "member"
+      <*> v .:? "user"
+      <*> v .: "token"
+      <*> v .: "version"
+      <*> v .:? "message"
+      <*> v .:? "locale"
+      <*> v .:? "guild_locale"
 
 data InteractionData = InteractionData
   { id :: Maybe (Snowflake ApplicationCommand)
@@ -67,21 +85,22 @@ data InteractionData = InteractionData
   , componentType :: Maybe ComponentType
   , values :: Maybe [T.Text]
   , targetID :: Maybe (Snowflake ())
-  , components :: Maybe [Value]
+  , components :: Maybe [Aeson.Value]
   }
-  deriving (Show, Generic)
-  deriving (FromJSON) via CalamityJSON InteractionData
+  deriving (Show)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow InteractionData
 
-data ResolvedInteractionData' = ResolvedInteractionData'
-  { users :: CalamityFromStringShow (H.HashMap (Snowflake User) User)
-  , members :: CalamityFromStringShow (H.HashMap (Snowflake Member) Member)
-  , roles :: CalamityFromStringShow (H.HashMap (Snowflake Role) Role)
-  , channels :: CalamityFromStringShow (H.HashMap (Snowflake Channel) (Partial Channel))
-  , messages :: CalamityFromStringShow (H.HashMap (Snowflake Message) (Partial Message))
-  , attachments :: CalamityFromStringShow (H.HashMap (Snowflake Attachment) Attachment)
-  }
-  deriving (Generic)
-  deriving (FromJSON) via CalamityJSON ResolvedInteractionData'
+instance Aeson.FromJSON InteractionData where
+  parseJSON = Aeson.withObject "InteractionData" $ \v ->
+    InteractionData
+      <$> v .:? "id"
+      <*> v .:? "name"
+      <*> v .:? "resolved"
+      <*> v .:? "custom_id"
+      <*> v .:? "component_type"
+      <*> v .:? "values"
+      <*> v .:? "target_id"
+      <*> v .:? "components"
 
 data ResolvedInteractionData = ResolvedInteractionData
   { users :: H.HashMap (Snowflake User) User
@@ -91,10 +110,18 @@ data ResolvedInteractionData = ResolvedInteractionData
   , messages :: H.HashMap (Snowflake Message) (Partial Message)
   , attachments :: H.HashMap (Snowflake Attachment) Attachment
   }
-  deriving (Show, Generic)
-  deriving
-    (FromJSON)
-    via OverriddenVia ResolvedInteractionData ResolvedInteractionData'
+  deriving (Show)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow ResolvedInteractionData
+
+instance Aeson.FromJSON ResolvedInteractionData where
+  parseJSON = Aeson.withObject "ResolvedInteractionData" $ \v ->
+    ResolvedInteractionData
+      <$> v .: "users"
+      <*> v .: "members"
+      <*> v .: "roles"
+      <*> v .: "channels"
+      <*> v .: "messages"
+      <*> v .: "attachments"
 
 data InteractionType
   = PingType
@@ -102,13 +129,22 @@ data InteractionType
   | MessageComponentType
   | ApplicationCommandAutoCompleteType
   | ModalSubmitType
-  deriving (Eq, Show, Generic)
+  deriving (Eq, Show)
 
-instance FromJSON InteractionType where
-  parseJSON = withScientific "InteractionType" $ \n -> case toBoundedInteger @Int n of
+instance Aeson.FromJSON InteractionType where
+  parseJSON = Aeson.withScientific "InteractionType" $ \n -> case toBoundedInteger @Int n of
     Just 1 -> pure PingType
     Just 2 -> pure ApplicationCommandType
     Just 3 -> pure MessageComponentType
     Just 4 -> pure ApplicationCommandAutoCompleteType
     Just 5 -> pure ModalSubmitType
     _ -> fail $ "Invalid InteractionType: " <> show n
+
+$(deriveTextShow ''InteractionToken)
+$(deriveTextShow ''Interaction)
+$(deriveTextShow ''InteractionType)
+$(makeFieldLabelsNoPrefix ''InteractionToken)
+$(makeFieldLabelsNoPrefix ''Interaction)
+$(makeFieldLabelsNoPrefix ''InteractionData)
+$(makeFieldLabelsNoPrefix ''ResolvedInteractionData)
+$(makeFieldLabelsNoPrefix ''InteractionType)

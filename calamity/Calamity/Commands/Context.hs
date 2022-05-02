@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Command invokation context
 module Calamity.Commands.Context (
   CalamityCommandContext (..),
@@ -17,14 +19,12 @@ import Calamity.Types.Snowflake
 import Calamity.Types.Tellable
 import qualified CalamityCommands.Context as CC
 import Control.Applicative
-import Control.Lens hiding (Context)
 import Control.Monad
 import qualified Data.Text as T
-import GHC.Generics
+import Optics
 import qualified Polysemy as P
 import qualified Polysemy.Fail as P
-import TextShow
-import qualified TextShow.Generic as TSG
+import qualified TextShow
 
 class CommandContext c => CalamityCommandContext c where
   -- | The id of the channel that invoked this command
@@ -61,8 +61,8 @@ data FullContext = FullContext
   , -- | The message remaining after consuming the prefix
     unparsedParams :: T.Text
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric FullContext
+  deriving (Show)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow FullContext
   deriving (HasID Channel) via HasIDField "channel" FullContext
   deriving (HasID Message) via HasIDField "message" FullContext
   deriving (HasID User) via HasIDField "user" FullContext
@@ -91,8 +91,8 @@ useFullContext =
 buildContext :: P.Member CacheEff r => Message -> User -> Maybe Member -> T.Text -> Command FullContext -> T.Text -> P.Sem r (Maybe FullContext)
 buildContext msg usr mem prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)
-  let member = mem <|> guild ^? _Just . #members . ix (coerceSnowflake $ getID @User msg)
-  let gchan = guild ^? _Just . #channels . ix (coerceSnowflake $ getID @Channel msg)
+  let member = mem <|> guild ^? _Just % #members % ix (coerceSnowflake $ getID @User msg)
+  let gchan = guild ^? _Just % #channels % ix (coerceSnowflake $ getID @Channel msg)
   Just channel <- case gchan of
     Just chan -> pure . pure $ GuildChannel' chan
     Nothing -> DMChannel' <<$>> getDM (coerceSnowflake $ getID @Channel msg)
@@ -120,8 +120,8 @@ data LightContext = LightContext
   , -- | The message remaining after consuming the prefix
     unparsedParams :: T.Text
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric LightContext
+  deriving (Show)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow LightContext
   deriving (HasID Channel) via HasIDField "channelID" LightContext
   deriving (HasID Message) via HasIDField "message" LightContext
   deriving (HasID User) via HasIDField "user" LightContext
@@ -134,7 +134,7 @@ instance CC.CommandContext IO LightContext () where
 instance CalamityCommandContext LightContext where
   ctxChannelID = (^. #channelID)
   ctxGuildID = (^. #guildID)
-  ctxUserID = (^. #user . #id)
+  ctxUserID = (^. #user % #id)
   ctxMessage = (^. #message)
 
 instance Tellable LightContext where
@@ -147,3 +147,6 @@ useLightContext =
         CC.ConstructContext (pre, cmd, up) (msg, usr, mem) ->
           pure . Just $ LightContext msg (msg ^. #guildID) (msg ^. #channelID) usr mem cmd pre up
     )
+
+$(makeFieldLabelsNoPrefix ''FullContext)
+$(makeFieldLabelsNoPrefix ''LightContext)

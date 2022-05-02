@@ -4,8 +4,7 @@ module Calamity.HTTP.MiscRoutes where
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
 import Calamity.HTTP.Internal.Types
-
-import Data.Function
+import Data.Function ((&))
 
 data MiscRequest a where
   GetGateway :: MiscRequest GatewayResponse

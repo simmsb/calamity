@@ -144,7 +144,7 @@ commandA' = CC.commandA'
  @
  'Calamity.Commands.Dsl.command' \@\'['CalamityCommands.Parser.Named' "user" ('Calamity.Types.Snowflake' 'Calamity.Types.Model.User'),
                 'CalamityCommands.Parser.Named' "reason" ('CalamityCommands.Parser.KleeneStarConcat' 'T.Text')]
-    "ban" $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
+    "ban" $ \\ctx uid r -> case (ctx 'Optics.^.' #guild) of
       'Just' guild -> do
         'Control.Monad.void' . 'Calamity.HTTP.invoke' $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid ('Calamity.HTTP.Guild.CreateGuildBanData' 'Nothing' $ 'Just' r)
         'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)
@@ -177,7 +177,7 @@ command = CC.command @ps
  @
  'commandA' \@\'['CalamityCommands.Parser.Named' "user" ('Calamity.Types.Snowflake' 'Calamity.Types.Model.User'),
                 'CalamityCommands.Parser.Named' "reason" ('CalamityCommands.Parser.KleeneStarConcat' 'T.Text')]
-    "ban" [] $ \\ctx uid r -> case (ctx 'Control.Lens.^.' #guild) of
+    "ban" [] $ \\ctx uid r -> case (ctx 'Optics.^.' #guild) of
       'Just' guild -> do
         'Control.Monad.void' . 'Calamity.HTTP.invoke' $ 'Calamity.HTTP.Guild.CreateGuildBan' guild uid ('Calamity.HTTP.Guild.CreateGuildBanData' 'Nothing' $ 'Just' r)
         'Control.Monad.void' $ 'Calamity.Types.Tellable.tell' ctx ("Banned user `" '<>' 'TextShow.showt' uid '<>' "` with reason: " '<>' r)

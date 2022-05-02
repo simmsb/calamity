@@ -7,9 +7,9 @@ import Calamity.HTTP
 import Calamity.Internal.Utils
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
-import Control.Lens
 import Control.Monad
 import Data.Traversable
+import Optics
 import Polysemy (Sem)
 import qualified Polysemy as P
 import qualified Polysemy.Fail as P

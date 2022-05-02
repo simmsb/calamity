@@ -29,19 +29,19 @@ import Calamity.Types.Model.Channel (
   DMChannel,
   GuildChannel,
   Message,
-  MessageReference(MessageReference),
+  MessageReference (MessageReference),
   TextChannel,
   VoiceChannel,
  )
 import Calamity.Types.Model.Guild (Emoji (..), Member, Role)
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
-import Control.Lens
 import Data.Foldable (Foldable (foldl'))
-import Data.Generics.Product.Fields
 import Data.Maybe (fromMaybe)
 import Data.String (IsString, fromString)
 import qualified Data.Text as T
+import GHC.Records (HasField (getField))
+import Optics
 import TextShow (TextShow (showt))
 
 zws :: IsString s => s
@@ -151,13 +151,13 @@ spoiler :: T.Text -> T.Text
 spoiler content = "||" <> escapeSpoilers content <> "||"
 
 fmtEmoji :: Emoji -> T.Text
-fmtEmoji Emoji{id, name, animated} = "<" <> ifanim <> ":" <> name <> ":" <> showt id <> ">"
- where
-  ifanim = if animated then "a" else ""
+fmtEmoji Emoji {id, name, animated} = "<" <> ifanim <> ":" <> name <> ":" <> showt id <> ">"
+  where
+    ifanim = if animated then "a" else ""
 
 -- | Format a 'User' or 'Member' into the format of @username#discriminator@
-displayUser :: (HasField' "username" a T.Text, HasField' "discriminator" a T.Text) => a -> T.Text
-displayUser u = u ^. field' @"username" <> "#" <> u ^. field' @"discriminator"
+displayUser :: (HasField "username" a T.Text, HasField "discriminator" a T.Text) => a -> T.Text
+displayUser u = getField @"username" u <> "#" <> getField @"discriminator" u
 
 mentionSnowflake :: T.Text -> Snowflake a -> T.Text
 mentionSnowflake tag s = "<" <> tag <> showt s <> ">"
@@ -221,11 +221,12 @@ instance Mentionable Role where
   mention = mentionSnowflake "@&" . getID @Role
 
 -- | Turn a regular 'Message' into a 'MessageReference'
-asReference :: Message
-  -- ^ The message to reply to
-  -> Bool
-  -- ^ If discord should error when replying to deleted messages
-  -> MessageReference
+asReference ::
+  -- | The message to reply to
+  Message ->
+  -- | If discord should error when replying to deleted messages
+  Bool ->
+  MessageReference
 asReference msg failIfNotExists =
   MessageReference
     (Just $ getID @Message msg)

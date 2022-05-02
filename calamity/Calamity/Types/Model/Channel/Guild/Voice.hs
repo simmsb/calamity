@@ -1,20 +1,19 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Voice channels
 module Calamity.Types.Model.Channel.Guild.Voice (VoiceChannel (..)) where
 
-import Calamity.Internal.AesonThings
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
-import Calamity.Internal.Utils ()
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import Calamity.Types.Model.Channel.Guild.Category
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake
-import Control.DeepSeq (NFData)
-import Data.Aeson
+import Data.Aeson ((.:), (.:?))
+import qualified Data.Aeson as Aeson
 import Data.Text (Text)
-import GHC.Generics
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics.TH
+import TextShow.TH
 
 data VoiceChannel = VoiceChannel
   { id :: Snowflake VoiceChannel
@@ -26,9 +25,22 @@ data VoiceChannel = VoiceChannel
   , userLimit :: Int
   , parentID :: Maybe (Snowflake Category)
   }
-  deriving (Show, Eq, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric VoiceChannel
-  deriving (ToJSON, FromJSON) via CalamityJSON VoiceChannel
+  deriving (Show, Eq)
   deriving (HasID VoiceChannel) via HasIDField "id" VoiceChannel
   deriving (HasID Channel) via HasIDFieldCoerce' "id" VoiceChannel
   deriving (HasID Guild) via HasIDField "guildID" VoiceChannel
+
+instance Aeson.FromJSON VoiceChannel where
+  parseJSON = Aeson.withObject "TextChannel" $ \v ->
+    VoiceChannel
+      <$> v .: "id"
+      <*> v .: "guild_id"
+      <*> v .: "position"
+      <*> v .: "permission_overwrites"
+      <*> v .: "name"
+      <*> v .: "bitrate"
+      <*> v .: "user_limit"
+      <*> v .:? "parent_id"
+
+$(deriveTextShow ''VoiceChannel)
+$(makeFieldLabelsNoPrefix ''VoiceChannel)

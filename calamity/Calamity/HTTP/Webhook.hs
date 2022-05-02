@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Webhook endpoints
 module Calamity.HTTP.Webhook (
   WebhookRequest (..),
@@ -9,19 +11,18 @@ module Calamity.HTTP.Webhook (
 import Calamity.HTTP.Channel (AllowedMentions, CreateMessageAttachment (..))
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
-import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=), (.?=))
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Snowflake
-import Control.Lens hiding ((.=))
-import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.Default.Class
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
+import Optics
 import PyF
 
 data CreateWebhookData = CreateWebhookData
@@ -29,8 +30,17 @@ data CreateWebhookData = CreateWebhookData
   , -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
     avatar :: Maybe Text
   }
-  deriving (Show, Generic, Default)
-  deriving (ToJSON) via CalamityJSON CreateWebhookData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateWebhookData
+
+instance CalamityToJSON' CreateWebhookData where
+  toPairs CreateWebhookData {..} =
+    [ "username" .?= username
+    , "avatar" .?= avatar
+    ]
+
+instance Default CreateWebhookData where
+  def = CreateWebhookData Nothing Nothing
 
 data ModifyWebhookData = ModifyWebhookData
   { username :: Maybe Text
@@ -38,8 +48,18 @@ data ModifyWebhookData = ModifyWebhookData
     avatar :: Maybe Text
   , channelID :: Maybe (Snowflake Channel)
   }
-  deriving (Show, Generic, Default)
-  deriving (ToJSON) via CalamityJSON ModifyWebhookData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ModifyWebhookData
+
+instance CalamityToJSON' ModifyWebhookData where
+  toPairs ModifyWebhookData {..} =
+    [ "username" .?= username
+    , "avatar" .?= avatar
+    , "channel_id" .?= channelID
+    ]
+
+instance Default ModifyWebhookData where
+  def = ModifyWebhookData Nothing Nothing Nothing
 
 data ExecuteWebhookOptions = ExecuteWebhookOptions
   { wait :: Maybe Bool
@@ -52,15 +72,25 @@ data ExecuteWebhookOptions = ExecuteWebhookOptions
   , tts :: Maybe Bool
   , components :: [Component]
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+
+instance Default ExecuteWebhookOptions where
+  def = ExecuteWebhookOptions Nothing Nothing [] Nothing Nothing Nothing Nothing Nothing []
 
 data CreateMessageAttachmentJson = CreateMessageAttachmentJson
   { id :: Int
   , filename :: Text
   , description :: Maybe Text
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateMessageAttachmentJson
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateMessageAttachmentJson
+
+instance CalamityToJSON' CreateMessageAttachmentJson where
+  toPairs CreateMessageAttachmentJson {..} =
+    [ "id" .= id
+    , "filename" .= filename
+    , "description" .?= description
+    ]
 
 data ExecuteWebhookJson = ExecuteWebhookJson
   { content :: Maybe Text
@@ -72,8 +102,19 @@ data ExecuteWebhookJson = ExecuteWebhookJson
   , allowedMentions :: Maybe AllowedMentions
   , components :: [Component]
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON ExecuteWebhookJson
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ExecuteWebhookJson
+
+instance CalamityToJSON' ExecuteWebhookJson where
+  toPairs ExecuteWebhookJson {..} =
+    [ "content" .?= content
+    , "embeds" .?= embeds
+    , "avatar_url" .?= avatarUrl
+    , "tts" .?= tts
+    , "attachments" .= attachments
+    , "allowed_mentions" .?= allowedMentions
+    , "components" .= components
+    ]
 
 data WebhookRequest a where
   CreateWebhook :: HasID Channel c => c -> CreateWebhookData -> WebhookRequest Webhook
@@ -157,5 +198,9 @@ instance Request (WebhookRequest a) where
             , components = wh ^. #components
             , attachments = attachments
             }
-    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonBody) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonBody) : files)
     postWithP' body ("wait" =:? (wh ^. #wait)) u o
+
+$(makeFieldLabelsNoPrefix ''CreateWebhookData)
+$(makeFieldLabelsNoPrefix ''ModifyWebhookData)
+$(makeFieldLabelsNoPrefix ''ExecuteWebhookOptions)

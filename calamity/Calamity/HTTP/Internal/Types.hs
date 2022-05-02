@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Types for the http lib
 module Calamity.HTTP.Internal.Types
     ( RestError(..)
@@ -8,8 +10,7 @@ module Calamity.HTTP.Internal.Types
     , GatewayResponse
     , BotGatewayResponse ) where
 
-import           Calamity.HTTP.Internal.Route
-import           Calamity.Internal.AesonThings
+import Calamity.HTTP.Internal.Route
 import           Control.Concurrent.Event      ( Event )
 import           Control.Concurrent.STM.TVar   ( TVar )
 import Data.Time
@@ -17,8 +18,9 @@ import           Data.Aeson
 import qualified Data.ByteString.Lazy          as LB
 import qualified Data.ByteString          as B
 import           Data.Text as T
-import           GHC.Generics
 import qualified StmContainers.Map             as SC
+import qualified Data.Aeson as Aeson
+import Optics.TH
 
 data RestError
   -- | An error response from discord
@@ -28,7 +30,7 @@ data RestError
       }
   -- | Something failed while making the request (after retrying a few times)
   | InternalClientError T.Text
-  deriving ( Show, Generic )
+  deriving ( Show)
 
 data BucketState = BucketState
   { resetTime :: Maybe UTCTime
@@ -42,19 +44,17 @@ data BucketState = BucketState
   , ongoing :: Int
     -- ^ How many ongoing requests
   }
-  deriving ( Generic, Show )
+  deriving ( Show )
 
 newtype Bucket = Bucket
   { state :: TVar BucketState
   }
-  deriving ( Generic )
 
 data RateLimitState = RateLimitState
   { bucketKeys :: SC.Map RouteKey B.ByteString
   , buckets    :: SC.Map B.ByteString Bucket
   , globalLock :: Event
   }
-  deriving ( Generic )
 
 data DiscordResponseType
   = Good
@@ -76,12 +76,26 @@ data DiscordResponseType
 newtype GatewayResponse = GatewayResponse
   { url :: T.Text
   }
-  deriving ( Generic, Show )
-  deriving ( FromJSON ) via CalamityJSON GatewayResponse
+  deriving stock ( Show )
+
+instance Aeson.FromJSON GatewayResponse where
+  parseJSON = Aeson.withObject "GatewayResponse" $ \v ->
+    GatewayResponse <$> v .: "url"
 
 data BotGatewayResponse = BotGatewayResponse
   { url    :: T.Text
   , shards :: Int
   }
-  deriving ( Generic, Show )
-  deriving ( FromJSON ) via CalamityJSON BotGatewayResponse
+  deriving ( Show )
+
+instance Aeson.FromJSON BotGatewayResponse where
+  parseJSON = Aeson.withObject "BotGatewayResponse" $ \v ->
+    BotGatewayResponse
+      <$> v .: "url"
+      <*> v .: "shards"
+
+$(makeFieldLabelsNoPrefix ''Bucket)
+$(makeFieldLabelsNoPrefix ''BucketState)
+$(makeFieldLabelsNoPrefix ''RateLimitState)
+$(makeFieldLabelsNoPrefix ''GatewayResponse)
+$(makeFieldLabelsNoPrefix ''BotGatewayResponse)

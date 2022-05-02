@@ -1,27 +1,27 @@
 {-# OPTIONS_GHC -Wno-orphans #-}
 
 -- | Internal utilities and instances
-module CalamityCommands.Internal.Utils
-    ( -- whileMFinalIO
-    -- , untilJustFinalIO
-     whenJust
-    , whenM
-    , unlessM
-    , lastMaybe
-    , leftToMaybe
-    , rightToMaybe
-    , justToEither
-    , mapLeft
-    , (<<$>>)
-    , (<<*>>)
-    , (<.>)
-     ) where
+module CalamityCommands.Internal.Utils (
+  -- whileMFinalIO
+  -- , untilJustFinalIO
+  whenJust,
+  whenM,
+  unlessM,
+  lastMaybe,
+  leftToMaybe,
+  rightToMaybe,
+  justToEither,
+  mapLeft,
+  (<<$>>),
+  (<<*>>),
+  (<.>),
+) where
 
 -- import           CalamityCommands.Internal.RunIntoIO
 
-import           Control.Applicative
+import Control.Applicative
 
-import           Data.Semigroup        ( Last(..) )
+import Data.Semigroup (Last (..))
 
 -- import qualified Polysemy              as P
 
@@ -61,9 +61,10 @@ whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
 
 whenM :: Monad m => m Bool -> m () -> m ()
-whenM p m = p >>= \case
-  True  -> m
-  False -> pure ()
+whenM p m =
+  p >>= \case
+    True -> m
+    False -> pure ()
 
 unlessM :: Monad m => m Bool -> m () -> m ()
 unlessM = whenM . (not <$>)
@@ -77,15 +78,15 @@ mapLeft _ (Right x) = Right x
 
 leftToMaybe :: Either e a -> Maybe e
 leftToMaybe (Left x) = Just x
-leftToMaybe _        = Nothing
+leftToMaybe _ = Nothing
 
 rightToMaybe :: Either e a -> Maybe a
 rightToMaybe (Right x) = Just x
-rightToMaybe _         = Nothing
+rightToMaybe _ = Nothing
 
 justToEither :: Maybe e -> Either e ()
 justToEither (Just x) = Left x
-justToEither _        = Right ()
+justToEither _ = Right ()
 
 (<<$>>) :: (Functor f, Functor g) => (a -> b) -> f (g a) -> f (g b)
 (<<$>>) = fmap . fmap
@@ -101,4 +102,3 @@ infixl 4 <<*>>
 (<.>) f g x = f <$> g x
 
 infixl 4 <.>
-

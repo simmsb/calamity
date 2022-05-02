@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Guild endpoints
 module Calamity.HTTP.Guild (
   GuildRequest (..),
@@ -7,14 +9,14 @@ module Calamity.HTTP.Guild (
   ChannelPosition (..),
   ListMembersOptions (..),
   AddGuildMemberData (..),
-  ModifyGuildMemberData (..),
+  ModifyGuildMemberData,
   modifyGuildMemberNick,
   modifyGuildMemberRoles,
   modifyGuildMemberMute,
   modifyGuildMemberDeaf,
   modifyGuildMemberChannelID,
   CreateGuildBanData (..),
-  ModifyGuildRoleData (..),
+  ModifyGuildRoleData,
   modifyGuildRoleName,
   modifyGuildRolePermissions,
   modifyGuildRoleColour,
@@ -25,23 +27,20 @@ module Calamity.HTTP.Guild (
 
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
-import Calamity.Internal.AesonThings
 import Calamity.Internal.IntColour
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=), (.?=))
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
-import Control.Lens hiding ((.=))
-import Data.Aeson
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as K
-import Data.Aeson.Lens
 import Data.Colour (Colour)
 import Data.Default.Class
 import Data.Text (Text)
-import GHC.Generics
 import Network.HTTP.Req
-import TextShow
+import Optics
 
 data CreateGuildData = CreateGuildData
   { name :: Text
@@ -53,8 +52,20 @@ data CreateGuildData = CreateGuildData
   , roles :: [Role]
   , channels :: [Partial Channel]
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateGuildData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateGuildData
+
+instance CalamityToJSON' CreateGuildData where
+  toPairs CreateGuildData {..} =
+    [ "name" .= name
+    , "region" .= region
+    , "icon" .= icon
+    , "verification_level" .= verificationLevel
+    , "default_message_notifications" .= defaultMessageNotifications
+    , "explicit_content_filter" .= explicitContentFilter
+    , "roles" .= roles
+    , "channels" .= channels
+    ]
 
 data ModifyGuildData = ModifyGuildData
   { name :: Maybe Text
@@ -70,8 +81,40 @@ data ModifyGuildData = ModifyGuildData
   , banner :: Maybe Text
   , systemChannelID :: Maybe (Snowflake GuildChannel)
   }
-  deriving (Show, Generic, Default)
-  deriving (ToJSON) via CalamityJSON ModifyGuildData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ModifyGuildData
+
+instance Default ModifyGuildData where
+  def =
+    ModifyGuildData
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+      Nothing
+
+-- TODO: Make this work properly, a la modifyguildmember
+instance CalamityToJSON' ModifyGuildData where
+  toPairs ModifyGuildData {..} =
+    [ "name" .?= name
+    , "region" .?= region
+    , "icon" .?= icon
+    , "verification_level" .?= verificationLevel
+    , "default_message_notifications" .?= defaultMessageNotifications
+    , "explicit_content_filter" .?= explicitContentFilter
+    , "afk_timeout" .?= afkTimeout
+    , "owner_id" .?= ownerID
+    , "splash" .?= splash
+    , "banner" .?= banner
+    , "system_channel_id" .?= systemChannelID
+    ]
 
 data ChannelCreateData = ChannelCreateData
   { name :: Text
@@ -85,27 +128,68 @@ data ChannelCreateData = ChannelCreateData
   , parentID :: Maybe (Snowflake Category)
   , nsfw :: Maybe Bool
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON ChannelCreateData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ChannelCreateData
+
+instance CalamityToJSON' ChannelCreateData where
+  toPairs ChannelCreateData {..} =
+    [ "name" .= name
+    , "type" .?= type_
+    , "topic" .?= topic
+    , "bitrate" .?= bitrate
+    , "user_limit" .?= userLimit
+    , "rate_limit_per_user" .?= rateLimitPerUser
+    , "position" .?= position
+    , "permission_overwrites" .?= permissionOverwrites
+    , "parent_id" .?= parentID
+    , "nsfw" .?= nsfw
+    ]
 
 data ChannelPosition = ChannelPosition
   { id :: Snowflake GuildChannel
   , position :: Maybe Integer
+  , lockPermissions :: Maybe Bool
+  , parentID :: Snowflake GuildChannel
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON ChannelPosition
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ChannelPosition
+
+instance CalamityToJSON' ChannelPosition where
+  toPairs ChannelPosition {..} =
+    [ "id" .= id
+    , "position" .= position
+    , "lock_permissions" .= lockPermissions
+    , "parent_id" .= parentID
+    ]
 
 data ListMembersOptions = ListMembersOptions
   { limit :: Maybe Integer
   , after :: Maybe (Snowflake User)
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ListMembersOptions
+
+instance Default ListMembersOptions where
+  def = ListMembersOptions Nothing Nothing
+
+instance CalamityToJSON' ListMembersOptions where
+  toPairs ListMembersOptions {..} =
+    [ "limit" .?= limit
+    , "after" .?= after
+    ]
 
 data SearchMembersOptions = SearchMembersOptions
   { limit :: Maybe Integer
   , query :: Text
   }
-  deriving (Show, Generic)
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON SearchMembersOptions
+
+instance CalamityToJSON' SearchMembersOptions where
+  toPairs SearchMembersOptions {..} =
+    [ "limit" .?= limit
+    , "query" .= query
+    ]
 
 data AddGuildMemberData = AddGuildMemberData
   { accessToken :: Text
@@ -114,86 +198,107 @@ data AddGuildMemberData = AddGuildMemberData
   , mute :: Maybe Bool
   , deaf :: Maybe Bool
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON AddGuildMemberData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON AddGuildMemberData
+
+instance CalamityToJSON' AddGuildMemberData where
+  toPairs AddGuildMemberData {..} =
+    [ "access_token" .= accessToken
+    , "nick" .?= nick
+    , "roles" .?= roles
+    , "mute" .?= mute
+    , "deaf" .?= deaf
+    ]
 
 {- | Parameters to the Modify Guild Member endpoint.
 
  Use the provided methods (@modifyGuildMemberX@) to create a value with the
- field set, use the Semigroup instance to union the values.
+ field set, use the Semigroup instance to combine modifications.
 
  ==== Examples
 
  >>> encode $ modifyGuildMemberNick (Just "test") <> modifyGuildMemberDeaf Nothing
  "{\"nick\":\"test\",\"deaf\":null}"
 -}
-newtype ModifyGuildMemberData = ModifyGuildMemberData Object
-  deriving (Show, Generic)
-  deriving newtype (ToJSON, Semigroup, Monoid)
+newtype ModifyGuildMemberData = ModifyGuildMemberData Aeson.Object
+  deriving stock (Show)
+  deriving newtype (Aeson.ToJSON, Semigroup, Monoid)
 
 modifyGuildMemberNick :: Maybe Text -> ModifyGuildMemberData
-modifyGuildMemberNick v = ModifyGuildMemberData $ K.fromList [("nick", toJSON v)]
+modifyGuildMemberNick v = ModifyGuildMemberData $ K.fromList [("nick", Aeson.toJSON v)]
 
 modifyGuildMemberRoles :: Maybe [Snowflake Role] -> ModifyGuildMemberData
-modifyGuildMemberRoles v = ModifyGuildMemberData $ K.fromList [("roles", toJSON v)]
+modifyGuildMemberRoles v = ModifyGuildMemberData $ K.fromList [("roles", Aeson.toJSON v)]
 
 modifyGuildMemberMute :: Maybe Bool -> ModifyGuildMemberData
-modifyGuildMemberMute v = ModifyGuildMemberData $ K.fromList [("mute", toJSON v)]
+modifyGuildMemberMute v = ModifyGuildMemberData $ K.fromList [("mute", Aeson.toJSON v)]
 
 modifyGuildMemberDeaf :: Maybe Bool -> ModifyGuildMemberData
-modifyGuildMemberDeaf v = ModifyGuildMemberData $ K.fromList [("deaf", toJSON v)]
+modifyGuildMemberDeaf v = ModifyGuildMemberData $ K.fromList [("deaf", Aeson.toJSON v)]
 
 modifyGuildMemberChannelID :: Maybe (Snowflake VoiceChannel) -> ModifyGuildMemberData
-modifyGuildMemberChannelID v = ModifyGuildMemberData $ K.fromList [("channel_id", toJSON v)]
+modifyGuildMemberChannelID v = ModifyGuildMemberData $ K.fromList [("channel_id", Aeson.toJSON v)]
 
 data GetGuildBansOptions = GetGuildBansOptions
   { limit :: Maybe Int
   , before :: Maybe Int
   , after :: Maybe Int
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+
+instance Default GetGuildBansOptions where
+  def = GetGuildBansOptions Nothing Nothing Nothing
 
 data CreateGuildBanData = CreateGuildBanData
   { deleteMessageDays :: Maybe Integer
   , reason :: Maybe Text
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+
+instance Default CreateGuildBanData where
+  def = CreateGuildBanData Nothing Nothing
 
 {- | Parameters to the Modify Guild Role endpoint.
 
  Use the provided methods (@modifyGuildRoleX@) to create a value with the
- field set, use the Semigroup instance to union the values.
+ field set, use the Semigroup instance to combine parameters.
 
  ==== Examples
 
  >>> encode $ modifyGuildRoleName (Just "test") <> modifyGuildRolePermissions Nothing
  "{\"name\":\"test\",\"permissions\":null}"
 -}
-newtype ModifyGuildRoleData = ModifyGuildRoleData Object
-  deriving (Show, Generic)
-  deriving newtype (ToJSON, Semigroup, Monoid)
+newtype ModifyGuildRoleData = ModifyGuildRoleData Aeson.Object
+  deriving stock (Show)
+  deriving newtype (Aeson.ToJSON, Semigroup, Monoid)
 
 modifyGuildRoleName :: Maybe Text -> ModifyGuildRoleData
-modifyGuildRoleName v = ModifyGuildRoleData $ K.fromList [("name", toJSON v)]
+modifyGuildRoleName v = ModifyGuildRoleData $ K.fromList [("name", Aeson.toJSON v)]
 
 modifyGuildRolePermissions :: Maybe Permissions -> ModifyGuildRoleData
-modifyGuildRolePermissions v = ModifyGuildRoleData $ K.fromList [("permissions", toJSON v)]
+modifyGuildRolePermissions v = ModifyGuildRoleData $ K.fromList [("permissions", Aeson.toJSON v)]
 
 modifyGuildRoleColour :: Maybe (Colour Double) -> ModifyGuildRoleData
-modifyGuildRoleColour v = ModifyGuildRoleData $ K.fromList [("colour", toJSON (IntColour <$> v))]
+modifyGuildRoleColour v = ModifyGuildRoleData $ K.fromList [("colour", Aeson.toJSON (IntColour <$> v))]
 
 modifyGuildRoleHoist :: Maybe Bool -> ModifyGuildRoleData
-modifyGuildRoleHoist v = ModifyGuildRoleData $ K.fromList [("hoist", toJSON v)]
+modifyGuildRoleHoist v = ModifyGuildRoleData $ K.fromList [("hoist", Aeson.toJSON v)]
 
 modifyGuildRoleMentionable :: Maybe Bool -> ModifyGuildRoleData
-modifyGuildRoleMentionable v = ModifyGuildRoleData $ K.fromList [("mentionable", toJSON v)]
+modifyGuildRoleMentionable v = ModifyGuildRoleData $ K.fromList [("mentionable", Aeson.toJSON v)]
 
 data ModifyGuildRolePositionsData = ModifyGuildRolePositionsData
   { id :: Snowflake Role
   , position :: Maybe Integer
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON ModifyGuildRolePositionsData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ModifyGuildRolePositionsData
+
+instance CalamityToJSON' ModifyGuildRolePositionsData where
+  toPairs ModifyGuildRolePositionsData {..} =
+    [ "id" .= id
+    , "postition" .?= position
+    ]
 
 data GuildRequest a where
   CreateGuild :: CreateGuildData -> GuildRequest Guild
@@ -351,7 +456,7 @@ instance Request (GuildRequest a) where
       ("limit" =:? limit <> "query" =: query)
   action (AddGuildMember _ _ o) = putWith' (ReqBodyJson o)
   action (ModifyGuildMember _ _ o) = patchWith' (ReqBodyJson o)
-  action (ModifyCurrentUserNick _ nick) = patchWith' (ReqBodyJson $ object ["nick" .= nick])
+  action (ModifyCurrentUserNick _ nick) = patchWith' (ReqBodyJson $ Aeson.object ["nick" Aeson..= nick])
   action AddGuildMemberRole {} = putEmpty
   action RemoveGuildMemberRole {} = deleteWith
   action (RemoveGuildMember _ _) = deleteWith
@@ -376,3 +481,12 @@ instance Request (GuildRequest a) where
   -- this is a bit of a hack
   -- TODO: add something to allow for contextual parsing
   modifyResponse _ = Prelude.id
+
+$(makeFieldLabelsNoPrefix ''CreateGuildData)
+$(makeFieldLabelsNoPrefix ''ModifyGuildData)
+$(makeFieldLabelsNoPrefix ''ChannelCreateData)
+$(makeFieldLabelsNoPrefix ''ChannelPosition)
+$(makeFieldLabelsNoPrefix ''ListMembersOptions)
+$(makeFieldLabelsNoPrefix ''AddGuildMemberData)
+$(makeFieldLabelsNoPrefix ''ModifyGuildRolePositionsData)
+$(makeFieldLabelsNoPrefix ''CreateGuildBanData)

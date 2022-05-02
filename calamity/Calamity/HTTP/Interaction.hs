@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Interaction endpoints
 module Calamity.HTTP.Interaction (
   InteractionRequest (..),
@@ -10,14 +12,13 @@ module Calamity.HTTP.Interaction (
 import Calamity.HTTP.Channel (AllowedMentions, CreateMessageAttachment (..))
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
-import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=), (.?=))
 import Calamity.Types.Model.Channel.Component (Component, CustomID)
 import Calamity.Types.Model.Channel.Embed (Embed)
 import Calamity.Types.Model.Channel.Message (Message)
 import Calamity.Types.Model.Interaction
 import Calamity.Types.Snowflake
-import Control.Lens hiding ((.=))
-import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.Bits (shiftL, (.|.))
 import Data.Default.Class
 import qualified Data.HashMap.Strict as H
@@ -25,20 +26,24 @@ import Data.Maybe (fromMaybe)
 import Data.Monoid (First (First, getFirst))
 import Data.Text (Text)
 import qualified Data.Text as T
-import GHC.Generics
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
+import Optics
 import PyF
-import TextShow
-import qualified TextShow.Generic as TSG
 
 data InteractionCallback = InteractionCallback
   { type_ :: InteractionCallbackType
-  , data_ :: Maybe Value
+  , data_ :: Maybe Aeson.Value
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON InteractionCallback
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON InteractionCallback
+
+instance CalamityToJSON' InteractionCallback where
+  toPairs InteractionCallback {..} =
+    [ "type" .= type_
+    , "data" .?= data_
+    ]
 
 data InteractionCallbackMessageOptions = InteractionCallbackMessageOptions
   { tts :: Maybe Bool
@@ -50,15 +55,25 @@ data InteractionCallbackMessageOptions = InteractionCallbackMessageOptions
   , components :: Maybe [Component]
   , attachments :: Maybe [CreateMessageAttachment]
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+
+instance Default InteractionCallbackMessageOptions where
+  def = InteractionCallbackMessageOptions Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 data CreateMessageAttachmentJson = CreateMessageAttachmentJson
   { id :: Int
   , filename :: Text
   , description :: Maybe Text
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateMessageAttachmentJson
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateMessageAttachmentJson
+
+instance CalamityToJSON' CreateMessageAttachmentJson where
+  toPairs CreateMessageAttachmentJson {..} =
+    [ "id" .= id
+    , "filename" .= filename
+    , "description" .?= description
+    ]
 
 data CreateResponseMessageJson = CreateResponseMessageJson
   { tts :: Maybe Bool
@@ -69,31 +84,59 @@ data CreateResponseMessageJson = CreateResponseMessageJson
   , components :: Maybe [Component]
   , attachments :: Maybe [CreateMessageAttachmentJson]
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateResponseMessageJson
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateResponseMessageJson
+
+instance CalamityToJSON' CreateResponseMessageJson where
+  toPairs CreateResponseMessageJson {..} =
+    [ "tts" .?= tts
+    , "content" .?= content
+    , "embeds" .?= embeds
+    , "allowed_mentions" .?= allowedMentions
+    , "flags" .?= flags
+    , "components" .?= components
+    , "attachments" .?= attachments
+    ]
 
 newtype InteractionCallbackAutocomplete = InteractionCallbackAutocomplete
   { choices :: [InteractionCallbackAutocompleteChoice]
   }
-  deriving stock (Show, Generic)
-  deriving (ToJSON) via CalamityJSON InteractionCallbackAutocomplete
+  deriving stock (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON InteractionCallbackAutocomplete
+
+instance CalamityToJSON' InteractionCallbackAutocomplete where
+  toPairs InteractionCallbackAutocomplete {..} = ["choices" .= choices]
 
 data InteractionCallbackAutocompleteChoice = InteractionCallbackAutocompleteChoice
   { name :: Text
   , nameLocalizations :: H.HashMap Text Text
   , -- | Either text or numeric
-    value :: Value
+    value :: Aeson.Value
   }
-  deriving stock (Show, Generic)
-  deriving (ToJSON) via CalamityJSON InteractionCallbackAutocompleteChoice
+  deriving stock (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON InteractionCallbackAutocompleteChoice
+
+instance CalamityToJSON' InteractionCallbackAutocompleteChoice where
+  toPairs InteractionCallbackAutocompleteChoice {..} =
+    [ "name" .= name
+    , "name_localizations" .= nameLocalizations
+    , "value" .= value
+    ]
 
 data InteractionCallbackModal = InteractionCallbackModal
   { customID :: CustomID
   , title :: Text
   , components :: [Component]
   }
-  deriving stock (Show, Generic)
-  deriving (ToJSON) via CalamityJSON InteractionCallbackModal
+  deriving stock (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON InteractionCallbackModal
+
+instance CalamityToJSON' InteractionCallbackModal where
+  toPairs InteractionCallbackModal {..} =
+    [ "custom_id" .= customID
+    , "title" .= title
+    , "components" .= components
+    ]
 
 data InteractionCallbackType
   = PongType
@@ -103,11 +146,18 @@ data InteractionCallbackType
   | UpdateMessageType
   | ApplicationCommandAutocompleteResultType
   | ModalType
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric InteractionCallbackType
+  deriving (Show)
 
-instance ToJSON InteractionCallbackType where
-  toEncoding ty = toEncoding @Int $ case ty of
+instance Aeson.ToJSON InteractionCallbackType where
+  toJSON ty = Aeson.toJSON @Int $ case ty of
+    PongType -> 1
+    ChannelMessageWithSourceType -> 4
+    DeferredChannelMessageWithSourceType -> 5
+    DeferredUpdateMessageType -> 6
+    UpdateMessageType -> 7
+    ApplicationCommandAutocompleteResultType -> 8
+    ModalType -> 9
+  toEncoding ty = Aeson.toEncoding @Int $ case ty of
     PongType -> 1
     ChannelMessageWithSourceType -> 4
     DeferredChannelMessageWithSourceType -> 5
@@ -257,7 +307,7 @@ instance Request (InteractionRequest a) where
     let jsonBody =
           InteractionCallback
             { type_ = DeferredChannelMessageWithSourceType
-            , data_ = if ephemeral then Just . object $ [("flags", Number 64)] else Nothing
+            , data_ = if ephemeral then Just . Aeson.object $ [("flags", Aeson.Number 64)] else Nothing
             }
      in postWith' (ReqBodyJson jsonBody)
   action (CreateResponseDeferComponent _ _) =
@@ -293,9 +343,9 @@ instance Request (InteractionRequest a) where
         jsonBody =
           InteractionCallback
             { type_ = ChannelMessageWithSourceType
-            , data_ = Just . toJSON $ jsonData
+            , data_ = Just . Aeson.toJSON $ jsonData
             }
-    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonBody) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonBody) : files)
     postWith' body u o
   action (CreateResponseUpdate _ _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
@@ -323,22 +373,22 @@ instance Request (InteractionRequest a) where
         jsonBody =
           InteractionCallback
             { type_ = UpdateMessageType
-            , data_ = Just . toJSON $ jsonData
+            , data_ = Just . Aeson.toJSON $ jsonData
             }
-    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonBody) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonBody) : files)
     postWith' body u o
   action (CreateResponseAutocomplete _ _ ao) =
     let jsonBody =
           InteractionCallback
             { type_ = ApplicationCommandAutocompleteResultType
-            , data_ = Just . toJSON $ ao
+            , data_ = Just . Aeson.toJSON $ ao
             }
      in postWith' (ReqBodyJson jsonBody)
   action (CreateResponseModal _ _ mo) =
     let jsonBody =
           InteractionCallback
             { type_ = ModalType
-            , data_ = Just . toJSON $ mo
+            , data_ = Just . Aeson.toJSON $ mo
             }
      in postWith' (ReqBodyJson jsonBody)
   action (GetOriginalInteractionResponse _ _) = getWith
@@ -368,9 +418,9 @@ instance Request (InteractionRequest a) where
         jsonBody =
           InteractionCallback
             { type_ = UpdateMessageType
-            , data_ = Just . toJSON $ jsonData
+            , data_ = Just . Aeson.toJSON $ jsonData
             }
-    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonBody) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonBody) : files)
     patchWith' body u o
   action (DeleteOriginalInteractionResponse _ _) = deleteWith
   action (CreateFollowupMessage _ _ cm) = \u o -> do
@@ -396,7 +446,7 @@ instance Request (InteractionRequest a) where
             , attachments = attachments
             , flags = flags
             }
-    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonData) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonData) : files)
     postWith' body u o
   action GetFollowupMessage {} = getWith
   action (EditFollowupMessage _ _ _ cm) = \u o -> do
@@ -422,6 +472,11 @@ instance Request (InteractionRequest a) where
             , attachments = attachments
             , flags = flags
             }
-    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonData) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonData) : files)
     patchWith' body u o
   action DeleteFollowupMessage {} = deleteWith
+
+$(makeFieldLabelsNoPrefix ''InteractionCallbackMessageOptions)
+$(makeFieldLabelsNoPrefix ''InteractionCallbackAutocomplete)
+$(makeFieldLabelsNoPrefix ''InteractionCallbackAutocompleteChoice)
+$(makeFieldLabelsNoPrefix ''InteractionCallbackModal)

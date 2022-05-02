@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Emoji endpoints
 module Calamity.HTTP.Emoji (
   EmojiRequest (..),
@@ -7,33 +9,42 @@ module Calamity.HTTP.Emoji (
 
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
-import Calamity.Internal.AesonThings
-import Calamity.Internal.Utils ()
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=))
 import Calamity.Types.Model.Guild
 import Calamity.Types.Snowflake
-
-import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.Function
 import Data.Text (Text)
-
-import GHC.Generics
-
 import Network.HTTP.Req
+import Optics.TH
 
 data CreateGuildEmojiOptions = CreateGuildEmojiOptions
   { name :: Text
   , image :: Text
   , roles :: [Snowflake Role]
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateGuildEmojiOptions
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateGuildEmojiOptions
+
+instance CalamityToJSON' CreateGuildEmojiOptions where
+  toPairs CreateGuildEmojiOptions {..} =
+    [ "name" .= name
+    , "image" .= image
+    , "roles" .= roles
+    ]
 
 data ModifyGuildEmojiOptions = ModifyGuildEmojiOptions
   { name :: Text
   , roles :: [Snowflake Role]
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON ModifyGuildEmojiOptions
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ModifyGuildEmojiOptions
+
+instance CalamityToJSON' ModifyGuildEmojiOptions where
+  toPairs ModifyGuildEmojiOptions {..} =
+    [ "name" .= name
+    , "roles" .= roles
+    ]
 
 data EmojiRequest a where
   ListGuildEmojis :: (HasID Guild g) => g -> EmojiRequest [Emoji]
@@ -68,3 +79,6 @@ instance Request (EmojiRequest a) where
   action (CreateGuildEmoji _ o) = postWith' (ReqBodyJson o)
   action (ModifyGuildEmoji _ _ o) = patchWith' (ReqBodyJson o)
   action (DeleteGuildEmoji _ _) = deleteWith
+
+$(makeFieldLabelsNoPrefix ''CreateGuildEmojiOptions)
+$(makeFieldLabelsNoPrefix ''ModifyGuildEmojiOptions)

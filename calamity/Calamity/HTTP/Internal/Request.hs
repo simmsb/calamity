@@ -23,7 +23,6 @@ import Calamity.Metrics.Eff
 import Calamity.Types.LogEff (LogEff)
 import Calamity.Types.Token
 import Calamity.Types.TokenEff
-import Control.Lens
 import Control.Monad
 import Data.Aeson hiding (Options)
 import Data.Aeson.Types (parseEither)
@@ -32,6 +31,7 @@ import qualified Data.Text as T
 import qualified Data.Text.Encoding as TS
 import DiPolysemy hiding (debug, error, info)
 import Network.HTTP.Req
+import Optics
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
 import Web.HttpApiData

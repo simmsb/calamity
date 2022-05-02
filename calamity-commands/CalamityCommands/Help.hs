@@ -14,16 +14,13 @@ import CalamityCommands.Group
 import CalamityCommands.Handler
 import CalamityCommands.ParameterInfo
 import CalamityCommands.Internal.LocalWriter
-
 import Control.Applicative
-import Control.Lens hiding (Context (..))
-
+import Optics
 import qualified Data.HashMap.Lazy as LH
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe (mapMaybe)
 import qualified Data.Text as T
-
 import qualified Polysemy as P
 import qualified Polysemy.Fail as P
 import qualified Polysemy.Reader as P
@@ -100,7 +97,7 @@ helpForGroup ctx grp =
   path' = T.unwords $ groupPath grp
   groups = onlyVisibleG . onlyOriginals . LH.elems $ grp ^. #children
   commands = onlyVisibleC . onlyOriginals . LH.elems $ grp ^. #commands
-  groupsFmt = map formatWithAliases (groups ^.. traverse . #names)
+  groupsFmt = map formatWithAliases (groups ^.. traversed % #names)
   groupsMsg =
     if null groups
       then ""
@@ -125,7 +122,7 @@ rootHelp handler = groupsMsg <> commandsMsg
  where
   groups = onlyVisibleG . onlyOriginals . LH.elems $ handler ^. #groups
   commands = onlyVisibleC . onlyOriginals . LH.elems $ handler ^. #commands
-  groupsFmt = map formatWithAliases (groups ^.. traverse . #names)
+  groupsFmt = map formatWithAliases (groups ^.. traversed % #names)
   groupsMsg =
     if null groups
       then ""

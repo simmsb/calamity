@@ -23,18 +23,17 @@ import Calamity.Types.Model.Guild.Member (Member)
 import Calamity.Types.Model.Guild.Role (Role)
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-import Control.Lens
 import Data.Default.Class
 import Data.Monoid
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as L
-import GHC.Generics
+import Optics
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
 
 -- | A wrapper type for allowing mentions
 newtype TMention a = TMention (Snowflake a)
-  deriving stock (Show, Generic)
+  deriving stock (Show)
 
 {- | Things that can be used to send a message
 
@@ -74,15 +73,15 @@ instance ToMessage AllowedMentions where
 
 -- | Add a 'User' id to the list of allowed user mentions
 instance ToMessage (TMention User) where
-  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #users <>~ [s])
+  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #users %~ (<> [s]))
 
 -- | Add a 'Member' id to the list of allowed user mentions
 instance ToMessage (TMention Member) where
-  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #users <>~ [coerceSnowflake s])
+  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #users %~ (<> [coerceSnowflake s]))
 
 -- | Add a 'Role' id to the list of allowed role mentions
 instance ToMessage (TMention Role) where
-  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #roles <>~ [s])
+  intoMsg (TMention s) = intoMsg (def @AllowedMentions & #roles %~ (<> [s]))
 
 fixupActionRow :: Component -> Component
 fixupActionRow r@(ActionRow' _) = r

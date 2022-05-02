@@ -1,61 +1,63 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Types for shards
-module Calamity.Gateway.Types
-    ( ShardC
-    , ShardMsg(..)
-    , ReceivedDiscordMessage(..)
-    , SentDiscordMessage(..)
-    , DispatchType(..)
-    , IdentifyData(..)
-    , StatusUpdateData(..)
-    , ResumeData(..)
-    , RequestGuildMembersData(..)
-    , IdentifyProps(..)
-    , ControlMessage(..)
-    , ShardFlowControl(..)
-    , Shard(..)
-    , ShardState(..) ) where
+module Calamity.Gateway.Types (
+  ShardC,
+  ShardMsg (..),
+  ReceivedDiscordMessage (..),
+  SentDiscordMessage (..),
+  DispatchType (..),
+  IdentifyData (..),
+  StatusUpdateData (..),
+  ResumeData (..),
+  RequestGuildMembersData (..),
+  IdentifyProps (..),
+  ControlMessage (..),
+  ShardFlowControl (..),
+  Shard (..),
+  ShardState (..),
+) where
 
-import           Calamity.Gateway.DispatchEvents
-import           Calamity.Gateway.Intents
-import           Calamity.Internal.AesonThings
-import           Calamity.Metrics.Eff
-import           Calamity.Types.LogEff
-import           Calamity.Types.Model.Guild.Guild
-import           Calamity.Types.Model.Voice
-import           Calamity.Types.Model.Presence.Activity
-import           Calamity.Types.Model.User (StatusType)
-import           Calamity.Types.Snowflake
-
-import           Control.Concurrent.Async
-import           Control.Concurrent.Chan.Unagi
-
-import           Data.Aeson
-import qualified Data.Aeson.Types                 as AT
-import           Data.Generics.Labels             ()
-import           Data.Maybe
-import           Data.Text                   ( Text )
-
-import           GHC.Generics
-
-import           Network.WebSockets.Connection    ( Connection )
-
-import qualified Polysemy                         as P
-import qualified Polysemy.Async                   as P
-import qualified Polysemy.AtomicState             as P
-import qualified TextShow.Generic as TSG
-import TextShow (TextShow)
-import Control.Lens.Operators ((^?))
+import Calamity.Gateway.DispatchEvents
+import Calamity.Gateway.Intents
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=), (.?=))
+import Calamity.Metrics.Eff
+import Calamity.Types.LogEff
+import Calamity.Types.Model.Guild.Guild
+import Calamity.Types.Model.Presence.Activity
+import Calamity.Types.Model.User
+import Calamity.Types.Model.Voice
+import Calamity.Types.Snowflake
+import Control.Concurrent.Async
+import Control.Concurrent.Chan.Unagi
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Optics
 import Data.Aeson.Types (parseMaybe)
-import Control.Lens (Ixed(ix))
-import Data.Aeson.Lens
+import qualified Data.Aeson.Types as AT
+import Data.Text (Text)
+import GHC.Generics
+import Network.WebSockets.Connection (Connection)
+import Optics
+import qualified Polysemy as P
+import qualified Polysemy.Async as P
+import qualified Polysemy.AtomicState as P
 
-type ShardC r = (P.Members '[LogEff, P.AtomicState ShardState, P.Embed IO, P.Final IO,
-  P.Async, MetricEff] r)
+type ShardC r =
+  ( P.Members
+      '[ LogEff
+       , P.AtomicState ShardState
+       , P.Embed IO
+       , P.Final IO
+       , P.Async
+       , MetricEff
+       ]
+      r
+  )
 
 data ShardMsg
   = Discord ReceivedDiscordMessage
   | Control ControlMessage
-  deriving ( Show, Generic )
+  deriving (Show)
 
 data ReceivedDiscordMessage
   = EvtDispatch Int !DispatchData
@@ -64,86 +66,89 @@ data ReceivedDiscordMessage
   | InvalidSession Bool
   | Hello Int
   | HeartBeatAck
-  deriving ( Show, Generic )
+  deriving (Show)
 
-instance FromJSON ReceivedDiscordMessage where
-  parseJSON = withObject "ReceivedDiscordMessage" $ \v -> do
-    op :: Int <- v .: "op"
+instance Aeson.FromJSON ReceivedDiscordMessage where
+  parseJSON = Aeson.withObject "ReceivedDiscordMessage" $ \v -> do
+    op :: Int <- v Aeson..: "op"
     case op of
-      0  -> do
-        d <- v .: "d"
-        t <- v .: "t"
-        s <- v .: "s"
+      0 -> do
+        d <- v Aeson..: "d"
+        t <- v Aeson..: "t"
+        s <- v Aeson..: "s"
         EvtDispatch s <$> parseDispatchData t d
-
-      1  -> pure HeartBeatReq
-
-      7  -> pure Reconnect
-
-      9  -> InvalidSession <$> v .: "d"
-
-      10 -> Hello <$> do
-        d <- v .: "d"
-        d .: "heartbeat_interval"
-
+      1 -> pure HeartBeatReq
+      7 -> pure Reconnect
+      9 -> InvalidSession <$> v Aeson..: "d"
+      10 ->
+        Hello <$> do
+          d <- v Aeson..: "d"
+          d Aeson..: "heartbeat_interval"
       11 -> pure HeartBeatAck
+      _ -> fail $ "invalid opcode: " <> show op
 
-      _  -> fail $ "invalid opcode: " <> show op
+parseDispatchData :: DispatchType -> Aeson.Value -> AT.Parser DispatchData
+parseDispatchData READY data' = Ready <$> Aeson.parseJSON data'
+parseDispatchData RESUMED _ = pure Resumed
+parseDispatchData CHANNEL_CREATE data' = ChannelCreate <$> Aeson.parseJSON data'
+parseDispatchData CHANNEL_UPDATE data' = ChannelUpdate <$> Aeson.parseJSON data'
+parseDispatchData CHANNEL_DELETE data' = ChannelDelete <$> Aeson.parseJSON data'
+parseDispatchData CHANNEL_PINS_UPDATE data' = ChannelPinsUpdate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_CREATE data' = GuildCreate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_UPDATE data' = GuildUpdate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_DELETE data' = GuildDelete <$> Aeson.parseJSON data'
+parseDispatchData GUILD_BAN_ADD data' = GuildBanAdd <$> Aeson.parseJSON data'
+parseDispatchData GUILD_BAN_REMOVE data' = GuildBanRemove <$> Aeson.parseJSON data'
+parseDispatchData GUILD_EMOJIS_UPDATE data' = GuildEmojisUpdate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_INTEGRATIONS_UPDATE data' = GuildIntegrationsUpdate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_MEMBER_ADD data' = do
+  guildID <- Aeson.withObject "GuildMemberAdd.guild_id" (Aeson..: "guild_id") data'
+  GuildMemberAdd guildID <$> Aeson.parseJSON data'
+parseDispatchData GUILD_MEMBER_REMOVE data' = GuildMemberRemove <$> Aeson.parseJSON data'
+parseDispatchData GUILD_MEMBER_UPDATE data' = GuildMemberUpdate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_MEMBERS_CHUNK data' = GuildMembersChunk <$> Aeson.parseJSON data'
+parseDispatchData GUILD_ROLE_CREATE data' = GuildRoleCreate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_ROLE_UPDATE data' = GuildRoleUpdate <$> Aeson.parseJSON data'
+parseDispatchData GUILD_ROLE_DELETE data' = GuildRoleDelete <$> Aeson.parseJSON data'
+parseDispatchData INVITE_CREATE data' = InviteCreate <$> Aeson.parseJSON data'
+parseDispatchData INVITE_DELETE data' = InviteDelete <$> Aeson.parseJSON data'
+parseDispatchData MESSAGE_CREATE data' = do
+  message <- Aeson.parseJSON data'
+  let member =
+        parseMaybe
+          ( Aeson.withObject "MessageCreate.member" $ \o -> do
+              userObject :: Aeson.Object <- o Aeson..: "author"
+              memberObject :: Aeson.Object <- o Aeson..: "member"
+              Aeson.parseJSON $ Aeson.Object (memberObject <> "user" Aeson..= userObject)
+          )
+          data'
 
-parseDispatchData :: DispatchType -> Value -> AT.Parser DispatchData
-parseDispatchData READY data'                       = Ready <$> parseJSON data'
-parseDispatchData RESUMED _                         = pure Resumed
-parseDispatchData CHANNEL_CREATE data'              = ChannelCreate <$> parseJSON data'
-parseDispatchData CHANNEL_UPDATE data'              = ChannelUpdate <$> parseJSON data'
-parseDispatchData CHANNEL_DELETE data'              = ChannelDelete <$> parseJSON data'
-parseDispatchData CHANNEL_PINS_UPDATE data'         = ChannelPinsUpdate <$> parseJSON data'
-parseDispatchData GUILD_CREATE data'                = GuildCreate <$> parseJSON data'
-parseDispatchData GUILD_UPDATE data'                = GuildUpdate <$> parseJSON data'
-parseDispatchData GUILD_DELETE data'                = GuildDelete <$> parseJSON data'
-parseDispatchData GUILD_BAN_ADD data'               = GuildBanAdd <$> parseJSON data'
-parseDispatchData GUILD_BAN_REMOVE data'            = GuildBanRemove <$> parseJSON data'
-parseDispatchData GUILD_EMOJIS_UPDATE data'         = GuildEmojisUpdate <$> parseJSON data'
-parseDispatchData GUILD_INTEGRATIONS_UPDATE data'   = GuildIntegrationsUpdate <$> parseJSON data'
-parseDispatchData GUILD_MEMBER_ADD data'            = do
-  guildID <- withObject "GuildMemberAdd.guild_id" (.: "guild_id") data'
-  GuildMemberAdd guildID <$> parseJSON data'
-parseDispatchData GUILD_MEMBER_REMOVE data'         = GuildMemberRemove <$> parseJSON data'
-parseDispatchData GUILD_MEMBER_UPDATE data'         = GuildMemberUpdate <$> parseJSON data'
-parseDispatchData GUILD_MEMBERS_CHUNK data'         = GuildMembersChunk <$> parseJSON data'
-parseDispatchData GUILD_ROLE_CREATE data'           = GuildRoleCreate <$> parseJSON data'
-parseDispatchData GUILD_ROLE_UPDATE data'           = GuildRoleUpdate <$> parseJSON data'
-parseDispatchData GUILD_ROLE_DELETE data'           = GuildRoleDelete <$> parseJSON data'
-parseDispatchData INVITE_CREATE data'               = InviteCreate <$> parseJSON data'
-parseDispatchData INVITE_DELETE data'               = InviteDelete <$> parseJSON data'
-parseDispatchData MESSAGE_CREATE data'              = do
-  message <- parseJSON data'
-  let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
-                                         userObject :: Object <- o .: "author"
-                                         memberObject :: Object <- o .: "member"
-                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
-
-  let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
+  let user = parseMaybe Aeson.parseJSON =<< data' ^? _Object % ix "author"
   pure $ MessageCreate message user member
-parseDispatchData MESSAGE_UPDATE data'              = do
-  message <- parseJSON data'
-  let member = parseMaybe (withObject "MessageCreate.member" $ \o -> do
-                                         userObject :: Object <- o .: "author"
-                                         memberObject :: Object <- o .: "member"
-                                         parseJSON $ Object (memberObject <> "user" .= userObject)) data'
-  let user = parseMaybe parseJSON =<< data' ^? _Object . ix "author"
+parseDispatchData MESSAGE_UPDATE data' = do
+  message <- Aeson.parseJSON data'
+  let member =
+        parseMaybe
+          ( Aeson.withObject "MessageCreate.member" $ \o -> do
+              userObject :: Aeson.Object <- o Aeson..: "author"
+              memberObject :: Aeson.Object <- o Aeson..: "member"
+              Aeson.parseJSON $ Aeson.Object (memberObject <> "user" Aeson..= userObject)
+          )
+          data'
+  let user = parseMaybe Aeson.parseJSON =<< data' ^? _Object % ix "author"
   pure $ MessageUpdate message user member
-parseDispatchData MESSAGE_DELETE data'              = MessageDelete <$> parseJSON data'
-parseDispatchData MESSAGE_DELETE_BULK data'         = MessageDeleteBulk <$> parseJSON data'
-parseDispatchData MESSAGE_REACTION_ADD data'        = MessageReactionAdd <$> parseJSON data'
-parseDispatchData MESSAGE_REACTION_REMOVE data'     = MessageReactionRemove <$> parseJSON data'
-parseDispatchData MESSAGE_REACTION_REMOVE_ALL data' = MessageReactionRemoveAll <$> parseJSON data'
-parseDispatchData PRESENCE_UPDATE data'             = PresenceUpdate <$> parseJSON data'
-parseDispatchData TYPING_START data'                = TypingStart <$> parseJSON data'
-parseDispatchData USER_UPDATE data'                 = UserUpdate <$> parseJSON data'
-parseDispatchData VOICE_STATE_UPDATE data'          = VoiceStateUpdate <$> parseJSON data'
-parseDispatchData VOICE_SERVER_UPDATE data'         = VoiceServerUpdate <$> parseJSON data'
-parseDispatchData WEBHOOKS_UPDATE data'             = WebhooksUpdate <$> parseJSON data'
-parseDispatchData INTERACTION_CREATE data'          = InteractionCreate <$> parseJSON data'
+parseDispatchData MESSAGE_DELETE data' = MessageDelete <$> Aeson.parseJSON data'
+parseDispatchData MESSAGE_DELETE_BULK data' = MessageDeleteBulk <$> Aeson.parseJSON data'
+parseDispatchData MESSAGE_REACTION_ADD data' = MessageReactionAdd <$> Aeson.parseJSON data'
+parseDispatchData MESSAGE_REACTION_REMOVE data' = MessageReactionRemove <$> Aeson.parseJSON data'
+parseDispatchData MESSAGE_REACTION_REMOVE_ALL data' = MessageReactionRemoveAll <$> Aeson.parseJSON data'
+parseDispatchData PRESENCE_UPDATE data' = PresenceUpdate <$> Aeson.parseJSON data'
+parseDispatchData TYPING_START data' = TypingStart <$> Aeson.parseJSON data'
+parseDispatchData USER_UPDATE data' = UserUpdate <$> Aeson.parseJSON data'
+parseDispatchData VOICE_STATE_UPDATE data' = VoiceStateUpdate <$> Aeson.parseJSON data'
+parseDispatchData VOICE_SERVER_UPDATE data' = VoiceServerUpdate <$> Aeson.parseJSON data'
+parseDispatchData WEBHOOKS_UPDATE data' = WebhooksUpdate <$> Aeson.parseJSON data'
+parseDispatchData INTERACTION_CREATE data' = InteractionCreate <$> Aeson.parseJSON data'
 
 data SentDiscordMessage
   = StatusUpdate StatusUpdateData
@@ -152,32 +157,22 @@ data SentDiscordMessage
   | VoiceStatusUpdate VoiceState
   | Resume ResumeData
   | RequestGuildMembers RequestGuildMembersData
-  deriving ( Show, Generic )
+  deriving (Show)
 
-instance ToJSON SentDiscordMessage where
-  toJSON (HeartBeat data') = object ["op" .= (1 :: Int), "d" .= data']
+instance Aeson.ToJSON SentDiscordMessage where
+  toJSON (HeartBeat data') = Aeson.object ["op" Aeson..= (1 :: Int), "d" Aeson..= data']
+  toJSON (Identify data') = Aeson.object ["op" Aeson..= (2 :: Int), "d" Aeson..= data']
+  toJSON (StatusUpdate data') = Aeson.object ["op" Aeson..= (3 :: Int), "d" Aeson..= data']
+  toJSON (VoiceStatusUpdate data') = Aeson.object ["op" Aeson..= (4 :: Int), "d" Aeson..= data']
+  toJSON (Resume data') = Aeson.object ["op" Aeson..= (6 :: Int), "d" Aeson..= data']
+  toJSON (RequestGuildMembers data') = Aeson.object ["op" Aeson..= (8 :: Int), "d" Aeson..= data']
 
-  toJSON (Identify data') = object ["op" .= (2 :: Int), "d" .= data']
-
-  toJSON (StatusUpdate data') = object ["op" .= (3 :: Int), "d" .= data']
-
-  toJSON (VoiceStatusUpdate data') = object ["op" .= (4 :: Int), "d" .= data']
-
-  toJSON (Resume data') = object ["op" .= (6 :: Int), "d" .= data']
-
-  toJSON (RequestGuildMembers data') = object ["op" .= (8 :: Int), "d" .= data']
-
-  toEncoding (HeartBeat data') = pairs ("op" .= (1 :: Int) <> "d" .= data')
-
-  toEncoding (Identify data') = pairs ("op" .= (2 :: Int) <> "d" .= data')
-
-  toEncoding (StatusUpdate data') = pairs ("op" .= (3 :: Int) <> "d" .= data')
-
-  toEncoding (VoiceStatusUpdate data') = pairs ("op" .= (4 :: Int) <> "d" .= data')
-
-  toEncoding (Resume data') = pairs ("op" .= (6 :: Int) <> "d" .= data')
-
-  toEncoding (RequestGuildMembers data') = pairs ("op" .= (8 :: Int) <> "d" .= data')
+  toEncoding (HeartBeat data') = Aeson.pairs ("op" Aeson..= (1 :: Int) <> "d" Aeson..= data')
+  toEncoding (Identify data') = Aeson.pairs ("op" Aeson..= (2 :: Int) <> "d" Aeson..= data')
+  toEncoding (StatusUpdate data') = Aeson.pairs ("op" Aeson..= (3 :: Int) <> "d" Aeson..= data')
+  toEncoding (VoiceStatusUpdate data') = Aeson.pairs ("op" Aeson..= (4 :: Int) <> "d" Aeson..= data')
+  toEncoding (Resume data') = Aeson.pairs ("op" Aeson..= (6 :: Int) <> "d" Aeson..= data')
+  toEncoding (RequestGuildMembers data') = Aeson.pairs ("op" Aeson..= (8 :: Int) <> "d" Aeson..= data')
 
 -- Thanks sbrg:
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs
@@ -218,89 +213,126 @@ data DispatchType
   | VOICE_SERVER_UPDATE
   | WEBHOOKS_UPDATE
   | INTERACTION_CREATE
-  deriving ( Show, Eq, Enum, Generic )
-  deriving anyclass ( ToJSON, FromJSON )
+  deriving (Show, Eq, Enum, Generic)
+  deriving (Aeson.ToJSON, Aeson.FromJSON)
 
 data IdentifyData = IdentifyData
-  { token          :: Text
-  , properties     :: IdentifyProps
-  , compress       :: Bool
-  , largeThreshold :: Int
-  , shard          :: (Int, Int)
-  , presence       :: Maybe StatusUpdateData
-  , intents        :: Intents
+  { token :: Text
+  , properties :: IdentifyProps
+  , compress :: Bool
+  , largeThreshold :: Maybe Int
+  , shard :: Maybe (Int, Int)
+  , presence :: Maybe StatusUpdateData
+  , intents :: Intents
   }
-  deriving ( Show, Generic )
-  deriving ToJSON via CalamityJSON IdentifyData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON IdentifyData
+
+instance CalamityToJSON' IdentifyData where
+  toPairs IdentifyData {..} =
+    [ "token" .= token
+    , "properties" .= properties
+    , "compress" .= compress
+    , "large_threshold" .?= largeThreshold
+    , "shard" .?= shard
+    , "presence" .?= presence
+    , "intents" .= intents
+    ]
 
 data StatusUpdateData = StatusUpdateData
-  { since  :: Maybe Integer
-  , game   :: Maybe Activity
+  { since :: Maybe Integer
+  , activities :: [Activity]
   , status :: StatusType
-  , afk    :: Bool
+  , afk :: Bool
   }
-  deriving ( Show, Generic )
-  deriving ToJSON via CalamityJSONKeepNothing StatusUpdateData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON StatusUpdateData
+
+instance CalamityToJSON' StatusUpdateData where
+  toPairs StatusUpdateData {..} =
+    [ "since" .= since
+    , "activities" .= activities
+    , "status" .= status
+    , "afk" .= afk
+    ]
 
 data ResumeData = ResumeData
-  { token     :: Text
+  { token :: Text
   , sessionID :: Text
-  , seq       :: Int
+  , seq :: Int
   }
-  deriving ( Show, Generic )
-  deriving ( ToJSON, FromJSON ) via CalamityJSON ResumeData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ResumeData
+
+instance CalamityToJSON' ResumeData where
+  toPairs ResumeData {..} =
+    [ "token" .= token
+    , "session_id" .= sessionID
+    , "seq" .= seq
+    ]
 
 data RequestGuildMembersData = RequestGuildMembersData
   { guildID :: Snowflake Guild
-  , query   :: Maybe Text
-  , limit   :: Maybe Int
+  , query :: Maybe Text
+  , limit :: Int
+  , presences :: Maybe Bool
+  , userIDs :: Maybe [Snowflake User]
+  , nonce :: Maybe Text
   }
-  deriving ( Show, Generic )
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON RequestGuildMembersData
 
-instance ToJSON RequestGuildMembersData where
-  toJSON RequestGuildMembersData { guildID, query, limit } =
-    object ["guild_id" .= guildID, "query" .= fromMaybe "" query, "limit" .= fromMaybe 0 limit]
+instance CalamityToJSON' RequestGuildMembersData where
+  toPairs RequestGuildMembersData {..} =
+    [ "guild_id" .= guildID
+    , "query" .?= query
+    , "limit" .= limit
+    , "presences" .?= presences
+    , "user_ids" .?= userIDs
+    , "nonce" .?= nonce
+    ]
 
 data IdentifyProps = IdentifyProps
   { browser :: Text
-  , device  :: Text
+  , device :: Text
   }
-  deriving ( Show, Generic )
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON IdentifyProps
 
-instance ToJSON IdentifyProps where
-  toJSON IdentifyProps { browser, device } = object ["$browser" .= browser, "$device" .= device]
+instance CalamityToJSON' IdentifyProps where
+  toPairs IdentifyProps {..} = ["$browser" .= browser, "$device" .= device]
 
 data ControlMessage
   = RestartShard
   | ShutDownShard
   | SendPresence StatusUpdateData
-  deriving ( Show, Generic )
+  deriving (Show)
 
 data ShardFlowControl
   = ShardFlowRestart
   | ShardFlowShutDown
-  deriving ( Show, Generic )
-  deriving ( TextShow ) via TSG.FromGeneric ShardFlowControl
+  deriving (Show)
 
 data Shard = Shard
-  { shardID       :: Int
-  , shardCount    :: Int
-  , gateway       :: Text
-  , evtIn         :: InChan CalamityEvent
-  , cmdOut        :: OutChan ControlMessage
-  , token         :: Text
+  { shardID :: Int
+  , shardCount :: Int
+  , gateway :: Text
+  , evtIn :: InChan CalamityEvent
+  , cmdOut :: OutChan ControlMessage
+  , token :: Text
   , initialStatus :: Maybe StatusUpdateData
-  , intents       :: Intents
+  , intents :: Intents
   }
-  deriving ( Generic )
 
 data ShardState = ShardState
-  { shardS     :: Shard
-  , seqNum     :: Maybe Int
-  , hbThread   :: Maybe (Async (Maybe ()))
+  { shardS :: Shard
+  , seqNum :: Maybe Int
+  , hbThread :: Maybe (Async (Maybe ()))
   , hbResponse :: Bool
-  , wsHost     :: Maybe Text
-  , sessionID  :: Maybe Text
-  , wsConn     :: Maybe Connection
+  , wsHost :: Maybe Text
+  , sessionID :: Maybe Text
+  , wsConn :: Maybe Connection
   }
-  deriving ( Generic )
+
+$(makeFieldLabelsNoPrefix ''Shard)
+$(makeFieldLabelsNoPrefix ''ShardState)

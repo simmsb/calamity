@@ -22,17 +22,14 @@ import CalamityCommands.Internal.RunIntoM
 import CalamityCommands.Internal.Utils
 import CalamityCommands.ParameterInfo
 import CalamityCommands.Parser
-
-import Control.Lens hiding (Context, (<.>))
+import Optics
 import Control.Monad
-
 import Data.Foldable
 import Data.Kind
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Data.List.NonEmpty as NE
 import Data.Maybe
 import qualified Data.Text as S
-
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
 import qualified Polysemy.Fail as P

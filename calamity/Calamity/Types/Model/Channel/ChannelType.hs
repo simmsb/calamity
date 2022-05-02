@@ -1,13 +1,12 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Types of channels
 module Calamity.Types.Model.Channel.ChannelType (ChannelType (..)) where
 
-import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.Scientific
-
-import GHC.Generics
-
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics.TH
+import TextShow.TH
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hsfield#L182)
 data ChannelType
@@ -16,14 +15,17 @@ data ChannelType
   | GuildVoiceType
   | GroupDMType
   | GuildCategoryType
-  deriving (Eq, Generic, Show, Enum)
-  deriving (TextShow) via TSG.FromGeneric ChannelType
+  deriving (Eq, Show, Enum)
 
-instance ToJSON ChannelType where
-  toJSON t = Number $ fromIntegral (fromEnum t)
+$(deriveTextShow ''ChannelType)
+$(makeFieldLabelsNoPrefix ''ChannelType)
 
-instance FromJSON ChannelType where
-  parseJSON = withScientific "ChannelType" $ \n -> case toBoundedInteger @Int n of
+instance Aeson.ToJSON ChannelType where
+  toJSON t = Aeson.toJSON (fromEnum t)
+  toEncoding t = Aeson.toEncoding (fromEnum t)
+
+instance Aeson.FromJSON ChannelType where
+  parseJSON = Aeson.withScientific "ChannelType" $ \n -> case toBoundedInteger @Int n of
     Just v -> case v of
       0 -> pure GuildTextType
       1 -> pure DMType

@@ -12,7 +12,7 @@ import Calamity.Types.Partial
 import Calamity.Types.Snowflake
 import CalamityCommands.ParameterInfo
 import CalamityCommands.Parser
-import Control.Lens hiding (Context)
+import Optics
 import Control.Monad
 import Control.Monad.Trans (lift)
 import Data.Maybe (fromMaybe, isJust)
@@ -80,7 +80,7 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Memb
         ( \mid -> do
             ctx <- P.ask
             guild <- join <$> getGuild `traverse` ctxGuildID ctx
-            pure $ guild ^? _Just . #members . ix mid
+            pure $ guild ^? _Just % #members % ix mid
         )
   parameterDescription = "user mention or id"
 
@@ -110,7 +110,7 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Guil
         ( \cid -> do
             ctx <- P.ask
             guild <- join <$> getGuild `traverse` ctxGuildID ctx
-            pure $ guild ^? _Just . #channels . ix cid
+            pure $ guild ^? _Just % #channels % ix cid
         )
   parameterDescription = "channel mention or id"
 
@@ -140,7 +140,7 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Emoj
         ( \eid -> do
             ctx <- P.ask
             guild <- join <$> getGuild `traverse` ctxGuildID ctx
-            pure $ guild ^? _Just . #emojis . ix eid
+            pure $ guild ^? _Just % #emojis % ix eid
         )
   parameterDescription = "emoji or id"
 
@@ -164,7 +164,7 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Role
         ( \rid -> do
             ctx <- P.ask
             guild <- join <$> getGuild `traverse` ctxGuildID ctx
-            pure $ guild ^? _Just . #roles . ix rid
+            pure $ guild ^? _Just % #roles % ix rid
         )
   parameterDescription = "role mention or id"
 

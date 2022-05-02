@@ -32,10 +32,8 @@ import CalamityCommands.Group hiding (help)
 import CalamityCommands.Handler
 import CalamityCommands.ParameterInfo
 import CalamityCommands.Internal.LocalWriter
-
 import qualified Data.HashMap.Lazy as LH
 import qualified Data.Text as T
-
 import Data.List.NonEmpty (NonEmpty (..))
 import qualified Polysemy as P
 import qualified Polysemy.Fail as P

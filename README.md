@@ -58,7 +58,7 @@ project listed here)
   build-depends:
      base >= 4.13 && < 5
      , calamity >= 0.3.0.0
-     , text >= 1.2 && < 2.1
+     , optics >= 0.4.1 && < 0.5
      , lens >= 5.1 && < 6
      , di-polysemy ^>= 0.2
      , di >= 1.3 && < 2
@@ -76,16 +76,16 @@ project listed here)
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE GADTs #-}
 {-# LANGUAGE OverloadedLabels #-}
-
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE TypeApplications #-}
-
-{-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE TemplateHaskell #-}
 {-# LANGUAGE BlockArguments #-}
-
 {-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE FlexibleInstances #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE UndecidableInstances #-}
 
 module Main (main) where
 
@@ -96,12 +96,11 @@ import Calamity.Commands.Context (useFullContext)
 import qualified Calamity.Interactions as I
 import Calamity.Metrics.Noop
 import Control.Concurrent
-import Control.Lens
+import Optics
 import Control.Monad
 import qualified Data.Text as T
 import qualified Di
 import qualified DiPolysemy as DiP
-import GHC.Generics
 import qualified Polysemy as P
 import qualified Polysemy.Async as P
 import qualified Polysemy.State as P
@@ -112,7 +111,8 @@ data MyViewState = MyViewState
   { numOptions :: Int
   , selected :: Maybe T.Text
   }
-  deriving (Generic)
+
+$(makeFieldLabelsNoPrefix ''MyViewState)
 
 main :: IO ()
 main = do

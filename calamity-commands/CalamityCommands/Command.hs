@@ -1,4 +1,4 @@
-{-# LANGUAGE NoPolyKinds #-}
+{-# LANGUAGE TemplateHaskell #-}
 
 -- | Commands and stuff
 module CalamityCommands.Command (Command (..)) where
@@ -7,18 +7,13 @@ import CalamityCommands.Check
 import CalamityCommands.Error
 import CalamityCommands.Group
 import CalamityCommands.ParameterInfo
-
-import Control.Lens hiding (Context, (<.>))
-
 import Data.Kind (Type)
 import Data.List.NonEmpty (NonEmpty)
-import Data.Text as T
-
-import GHC.Generics
-
 import qualified Data.List.NonEmpty as NE
-import TextShow
-import qualified TextShow.Generic as TSG
+import Data.Text as T
+import Optics
+import qualified TextShow
+import TextShow.TH (deriveTextShow)
 
 -- | A command, paremeterised over its context
 data Command (m :: Type -> Type) (c :: Type) (a :: Type) = forall p.
@@ -48,25 +43,27 @@ data CommandS = CommandS
   , checks :: [T.Text]
   , hidden :: Bool
   }
-  deriving (Generic, Show)
-  deriving (TextShow) via TSG.FromGeneric CommandS
+  deriving (Show)
 
 instance Show (Command m c a) where
-  showsPrec d Command{names, params, parent, checks, hidden} =
+  showsPrec d Command {names, params, parent, checks, hidden} =
     showsPrec d $
       CommandS
         names
         params
-        (NE.head <$> parent ^? _Just . #names)
-        (checks ^.. traverse . #name)
+        (NE.head <$> parent ^? _Just % #names)
+        (checks ^.. traversed % #name)
         hidden
 
-instance TextShow (Command m c a) where
-  showbPrec d Command{names, params, parent, checks, hidden} =
-    showbPrec d $
+instance TextShow.TextShow (Command m c a) where
+  showbPrec d Command {names, params, parent, checks, hidden} =
+    TextShow.showbPrec d $
       CommandS
         names
         params
-        (NE.head <$> parent ^? _Just . #names)
-        (checks ^.. traverse . #name)
+        (NE.head <$> parent ^? _Just % #names)
+        (checks ^.. traversed % #name)
         hidden
+
+$(deriveTextShow ''CommandS)
+$(makeFieldLabelsNoPrefix ''Command)

@@ -1,19 +1,17 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Channel webhooks
 module Calamity.Types.Model.Channel.Webhook (Webhook (..)) where
 
-import Calamity.Internal.AesonThings
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-
-import Data.Aeson
+import Data.Aeson ((.:), (.:?))
+import qualified Data.Aeson as Aeson
 import Data.Text (Text)
-
-import GHC.Generics
-
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics.TH
+import TextShow.TH
 
 data Webhook = Webhook
   { id :: Snowflake Webhook
@@ -25,7 +23,23 @@ data Webhook = Webhook
   , avatar :: Text
   , token :: Maybe Text
   }
-  deriving (Eq, Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric Webhook
-  deriving (FromJSON) via WithSpecialCases '["user" `ExtractFieldFrom` "id"] Webhook
+  deriving (Eq, Show)
   deriving (HasID Webhook) via HasIDField "id" Webhook
+
+instance Aeson.FromJSON Webhook where
+  parseJSON = Aeson.withObject "Webhook" $ \v -> do
+    user <- v .:? "user"
+    userID <- traverse (.: "id") user
+
+    Webhook
+      <$> v .: "id"
+      <*> v .: "type"
+      <*> v .:? "guild_id"
+      <*> v .:? "channel_id"
+      <*> pure userID
+      <*> v .: "name"
+      <*> v .: "avatar"
+      <*> v .:? "token"
+
+$(deriveTextShow ''Webhook)
+$(makeFieldLabelsNoPrefix ''Webhook)

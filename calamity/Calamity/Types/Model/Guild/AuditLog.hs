@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Audit Log models
 module Calamity.Types.Model.Guild.AuditLog (
   AuditLog (..),
@@ -7,44 +9,48 @@ module Calamity.Types.Model.Guild.AuditLog (
   AuditLogAction (..),
 ) where
 
-import Calamity.Internal.AesonThings
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-
-import Data.Aeson
+import Data.Aeson ((.:), (.:?))
+import qualified Data.Aeson as Aeson
 import Data.Scientific
 import Data.Text (Text)
-
-import GHC.Generics
-
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics.TH
+import qualified TextShow
+import TextShow.TH
 
 data AuditLog = AuditLog
   { webhooks :: SnowflakeMap Webhook
   , users :: SnowflakeMap User
   , auditLogEntries :: SnowflakeMap AuditLogEntry
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric AuditLog
-  deriving (FromJSON) via CalamityJSON AuditLog
+  deriving (Show)
 
 data AuditLogEntry = AuditLogEntry
   { targetID :: Maybe (Snowflake ())
   , changes :: [AuditLogChange]
   , userID :: Snowflake User
   , id :: Snowflake AuditLogEntry
-  , actionType :: !AuditLogAction
+  , actionType :: AuditLogAction
   , options :: Maybe AuditLogEntryInfo
   , reason :: Maybe Text
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric AuditLogEntry
-  deriving (FromJSON) via CalamityJSON AuditLogEntry
+  deriving (Show)
   deriving (HasID User) via HasIDField "userID" AuditLogEntry
   deriving (HasID AuditLogEntry) via HasIDField "id" AuditLogEntry
+
+instance Aeson.FromJSON AuditLogEntry where
+  parseJSON = Aeson.withObject "AuditLogEntry" $ \v ->
+    AuditLogEntry
+      <$> v .:? "target_id"
+      <*> v .: "changes"
+      <*> v .: "user_id"
+      <*> v .: "id"
+      <*> v .: "action_type"
+      <*> v .: "options"
+      <*> v .:? "reason"
 
 data AuditLogEntryInfo = AuditLogEntryInfo
   { deleteMemberDays :: Maybe Text
@@ -56,18 +62,34 @@ data AuditLogEntryInfo = AuditLogEntryInfo
   , type_ :: Maybe Text
   , roleName :: Maybe Text
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric AuditLogEntryInfo
-  deriving (FromJSON) via CalamityJSON AuditLogEntryInfo
+  deriving (Show)
+
+instance Aeson.FromJSON AuditLogEntryInfo where
+  parseJSON = Aeson.withObject "AudotLogEntryInfo" $ \v ->
+    AuditLogEntryInfo
+      <$> v .:? "delete_member_days"
+      <*> v .:? "members_removed"
+      <*> v .:? "channel_id"
+      <*> v .:? "message_id"
+      <*> v .:? "count"
+      <*> v .:? "id"
+      <*> v .:? "type"
+      <*> v .:? "role_name"
 
 data AuditLogChange = AuditLogChange
-  { newValue :: Maybe Value
-  , oldValue :: Maybe Value
+  { newValue :: Maybe Aeson.Value
+  , oldValue :: Maybe Aeson.Value
   , key :: Text
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via FromStringShow AuditLogChange
-  deriving (FromJSON) via CalamityJSON AuditLogChange
+  deriving (Show)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow AuditLogChange
+
+instance Aeson.FromJSON AuditLogChange where
+  parseJSON = Aeson.withObject "AudotLogChange" $ \v ->
+    AuditLogChange
+      <$> v .:? "new_value"
+      <*> v .:? "old_value"
+      <*> v .: "key"
 
 data AuditLogAction
   = GUILD_UPDATE
@@ -105,8 +127,7 @@ data AuditLogAction
   | INTEGRATION_CREATE
   | INTEGRATION_UPDATE
   | INTEGRATION_DELETE
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric AuditLogAction
+  deriving (Show)
 
 instance Enum AuditLogAction where
   toEnum v = case v of
@@ -184,8 +205,8 @@ instance Enum AuditLogAction where
     INTEGRATION_UPDATE -> 81
     INTEGRATION_DELETE -> 82
 
-instance FromJSON AuditLogAction where
-  parseJSON = withScientific "AuditLogAction" $ \n -> case toBoundedInteger @Int n of
+instance Aeson.FromJSON AuditLogAction where
+  parseJSON = Aeson.withScientific "AuditLogAction" $ \n -> case toBoundedInteger @Int n of
     Just v -> case v of --  no safe toEnum :S
       1 -> pure GUILD_UPDATE
       10 -> pure CHANNEL_CREATE
@@ -225,5 +246,16 @@ instance FromJSON AuditLogAction where
       _ -> fail $ "Invalid AuditLogAction: " <> show n
     Nothing -> fail $ "Invalid AuditLogAction: " <> show n
 
-instance ToJSON AuditLogAction where
-  toJSON = toJSON @Int . fromEnum
+instance Aeson.ToJSON AuditLogAction where
+  toJSON = Aeson.toJSON @Int . fromEnum
+  toEncoding = Aeson.toEncoding @Int . fromEnum
+
+$(deriveTextShow ''AuditLog)
+$(deriveTextShow ''AuditLogEntry)
+$(deriveTextShow ''AuditLogEntryInfo)
+$(deriveTextShow ''AuditLogAction)
+
+$(makeFieldLabelsNoPrefix ''AuditLog)
+$(makeFieldLabelsNoPrefix ''AuditLogEntry)
+$(makeFieldLabelsNoPrefix ''AuditLogEntryInfo)
+$(makeFieldLabelsNoPrefix ''AuditLogChange)

@@ -12,6 +12,8 @@ module Calamity.Internal.Utils (
   (<<$>>),
   (<<*>>),
   (<.>),
+  (.?=),
+  (.=),
   debug,
   info,
   Calamity.Internal.Utils.error,
@@ -20,13 +22,14 @@ module Calamity.Internal.Utils (
   AesonVector (..),
   CalamityFromStringShow (..),
   MaybeNull (..),
+  CalamityToJSON (..),
+  CalamityToJSON' (..),
 ) where
 
 -- import Calamity.Internal.RunIntoIO
 import Calamity.Types.LogEff
 import Control.Applicative
 import Control.Monad (when)
-import Data.Aeson
 import Data.Aeson.Encoding (null_)
 import Data.Default.Class
 import qualified Data.Map as M
@@ -34,10 +37,10 @@ import Data.Semigroup (Last (..))
 import Data.Text
 import qualified Data.Vector.Unboxing as VU
 import qualified DiPolysemy as Di
-import GHC.Generics
 import qualified Polysemy as P
 import TextShow
-import qualified TextShow.Generic as TSG
+import qualified Data.Aeson as Aeson
+import Data.Maybe (catMaybes)
 
 {- | Like whileM, but stateful effects are not preserved to mitigate memory leaks
 
@@ -137,18 +140,18 @@ instance Default (DefaultingMap k v) where
 newtype AesonVector a = AesonVector {unAesonVector :: VU.Vector a}
   deriving (Show) via VU.Vector a
 
-instance (FromJSON a, VU.Unboxable a) => FromJSON (AesonVector a) where
-  parseJSON = (AesonVector . VU.fromList <$>) . parseJSON
+instance (Aeson.FromJSON a, VU.Unboxable a) => Aeson.FromJSON (AesonVector a) where
+  parseJSON = (AesonVector . VU.fromList <$>) . Aeson.parseJSON
 
-instance (ToJSON a, VU.Unboxable a) => ToJSON (AesonVector a) where
-  toJSON = toJSON . VU.toList . unAesonVector
-  toEncoding = toEncoding . VU.toList . unAesonVector
+instance (Aeson.ToJSON a, VU.Unboxable a) => Aeson.ToJSON (AesonVector a) where
+  toJSON = Aeson.toJSON . VU.toList . unAesonVector
+  toEncoding = Aeson.toEncoding . VU.toList . unAesonVector
 
 instance (TextShow a, VU.Unboxable a) => TextShow (AesonVector a) where
   showb = showbList . VU.toList . unAesonVector
 
 newtype CalamityFromStringShow a = CalamityFromStringShow {unCalamityFromStringShow :: a}
-  deriving (FromJSON, ToJSON) via a
+  deriving (Aeson.FromJSON, Aeson.ToJSON) via a
   deriving (TextShow) via FromStringShow a
 
 {- | An alternative 'Maybe' type that allows us to distinguish between parsed
@@ -157,16 +160,31 @@ newtype CalamityFromStringShow a = CalamityFromStringShow {unCalamityFromStringS
 data MaybeNull a
   = WasNull
   | NotNull a
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric (MaybeNull a)
+  deriving (Show)
 
-instance FromJSON a => FromJSON (MaybeNull a) where
-  parseJSON Null = pure WasNull
-  parseJSON x = NotNull <$> parseJSON x
+instance Aeson.FromJSON a => Aeson.FromJSON (MaybeNull a) where
+  parseJSON Aeson.Null = pure WasNull
+  parseJSON x = NotNull <$> Aeson.parseJSON x
 
-instance ToJSON a => ToJSON (MaybeNull a) where
-  toJSON WasNull = Null
-  toJSON (NotNull x) = toJSON x
+instance Aeson.ToJSON a => Aeson.ToJSON (MaybeNull a) where
+  toJSON WasNull = Aeson.Null
+  toJSON (NotNull x) = Aeson.toJSON x
 
   toEncoding WasNull = null_
-  toEncoding (NotNull x) = toEncoding x
+  toEncoding (NotNull x) = Aeson.toEncoding x
+
+(.?=) :: (Aeson.ToJSON v, Aeson.KeyValue kv) => Aeson.Key -> Maybe v -> Maybe kv
+k .?= Just v = Just (k Aeson..= v)
+_ .?= Nothing = Nothing
+
+(.=) :: (Aeson.ToJSON v, Aeson.KeyValue kv) => Aeson.Key -> v -> Maybe kv
+k .= v = Just (k Aeson..= v)
+
+class CalamityToJSON' a where
+  toPairs :: Aeson.KeyValue kv => a -> [Maybe kv]
+
+newtype CalamityToJSON a = CalamityToJSON a
+
+instance CalamityToJSON' a => Aeson.ToJSON (CalamityToJSON a) where
+  toJSON (CalamityToJSON x) = Aeson.object . catMaybes . toPairs $ x
+  toEncoding (CalamityToJSON x) = Aeson.pairs . mconcat . catMaybes . toPairs $ x

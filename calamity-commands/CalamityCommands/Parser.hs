@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Something that can parse user input
 module CalamityCommands.Parser (
   ParameterParser (..),
@@ -15,11 +17,9 @@ module CalamityCommands.Parser (
 
 import CalamityCommands.ParameterInfo
 
-import Control.Lens hiding (Context)
 import Control.Monad
-
+import Optics
 import Data.Char (isSpace)
-import Data.Generics.Labels ()
 import Data.Kind
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
@@ -27,15 +27,11 @@ import Data.Semigroup
 import qualified Data.Text as T
 import qualified Data.Text.Lazy as L
 import Data.Typeable
-
-import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-
 import qualified Polysemy as P
 import qualified Polysemy.Error as P
 import qualified Polysemy.Reader as P
 import qualified Polysemy.State as P
-
 import Numeric.Natural (Natural)
 import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char
@@ -57,7 +53,7 @@ data ParserState = ParserState
   , -- | The input message ot parse
     msg :: T.Text
   }
-  deriving (Show, Generic)
+  deriving (Show)
 
 -- |
 type ParserEffs c r =
@@ -129,7 +125,7 @@ parseMP n m = do
   res <- P.raise . P.raise $ runParserT (skipN (s ^. #off) *> trackOffsets (space *> m)) "" (s ^. #msg)
   case res of
     Right (a, offset) -> do
-      P.modify (#off +~ offset)
+      P.modify (#off %~ (+ offset))
       pure a
     Left s -> P.throw (n, T.pack $ errorBundlePretty s)
 
@@ -296,3 +292,5 @@ quotedString =
 
 someNonWS :: (Token s ~ Char, MonadParsec e s m) => m (Tokens s)
 someNonWS = takeWhile1P (Just "any non-whitespace") (not . isSpace)
+
+$(makeFieldLabelsNoPrefix ''ParserState)

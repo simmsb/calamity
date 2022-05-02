@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Types for the client
 module Calamity.Client.Types (
   Client (..),
@@ -49,13 +51,11 @@ import Data.Void (Void)
 import qualified Df1
 import qualified Di.Core as DC
 import GHC.Exts (fromList)
-import GHC.Generics
+import Optics.TH
 import qualified Polysemy as P
 import qualified Polysemy.Async as P
 import qualified Polysemy.AtomicState as P
 import qualified Polysemy.Reader as P
-import TextShow
-import qualified TextShow.Generic as TSG
 
 data Client = Client
   { shards :: TVar [(InChan ControlMessage, Async (Maybe ()))]
@@ -67,7 +67,6 @@ data Client = Client
   , ehidCounter :: IORef Integer
   , initialDi :: Maybe (DC.Di Df1.Level Df1.Path Df1.Message)
   }
-  deriving (Generic)
 
 -- | Constraints required by the bot client
 type BotC r =
@@ -177,16 +176,14 @@ data GuildCreateStatus
     GuildCreateNew
   | -- | The guild is becoming available
     GuildCreateAvailable
-  deriving (Generic, Show)
-  deriving (TextShow) via TSG.FromGeneric GuildCreateStatus
+  deriving (Show)
 
 data GuildDeleteStatus
   = -- | The guild became unavailable
     GuildDeleteUnavailable
   | -- | The bot was removed from the guild
     GuildDeleteRemoved
-  deriving (Generic, Show)
-  deriving (TextShow) via TSG.FromGeneric GuildDeleteStatus
+  deriving (Show)
 
 {- | A type family to decide what the parameters for an event handler should be
  determined by the type of event it is handling.
@@ -384,3 +381,5 @@ getCustomEventHandlers (EventHandlers handlers) =
         unwrapEventHandler @( 'CustomEvt Void) $
           fromMaybe mempty (TM.lookup handlers :: Maybe (EventHandler ( 'CustomEvt Void)))
    in maybe mempty (map eh . unwrapCustomEHTypeStorage) $ TM.lookup @a handlerMap
+
+$(makeFieldLabelsNoPrefix ''Client)

@@ -1,18 +1,17 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 module Calamity.Types.Model.Channel.Guild.Category (Category (..)) where
 
-import Calamity.Internal.AesonThings
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
-import Calamity.Internal.Utils ()
 import {-# SOURCE #-} Calamity.Types.Model.Channel
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake
-import Control.DeepSeq (NFData)
-import Data.Aeson
+import Data.Aeson ((.!=), (.:), (.:?))
+import qualified Data.Aeson as Aeson
 import Data.Text (Text)
-import GHC.Generics
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics.TH
+import TextShow.TH
 
 data Category = Category
   { id :: Snowflake Category
@@ -22,9 +21,19 @@ data Category = Category
   , position :: Int
   , guildID :: Snowflake Guild
   }
-  deriving (Show, Eq, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric Category
-  deriving (ToJSON) via CalamityJSON Category
-  deriving (FromJSON) via WithSpecialCases '[IfNoneThen "nsfw" DefaultToFalse] Category
+  deriving (Show, Eq)
   deriving (HasID Category) via HasIDField "id" Category
   deriving (HasID Channel) via HasIDFieldCoerce' "id" Category
+
+instance Aeson.FromJSON Category where
+  parseJSON = Aeson.withObject "Category" $ \v ->
+    Category
+      <$> v .: "id"
+      <*> v .: "permission_overwrites"
+      <*> v .: "name"
+      <*> v .:? "nsfw" .!= False
+      <*> v .: "position"
+      <*> v .: "guild_id"
+
+$(deriveTextShow ''Category)
+$(makeFieldLabelsNoPrefix ''Category)

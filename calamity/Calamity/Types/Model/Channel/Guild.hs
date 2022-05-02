@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | The generic guild channel type
 module Calamity.Types.Model.Channel.Guild (
   GuildChannel (..),
@@ -15,74 +17,72 @@ import Calamity.Types.Model.Channel.Guild.Voice
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake
-import Control.DeepSeq (NFData)
-import Control.Lens
-import Data.Aeson
-import Data.Generics.Product.Fields
+import Data.Aeson ((.:))
+import qualified Data.Aeson as Aeson
 import Data.Text (Text)
-import GHC.Generics
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics ((&), (.~), (^.))
+import qualified Optics
+import Optics.TH
+import TextShow.TH
 
 data GuildChannel
   = GuildTextChannel TextChannel
   | GuildVoiceChannel VoiceChannel
   | GuildCategory Category
-  deriving (Show, Eq, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric GuildChannel
+  deriving (Show, Eq)
 
-instance FromJSON GuildChannel where
-  parseJSON = withObject "GuildChannel" $ \v -> do
+instance Aeson.FromJSON GuildChannel where
+  parseJSON = Aeson.withObject "GuildChannel" $ \v -> do
     type_ <- v .: "type"
 
     case type_ of
-      GuildTextType -> GuildTextChannel <$> parseJSON (Object v)
-      GuildVoiceType -> GuildVoiceChannel <$> parseJSON (Object v)
-      GuildCategoryType -> GuildCategory <$> parseJSON (Object v)
+      GuildTextType -> GuildTextChannel <$> Aeson.parseJSON (Aeson.Object v)
+      GuildVoiceType -> GuildVoiceChannel <$> Aeson.parseJSON (Aeson.Object v)
+      GuildCategoryType -> GuildCategory <$> Aeson.parseJSON (Aeson.Object v)
       typ -> fail $ "Not a valid guild channel: " <> show typ
 
 instance HasID GuildChannel GuildChannel where
-  getID (GuildTextChannel a) = coerceSnowflake $ a ^. field' @"id"
-  getID (GuildVoiceChannel a) = coerceSnowflake $ a ^. field' @"id"
-  getID (GuildCategory a) = coerceSnowflake $ a ^. field' @"id"
+  getID (GuildTextChannel a) = coerceSnowflake $ a ^. #id
+  getID (GuildVoiceChannel a) = coerceSnowflake $ a ^. #id
+  getID (GuildCategory a) = coerceSnowflake $ a ^. #id
 
 instance HasID Channel GuildChannel where
   getID = coerceSnowflake . getID @GuildChannel
 
 instance HasID Guild GuildChannel where
-  getID (GuildTextChannel a) = coerceSnowflake $ a ^. field' @"guildID"
-  getID (GuildVoiceChannel a) = coerceSnowflake $ a ^. field' @"guildID"
-  getID (GuildCategory a) = coerceSnowflake $ a ^. field' @"guildID"
+  getID (GuildTextChannel a) = coerceSnowflake $ a ^. #guildID
+  getID (GuildVoiceChannel a) = coerceSnowflake $ a ^. #guildID
+  getID (GuildCategory a) = coerceSnowflake $ a ^. #guildID
 
-instance {-# OVERLAPS #-} HasField' "name" GuildChannel Text where
-  field' = lens get set
-   where
-    get (GuildTextChannel (TextChannel{name})) = name
-    get (GuildVoiceChannel (VoiceChannel{name})) = name
-    get (GuildCategory (Category{name})) = name
+instance (k ~ Optics.A_Lens) => Optics.LabelOptic "name" k GuildChannel GuildChannel Text Text where
+  labelOptic = Optics.lensVL $ \f s -> case s of
+    GuildTextChannel c ->
+      fmap
+        (\y -> GuildTextChannel (c & Optics.labelOptic @"name" .~ y))
+        (f $ c ^. Optics.labelOptic @"name")
+    GuildVoiceChannel c ->
+      fmap
+        (\y -> GuildVoiceChannel (c & Optics.labelOptic @"name" .~ y))
+        (f $ c ^. Optics.labelOptic @"name")
+    GuildCategory c ->
+      fmap
+        (\y -> GuildCategory (c & Optics.labelOptic @"name" .~ y))
+        (f $ c ^. Optics.labelOptic @"name")
 
-    set (GuildTextChannel t) v = GuildTextChannel (t{name = v})
-    set (GuildVoiceChannel t) v = GuildVoiceChannel (t{name = v})
-    set (GuildCategory t) v = GuildCategory (t{name = v})
+instance (k ~ Optics.A_Lens) => Optics.LabelOptic "permissionOverwrites" k GuildChannel GuildChannel (SnowflakeMap Overwrite) (SnowflakeMap Overwrite) where
+  labelOptic = Optics.lensVL $ \f s -> case s of
+    GuildTextChannel c ->
+      fmap
+        (\y -> GuildTextChannel (c & Optics.labelOptic @"permissionOverwrites" .~ y))
+        (f $ c ^. Optics.labelOptic @"permissionOverwrites")
+    GuildVoiceChannel c ->
+      fmap
+        (\y -> GuildVoiceChannel (c & Optics.labelOptic @"permissionOverwrites" .~ y))
+        (f $ c ^. Optics.labelOptic @"permissionOverwrites")
+    GuildCategory c ->
+      fmap
+        (\y -> GuildCategory (c & Optics.labelOptic @"permissionOverwrites" .~ y))
+        (f $ c ^. Optics.labelOptic @"permissionOverwrites")
 
-instance {-# OVERLAPS #-} HasField' "permissionOverwrites" GuildChannel (SnowflakeMap Overwrite) where
-  field' = lens get set
-   where
-    get (GuildTextChannel (TextChannel{permissionOverwrites})) = permissionOverwrites
-    get (GuildVoiceChannel (VoiceChannel{permissionOverwrites})) = permissionOverwrites
-    get (GuildCategory (Category{permissionOverwrites})) = permissionOverwrites
-
-    set (GuildTextChannel t) v = GuildTextChannel (t{permissionOverwrites = v})
-    set (GuildVoiceChannel t) v = GuildVoiceChannel (t{permissionOverwrites = v})
-    set (GuildCategory t) v = GuildCategory (t{permissionOverwrites = v})
-
-instance {-# OVERLAPS #-} HasField' "position" GuildChannel Int where
-  field' = lens get set
-   where
-    get (GuildTextChannel (TextChannel{position})) = position
-    get (GuildVoiceChannel (VoiceChannel{position})) = position
-    get (GuildCategory (Category{position})) = position
-
-    set (GuildTextChannel t) v = GuildTextChannel (t{position = v})
-    set (GuildVoiceChannel t) v = GuildVoiceChannel (t{position = v})
-    set (GuildCategory t) v = GuildCategory (t{position = v})
+$(deriveTextShow ''GuildChannel)
+$(makeFieldLabelsNoPrefix ''GuildChannel)

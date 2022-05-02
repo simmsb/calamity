@@ -20,7 +20,7 @@ import Calamity.Types.Model.Channel.Component (Component (ActionRow'))
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake (Snowflake)
 import Calamity.Types.Tellable
-import Control.Lens ((^.))
+import Optics
 import qualified Data.HashMap.Strict as H
 import Data.Text (Text)
 import qualified Polysemy as P

@@ -1,35 +1,18 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Guild roles
 module Calamity.Types.Model.Guild.Role (Role (..)) where
 
-import Calamity.Internal.AesonThings
 import Calamity.Internal.IntColour
+import Calamity.Internal.Utils
 import Calamity.Types.Model.Guild.Permissions
 import Calamity.Types.Snowflake
-
-import Data.Aeson
+import Data.Aeson ((.:))
+import qualified Data.Aeson as Aeson
 import Data.Colour
 import Data.Text (Text)
-
-import GHC.Generics
-
-import Calamity.Internal.OverriddenVia
-import Control.DeepSeq (NFData (rnf), rwhnf)
-import TextShow
-import qualified TextShow.Generic as TSG
-
-data Role' = Role'
-  { id :: Snowflake Role
-  , name :: Text
-  , color :: IntColour
-  , hoist :: Bool
-  , position :: Int
-  , permissions :: Permissions
-  , managed :: Bool
-  , mentionable :: Bool
-  }
-  deriving (Generic)
-  deriving (TextShow) via TSG.FromGeneric Role'
-  deriving (ToJSON, FromJSON) via CalamityJSON Role'
+import Optics.TH
+import qualified TextShow
 
 data Role = Role
   { id :: Snowflake Role
@@ -41,13 +24,32 @@ data Role = Role
   , managed :: Bool
   , mentionable :: Bool
   }
-  deriving (Eq, Show, Generic)
-  deriving (TextShow, FromJSON, ToJSON) via OverriddenVia Role Role'
+  deriving (Eq, Show)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow Role
   deriving (HasID Role) via HasIDField "id" Role
+  deriving (Aeson.ToJSON) via CalamityToJSON Role
 
-instance NFData Role where
-  rnf (Role id name color hoist position permissions managed mentionable) =
-    rnf id `seq` rnf name `seq` rwhnf color `seq` rnf hoist `seq` rnf position
-      `seq` rnf permissions
-      `seq` rnf managed
-      `seq` rnf mentionable
+instance CalamityToJSON' Role where
+  toPairs Role {..} =
+    [ "id" .= id
+    , "name" .= name
+    , "color" .= IntColour color
+    , "position" .= position
+    , "permissions" .= permissions
+    , "managed" .= managed
+    , "mentionable" .= mentionable
+    ]
+
+instance Aeson.FromJSON Role where
+  parseJSON = Aeson.withObject "Role" $ \v ->
+    Role
+      <$> v .: "id"
+      <*> v .: "name"
+      <*> (fromIntColour <$> v .: "color")
+      <*> v .: "hoist"
+      <*> v .: "position"
+      <*> v .: "permissions"
+      <*> v .: "managed"
+      <*> v .: "mentionable"
+
+$(makeFieldLabelsNoPrefix ''Role)

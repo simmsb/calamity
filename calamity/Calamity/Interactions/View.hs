@@ -25,7 +25,6 @@ import Calamity.HTTP.Channel (ChannelRequest (DeleteMessage))
 import Calamity.HTTP.Internal.Ratelimit (RatelimitEff)
 import Calamity.HTTP.Internal.Request (invoke)
 import Calamity.Interactions.Eff (InteractionEff (..))
-import Calamity.Internal.AesonThings
 import Calamity.Metrics.Eff (MetricEff)
 import Calamity.Types.LogEff (LogEff)
 import Calamity.Types.Model.Channel.Component (CustomID)
@@ -34,19 +33,19 @@ import Calamity.Types.Model.Channel.Message (Message)
 import Calamity.Types.Model.Interaction
 import Calamity.Types.TokenEff (TokenEff)
 import qualified Control.Concurrent.STM as STM
-import Control.Lens ((.~), (?~), (^.), (^..), _1, _2, _3, _Just)
+import Optics
 import Control.Monad (guard, void)
-import qualified Data.Aeson
-import Data.Aeson.Lens (AsValue (_Array), key)
+import qualified Data.Aeson as Aeson
 import qualified Data.List
 import qualified Data.Set as S
 import Data.Text (Text)
-import GHC.Generics (Generic)
 import qualified GHC.TypeLits as E
 import qualified Polysemy as P
 import qualified Polysemy.Resource as P
 import qualified Polysemy.State as P
 import System.Random
+import Data.Aeson ((.:?), (.:))
+import Data.Aeson.Optics
 
 data ViewComponent a = ViewComponent
   { component :: C.Component
@@ -213,12 +212,12 @@ select' :: [C.SelectOption] -> (C.Select -> C.Select) -> View (Maybe [Text])
 select' opts f = SingView $ \g ->
   let (cid, g') = uniform g
       comp = f $ C.select opts cid
-      finalValues = S.fromList $ comp ^.. #options . traverse . #value
+      finalValues = S.fromList $ comp ^.. #options % traversed % #value
       parse int = extractOkFromMaybe $ do
         customID <- extractCustomID int
         guard $ customID == cid
         guardComponentType int C.SelectType
-        values <- int ^. #data_ . _Just . #values
+        values <- int ^? #data_ % _Just % #values % _Just
         let values' = S.fromList values
         guard $ S.isSubsetOf values' finalValues
         pure values
@@ -228,20 +227,25 @@ data TextInputDecoded = TextInputDecoded
   { value :: Maybe Text
   , customID :: CustomID
   }
-  deriving (Show, Generic)
-  deriving (Data.Aeson.FromJSON) via CalamityJSON TextInputDecoded
+  deriving (Show)
+
+instance Aeson.FromJSON TextInputDecoded where
+  parseJSON = Aeson.withObject "TextInputDecoded" $ \v ->
+    TextInputDecoded
+      <$> v .:? "value"
+      <*> v .: "custom_id"
 
 parseTextInput :: CustomID -> Interaction -> ExtractResult (Maybe Text)
 parseTextInput cid int = extractOkFromMaybe $ do
-  components <- int ^. #data_ . _Just . #components
+  components <- int ^? #data_ % _Just % #components
   -- currently, each text input is a singleton actionrow containing a single textinput component
 
-  let textInputs = components ^.. traverse . key "components" . _Array . traverse
-      inputs' :: Data.Aeson.Result [TextInputDecoded] = traverse Data.Aeson.fromJSON textInputs
+  let textInputs = components ^.. traversed % traversed % key "components" % _Array % traversed
+      inputs' :: Aeson.Result [TextInputDecoded] = traverse Aeson.fromJSON textInputs
 
   inputs <- case inputs' of
-    Data.Aeson.Success x -> pure x
-    Data.Aeson.Error _ -> Nothing
+    Aeson.Success x -> pure x
+    Aeson.Error _ -> Nothing
 
   thisValue <- Data.List.find ((== cid) . (^. #customID)) inputs
 
@@ -426,3 +430,5 @@ runViewInstance initSendResp inst m = P.resourceToIOFinal $ do
 
     sender :: STM.TQueue Interaction -> Interaction -> IO ()
     sender eventIn int = STM.atomically $ STM.writeTQueue eventIn int
+
+$(makeFieldLabelsNoPrefix ''TextInputDecoded)

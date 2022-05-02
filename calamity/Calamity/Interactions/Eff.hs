@@ -14,7 +14,7 @@ import Calamity.Types.Model.Interaction
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
 import Control.Applicative ((<|>))
-import Control.Lens ((^.), (^?), _Just)
+import Optics ((^.), (^?), _Just, (%))
 import Data.Maybe (fromJust)
 import Polysemy
 import qualified Polysemy as P
@@ -36,7 +36,7 @@ getInteractionToken = (^. #token) <$> getInteraction
 getInteractionUser :: P.Member InteractionEff r => P.Sem r (Snowflake User)
 getInteractionUser = do
   int <- getInteraction
-  let uid = int ^? #user . _Just . #id
-      mid = int ^? #member . _Just . #id
+  let uid = int ^? #user % _Just % #id
+      mid = int ^? #member % _Just % #id
   pure . fromJust $ uid <|> mid
 

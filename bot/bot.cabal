@@ -32,7 +32,7 @@ executable bot
     , polysemy
     , polysemy-plugin
     , text
-    , lens
+    , optics
     , di-polysemy
     , di
     , df1

@@ -14,25 +14,21 @@ import           Calamity.Types.Model.Guild.Permissions
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
 import           Calamity.Types.Upgradeable
-
-import           Control.Lens
-
-import           Data.Maybe (catMaybes)
+import           Data.Maybe (mapMaybe)
 import           Data.Flags
 import qualified Data.Vector.Unboxing                   as V
-import           Data.Generics.Product.Fields
-
+import Optics
 import qualified Polysemy                               as P
 import Data.Foldable (Foldable(foldl'))
 
 -- | Calculate a 'Member'\'s 'Permissions' in a 'Guild'
 basePermissions :: Guild -> Member -> Permissions
 basePermissions g m
-  | (g ^. #ownerID == getID m) = allFlags
-  | otherwise = let everyoneRole  = g ^. #roles . at (coerceSnowflake $ getID @Guild g)
+  | g ^. #ownerID == getID m = allFlags
+  | otherwise = let everyoneRole  = g ^. #roles % at (coerceSnowflake $ getID @Guild g)
                     permsEveryone = maybe noFlags (^. #permissions) everyoneRole
                     roleIDs       = V.toList $ m ^. #roles
-                    rolePerms     = catMaybes $ map (\rid -> g ^? #roles . ix rid . #permissions) roleIDs
+                    rolePerms     = mapMaybe (\rid -> g ^? #roles % ix rid % #permissions) roleIDs
                     perms         = foldl' andFlags noFlags (permsEveryone:rolePerms)
                 in if perms .<=. administrator
                    then allFlags
@@ -43,16 +39,16 @@ applyOverwrites :: GuildChannel -> Member -> Permissions -> Permissions
 applyOverwrites c m p
   | p .<=. administrator = allFlags
   | otherwise =
-    let everyoneOverwrite = c ^. field' @"permissionOverwrites" . at (coerceSnowflake $ getID @Guild c)
+    let everyoneOverwrite = c ^. #permissionOverwrites % at (coerceSnowflake $ getID @Guild c)
         everyoneAllow     = maybe noFlags (^. #allow) everyoneOverwrite
         everyoneDeny      = maybe noFlags (^. #deny) everyoneOverwrite
         p'                = p .-. everyoneDeny .+. everyoneAllow
         roleOverwriteIDs  = map (coerceSnowflake @_ @Overwrite) . V.toList $ m ^. #roles
-        roleOverwrites    = catMaybes $ map (\oid -> c ^? field' @"permissionOverwrites" . ix oid) roleOverwriteIDs
-        roleAllow         = foldl' andFlags noFlags (roleOverwrites ^.. traverse . #allow)
-        roleDeny          = foldl' andFlags noFlags (roleOverwrites ^.. traverse . #deny)
+        roleOverwrites    = mapMaybe (\oid -> c ^? #permissionOverwrites % ix oid) roleOverwriteIDs
+        roleAllow         = foldl' andFlags noFlags (roleOverwrites ^.. traversed % #allow)
+        roleDeny          = foldl' andFlags noFlags (roleOverwrites ^.. traversed % #deny)
         p''               = p' .-. roleDeny .+. roleAllow
-        memberOverwrite   = c ^. field' @"permissionOverwrites" . at (coerceSnowflake @_ @Overwrite $ getID @Member m)
+        memberOverwrite   = c ^. #permissionOverwrites % at (coerceSnowflake @_ @Overwrite $ getID @Member m)
         memberAllow       = maybe noFlags (^. #allow) memberOverwrite
         memberDeny        = maybe noFlags (^. #deny) memberOverwrite
         p'''              = p'' .-. memberDeny .+. memberAllow

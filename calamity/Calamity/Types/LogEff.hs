@@ -1,15 +1,16 @@
 {-# LANGUAGE NoImplicitPrelude #-}
 
 -- | The logging effect we use
-module Calamity.Types.LogEff
-    ( LogEff
-    , LogC ) where
+module Calamity.Types.LogEff (
+  LogEff,
+  LogC,
+) where
 
 import qualified Df1
 
-import           DiPolysemy
+import DiPolysemy
 
-import qualified Polysemy   as P
+import qualified Polysemy as P
 
 type LogEff = Di Df1.Level Df1.Path Df1.Message
 

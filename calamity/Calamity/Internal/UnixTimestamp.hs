@@ -7,20 +7,16 @@ module Calamity.Internal.UnixTimestamp (
 
 import Calamity.Internal.Utils ()
 import Control.Arrow
-import Control.DeepSeq (NFData)
 import Data.Aeson
 import Data.Aeson.Encoding (word64)
 import Data.Time
 import Data.Time.Clock.POSIX
 import Data.Word
-import GHC.Generics
 import TextShow
 
 newtype UnixTimestamp = UnixTimestamp
     { unUnixTimestamp :: UTCTime
     }
-    deriving stock (Generic)
-    deriving anyclass (NFData)
     deriving (Show) via UTCTime
     deriving (TextShow) via FromStringShow UTCTime
 

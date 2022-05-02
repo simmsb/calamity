@@ -9,11 +9,10 @@ module CalamityCommands.Context (
   useBasicContext,
 ) where
 
-import qualified Data.Text as T
-import GHC.Generics (Generic)
-import qualified Polysemy as P
-
 import CalamityCommands.Command
+import qualified Data.Text as T
+import Optics.TH
+import qualified Polysemy as P
 
 class CommandContext m c a | c -> m, c -> a where
   -- | The prefix that was used to invoke the command
@@ -44,7 +43,7 @@ data BasicContext m a = BasicContext
   , bcCommand :: Command m (BasicContext m a) a
   , bcUnparsedParams :: T.Text
   }
-  deriving (Show, Generic)
+  deriving (Show)
 
 instance CommandContext m (BasicContext m a) a where
   ctxPrefix = bcPrefix
@@ -58,3 +57,5 @@ useBasicContext =
     ( \case
         ConstructContext (pre, cmd, up) _ -> pure . Just $ BasicContext pre cmd up
     )
+
+$(makeFieldLabelsNoPrefix ''BasicContext)

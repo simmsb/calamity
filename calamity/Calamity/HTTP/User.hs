@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | User endpoints
 module Calamity.HTTP.User (
   UserRequest (..),
@@ -7,20 +9,16 @@ module Calamity.HTTP.User (
 
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
-import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.?=))
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-
-import Control.Lens hiding ((.=))
-
-import Data.Aeson
+import qualified Data.Aeson as Aeson
 import Data.Default.Class
+import Data.Function ((&))
 import Data.Text (Text)
-
-import GHC.Generics
-
+import Optics.TH
 import Network.HTTP.Req
 
 data ModifyUserData = ModifyUserData
@@ -28,15 +26,27 @@ data ModifyUserData = ModifyUserData
   , -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
     avatar :: Maybe Text
   }
-  deriving (Show, Generic, Default)
-  deriving (ToJSON) via CalamityJSON ModifyUserData
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ModifyUserData
+
+instance CalamityToJSON' ModifyUserData where
+  toPairs ModifyUserData {..} =
+    [ "username" .?= username
+    , "avatar" .?= avatar
+    ]
+
+instance Default ModifyUserData where
+  def = ModifyUserData Nothing Nothing
 
 data GetCurrentUserGuildsOptions = GetCurrentUserGuildsOptions
   { before :: Maybe (Snowflake Guild)
   , after :: Maybe (Snowflake Guild)
   , limit :: Maybe Integer
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+
+instance Default GetCurrentUserGuildsOptions where
+  def = GetCurrentUserGuildsOptions Nothing Nothing Nothing
 
 data UserRequest a where
   GetCurrentUser :: UserRequest User
@@ -76,10 +86,13 @@ instance Request (UserRequest a) where
   action GetCurrentUser = getWith
   action (GetUser _) = getWith
   action (ModifyCurrentUser o) = patchWith' $ ReqBodyJson o
-  action (GetCurrentUserGuilds GetCurrentUserGuildsOptions{before, after, limit}) =
+  action (GetCurrentUserGuilds GetCurrentUserGuildsOptions {before, after, limit}) =
     getWithP
       ( "before" =:? (fromSnowflake <$> before) <> "after" =:? (fromSnowflake <$> after)
           <> "limit" =:? limit
       )
   action (LeaveGuild _) = deleteWith
-  action (CreateDM (getID @User -> uid)) = postWith' $ ReqBodyJson (object ["recipient_id" .= uid])
+  action (CreateDM (getID @User -> uid)) = postWith' $ ReqBodyJson (Aeson.object ["recipient_id" Aeson..= uid])
+
+$(makeFieldLabelsNoPrefix ''ModifyUserData)
+$(makeFieldLabelsNoPrefix ''GetCurrentUserGuildsOptions)

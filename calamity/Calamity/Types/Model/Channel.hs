@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | The generic channel type
 module Calamity.Types.Model.Channel (
   Channel (..),
@@ -14,7 +16,7 @@ module Calamity.Types.Model.Channel (
   module Calamity.Types.Model.Channel.Component,
 ) where
 
-import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel.Attachment
 import Calamity.Types.Model.Channel.ChannelType
 import Calamity.Types.Model.Channel.Component
@@ -27,43 +29,64 @@ import Calamity.Types.Model.Channel.Reaction
 import Calamity.Types.Model.Channel.Webhook
 import Calamity.Types.Model.Guild.Permissions (Permissions)
 import Calamity.Types.Snowflake
-import Data.Aeson
+import Data.Aeson ((.:), (.:?))
+import qualified Data.Aeson as Aeson
 import Data.Text (Text)
-import GHC.Generics
-import TextShow
-import qualified TextShow.Generic as TSG
+import Optics.TH
+import TextShow.TH
 
 data Channel
   = DMChannel' DMChannel
   | GroupChannel' GroupChannel
   | GuildChannel' GuildChannel
-  deriving (Show, Eq, Generic)
-  deriving (TextShow) via TSG.FromGeneric Channel
+  deriving (Show, Eq)
 
 instance HasID Channel Channel where
   getID (DMChannel' a) = getID a
   getID (GroupChannel' a) = getID a
   getID (GuildChannel' a) = getID a
 
-instance FromJSON Channel where
-  parseJSON = withObject "Channel" $ \v -> do
-    type_ <- v .: "type"
+instance Aeson.FromJSON Channel where
+  parseJSON = Aeson.withObject "Channel" $ \v -> do
+    type_ <- v Aeson..: "type"
 
     case type_ of
-      GuildTextType -> GuildChannel' <$> parseJSON (Object v)
-      GuildVoiceType -> GuildChannel' <$> parseJSON (Object v)
-      GuildCategoryType -> GuildChannel' <$> parseJSON (Object v)
-      DMType -> DMChannel' <$> parseJSON (Object v)
-      GroupDMType -> GroupChannel' <$> parseJSON (Object v)
+      GuildTextType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildVoiceType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildCategoryType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      DMType -> DMChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GroupDMType -> GroupChannel' <$> Aeson.parseJSON (Aeson.Object v)
 
 data instance Partial Channel = PartialChannel
   { id :: Snowflake Channel
   , name :: Text
-  , type_ :: !ChannelType
+  , type_ :: ChannelType
   , permissions :: Maybe Permissions
   , parentID :: Maybe (Snowflake Category)
   }
-  deriving (Show, Eq, Generic)
-  deriving (TextShow) via TSG.FromGeneric (Partial Channel)
-  deriving (ToJSON, FromJSON) via CalamityJSON (Partial Channel)
+  deriving (Show, Eq)
   deriving (HasID Channel) via HasIDField "id" (Partial Channel)
+  deriving (Aeson.ToJSON) via CalamityToJSON (Partial Channel)
+
+instance CalamityToJSON' (Partial Channel) where
+  toPairs PartialChannel {..} =
+    [ "id" .= id
+    , "name" .= name
+    , "type" .= type_
+    , "permissions" .?= permissions
+    , "parent_id" .?= parentID
+    ]
+
+instance Aeson.FromJSON (Partial Channel) where
+  parseJSON = Aeson.withObject "Partial Channel" $ \v ->
+    PartialChannel
+      <$> v .: "id"
+      <*> v .: "name"
+      <*> v .: "type"
+      <*> v .:? "permissions"
+      <*> v .:? "parent_id"
+
+$(deriveTextShow ''Channel)
+$(deriveTextShow 'PartialChannel)
+$(makeFieldLabelsNoPrefix ''Channel)
+$(makeFieldLabelsNoPrefix 'PartialChannel)

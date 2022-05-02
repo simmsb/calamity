@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Channel endpoints
 module Calamity.HTTP.Channel (
   ChannelRequest (..),
@@ -21,7 +23,7 @@ module Calamity.HTTP.Channel (
 
 import Calamity.HTTP.Internal.Request
 import Calamity.HTTP.Internal.Route
-import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=), (.?=))
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild.Emoji (RawEmoji (..))
 import Calamity.Types.Model.Guild.Invite (Invite)
@@ -29,8 +31,7 @@ import Calamity.Types.Model.Guild.Overwrite (Overwrite)
 import Calamity.Types.Model.Guild.Role (Role)
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-import Control.Lens hiding ((.=))
-import Data.Aeson
+import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.KeyMap as K
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
@@ -38,10 +39,10 @@ import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Word
-import GHC.Generics
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
+import Optics
 import PyF
 import TextShow
 
@@ -50,7 +51,7 @@ data CreateMessageAttachment = CreateMessageAttachment
   , description :: Maybe Text
   , content :: ByteString
   }
-  deriving (Show, Generic)
+  deriving (Show)
 
 data CreateMessageOptions = CreateMessageOptions
   { content :: Maybe Text
@@ -62,15 +63,25 @@ data CreateMessageOptions = CreateMessageOptions
   , messageReference :: Maybe MessageReference
   , components :: Maybe [Component]
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+
+instance Default CreateMessageOptions where
+  def = CreateMessageOptions Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
 
 data CreateMessageAttachmentJson = CreateMessageAttachmentJson
   { id :: Int
   , filename :: Text
   , description :: Maybe Text
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateMessageAttachmentJson
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateMessageAttachmentJson
+
+instance CalamityToJSON' CreateMessageAttachmentJson where
+  toPairs CreateMessageAttachmentJson {..} =
+    [ "filename" .= filename
+    , "description" .?= description
+    , "id" .= id
+    ]
 
 data CreateMessageJson = CreateMessageJson
   { content :: Maybe Text
@@ -82,19 +93,31 @@ data CreateMessageJson = CreateMessageJson
   , components :: Maybe [Component]
   , attachments :: Maybe [CreateMessageAttachmentJson]
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON CreateMessageJson
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateMessageJson
+
+instance CalamityToJSON' CreateMessageJson where
+  toPairs CreateMessageJson {..} =
+    [ "content" .?= content
+    , "nonce" .?= nonce
+    , "tts" .?= tts
+    , "embeds" .?= embeds
+    , "allowed_mentions" .?= allowedMentions
+    , "message_reference" .?= messageReference
+    , "components" .?= components
+    , "attachments" .?= attachments
+    ]
 
 data AllowedMentionType
   = AllowedMentionRoles
   | AllowedMentionUsers
   | AllowedMentionEveryone
-  deriving (Show, Generic)
+  deriving (Show)
 
-instance ToJSON AllowedMentionType where
-  toJSON AllowedMentionRoles = String "roles"
-  toJSON AllowedMentionUsers = String "users"
-  toJSON AllowedMentionEveryone = String "everyone"
+instance Aeson.ToJSON AllowedMentionType where
+  toJSON AllowedMentionRoles = Aeson.String "roles"
+  toJSON AllowedMentionUsers = Aeson.String "users"
+  toJSON AllowedMentionEveryone = Aeson.String "everyone"
 
 data AllowedMentions = AllowedMentions
   { parse :: [AllowedMentionType]
@@ -102,8 +125,16 @@ data AllowedMentions = AllowedMentions
   , users :: [Snowflake User]
   , repliedUser :: Bool
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON AllowedMentions
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON AllowedMentions
+
+instance CalamityToJSON' AllowedMentions where
+  toPairs AllowedMentions {..} =
+    [ "parse" .= parse
+    , "roles" .= roles
+    , "users" .= users
+    , "replied_user" .= repliedUser
+    ]
 
 instance Default AllowedMentions where
   def = AllowedMentions def def def False
@@ -125,24 +156,24 @@ instance Monoid AllowedMentions where
  >>> encode $ editMessageContent (Just "test") <> editMessageFlags Nothing
  "{\"nick\":\"test\",\"deaf\":null}"
 -}
-newtype EditMessageData = EditMessageData Object
-  deriving (Show, Generic)
-  deriving newtype (ToJSON, Semigroup, Monoid)
+newtype EditMessageData = EditMessageData Aeson.Object
+  deriving stock (Show)
+  deriving newtype (Aeson.ToJSON, Semigroup, Monoid)
 
 editMessageContent :: Maybe Text -> EditMessageData
-editMessageContent v = EditMessageData $ K.fromList [("content", toJSON v)]
+editMessageContent v = EditMessageData $ K.fromList [("content", Aeson.toJSON v)]
 
 editMessageEmbeds :: [Embed] -> EditMessageData
-editMessageEmbeds v = EditMessageData $ K.fromList [("embeds", toJSON v)]
+editMessageEmbeds v = EditMessageData $ K.fromList [("embeds", Aeson.toJSON v)]
 
 editMessageFlags :: Maybe Word64 -> EditMessageData
-editMessageFlags v = EditMessageData $ K.fromList [("flags", toJSON v)]
+editMessageFlags v = EditMessageData $ K.fromList [("flags", Aeson.toJSON v)]
 
 editMessageAllowedMentions :: Maybe AllowedMentions -> EditMessageData
-editMessageAllowedMentions v = EditMessageData $ K.fromList [("allowed_mentions", toJSON v)]
+editMessageAllowedMentions v = EditMessageData $ K.fromList [("allowed_mentions", Aeson.toJSON v)]
 
 editMessageComponents :: [Component] -> EditMessageData
-editMessageComponents v = EditMessageData $ K.fromList [("components", toJSON v)]
+editMessageComponents v = EditMessageData $ K.fromList [("components", Aeson.toJSON v)]
 
 data ChannelUpdate = ChannelUpdate
   { name :: Maybe Text
@@ -155,8 +186,24 @@ data ChannelUpdate = ChannelUpdate
   , permissionOverwrites :: Maybe [Overwrite]
   , parentID :: Maybe (Snowflake Channel)
   }
-  deriving (Generic, Show, Default)
-  deriving (ToJSON) via CalamityJSON ChannelUpdate
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ChannelUpdate
+
+instance Default ChannelUpdate where
+  def = ChannelUpdate Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing Nothing
+
+instance CalamityToJSON' ChannelUpdate where
+  toPairs ChannelUpdate {..} =
+    [ "name" .?= name
+    , "position" .?= position
+    , "topic" .?= topic
+    , "nsfw" .?= nsfw
+    , "rate_limit_per_user" .?= rateLimitPerUser
+    , "bitrate" .?= bitrate
+    , "user_limit" .?= userLimit
+    , "permission_overwrites" .?= permissionOverwrites
+    , "parent_id" .?= parentID
+    ]
 
 data ChannelMessagesFilter
   = ChannelMessagesAround
@@ -168,20 +215,28 @@ data ChannelMessagesFilter
   | ChannelMessagesAfter
       { after :: Snowflake Message
       }
-  deriving (Generic, Show)
-  deriving (ToJSON) via CalamityJSON ChannelMessagesFilter
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON ChannelMessagesFilter
+
+instance CalamityToJSON' ChannelMessagesFilter where
+  toPairs ChannelMessagesAround {around} = ["around" .= around]
+  toPairs ChannelMessagesBefore {before} = ["before" .= before]
+  toPairs ChannelMessagesAfter {after} = ["after" .= after]
 
 newtype ChannelMessagesLimit = ChannelMessagesLimit
   { limit :: Integer
   }
-  deriving (Generic, Show)
+  deriving stock (Show)
 
 data GetReactionsOptions = GetReactionsOptions
   { before :: Maybe (Snowflake User)
   , after :: Maybe (Snowflake User)
   , limit :: Maybe Integer
   }
-  deriving (Show, Generic, Default)
+  deriving (Show)
+
+instance Default GetReactionsOptions where
+  def = GetReactionsOptions Nothing Nothing Nothing
 
 data CreateChannelInviteOptions = CreateChannelInviteOptions
   { maxAge :: Maybe Int
@@ -189,15 +244,32 @@ data CreateChannelInviteOptions = CreateChannelInviteOptions
   , temporary :: Maybe Bool
   , unique :: Maybe Bool
   }
-  deriving (Show, Generic, Default)
-  deriving (ToJSON) via CalamityJSON CreateChannelInviteOptions
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON CreateChannelInviteOptions
+
+instance Default CreateChannelInviteOptions where
+  def = CreateChannelInviteOptions Nothing Nothing Nothing Nothing
+
+instance CalamityToJSON' CreateChannelInviteOptions where
+  toPairs CreateChannelInviteOptions {..} =
+    [ "max_age" .?= maxAge
+    , "max_uses" .?= maxUses
+    , "temporary" .?= temporary
+    , "unique" .?= unique
+    ]
 
 data GroupDMAddRecipientOptions = GroupDMAddRecipientOptions
   { accessToken :: Text
   , nick :: Text
   }
-  deriving (Show, Generic)
-  deriving (ToJSON) via CalamityJSON GroupDMAddRecipientOptions
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON GroupDMAddRecipientOptions
+
+instance CalamityToJSON' GroupDMAddRecipientOptions where
+  toPairs GroupDMAddRecipientOptions {..} =
+    [ "access_token" .= accessToken
+    , "nick" .= nick
+    ]
 
 data ChannelRequest a where
   CreateMessage :: (HasID Channel c) => c -> CreateMessageOptions -> ChannelRequest Message
@@ -354,19 +426,19 @@ instance Request (ChannelRequest a) where
             , components = cm ^. #components
             , attachments = attachments
             }
-    body <- reqBodyMultipart (partLBS "payload_json" (encode jsonBody) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonBody) : files)
     postWith' body u o
   action (CrosspostMessage _ _) = postEmpty
   action (GetChannel _) = getWith
   action (ModifyChannel _ p) = patchWith' (ReqBodyJson p)
   action (DeleteChannel _) = deleteWith
   action (GetChannelMessages _ (Just (ChannelMessagesAround (fromSnowflake -> a))) l) =
-    getWithP ("around" =: a <> "limit" =:? (l ^? _Just . #limit))
+    getWithP ("around" =: a <> "limit" =:? (l ^? _Just % #limit))
   action (GetChannelMessages _ (Just (ChannelMessagesBefore (fromSnowflake -> a))) l) =
-    getWithP ("before" =: a <> "limit" =:? (l ^? _Just . #limit))
+    getWithP ("before" =: a <> "limit" =:? (l ^? _Just % #limit))
   action (GetChannelMessages _ (Just (ChannelMessagesAfter (fromSnowflake -> a))) l) =
-    getWithP ("after" =: a <> "limit" =:? (l ^? _Just . #limit))
-  action (GetChannelMessages _ Nothing l) = getWithP ("limit" =:? (l ^? _Just . #limit))
+    getWithP ("after" =: a <> "limit" =:? (l ^? _Just % #limit))
+  action (GetChannelMessages _ Nothing l) = getWithP ("limit" =:? (l ^? _Just % #limit))
   action (GetMessage _ _) = getWith
   action CreateReaction {} = putEmpty
   action DeleteOwnReaction {} = deleteWith
@@ -380,7 +452,7 @@ instance Request (ChannelRequest a) where
   action (DeleteAllReactions _ _) = deleteWith
   action (EditMessage _ _ o) = patchWith' (ReqBodyJson o)
   action (DeleteMessage _ _) = deleteWith
-  action (BulkDeleteMessages _ (map (getID @Message) -> ids)) = postWith' (ReqBodyJson $ object ["messages" .= ids])
+  action (BulkDeleteMessages _ (map (getID @Message) -> ids)) = postWith' (ReqBodyJson $ Aeson.object ["messages" Aeson..= ids])
   action (GetChannelInvites _) = getWith
   action (CreateChannelInvite _ o) = postWith' (ReqBodyJson o)
   action (EditChannelPermissions _ o) = putWith' (ReqBodyJson o)
@@ -391,3 +463,14 @@ instance Request (ChannelRequest a) where
   action (DeletePinnedMessage _ _) = deleteWith
   action (GroupDMAddRecipient _ _ o) = putWith' (ReqBodyJson o)
   action (GroupDMRemoveRecipient _ _) = deleteWith
+
+$(makeFieldLabelsNoPrefix ''CreateMessageAttachment)
+$(makeFieldLabelsNoPrefix ''CreateMessageOptions)
+$(makeFieldLabelsNoPrefix ''CreateMessageAttachmentJson)
+$(makeFieldLabelsNoPrefix ''AllowedMentions)
+$(makeFieldLabelsNoPrefix ''ChannelUpdate)
+$(makeFieldLabelsNoPrefix ''ChannelMessagesFilter)
+$(makeFieldLabelsNoPrefix ''ChannelMessagesLimit)
+$(makeFieldLabelsNoPrefix ''GetReactionsOptions)
+$(makeFieldLabelsNoPrefix ''CreateChannelInviteOptions)
+$(makeFieldLabelsNoPrefix ''GroupDMAddRecipientOptions)

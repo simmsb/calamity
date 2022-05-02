@@ -1,17 +1,15 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Permission overwrites
 module Calamity.Types.Model.Guild.Overwrite (Overwrite (..)) where
 
-import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils
 import Calamity.Types.Model.Guild.Permissions
 import Calamity.Types.Snowflake
-
-import Data.Aeson
-
-import GHC.Generics
-
-import Control.DeepSeq (NFData)
-import TextShow
-import qualified TextShow.Generic as TSG
+import Data.Aeson ((.:))
+import qualified Data.Aeson as Aeson
+import Optics.TH
+import TextShow.TH
 
 data Overwrite = Overwrite
   { id :: Snowflake Overwrite
@@ -19,7 +17,25 @@ data Overwrite = Overwrite
   , allow :: Permissions
   , deny :: Permissions
   }
-  deriving (Eq, Show, Generic, NFData)
-  deriving (TextShow) via TSG.FromGeneric Overwrite
-  deriving (ToJSON, FromJSON) via CalamityJSON Overwrite
+  deriving (Eq, Show)
   deriving (HasID Overwrite) via HasIDField "id" Overwrite
+  deriving (Aeson.ToJSON) via CalamityToJSON Overwrite
+
+instance CalamityToJSON' Overwrite where
+  toPairs Overwrite {..} =
+    [ "id" .= id
+    , "type" .= type_
+    , "allow" .= allow
+    , "deny" .= deny
+    ]
+
+instance Aeson.FromJSON Overwrite where
+  parseJSON = Aeson.withObject "Overwrite" $ \v ->
+    Overwrite
+      <$> v .: "id"
+      <*> v .: "type"
+      <*> v .: "allo"
+      <*> v .: "deny"
+
+$(deriveTextShow ''Overwrite)
+$(makeFieldLabelsNoPrefix ''Overwrite)

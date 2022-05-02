@@ -1,3 +1,5 @@
+{-# LANGUAGE TemplateHaskell #-}
+
 -- | Message components
 module Calamity.Types.Model.Channel.Component (
   CustomID (..),
@@ -20,57 +22,56 @@ module Calamity.Types.Model.Channel.Component (
   componentType,
 ) where
 
-import Calamity.Internal.AesonThings
+import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=), (.?=))
 import Calamity.Types.Model.Guild.Emoji
 import Control.Monad (replicateM)
-import Data.Aeson
+import Data.Aeson ((.!=), (.:), (.:?))
+import qualified Data.Aeson as Aeson
 import Data.Scientific (toBoundedInteger)
 import qualified Data.Text as T
-import GHC.Generics
+import Optics.TH
 import System.Random (Uniform)
 import System.Random.Stateful (Uniform (uniformM), UniformRange (uniformRM))
-import TextShow
-import qualified TextShow.Generic as TSG
+import TextShow.TH
+import Data.Maybe (catMaybes)
 
 newtype CustomID = CustomID T.Text
-  deriving stock (Eq, Ord, Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric CustomID
-  deriving (ToJSON, FromJSON) via T.Text
+  deriving stock (Eq, Ord, Show)
+  deriving (Aeson.ToJSON, Aeson.FromJSON) via T.Text
+
+$(deriveTextShow ''CustomID)
 
 instance Uniform CustomID where
   uniformM = ((CustomID . T.pack) <$>) . replicateM 16 . uniformRM ('a', 'z')
 
-data Button = Button
-  { style :: ButtonStyle
-  , label :: Maybe T.Text
-  , emoji :: Maybe RawEmoji
-  , disabled :: Bool
-  , customID :: CustomID
-  }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric Button
-  deriving (ToJSON) via CalamityJSONKeepNothing Button
-  deriving
-    (FromJSON)
-    via WithSpecialCases
-          '["disabled" `IfNoneThen` DefaultToFalse]
-          Button
+data ComponentType
+  = ActionRowType
+  | ButtonType
+  | SelectType
+  | TextInputType
+  deriving (Eq, Show)
 
-data LinkButton = LinkButton
-  { stype :: ButtonStyle
-  , label :: Maybe T.Text
-  , emoji :: Maybe RawEmoji
-  , url :: T.Text
-  , disabled :: Bool
-  }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric LinkButton
-  deriving (ToJSON) via CalamityJSONKeepNothing LinkButton
-  deriving
-    (FromJSON)
-    via WithSpecialCases
-          '["disabled" `IfNoneThen` DefaultToFalse]
-          LinkButton
+$(deriveTextShow ''ComponentType)
+
+instance Aeson.ToJSON ComponentType where
+  toJSON x = Aeson.toJSON @Int $ case x of
+    ActionRowType -> 1
+    ButtonType -> 2
+    SelectType -> 3
+    TextInputType -> 4
+  toEncoding x = Aeson.toEncoding @Int $ case x of
+    ActionRowType -> 1
+    ButtonType -> 2
+    SelectType -> 3
+    TextInputType -> 4
+
+instance Aeson.FromJSON ComponentType where
+  parseJSON = Aeson.withScientific "Components.ComponentType" $ \n -> case toBoundedInteger @Int n of
+    Just 1 -> pure ActionRowType
+    Just 2 -> pure ButtonType
+    Just 3 -> pure SelectType
+    Just 4 -> pure TextInputType
+    _ -> fail $ "Invalid ComponentType: " <> show n
 
 data ButtonStyle
   = ButtonPrimary
@@ -78,19 +79,26 @@ data ButtonStyle
   | ButtonSuccess
   | ButtonDanger
   | ButtonLink
-  deriving (Eq, Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric ButtonStyle
+  deriving (Eq, Show)
 
-instance ToJSON ButtonStyle where
-  toJSON t = toJSON @Int $ case t of
+$(deriveTextShow ''ButtonStyle)
+
+instance Aeson.ToJSON ButtonStyle where
+  toJSON t = Aeson.toJSON @Int $ case t of
+    ButtonPrimary -> 1
+    ButtonSecondary -> 2
+    ButtonSuccess -> 3
+    ButtonDanger -> 4
+    ButtonLink -> 5
+  toEncoding t = Aeson.toEncoding @Int $ case t of
     ButtonPrimary -> 1
     ButtonSecondary -> 2
     ButtonSuccess -> 3
     ButtonDanger -> 4
     ButtonLink -> 5
 
-instance FromJSON ButtonStyle where
-  parseJSON = withScientific "ButtonStyle" $ \n -> case toBoundedInteger @Int n of
+instance Aeson.FromJSON ButtonStyle where
+  parseJSON = Aeson.withScientific "Components.ButtonStyle" $ \n -> case toBoundedInteger @Int n of
     Just v -> case v of
       1 -> pure ButtonPrimary
       2 -> pure ButtonSecondary
@@ -99,6 +107,71 @@ instance FromJSON ButtonStyle where
       5 -> pure ButtonLink
       _ -> fail $ "Invalid ButtonStyle: " <> show n
     Nothing -> fail $ "Invalid ButtonStyle: " <> show n
+
+data Button = Button
+  { style :: ButtonStyle
+  , label :: Maybe T.Text
+  , emoji :: Maybe RawEmoji
+  , disabled :: Bool
+  , customID :: CustomID
+  }
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON Button
+
+instance CalamityToJSON' Button where
+  toPairs Button {..} =
+    [ "style" .= style
+    , "label" .?= label
+    , "emoji" .?= emoji
+    , "disabled" .= disabled
+    , "custom_id" .= customID
+    , "type" .= ButtonType
+    ]
+
+$(deriveTextShow ''Button)
+$(makeFieldLabelsNoPrefix ''Button)
+
+
+instance Aeson.FromJSON Button where
+  parseJSON = Aeson.withObject "Components.Button" $ \v ->
+    Button
+      <$> v .: "style"
+      <*> v .:? "label"
+      <*> v .:? "emoji"
+      <*> v .:? "disabled" .!= False
+      <*> v .: "custom_id"
+
+data LinkButton = LinkButton
+  { style :: ButtonStyle
+  , label :: Maybe T.Text
+  , emoji :: Maybe RawEmoji
+  , url :: T.Text
+  , disabled :: Bool
+  }
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON LinkButton
+
+instance CalamityToJSON' LinkButton where
+  toPairs LinkButton {..} =
+      [ "style" .= style
+      , "label" .?= label
+      , "emoji" .?= emoji
+      , "url" .= url
+      , "disabled" .= disabled
+      , "type" .= ButtonType
+      ]
+
+instance Aeson.FromJSON LinkButton where
+  parseJSON = Aeson.withObject "Components.Linkbutton" $ \v ->
+    LinkButton
+      <$> v .: "style"
+      <*> v .:? "label"
+      <*> v .:? "emoji"
+      <*> v .: "url"
+      <*> v .:? "disabled" .!= False
+
+$(deriveTextShow ''LinkButton)
+$(makeFieldLabelsNoPrefix ''LinkButton)
 
 {- | Constuct a non-disabled 'Button' with the given 'ButtonStyle' and 'CustomID',
  all other fields are set to 'Nothing'
@@ -134,6 +207,37 @@ lbutton' ::
   LinkButton
 lbutton' s lnk lbl = LinkButton s (Just lbl) Nothing lnk False
 
+data SelectOption = SelectOption
+  { label :: T.Text
+  , value :: T.Text
+  , description :: Maybe T.Text
+  , emoji :: Maybe RawEmoji
+  , default_ :: Bool
+  }
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON SelectOption
+
+instance CalamityToJSON' SelectOption where
+  toPairs SelectOption {..} =
+      [ "label" .= label
+      , "value" .= value
+      , "description" .?= description
+      , "emoji" .?= emoji
+      , "default" .= default_
+      ]
+
+instance Aeson.FromJSON SelectOption where
+  parseJSON = Aeson.withObject "Components.SelectOption" $ \v ->
+    SelectOption
+      <$> v .: "label"
+      <*> v .: "value"
+      <*> v .:? "description"
+      <*> v .:? "emoji"
+      <*> v .:? "default" .!= False
+
+$(deriveTextShow ''SelectOption)
+$(makeFieldLabelsNoPrefix ''SelectOption)
+
 data Select = Select
   { options :: [SelectOption]
   , placeholder :: Maybe T.Text
@@ -142,30 +246,32 @@ data Select = Select
   , disabled :: Bool
   , customID :: CustomID
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric Select
-  deriving (ToJSON) via CalamityJSONKeepNothing Select
-  deriving
-    (FromJSON)
-    via WithSpecialCases
-          '["disabled" `IfNoneThen` DefaultToFalse]
-          Select
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON Select
 
-data SelectOption = SelectOption
-  { label :: T.Text
-  , value :: T.Text
-  , description :: Maybe T.Text
-  , emoji :: Maybe RawEmoji
-  , default_ :: Bool
-  }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric SelectOption
-  deriving (ToJSON) via CalamityJSONKeepNothing SelectOption
-  deriving
-    (FromJSON)
-    via WithSpecialCases
-          '["default" `IfNoneThen` DefaultToFalse]
-          SelectOption
+instance CalamityToJSON' Select where
+  toPairs Select {..} =
+      [ "options" .= options
+      , "placeholder" .?= placeholder
+      , "min_values" .?= minValues
+      , "max_values" .?= maxValues
+      , "disabled" .= disabled
+      , "custom_id" .= customID
+      , "type" .= SelectType
+      ]
+
+instance Aeson.FromJSON Select where
+  parseJSON = Aeson.withObject "Components.Select" $ \v ->
+    Select
+      <$> v .: "options"
+      <*> v .:? "placeholder"
+      <*> v .:? "min_values"
+      <*> v .:? "max_values"
+      <*> v .:? "disabled" .!= False
+      <*> v .: "custom_id"
+
+$(deriveTextShow ''Select)
+$(makeFieldLabelsNoPrefix ''Select)
 
 select :: [SelectOption] -> CustomID -> Select
 select o = Select o Nothing Nothing Nothing False
@@ -178,6 +284,29 @@ sopt ::
   SelectOption
 sopt l v = SelectOption l v Nothing Nothing False
 
+data TextInputStyle
+  = TextInputShort
+  | TextInputParagraph
+  deriving (Show)
+
+$(deriveTextShow ''TextInputStyle)
+
+instance Aeson.ToJSON TextInputStyle where
+  toJSON t = Aeson.toJSON @Int $ case t of
+    TextInputShort -> 1
+    TextInputParagraph -> 2
+  toEncoding t = Aeson.toEncoding @Int $ case t of
+    TextInputShort -> 1
+    TextInputParagraph -> 2
+
+instance Aeson.FromJSON TextInputStyle where
+  parseJSON = Aeson.withScientific "Components.TextInputStyle" $ \n -> case toBoundedInteger @Int n of
+    Just v -> case v of
+      1 -> pure TextInputShort
+      2 -> pure TextInputParagraph
+      _ -> fail $ "Invalid TextInputStyle: " <> show n
+    Nothing -> fail $ "Invalid TextInputStyle: " <> show n
+
 data TextInput = TextInput
   { style :: TextInputStyle
   , label :: T.Text
@@ -188,33 +317,36 @@ data TextInput = TextInput
   , placeholder :: Maybe T.Text
   , customID :: CustomID
   }
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric TextInput
-  deriving (ToJSON) via CalamityJSONKeepNothing TextInput
-  deriving
-    (FromJSON)
-    via WithSpecialCases
-          '["required" `IfNoneThen` DefaultToFalse]
-          TextInput
+  deriving (Show)
+  deriving (Aeson.ToJSON) via CalamityToJSON TextInput
 
-data TextInputStyle
-  = TextInputShort
-  | TextInputParagraph
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric TextInputStyle
+instance CalamityToJSON' TextInput where
+  toPairs TextInput {..} =
+      [ "style" .= style
+      , "label" .= label
+      , "min_length" .= minLength
+      , "max_length" .= maxLength
+      , "required" .= required
+      , "value" .= value
+      , "placeholder" .= placeholder
+      , "custom_id" .= customID
+      , "type" .= TextInputType
+      ]
 
-instance ToJSON TextInputStyle where
-  toJSON t = toJSON @Int $ case t of
-    TextInputShort -> 1
-    TextInputParagraph -> 2
+instance Aeson.FromJSON TextInput where
+  parseJSON = Aeson.withObject "Components.TextInput" $ \v ->
+    TextInput
+      <$> v .: "style"
+      <*> v .: "label"
+      <*> v .:? "min_length"
+      <*> v .:? "max_length"
+      <*> v .:? "required" .!= False
+      <*> v .:? "value"
+      <*> v .:? "placeholder"
+      <*> v .: "custom_id"
 
-instance FromJSON TextInputStyle where
-  parseJSON = withScientific "TextInputStyle" $ \n -> case toBoundedInteger @Int n of
-    Just v -> case v of
-      1 -> pure TextInputShort
-      2 -> pure TextInputParagraph
-      _ -> fail $ "Invalid TextInputStyle: " <> show n
-    Nothing -> fail $ "Invalid TextInputStyle: " <> show n
+$(deriveTextShow ''TextInput)
+$(makeFieldLabelsNoPrefix ''TextInput)
 
 textInput ::
   TextInputStyle ->
@@ -230,35 +362,42 @@ data Component
   | LinkButton' LinkButton
   | Select' Select
   | TextInput' TextInput
-  deriving (Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric Component
+  deriving (Show)
 
-instance ToJSON Component where
+$(deriveTextShow ''Component)
+
+instance Aeson.ToJSON Component where
   toJSON t =
-    let (Object inner, type_) = case t of
-          ActionRow' xs -> (Object ("components" .= xs), 1 :: Int)
-          Button' b -> (toJSON b, 2 :: Int)
-          LinkButton' lb -> (toJSON lb, 2 :: Int)
-          Select' s -> (toJSON s, 3 :: Int)
-          TextInput' ti -> (toJSON ti, 4 :: Int)
-     in Object (inner <> ("type" .= type_))
+    case t of
+      ActionRow' xs -> Aeson.object . catMaybes $ ["components" .= xs, "type" .= ActionRowType]
+      Button' b -> Aeson.toJSON b
+      LinkButton' lb -> Aeson.toJSON lb
+      Select' s -> Aeson.toJSON s
+      TextInput' ti -> Aeson.toJSON ti
 
-instance FromJSON Component where
-  parseJSON = withObject "Component" $ \v -> do
-    type_ :: Int <- v .: "type"
+  toEncoding t =
+    case t of
+      ActionRow' xs -> Aeson.pairs . mconcat . catMaybes $ ["components" .= xs, "type" .= ActionRowType]
+      Button' b -> Aeson.toEncoding b
+      LinkButton' lb -> Aeson.toEncoding lb
+      Select' s -> Aeson.toEncoding s
+      TextInput' ti -> Aeson.toEncoding ti
+
+instance Aeson.FromJSON Component where
+  parseJSON = Aeson.withObject "Component" $ \v -> do
+    type_ :: ComponentType <- v .: "type"
 
     case type_ of
-      1 -> ActionRow' <$> v .: "components"
-      2 -> do
+      ActionRowType -> ActionRow' <$> v .: "components"
+      ButtonType -> do
         cid :: Maybe CustomID <- v .:? "custom_id"
         url :: Maybe T.Text <- v .:? "url"
         case (cid, url) of
-          (Just _, _) -> Button' <$> parseJSON (Object v)
-          (_, Just _) -> LinkButton' <$> parseJSON (Object v)
+          (Just _, _) -> Button' <$> Aeson.parseJSON (Aeson.Object v)
+          (_, Just _) -> LinkButton' <$> Aeson.parseJSON (Aeson.Object v)
           _ -> fail $ "Impossible button: " <> show v
-      3 -> Select' <$> parseJSON (Object v)
-      4 -> TextInput' <$> parseJSON (Object v)
-      _ -> fail $ "Invalid ComponentType: " <> show type_
+      SelectType -> Select' <$> Aeson.parseJSON (Aeson.Object v)
+      TextInputType -> TextInput' <$> Aeson.parseJSON (Aeson.Object v)
 
 componentType :: Component -> ComponentType
 componentType (ActionRow' _) = ActionRowType
@@ -266,26 +405,3 @@ componentType (Button' _) = ButtonType
 componentType (LinkButton' _) = ButtonType
 componentType (Select' _) = SelectType
 componentType (TextInput' _) = TextInputType
-
-data ComponentType
-  = ActionRowType
-  | ButtonType
-  | SelectType
-  | TextInputType
-  deriving (Eq, Show, Generic)
-  deriving (TextShow) via TSG.FromGeneric ComponentType
-
-instance ToJSON ComponentType where
-  toJSON x = toJSON @Int $ case x of
-    ActionRowType -> 1
-    ButtonType -> 2
-    SelectType -> 3
-    TextInputType -> 4
-
-instance FromJSON ComponentType where
-  parseJSON = withScientific "ComponentType" $ \n -> case toBoundedInteger @Int n of
-    Just 1 -> pure ActionRowType
-    Just 2 -> pure ButtonType
-    Just 3 -> pure SelectType
-    Just 4 -> pure TextInputType
-    _ -> fail $ "Invalid ComponentType: " <> show n

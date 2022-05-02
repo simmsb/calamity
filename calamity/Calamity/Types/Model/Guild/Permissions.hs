@@ -2,87 +2,97 @@
 {-# LANGUAGE NoDeriveAnyClass #-}
 
 -- | Guild permissions
-module Calamity.Types.Model.Guild.Permissions
-  ( Permissions (..),
-    createInstantInvite,
-    kickMembers,
-    banMembers,
-    administrator,
-    manageChannels,
-    manageGuild,
-    addReactions,
-    viewAuditLog,
-    prioritySpeaker,
-    stream,
-    viewChannel,
-    sendMessages,
-    sendTtsMessages,
-    manageMessages,
-    embedLinks,
-    attachFiles,
-    readMessageHistory,
-    mentionEveryone,
-    useExternalEmojis,
-    viewGuildInsights,
-    connect,
-    speak,
-    muteMembers,
-    deafenMembers,
-    moveMembers,
-    useVad,
-    changeNickname,
-    manageNicknames,
-    manageRoles,
-    manageWebhooks,
-    manageEmojis,
-  )
-where
+module Calamity.Types.Model.Guild.Permissions (
+  Permissions (..),
+  createInstantInvite,
+  kickMembers,
+  banMembers,
+  administrator,
+  manageChannels,
+  manageGuild,
+  addReactions,
+  viewAuditLog,
+  prioritySpeaker,
+  stream,
+  viewChannel,
+  sendMessages,
+  sendTtsMessages,
+  manageMessages,
+  embedLinks,
+  attachFiles,
+  readMessageHistory,
+  mentionEveryone,
+  useExternalEmojis,
+  viewGuildInsights,
+  connect,
+  speak,
+  muteMembers,
+  deafenMembers,
+  moveMembers,
+  useVad,
+  changeNickname,
+  manageNicknames,
+  manageRoles,
+  manageWebhooks,
+  manageEmojis,
+) where
 
+import Control.DeepSeq (NFData)
 import Data.Aeson (FromJSON (..), ToJSON (..))
 import Data.Aeson.Types (parseFail)
+import Data.Bits (Bits (shiftL))
 import Data.Flags ()
 import Data.Flags.TH
 import Data.Text.Read (decimal)
 import Data.Word
 import TextShow
-import Control.DeepSeq (NFData)
 
 $( bitmaskWrapper
-     "Permissions"
-     ''Word64
-     []
-     [ ("createInstantInvite", 0x00000001),
-       ("kickMembers", 0x00000002),
-       ("banMembers", 0x00000004),
-       ("administrator", 0x00000008),
-       ("manageChannels", 0x00000010),
-       ("manageGuild", 0x00000020),
-       ("addReactions", 0x00000040),
-       ("viewAuditLog", 0x00000080),
-       ("prioritySpeaker", 0x00000100),
-       ("stream", 0x00000200),
-       ("viewChannel", 0x00000400),
-       ("sendMessages", 0x00000800),
-       ("sendTtsMessages", 0x00001000),
-       ("manageMessages", 0x00002000),
-       ("embedLinks", 0x00004000),
-       ("attachFiles", 0x00008000),
-       ("readMessageHistory", 0x00010000),
-       ("mentionEveryone", 0x00020000),
-       ("useExternalEmojis", 0x00040000),
-       ("viewGuildInsights", 0x00080000),
-       ("connect", 0x00100000),
-       ("speak", 0x00200000),
-       ("muteMembers", 0x00400000),
-       ("deafenMembers", 0x00800000),
-       ("moveMembers", 0x01000000),
-       ("useVad", 0x02000000),
-       ("changeNickname", 0x04000000),
-       ("manageNicknames", 0x08000000),
-       ("manageRoles", 0x10000000),
-       ("manageWebhooks", 0x20000000),
-       ("manageEmojis", 0x4000000)
-     ]
+    "Permissions"
+    ''Word64
+    []
+    [ ("createInstantInvite", 1 `shiftL` 0)
+    , ("kickMembers", 1 `shiftL` 1)
+    , ("banMembers", 1 `shiftL` 2)
+    , ("administrator", 1 `shiftL` 3)
+    , ("manageChannels", 1 `shiftL` 4)
+    , ("manageGuild", 1 `shiftL` 5)
+    , ("addReactions", 1 `shiftL` 6)
+    , ("viewAuditLog", 1 `shiftL` 7)
+    , ("prioritySpeaker", 1 `shiftL` 8)
+    , ("stream", 1 `shiftL` 9)
+    , ("viewChannel", 1 `shiftL` 10)
+    , ("sendMessages", 1 `shiftL` 11)
+    , ("sendTtsMessages", 1 `shiftL` 12)
+    , ("manageMessages", 1 `shiftL` 13)
+    , ("embedLinks", 1 `shiftL` 14)
+    , ("attachFiles", 1 `shiftL` 15)
+    , ("readMessageHistory", 1 `shiftL` 16)
+    , ("mentionEveryone", 1 `shiftL` 17)
+    , ("useExternalEmojis", 1 `shiftL` 18)
+    , ("viewGuildInsights", 1 `shiftL` 19)
+    , ("connect", 1 `shiftL` 20)
+    , ("speak", 1 `shiftL` 21)
+    , ("muteMembers", 1 `shiftL` 22)
+    , ("deafenMembers", 1 `shiftL` 23)
+    , ("moveMembers", 1 `shiftL` 24)
+    , ("useVad", 1 `shiftL` 25)
+    , ("changeNickname", 1 `shiftL` 26)
+    , ("manageNicknames", 1 `shiftL` 27)
+    , ("manageRoles", 1 `shiftL` 28)
+    , ("manageWebhooks", 1 `shiftL` 29)
+    , ("manageEmojis", 1 `shiftL` 30)
+    , ("useApplicationCommands", 1 `shiftL` 31)
+    , ("requestToSPeak", 1 `shiftL` 32)
+    , ("manageEvents", 1 `shiftL` 33)
+    , ("manageThreads", 1 `shiftL` 34)
+    , ("createPublicThreads", 1 `shiftL` 35)
+    , ("createPrivateThreads", 1 `shiftL` 36)
+    , ("useExternalStickers", 1 `shiftL` 37)
+    , ("sendMessagesInThreads", 1 `shiftL` 38)
+    , ("useEmbeddedActivities", 1 `shiftL` 39)
+    , ("moderateMembers", 1 `shiftL` 40)
+    ]
  )
 
 instance ToJSON Permissions where

@@ -19,10 +19,9 @@ import Control.Concurrent.Event (Event)
 import qualified Control.Concurrent.Event as E
 import Control.Concurrent.STM
 import qualified Control.Exception.Safe as Ex
-import Control.Lens
 import Control.Monad
-import Data.Aeson
-import Data.Aeson.Lens
+import qualified Data.Aeson as Aeson
+import Data.Aeson.Optics
 import qualified Data.ByteString as B
 import qualified Data.ByteString.Lazy as LB
 import Data.Maybe
@@ -32,6 +31,8 @@ import Data.Time.Clock.POSIX
 import Network.HTTP.Client (responseStatus)
 import Network.HTTP.Req
 import Network.HTTP.Types
+import Optics
+import Optics.Operators.Unsafe ((^?!))
 import Polysemy (Sem, makeSem)
 import qualified Polysemy as P
 import PyF
@@ -168,8 +169,8 @@ useBucketOnce bucket = go 0
             -- there are tokens remaining for us to use
             modifyTVar'
               (bucket ^. #state)
-              ( (#remaining -~ 1)
-                  . (#ongoing +~ 1)
+              ( (#remaining %~ pred)
+                  . (#ongoing %~ succ)
               )
             pure GoNow
           else do
@@ -240,31 +241,31 @@ parseRateLimitHeader now r = computedEnd <|> end
     computedEnd = flip addUTCTime now <$> resetAfter
 
     resetAfter :: Maybe NominalDiffTime
-    resetAfter = realToFrac <$> responseHeader r "X-Ratelimit-Reset-After" ^? _Just . _Double
+    resetAfter = realToFrac <$> responseHeader r "X-Ratelimit-Reset-After" ^? _Just % _Double
 
     end :: Maybe UTCTime
     end =
       posixSecondsToUTCTime . realToFrac
-        <$> responseHeader r "X-Ratelimit-Reset" ^? _Just . _Double
+        <$> responseHeader r "X-Ratelimit-Reset" ^? _Just % _Double
 
 buildBucketState :: HttpResponse r => UTCTime -> r -> Maybe (BucketState, B.ByteString)
 buildBucketState now r = (,) <$> bs <*> bucketKey
   where
-    remaining = responseHeader r "X-RateLimit-Remaining" ^? _Just . _Integral
-    limit = responseHeader r "X-RateLimit-Limit" ^? _Just . _Integral
-    resetKey = ceiling <$> responseHeader r "X-RateLimit-Reset" ^? _Just . _Double
+    remaining = responseHeader r "X-RateLimit-Remaining" ^? _Just % _Integral
+    limit = responseHeader r "X-RateLimit-Limit" ^? _Just % _Integral
+    resetKey = ceiling <$> responseHeader r "X-RateLimit-Reset" ^? _Just % _Double
     resetTime = parseRateLimitHeader now r
     bs = BucketState resetTime <$> resetKey <*> remaining <*> limit <*> pure 0
     bucketKey = responseHeader r "X-RateLimit-Bucket"
 
 -- | Parse the retry after field, returning when to retry
-parseRetryAfter :: UTCTime -> Value -> UTCTime
+parseRetryAfter :: UTCTime -> Aeson.Value -> UTCTime
 parseRetryAfter now r = addUTCTime retryAfter now
   where
-    retryAfter = realToFrac $ r ^?! key "retry_after" . _Double
+    retryAfter = realToFrac $ r ^?! key "retry_after" % _Double
 
-isGlobal :: Value -> Bool
-isGlobal r = r ^? key "global" . _Bool == Just True
+isGlobal :: Aeson.Value -> Bool
+isGlobal r = r ^? key "global" % _Bool == Just True
 
 -- Either (Either a a) b
 data ShouldRetry a b
@@ -335,7 +336,7 @@ doSingleRequest rlstate route gl r = do
       void . P.embed . atomically $ do
         case rl of
           KnownRatelimit bucket ->
-            modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+            modifyTVar' (bucket ^. #state) (#ongoing %~ succ)
           _ -> pure ()
         case rlHeaders of
           Just (bs, bk) ->
@@ -348,7 +349,7 @@ doSingleRequest rlstate route gl r = do
       P.embed . atomically $ do
         case rl of
           KnownRatelimit bucket ->
-            modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+            modifyTVar' (bucket ^. #state) (#ongoing %~ succ)
           _ -> pure ()
         void $ updateBucket rlstate (routeKey route) bk bs
 
@@ -360,7 +361,7 @@ doSingleRequest rlstate route gl r = do
       debug "Internal error (ratelimited but no headers), retrying"
       case rl of
         KnownRatelimit bucket ->
-          void . P.embed . atomically $ modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+          void . P.embed . atomically $ modifyTVar' (bucket ^. #state) (#ongoing %~ succ)
         _ -> pure ()
 
       P.embed $ threadDelayUntil unlockWhen
@@ -372,7 +373,7 @@ doSingleRequest rlstate route gl r = do
         atomically $ do
           case rl of
             KnownRatelimit bucket ->
-              modifyTVar' (bucket ^. #state) (#ongoing -~ 1)
+              modifyTVar' (bucket ^. #state) (#ongoing %~ pred)
             _ -> pure ()
           case bs of
             Just (bs', bk) ->
@@ -403,7 +404,7 @@ doSingleRequest rlstate route gl r = do
         KnownRatelimit bucket ->
           P.embed $ useBucketOnce bucket
         _ -> debug "unknown ratelimit"
-      pure $ RFail (HTTPError c $ decode v)
+      pure $ RFail (HTTPError c $ Aeson.decode v)
 
 doRequest :: P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r => RateLimitState -> Route -> IO LbsResponse -> Sem r (Either RestError LB.ByteString)
 doRequest rlstate route action =

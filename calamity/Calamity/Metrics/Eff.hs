@@ -15,34 +15,26 @@ module Calamity.Metrics.Eff (
   observeHistogram,
 ) where
 
-import Calamity.Internal.Utils (DefaultingMap)
 import Calamity.Metrics.Internal
 import Data.Default.Class
-import Data.Map
+import qualified Data.Map as Map
 import Data.Text
-import GHC.Generics
+import Optics.TH
 import Polysemy
 import TextShow
-import Calamity.Internal.OverriddenVia
-
-data HistogramSample' = HistogramSample'
-  { buckets :: DefaultingMap Double Double
-  , sum :: Double
-  , count :: Int
-  }
-  deriving (Generic)
-  deriving (Default)
 
 data HistogramSample = HistogramSample
-  { buckets :: Map Double Double
+  { buckets :: Map.Map Double Double
   , sum :: Double
   , count :: Int
   }
-  deriving (Eq, Show, Generic)
-  deriving (Default) via OverriddenVia HistogramSample HistogramSample
+  deriving (Eq, Show)
   deriving
     (TextShow)
     via FromStringShow HistogramSample
+
+instance Default HistogramSample where
+  def = HistogramSample Map.empty 0.0 0
 
 data MetricEff m a where
   -- | Register a 'Counter'
@@ -73,3 +65,5 @@ data MetricEff m a where
   ObserveHistogram :: Double -> Histogram -> MetricEff m HistogramSample
 
 makeSem ''MetricEff
+
+$(makeFieldLabelsNoPrefix ''HistogramSample)

@@ -11,12 +11,8 @@ import           Calamity.Types.Model.Channel
 import           Calamity.Types.Model.Guild
 import           Calamity.Types.Model.User
 import           Calamity.Types.Snowflake
-
 import           Control.Applicative
-import           Control.Lens
-
-import           Data.Generics.Sum.Constructors
-
+import           Optics
 import qualified Polysemy                       as P
 import qualified Polysemy.Fail                  as P
 import qualified Polysemy.NonDet                as P
@@ -47,12 +43,12 @@ instance Upgradeable Member (Snowflake Guild, Snowflake Member) where
     where
       getcache = P.failToNonDet $ do
         Just g <- getGuild gid
-        Just m <- pure (g ^. #members . at mid)
+        Just m <- pure (g ^. #members % at mid)
         pure m
       gethttp = P.failToNonDet $ do
         Right m <- invoke $ H.GetGuildMember gid (coerceSnowflake @_ @User mid)
         -- getcache could have failed becuase the member wasn't cached
-        updateGuild gid (#members . at mid ?~ m)
+        updateGuild gid (#members % at mid ?~ m)
         pure m
 
 instance Upgradeable Guild (Snowflake Guild) where
@@ -65,7 +61,7 @@ instance Upgradeable Guild (Snowflake Guild) where
 insertChannel :: BotC r => Channel -> P.Sem r ()
 insertChannel (DMChannel' dm) = setDM dm
 insertChannel (GuildChannel' ch) =
-  updateGuild (getID ch) (#channels . at (getID @GuildChannel ch) ?~ ch)
+  updateGuild (getID ch) (#channels % at (getID @GuildChannel ch) ?~ ch)
 insertChannel _ = pure ()
 
 instance Upgradeable Channel (Snowflake Channel) where
@@ -85,7 +81,8 @@ instance Upgradeable GuildChannel (Snowflake GuildChannel) where
       gethttp = P.failToNonDet $ do
         Right c <- invoke $ H.GetChannel (coerceSnowflake @_ @Channel cid)
         insertChannel c
-        maybeToAlt (c ^? _Ctor @"GuildChannel'")
+        GuildChannel' c' <- pure c
+        pure c'
 
 instance Upgradeable VoiceChannel (Snowflake VoiceChannel) where
     upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
@@ -118,11 +115,11 @@ instance Upgradeable Emoji (Snowflake Guild, Snowflake Emoji) where
     where
       getcache = P.failToNonDet $ do
         Just g <- getGuild gid
-        Just m <- pure (g ^. #emojis . at eid)
+        Just m <- pure (g ^. #emojis % at eid)
         pure m
       gethttp = P.failToNonDet $ do
         Right e <- invoke $ H.GetGuildEmoji gid eid
-        updateGuild gid (#emojis . at eid ?~ e)
+        updateGuild gid (#emojis % at eid ?~ e)
         pure e
 
 instance Upgradeable Role (Snowflake Guild, Snowflake Role) where
@@ -130,11 +127,11 @@ instance Upgradeable Role (Snowflake Guild, Snowflake Role) where
     where
       getcache = P.failToNonDet $ do
         Just g <- getGuild gid
-        Just r <- pure (g ^. #roles . at rid)
+        Just r <- pure (g ^. #roles % at rid)
         pure r
       gethttp = P.failToNonDet $ do
         Right rs <- invoke $ H.GetGuildRoles gid
         let sm = SM.fromList rs
-        updateGuild gid (#roles <>~ sm)
+        updateGuild gid (#roles %~ (<> sm))
         Just r <- pure (sm ^. at rid)
         pure r
