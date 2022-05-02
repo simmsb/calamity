@@ -28,6 +28,8 @@ data Check m c = MkCheck
     callback :: c -> m (Maybe T.Text)
   }
 
+$(makeFieldLabelsNoPrefix ''Check)
+
 {- | Given the name of a check and a callback in the 'P.Sem' monad, build a check
  by transforming the Polysemy action into an @m@ action.
 -}
@@ -46,5 +48,3 @@ buildCheckPure name cb = MkCheck name (pure . cb)
 -}
 runCheck :: (Monad m, P.Member (P.Embed m) r) => c -> Check m c -> P.Sem r (Either CommandError ())
 runCheck ctx chk = P.embed (callback chk ctx) <&> justToEither . (CheckError (chk ^. #name) <$>)
-
-$(makeFieldLabelsNoPrefix ''Check)

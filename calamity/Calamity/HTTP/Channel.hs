@@ -271,6 +271,17 @@ instance CalamityToJSON' GroupDMAddRecipientOptions where
     , "nick" .= nick
     ]
 
+$(makeFieldLabelsNoPrefix ''CreateMessageAttachment)
+$(makeFieldLabelsNoPrefix ''CreateMessageOptions)
+$(makeFieldLabelsNoPrefix ''CreateMessageAttachmentJson)
+$(makeFieldLabelsNoPrefix ''AllowedMentions)
+$(makeFieldLabelsNoPrefix ''ChannelUpdate)
+$(makeFieldLabelsNoPrefix ''ChannelMessagesFilter)
+$(makeFieldLabelsNoPrefix ''ChannelMessagesLimit)
+$(makeFieldLabelsNoPrefix ''GetReactionsOptions)
+$(makeFieldLabelsNoPrefix ''CreateChannelInviteOptions)
+$(makeFieldLabelsNoPrefix ''GroupDMAddRecipientOptions)
+
 data ChannelRequest a where
   CreateMessage :: (HasID Channel c) => c -> CreateMessageOptions -> ChannelRequest Message
   CrosspostMessage :: (HasID Channel c, HasID Message m) => c -> m -> ChannelRequest Message
@@ -464,13 +475,3 @@ instance Request (ChannelRequest a) where
   action (GroupDMAddRecipient _ _ o) = putWith' (ReqBodyJson o)
   action (GroupDMRemoveRecipient _ _) = deleteWith
 
-$(makeFieldLabelsNoPrefix ''CreateMessageAttachment)
-$(makeFieldLabelsNoPrefix ''CreateMessageOptions)
-$(makeFieldLabelsNoPrefix ''CreateMessageAttachmentJson)
-$(makeFieldLabelsNoPrefix ''AllowedMentions)
-$(makeFieldLabelsNoPrefix ''ChannelUpdate)
-$(makeFieldLabelsNoPrefix ''ChannelMessagesFilter)
-$(makeFieldLabelsNoPrefix ''ChannelMessagesLimit)
-$(makeFieldLabelsNoPrefix ''GetReactionsOptions)
-$(makeFieldLabelsNoPrefix ''CreateChannelInviteOptions)
-$(makeFieldLabelsNoPrefix ''GroupDMAddRecipientOptions)

@@ -36,6 +36,8 @@ data Command (m :: Type -> Type) (c :: Type) (a :: Type) = forall p.
     callback :: (c, p) -> m (Either T.Text a)
   }
 
+$(makeFieldLabelsNoPrefix ''Command)
+
 data CommandS = CommandS
   { names :: NonEmpty T.Text
   , params :: [ParameterInfo]
@@ -55,6 +57,8 @@ instance Show (Command m c a) where
         (checks ^.. traversed % #name)
         hidden
 
+$(deriveTextShow ''CommandS)
+
 instance TextShow.TextShow (Command m c a) where
   showbPrec d Command {names, params, parent, checks, hidden} =
     TextShow.showbPrec d $
@@ -65,5 +69,3 @@ instance TextShow.TextShow (Command m c a) where
         (checks ^.. traversed % #name)
         hidden
 
-$(deriveTextShow ''CommandS)
-$(makeFieldLabelsNoPrefix ''Command)

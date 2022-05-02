@@ -29,6 +29,8 @@ data Group m c a = Group
     checks :: [Check m c]
   }
 
+$(makeFieldLabelsNoPrefix ''Group)
+
 data GroupS m c a = GroupS
   { names :: NonEmpty T.Text
   , parent :: Maybe T.Text
@@ -38,13 +40,12 @@ data GroupS m c a = GroupS
   }
   deriving (Show)
 
-instance Show (Group m c a) where
+instance (Show a, Show c) => Show (Group m c a) where
   showsPrec d Group {names, parent, commands, children, hidden} =
     showsPrec d $ GroupS names (NE.head <$> parent ^? _Just % #names) (LH.toList commands) (LH.toList children) hidden
+
+$(deriveTextShow ''GroupS)
 
 instance (TextShow.TextShow a, TextShow.TextShow c) => TextShow.TextShow (Group m c a) where
   showbPrec d Group {names, parent, commands, children, hidden} =
     TextShow.showbPrec d $ GroupS names (NE.head <$> parent ^? _Just % #names) (LH.toList commands) (LH.toList children) hidden
-
-$(makeFieldLabelsNoPrefix ''Group)
-$(deriveTextShow ''GroupS)

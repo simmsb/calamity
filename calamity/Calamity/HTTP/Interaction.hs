@@ -166,6 +166,11 @@ instance Aeson.ToJSON InteractionCallbackType where
     ApplicationCommandAutocompleteResultType -> 8
     ModalType -> 9
 
+$(makeFieldLabelsNoPrefix ''InteractionCallbackMessageOptions)
+$(makeFieldLabelsNoPrefix ''InteractionCallbackAutocomplete)
+$(makeFieldLabelsNoPrefix ''InteractionCallbackAutocompleteChoice)
+$(makeFieldLabelsNoPrefix ''InteractionCallbackModal)
+
 data InteractionRequest a where
   CreateResponseMessage ::
     (HasID Interaction i) =>
@@ -475,8 +480,3 @@ instance Request (InteractionRequest a) where
     body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonData) : files)
     patchWith' body u o
   action DeleteFollowupMessage {} = deleteWith
-
-$(makeFieldLabelsNoPrefix ''InteractionCallbackMessageOptions)
-$(makeFieldLabelsNoPrefix ''InteractionCallbackAutocomplete)
-$(makeFieldLabelsNoPrefix ''InteractionCallbackAutocompleteChoice)
-$(makeFieldLabelsNoPrefix ''InteractionCallbackModal)

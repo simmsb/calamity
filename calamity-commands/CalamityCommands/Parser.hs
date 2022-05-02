@@ -55,6 +55,8 @@ data ParserState = ParserState
   }
   deriving (Show)
 
+$(makeFieldLabelsNoPrefix ''ParserState)
+
 -- |
 type ParserEffs c r =
   ( P.State ParserState
@@ -292,5 +294,3 @@ quotedString =
 
 someNonWS :: (Token s ~ Char, MonadParsec e s m) => m (Tokens s)
 someNonWS = takeWhile1P (Just "any non-whitespace") (not . isSpace)
-
-$(makeFieldLabelsNoPrefix ''ParserState)

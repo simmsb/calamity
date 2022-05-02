@@ -67,6 +67,8 @@ data FullContext = FullContext
   deriving (HasID Message) via HasIDField "message" FullContext
   deriving (HasID User) via HasIDField "user" FullContext
 
+$(makeFieldLabelsNoPrefix ''FullContext)
+
 instance CC.CommandContext IO FullContext () where
   ctxPrefix = (^. #prefix)
   ctxCommand = (^. #command)
@@ -126,6 +128,8 @@ data LightContext = LightContext
   deriving (HasID Message) via HasIDField "message" LightContext
   deriving (HasID User) via HasIDField "user" LightContext
 
+$(makeFieldLabelsNoPrefix ''LightContext)
+
 instance CC.CommandContext IO LightContext () where
   ctxPrefix = (^. #prefix)
   ctxCommand = (^. #command)
@@ -147,6 +151,3 @@ useLightContext =
         CC.ConstructContext (pre, cmd, up) (msg, usr, mem) ->
           pure . Just $ LightContext msg (msg ^. #guildID) (msg ^. #channelID) usr mem cmd pre up
     )
-
-$(makeFieldLabelsNoPrefix ''FullContext)
-$(makeFieldLabelsNoPrefix ''LightContext)

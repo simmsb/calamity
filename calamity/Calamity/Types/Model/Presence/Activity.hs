@@ -203,10 +203,10 @@ instance Aeson.FromJSON ActivitySecrets where
       <*> v .:? "match"
 
 $(deriveTextShow ''ActivityType)
-$(deriveTextShow ''Activity)
 $(deriveTextShow ''ActivityParty)
 $(deriveTextShow ''ActivityAssets)
 $(deriveTextShow ''ActivitySecrets)
+$(deriveTextShow ''Activity)
 $(makeFieldLabelsNoPrefix ''Activity)
 $(makeFieldLabelsNoPrefix ''ActivityTimestamps)
 $(makeFieldLabelsNoPrefix ''ActivityParty)

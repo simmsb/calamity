@@ -116,6 +116,10 @@ instance CalamityToJSON' ExecuteWebhookJson where
     , "components" .= components
     ]
 
+$(makeFieldLabelsNoPrefix ''CreateWebhookData)
+$(makeFieldLabelsNoPrefix ''ModifyWebhookData)
+$(makeFieldLabelsNoPrefix ''ExecuteWebhookOptions)
+
 data WebhookRequest a where
   CreateWebhook :: HasID Channel c => c -> CreateWebhookData -> WebhookRequest Webhook
   GetChannelWebhooks :: HasID Channel c => c -> WebhookRequest [Webhook]
@@ -200,7 +204,3 @@ instance Request (WebhookRequest a) where
             }
     body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonBody) : files)
     postWithP' body ("wait" =:? (wh ^. #wait)) u o
-
-$(makeFieldLabelsNoPrefix ''CreateWebhookData)
-$(makeFieldLabelsNoPrefix ''ModifyWebhookData)
-$(makeFieldLabelsNoPrefix ''ExecuteWebhookOptions)

@@ -250,10 +250,10 @@ instance Aeson.ToJSON AuditLogAction where
   toJSON = Aeson.toJSON @Int . fromEnum
   toEncoding = Aeson.toEncoding @Int . fromEnum
 
-$(deriveTextShow ''AuditLog)
-$(deriveTextShow ''AuditLogEntry)
-$(deriveTextShow ''AuditLogEntryInfo)
 $(deriveTextShow ''AuditLogAction)
+$(deriveTextShow ''AuditLogEntryInfo)
+$(deriveTextShow ''AuditLogEntry)
+$(deriveTextShow ''AuditLog)
 
 $(makeFieldLabelsNoPrefix ''AuditLog)
 $(makeFieldLabelsNoPrefix ''AuditLogEntry)

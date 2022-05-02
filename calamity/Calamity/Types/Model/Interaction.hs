@@ -141,8 +141,8 @@ instance Aeson.FromJSON InteractionType where
     _ -> fail $ "Invalid InteractionType: " <> show n
 
 $(deriveTextShow ''InteractionToken)
-$(deriveTextShow ''Interaction)
 $(deriveTextShow ''InteractionType)
+$(deriveTextShow ''Interaction)
 $(makeFieldLabelsNoPrefix ''InteractionToken)
 $(makeFieldLabelsNoPrefix ''Interaction)
 $(makeFieldLabelsNoPrefix ''InteractionData)

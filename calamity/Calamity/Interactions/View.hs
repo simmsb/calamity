@@ -229,6 +229,8 @@ data TextInputDecoded = TextInputDecoded
   }
   deriving (Show)
 
+$(makeFieldLabelsNoPrefix ''TextInputDecoded)
+
 instance Aeson.FromJSON TextInputDecoded where
   parseJSON = Aeson.withObject "TextInputDecoded" $ \v ->
     TextInputDecoded
@@ -430,5 +432,3 @@ runViewInstance initSendResp inst m = P.resourceToIOFinal $ do
 
     sender :: STM.TQueue Interaction -> Interaction -> IO ()
     sender eventIn int = STM.atomically $ STM.writeTQueue eventIn int
-
-$(makeFieldLabelsNoPrefix ''TextInputDecoded)

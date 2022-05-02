@@ -25,11 +25,12 @@ data CommandHandlerS m c a = CommandHandlerS
   }
   deriving (Show)
 
-instance Show (CommandHandler m c a) where
+instance (Show c, Show a) => Show (CommandHandler m c a) where
   showsPrec d CommandHandler {groups, commands} = showsPrec d $ CommandHandlerS (LH.toList groups) (LH.toList commands)
+
+$(deriveTextShow ''CommandHandlerS)
 
 instance (TextShow.TextShow c, TextShow.TextShow a) => TextShow.TextShow (CommandHandler m c a) where
   showbPrec d CommandHandler {groups, commands} = TextShow.showbPrec d $ CommandHandlerS (LH.toList groups) (LH.toList commands)
 
-$(deriveTextShow ''CommandHandlerS)
 $(makeFieldLabelsNoPrefix ''CommandHandler)

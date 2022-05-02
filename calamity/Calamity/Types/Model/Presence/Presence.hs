@@ -61,7 +61,7 @@ instance Aeson.FromJSON ClientStatus where
       <*> v .:? "mobile"
       <*> v .:? "web"
 
-$(deriveTextShow ''Presence)
 $(deriveTextShow ''ClientStatus)
+$(deriveTextShow ''Presence)
 $(makeFieldLabelsNoPrefix ''Presence)
 $(makeFieldLabelsNoPrefix ''ClientStatus)
