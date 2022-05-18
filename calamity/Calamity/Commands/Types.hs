@@ -9,6 +9,7 @@ module Calamity.Commands.Types (
     type CommandHandler,
     type Check,
     type DSLState,
+    type DSLC,
     type CommandContext,
 ) where
 
@@ -24,4 +25,5 @@ type Group c = CC.Group IO c ()
 type CommandHandler c = CC.CommandHandler IO c ()
 type Check c = CC.Check IO c
 type DSLState c r = CC.DSLState IO c () r
+type DSLC c r = CC.DSLC IO c () r
 type CommandContext c = CC.CommandContext IO c ()

@@ -6,23 +6,23 @@
  documentation more tuned for usage with Calamity.
 -}
 module Calamity.Commands.Dsl (
-    -- * Commands DSL
-    -- $dslTutorial
-    command,
-    command',
-    commandA,
-    commandA',
-    hide,
-    help,
-    requires,
-    requires',
-    requiresPure,
-    group,
-    group',
-    groupA,
-    groupA',
-    DSLState,
-    fetchHandler,
+  -- * Commands DSL
+  -- $dslTutorial
+  command,
+  command',
+  commandA,
+  commandA',
+  hide,
+  help,
+  requires,
+  requires',
+  requiresPure,
+  group,
+  group',
+  groupA,
+  groupA',
+  DSLState,
+  fetchHandler,
 ) where
 
 import qualified CalamityCommands.Dsl as CC
@@ -92,16 +92,16 @@ import qualified Polysemy.Tagged as P
  reader context.
 -}
 command' ::
-    P.Member (P.Final IO) r =>
-    -- | The name of the command
-    T.Text ->
-    -- | The command's parameters
-    [ParameterInfo] ->
-    -- | The parser for this command
-    (c -> P.Sem r (Either CommandError a)) ->
-    -- | The callback for this command
-    ((c, a) -> P.Sem (P.Fail ': r) ()) ->
-    P.Sem (DSLState c r) (Command c)
+  (P.Member (P.Final IO) r, DSLC c r) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The command's parameters
+  [ParameterInfo] ->
+  -- | The parser for this command
+  (c -> P.Sem r (Either CommandError a)) ->
+  -- | The callback for this command
+  ((c, a) -> P.Sem (P.Fail ': r) ()) ->
+  P.Sem r (Command c)
 command' = CC.command'
 
 {- | Given the command name, aliases, and parameter names, @parser@ and
@@ -112,18 +112,18 @@ command' = CC.command'
  reader context.
 -}
 commandA' ::
-    P.Member (P.Final IO) r =>
-    -- | The name of the command
-    T.Text ->
-    -- | The aliases for the command
-    [T.Text] ->
-    -- | The command's parameters
-    [ParameterInfo] ->
-    -- | The parser for this command
-    (c -> P.Sem r (Either CommandError a)) ->
-    -- | The callback for this command
-    ((c, a) -> P.Sem (P.Fail ': r) ()) ->
-    P.Sem (DSLState c r) (Command c)
+  (P.Member (P.Final IO) r, DSLC c r) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The aliases for the command
+  [T.Text] ->
+  -- | The command's parameters
+  [ParameterInfo] ->
+  -- | The parser for this command
+  (c -> P.Sem r (Either CommandError a)) ->
+  -- | The callback for this command
+  ((c, a) -> P.Sem (P.Fail ': r) ()) ->
+  P.Sem r (Command c)
 commandA' = CC.commandA'
 
 {- | Given the name of a command and a callback, and a type level list of
@@ -152,16 +152,17 @@ commandA' = CC.commandA'
  @
 -}
 command ::
-    forall ps c r.
-    ( P.Member (P.Final IO) r
-    , CC.CommandContext IO c ()
-    , TypedCommandC ps c () r
-    ) =>
-    -- | The name of the command
-    T.Text ->
-    -- | The callback for this command
-    (c -> CommandForParsers ps r ()) ->
-    P.Sem (DSLState c r) (Command c)
+  forall ps c r.
+  ( P.Member (P.Final IO) r
+  , DSLC c r
+  , CC.CommandContext IO c ()
+  , TypedCommandC ps c () r
+  ) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The callback for this command
+  (c -> CommandForParsers ps r ()) ->
+  P.Sem r (Command c)
 command = CC.command @ps
 
 {- | Given the name and aliases of a command and a callback, and a type level list of
@@ -185,44 +186,46 @@ command = CC.command @ps
  @
 -}
 commandA ::
-    forall ps c r.
-    ( P.Member (P.Final IO) r
-    , CC.CommandContext IO c ()
-    , TypedCommandC ps c () r
-    ) =>
-    -- | The name of the command
-    T.Text ->
-    -- | The aliases for the command
-    [T.Text] ->
-    -- | The callback for this command
-    (c -> CommandForParsers ps r ()) ->
-    P.Sem (DSLState c r) (Command c)
+  forall ps c r.
+  ( P.Member (P.Final IO) r
+  , DSLC c r
+  , CC.CommandContext IO c ()
+  , TypedCommandC ps c () r
+  ) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The aliases for the command
+  [T.Text] ->
+  -- | The callback for this command
+  (c -> CommandForParsers ps r ()) ->
+  P.Sem r (Command c)
 commandA = CC.commandA @ps
 
 {- | Set the visibility of any groups or commands registered inside the given
  action to hidden.
 -}
 hide ::
-    P.Member (P.Tagged "hidden" (P.Reader Bool)) r =>
-    P.Sem r a ->
-    P.Sem r a
+  P.Member (P.Tagged "hidden" (P.Reader Bool)) r =>
+  P.Sem r a ->
+  P.Sem r a
 hide = CC.hide
 
 -- | Set the help for any groups or commands registered inside the given action.
 help ::
-    P.Member (P.Reader (c -> T.Text)) r =>
-    (c -> T.Text) ->
-    P.Sem r a ->
-    P.Sem r a
+  P.Member (P.Reader (c -> T.Text)) r =>
+  (c -> T.Text) ->
+  P.Sem r a ->
+  P.Sem r a
 help = CC.help
 
 {- | Add to the list of checks for any commands registered inside the given
  action.
 -}
 requires ::
-    [Check c] ->
-    P.Sem (DSLState c r) a ->
-    P.Sem (DSLState c r) a
+  DSLC c r =>
+  [Check c] ->
+  P.Sem r a ->
+  P.Sem r a
 requires = CC.requires
 
 {- | Construct a check and add it to the list of checks for any commands
@@ -231,13 +234,13 @@ requires = CC.requires
  Refer to 'CalamityCommands.Check.Check' for more info on checks.
 -}
 requires' ::
-    P.Member (P.Final IO) r =>
-    -- | The name of the check
-    T.Text ->
-    -- | The callback for the check
-    (c -> P.Sem r (Maybe T.Text)) ->
-    P.Sem (DSLState c r) a ->
-    P.Sem (DSLState c r) a
+  (P.Member (P.Final IO) r, DSLC c r) =>
+  -- | The name of the check
+  T.Text ->
+  -- | The callback for the check
+  (c -> P.Sem r (Maybe T.Text)) ->
+  P.Sem r a ->
+  P.Sem r a
 requires' = CC.requires'
 
 {- | Construct some pure checks and add them to the list of checks for any
@@ -246,10 +249,11 @@ requires' = CC.requires'
  Refer to 'CalamityCommands.Check.Check' for more info on checks.
 -}
 requiresPure ::
-    [(T.Text, c -> Maybe T.Text)] ->
-    -- A list of check names and check callbacks
-    P.Sem (DSLState c r) a ->
-    P.Sem (DSLState c r) a
+  DSLC c r =>
+  [(T.Text, c -> Maybe T.Text)] ->
+  -- A list of check names and check callbacks
+  P.Sem r a ->
+  P.Sem r a
 requiresPure = CC.requiresPure
 
 {- | Construct a group and place any commands registered in the given action
@@ -259,11 +263,11 @@ requiresPure = CC.requiresPure
  'group'' if you don't want that (i.e. your help function is context aware).
 -}
 group ::
-    P.Member (P.Final IO) r =>
-    -- | The name of the group
-    T.Text ->
-    P.Sem (DSLState c r) a ->
-    P.Sem (DSLState c r) a
+  (P.Member (P.Final IO) r, DSLC c r) =>
+  -- | The name of the group
+  T.Text ->
+  P.Sem r a ->
+  P.Sem r a
 group = CC.group
 
 {- | Construct a group with aliases and place any commands registered in the
@@ -276,13 +280,13 @@ group = CC.group
  'group'' if you don't want that (i.e. your help function is context aware).
 -}
 groupA ::
-    P.Member (P.Final IO) r =>
-    -- | The name of the group
-    T.Text ->
-    -- | The aliases of the group
-    [T.Text] ->
-    P.Sem (DSLState c r) a ->
-    P.Sem (DSLState c r) a
+  (P.Member (P.Final IO) r, DSLC c r) =>
+  -- | The name of the group
+  T.Text ->
+  -- | The aliases of the group
+  [T.Text] ->
+  P.Sem r a ->
+  P.Sem r a
 groupA = CC.groupA
 
 {- | Construct a group and place any commands registered in the given action
@@ -295,11 +299,11 @@ groupA = CC.groupA
  value.
 -}
 group' ::
-    P.Member (P.Final IO) r =>
-    -- | The name of the group
-    T.Text ->
-    P.Sem (DSLState c r) a ->
-    P.Sem (DSLState c r) a
+  (P.Member (P.Final IO) r, DSLC c r) =>
+  -- | The name of the group
+  T.Text ->
+  P.Sem r a ->
+  P.Sem r a
 group' = CC.group'
 
 {- | Construct a group with aliases and place any commands registered in the given action
@@ -312,15 +316,15 @@ group' = CC.group'
  value.
 -}
 groupA' ::
-    P.Member (P.Final IO) r =>
-    -- | The name of the group
-    T.Text ->
-    -- | The aliases of the group
-    [T.Text] ->
-    P.Sem (DSLState c r) a ->
-    P.Sem (DSLState c r) a
+  (P.Member (P.Final IO) r, DSLC c r) =>
+  -- | The name of the group
+  T.Text ->
+  -- | The aliases of the group
+  [T.Text] ->
+  P.Sem r a ->
+  P.Sem r a
 groupA' = CC.groupA'
 
 -- | Retrieve the final command handler for this block
-fetchHandler :: P.Sem (DSLState c r) (CommandHandler c)
+fetchHandler :: DSLC c r => P.Sem r (CommandHandler c)
 fetchHandler = P.ask
