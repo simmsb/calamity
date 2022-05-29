@@ -1,5 +1,10 @@
 # Changelog for Calamity Commands
 
+## 0.5.0.0
+
++ Replaced lens with optics internally, you should use optics for field labels now.
++ Generic instances have been removed from library data types.
+
 ## 0.3.0.0
 
 + DSL commands no longer use a concrete effect list prefix.

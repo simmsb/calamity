@@ -1,5 +1,12 @@
 # Changelog for Calamity
 
+## 0.5.0.0
+
++ Replaced lens with optics internally, you should use optics for field labels now.
++ Generic instances have been removed from library data types.
++ Internally, all aeson instances are manually implemented now, 
+  instead of using generic. Expect a 5x improvement in compile time.
+
 ## 0.4.0.0
 
 + DSL functions no longer use a concrete effect list prefix.
