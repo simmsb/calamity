@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.4.0.0
+
++ DSL functions no longer use a concrete effect list prefix.
+
 ## 0.3.0.0
 
 + The discord api version has been moved from v9 to v10.

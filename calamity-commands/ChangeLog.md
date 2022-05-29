@@ -1,5 +1,9 @@
 # Changelog for Calamity Commands
 
+## 0.3.0.0
+
++ DSL commands no longer use a concrete effect list prefix.
+
 ## 0.2.0.0
 
 + Remove all usages of lazy Text (except from typeclass instances)
