@@ -47,17 +47,17 @@ instance Aeson.FromJSON Member where
       <$> u .: "id"
       <*> u .: "username"
       <*> u .: "discriminator"
-      <*> u .:? "bot"
-      <*> u .:? "avatar"
-      <*> u .:? "mfa_enabled"
-      <*> u .:? "verified"
-      <*> u .:? "email"
-      <*> u .:? "flags"
-      <*> u .:? "premium_type"
+      <*> v .:? "bot"
+      <*> v .:? "avatar"
+      <*> v .:? "mfa_enabled"
+      <*> v .:? "verified"
+      <*> v .:? "email"
+      <*> v .:? "flags"
+      <*> v .:? "premium_type"
       <*> v .:? "nick"
-      <*> (fmap unAesonVector <$> u .:? "roles") .!= V.empty
-      <*> u .: "joined_at"
-      <*> u .: "deaf"
-      <*> u .: "mute"
+      <*> (fmap unAesonVector <$> v .:? "roles") .!= V.empty
+      <*> v .: "joined_at"
+      <*> v .: "deaf"
+      <*> v .: "mute"
 
 $(makeFieldLabelsNoPrefix ''Member)
