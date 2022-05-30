@@ -132,7 +132,7 @@ instance Aeson.FromJSON Message where
       <*> v .: "mention_everyone"
       <*> v .: "mentions"
       <*> (unAesonVector <$> v .: "mention_roles")
-      <*> v .: "mention_channels"
+      <*> v .:? "mention_channels" .!= []
       <*> v .: "attachments"
       <*> v .: "embeds"
       <*> v .:? "reactions" .!= []
@@ -143,7 +143,7 @@ instance Aeson.FromJSON Message where
       <*> v .:? "activity"
       <*> v .:? "application"
       <*> v .:? "message_reference"
-      <*> v .: "flags"
+      <*> v .:? "flags" .!= 0
       <*> v .:? "referenced_message"
       <*> v .:? "interaction"
       <*> v .:? "components" .!= []

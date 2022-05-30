@@ -6,6 +6,7 @@
 + Generic instances have been removed from library data types.
 + Internally, all aeson instances are manually implemented now, 
   instead of using generic. Expect a 5x improvement in compile time.
++ The `game` field on `StatusUpdateData` was changed to `activities :: [Activity]`
 
 ## 0.4.0.0
 
