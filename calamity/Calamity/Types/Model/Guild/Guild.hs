@@ -77,10 +77,9 @@ instance Aeson.FromJSON Guild where
       members' <- v .: "members"
       pure . SM.fromList . mapMaybe (Aeson.parseMaybe @Aeson.Object @Member (Aeson.parseJSON . Aeson.Object)) $ members'
 
-    -- sadly we have now way of logging channels/presences' that failed to parse here
     channels' <- do
       channels' <- v .: "channels"
-      pure . SM.fromList . mapMaybe (Aeson.parseMaybe @Aeson.Object @GuildChannel (\c -> Aeson.parseJSON $ Aeson.Object (c <> "guild_id" Aeson..= id))) $ channels'
+      SM.fromList <$> traverse (\c -> Aeson.parseJSON $ Aeson.Object (c <> "guild_id" Aeson..= id)) channels'
 
     presences' <- do
       presences' <- v .: "presences"

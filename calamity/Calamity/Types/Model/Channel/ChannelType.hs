@@ -15,6 +15,13 @@ data ChannelType
   | GuildVoiceType
   | GroupDMType
   | GuildCategoryType
+  | GuildNewsType
+  | GuildNewsThreadType
+  | GuildPublicThreadType
+  | GuildPrivateThreadType
+  | GuildStageVoiceType
+  | GuildDirectoryType
+  | GuildForumType
   deriving (Eq, Show, Enum)
 
 $(deriveTextShow ''ChannelType)
@@ -30,6 +37,14 @@ instance Aeson.FromJSON ChannelType where
       0 -> pure GuildTextType
       1 -> pure DMType
       2 -> pure GuildVoiceType
+      3 -> pure GroupDMType
       4 -> pure GuildCategoryType
+      5 -> pure GuildNewsType
+      10 -> pure GuildNewsThreadType
+      11 -> pure GuildPublicThreadType
+      12 -> pure GuildPrivateThreadType
+      13 -> pure GuildStageVoiceType
+      14 -> pure GuildDirectoryType
+      15 -> pure GuildForumType
       _ -> fail $ "Invalid ChannelType: " <> show n
     Nothing -> fail $ "Invalid ChannelType: " <> show n

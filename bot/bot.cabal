@@ -28,7 +28,7 @@ executable bot
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       base                     >=4.12      && <5
-    , calamity >= 0.3
+    , calamity >= 0.5
     , polysemy
     , polysemy-plugin
     , text

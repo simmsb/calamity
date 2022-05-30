@@ -56,6 +56,13 @@ instance Aeson.FromJSON Channel where
       GuildCategoryType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
       DMType -> DMChannel' <$> Aeson.parseJSON (Aeson.Object v)
       GroupDMType -> GroupChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildNewsType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildNewsThreadType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildPublicThreadType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildPrivateThreadType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildStageVoiceType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildDirectoryType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
+      GuildForumType -> GuildChannel' <$> Aeson.parseJSON (Aeson.Object v)
 
 data instance Partial Channel = PartialChannel
   { id :: Snowflake Channel

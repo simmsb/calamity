@@ -34,7 +34,7 @@ instance Aeson.FromJSON Overwrite where
     Overwrite
       <$> v .: "id"
       <*> v .: "type"
-      <*> v .: "allo"
+      <*> v .: "allow"
       <*> v .: "deny"
 
 $(deriveTextShow ''Overwrite)

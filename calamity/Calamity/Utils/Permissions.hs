@@ -20,6 +20,7 @@ import qualified Data.Vector.Unboxing                   as V
 import Optics
 import qualified Polysemy                               as P
 import Data.Foldable (Foldable(foldl'))
+import qualified Calamity.Internal.SnowflakeMap as SM
 
 -- | Calculate a 'Member'\'s 'Permissions' in a 'Guild'
 basePermissions :: Guild -> Member -> Permissions
@@ -34,21 +35,27 @@ basePermissions g m
                    then allFlags
                    else perms
 
+overwrites :: GuildChannel -> SM.SnowflakeMap Overwrite
+overwrites (GuildTextChannel c) = c ^. #permissionOverwrites
+overwrites (GuildVoiceChannel c) = c ^. #permissionOverwrites
+overwrites (GuildCategory c) = c ^. #permissionOverwrites
+overwrites _ = SM.empty
+
 -- | Apply any 'Overwrite's for a 'GuildChannel' onto some 'Permissions'
 applyOverwrites :: GuildChannel -> Member -> Permissions -> Permissions
 applyOverwrites c m p
   | p .<=. administrator = allFlags
   | otherwise =
-    let everyoneOverwrite = c ^. #permissionOverwrites % at (coerceSnowflake $ getID @Guild c)
+    let everyoneOverwrite = overwrites c ^. at (coerceSnowflake $ getID @Guild c)
         everyoneAllow     = maybe noFlags (^. #allow) everyoneOverwrite
         everyoneDeny      = maybe noFlags (^. #deny) everyoneOverwrite
         p'                = p .-. everyoneDeny .+. everyoneAllow
         roleOverwriteIDs  = map (coerceSnowflake @_ @Overwrite) . V.toList $ m ^. #roles
-        roleOverwrites    = mapMaybe (\oid -> c ^? #permissionOverwrites % ix oid) roleOverwriteIDs
+        roleOverwrites    = mapMaybe (\oid -> overwrites c ^? ix oid) roleOverwriteIDs
         roleAllow         = foldl' andFlags noFlags (roleOverwrites ^.. traversed % #allow)
         roleDeny          = foldl' andFlags noFlags (roleOverwrites ^.. traversed % #deny)
         p''               = p' .-. roleDeny .+. roleAllow
-        memberOverwrite   = c ^. #permissionOverwrites % at (coerceSnowflake @_ @Overwrite $ getID @Member m)
+        memberOverwrite   = overwrites c ^. at (coerceSnowflake @_ @Overwrite $ getID @Member m)
         memberAllow       = maybe noFlags (^. #allow) memberOverwrite
         memberDeny        = maybe noFlags (^. #deny) memberOverwrite
         p'''              = p'' .-. memberDeny .+. memberAllow

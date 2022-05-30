@@ -46,8 +46,8 @@ instance Aeson.FromJSON TextChannel where
       <*> v .: "topic"
       <*> v .:? "nsfw" .!= False
       <*> v .:? "last_message_id"
-      <*> v .: "last_pin_timestamp"
-      <*> v .: "rate_limit_per_user"
+      <*> v .:? "last_pin_timestamp"
+      <*> v .:? "rate_limit_per_user"
       <*> v .:? "parent_id"
 
 $(makeFieldLabelsNoPrefix ''TextChannel)
