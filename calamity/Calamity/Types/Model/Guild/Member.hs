@@ -7,11 +7,12 @@ import Calamity.Internal.Utils (AesonVector (unAesonVector))
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-import Data.Aeson ((.:), (.:?))
+import Data.Aeson ((.:), (.:?), (.!=))
 import qualified Data.Aeson as Aeson
 import Data.Text (Text)
 import Data.Time
 import Data.Vector.Unboxing (Vector)
+import qualified Data.Vector.Unboxing as V
 import Data.Word (Word64)
 import Optics.TH
 import qualified TextShow
@@ -54,7 +55,7 @@ instance Aeson.FromJSON Member where
       <*> u .:? "flags"
       <*> u .:? "premium_type"
       <*> v .:? "nick"
-      <*> (unAesonVector <$> u .: "roles")
+      <*> (fmap unAesonVector <$> u .:? "roles") .!= V.empty
       <*> u .: "joined_at"
       <*> u .: "deaf"
       <*> u .: "mute"

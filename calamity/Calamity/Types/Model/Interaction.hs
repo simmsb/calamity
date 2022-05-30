@@ -18,7 +18,7 @@ import Calamity.Types.Model.Guild (Guild, Role)
 import Calamity.Types.Model.Guild.Member (Member)
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
-import Data.Aeson ((.:), (.:?))
+import Data.Aeson ((.:), (.:?), (.!=))
 import qualified Data.Aeson as Aeson
 import qualified Data.HashMap.Strict as H
 import Data.Scientific (toBoundedInteger)
@@ -116,12 +116,12 @@ data ResolvedInteractionData = ResolvedInteractionData
 instance Aeson.FromJSON ResolvedInteractionData where
   parseJSON = Aeson.withObject "ResolvedInteractionData" $ \v ->
     ResolvedInteractionData
-      <$> v .: "users"
-      <*> v .: "members"
-      <*> v .: "roles"
-      <*> v .: "channels"
-      <*> v .: "messages"
-      <*> v .: "attachments"
+      <$> v .:? "users" .!= H.empty
+      <*> v .:? "members" .!= H.empty
+      <*> v .:? "roles" .!= H.empty
+      <*> v .:? "channels" .!= H.empty
+      <*> v .:? "messages" .!= H.empty
+      <*> v .:? "attachments" .!= H.empty
 
 data InteractionType
   = PingType

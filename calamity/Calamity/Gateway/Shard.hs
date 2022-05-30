@@ -246,7 +246,7 @@ shardLoop = do
                 Right a ->
                   P.embed . atomically $ tryWriteTBMQueue' outqueue (Discord a)
                 Left e -> do
-                  error [fmt|Failed to decode: {e}|]
+                  error [fmt|Failed to decode {e}: {msg'}|]
                   pure True
               when r inner
     outerloop :: ShardC r => Sem r ()

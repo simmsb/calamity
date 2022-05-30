@@ -184,7 +184,7 @@ instance Aeson.FromJSON MessageReference where
       <$> v .:? "message_id"
       <*> v .:? "channel_id"
       <*> v .:? "guild_id"
-      <*> v .: "fail_if_not_exists"
+      <*> v .:? "fail_if_not_exists" .!= False
 
 -- Thanks sbrg (https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L264)
 data MessageType
