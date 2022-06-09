@@ -201,9 +201,9 @@ type family EHType (d :: EventType) where
   EHType 'GuildBanRemoveEvt = (Guild, User)
   EHType 'GuildEmojisUpdateEvt = (Guild, [Emoji])
   EHType 'GuildIntegrationsUpdateEvt = Guild
-  EHType 'GuildMemberAddEvt = Member
-  EHType 'GuildMemberRemoveEvt = Member
-  EHType 'GuildMemberUpdateEvt = (Member, Member)
+  EHType 'GuildMemberAddEvt = (Guild, Member)
+  EHType 'GuildMemberRemoveEvt = (Guild, Member)
+  EHType 'GuildMemberUpdateEvt = (Guild, Member, Member)
   EHType 'GuildMembersChunkEvt = (Guild, [Member])
   EHType 'GuildRoleCreateEvt = (Guild, Role)
   EHType 'GuildRoleUpdateEvt = (Guild, Role, Role)

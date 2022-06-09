@@ -518,19 +518,19 @@ handleEvent' eh evt@(GuildMemberAdd gid member) = do
   updateCache evt
   Just guild <- getGuild gid
   Just member <- pure $ guild ^. #members % at (getID member)
-  pure $ map ($ member) (getEventHandlers @'GuildMemberAddEvt eh)
+  pure $ map ($ (guild, member)) (getEventHandlers @'GuildMemberAddEvt eh)
 handleEvent' eh evt@(GuildMemberRemove GuildMemberRemoveData {user, guildID}) = do
   Just guild <- getGuild guildID
   Just member <- pure $ guild ^. #members % at (getID user)
   updateCache evt
-  pure $ map ($ member) (getEventHandlers @'GuildMemberRemoveEvt eh)
+  pure $ map ($ (guild, member)) (getEventHandlers @'GuildMemberRemoveEvt eh)
 handleEvent' eh evt@(GuildMemberUpdate GuildMemberUpdateData {user, guildID}) = do
   Just oldGuild <- getGuild guildID
   Just oldMember <- pure $ oldGuild ^. #members % at (getID user)
   updateCache evt
   Just newGuild <- getGuild guildID
   Just newMember <- pure $ newGuild ^. #members % at (getID user)
-  pure $ map ($ (oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
+  pure $ map ($ (newGuild, oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
 handleEvent' eh evt@(GuildMembersChunk GuildMembersChunkData {members, guildID}) = do
   updateCache evt
   Just guild <- getGuild guildID
@@ -641,7 +641,7 @@ handleEvent' eh evt@(PresenceUpdate PresenceUpdateData {userID, presence = Prese
         if oldUser /= newUser
           then map ($ (oldUser, newUser)) (getEventHandlers @'UserUpdateEvt eh)
           else mempty
-  pure $ userUpdates <> map ($ (oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
+  pure $ userUpdates <> map ($ (newGuild, oldMember, newMember)) (getEventHandlers @'GuildMemberUpdateEvt eh)
 handleEvent' eh (TypingStart TypingStartData {channelID, guildID, userID, timestamp = UnixTimestamp timestamp}) =
   case guildID of
     Just gid -> do

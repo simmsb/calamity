@@ -1,5 +1,16 @@
 # Changelog for Calamity
 
+## 0.6.0.0
+
++ Updated the events `GuildMemberAddEvt`, `GuildMemberRemoveEvt`, and
+  `GuildMemberUpdateEvt` to include the relevant `Guild`.
+  
+```hs
+EHType 'GuildMemberAddEvt = (Guild, Member)
+EHType 'GuildMemberRemoveEvt = (Guild, Member)
+EHType 'GuildMemberUpdateEvt = (Guild, Member, Member)
+```
+
 ## 0.5.0.0
 
 + Replaced lens with optics internally, you should use optics for field labels now.
