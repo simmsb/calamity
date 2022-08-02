@@ -324,7 +324,7 @@ instance Request (InteractionRequest a) where
      in postWith' (ReqBodyJson jsonBody)
   action (CreateResponseMessage _ _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO [fmt|files[{n}]|] content)
+          (partLBS @IO (T.pack $ "files[" <> show n <> "]") content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }
@@ -354,7 +354,7 @@ instance Request (InteractionRequest a) where
     postWith' body u o
   action (CreateResponseUpdate _ _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO [fmt|files[{n}]|] content)
+          (partLBS @IO (T.pack $ "files[" <> show n <> "]") content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }
@@ -399,7 +399,7 @@ instance Request (InteractionRequest a) where
   action (GetOriginalInteractionResponse _ _) = getWith
   action (EditOriginalInteractionResponse _ _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO [fmt|files[{n}]|] content)
+          (partLBS @IO (T.pack $ "files[" <> show n <> "]") content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }
@@ -430,7 +430,7 @@ instance Request (InteractionRequest a) where
   action (DeleteOriginalInteractionResponse _ _) = deleteWith
   action (CreateFollowupMessage _ _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO [fmt|files[{n}]|] content)
+          (partLBS @IO (T.pack $ "files[" <> show n <> "]") content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }
@@ -456,7 +456,7 @@ instance Request (InteractionRequest a) where
   action GetFollowupMessage {} = getWith
   action (EditFollowupMessage _ _ _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO [fmt|files[{n}]|] content)
+          (partLBS @IO (T.pack $ "files[" <> show n <> "]") content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }

@@ -418,7 +418,7 @@ instance Request (ChannelRequest a) where
       & buildRoute
   action (CreateMessage _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO [fmt|files[{n}]|] content)
+          (partLBS @IO (T.pack $ "files[" <> show n <> "]") content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }

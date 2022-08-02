@@ -406,11 +406,11 @@ catchAllLogging m = do
   r <- P.errorToIOFinal . P.fromExceptionSem @SomeException $ P.raise m
   case r of
     Right _ -> pure ()
-    Left e -> debug [fmt|got exception: {e:s}|]
+    Left e -> debug . T.pack $ "got exception: " <> show e
 
 handleEvent :: BotC r => Int -> DispatchData -> P.Sem r ()
 handleEvent shardID data' = do
-  debug [fmt|"handling an event: {ctorName data'}"|]
+  debug . T.pack $ "handling an event: " <> ctorName data'
   eventHandlers <- P.atomicGet
   actions <- P.runFail $ do
     evtCounter <- registerCounter "events_received" [("type", T.pack $ ctorName data'), ("shard", showt shardID)]
@@ -427,7 +427,7 @@ handleEvent shardID data' = do
       (time, _) <- timeA . catchAllLogging $ P.embed action
       void $ observeHistogram time eventHandleHisto
     -- pattern match failures are usually stuff like events for uncached guilds, etc
-    Left err -> debug [fmt|Failed handling actions for event: {err:s}|]
+    Left err -> debug . T.pack $ "Failed handling actions for event: " <> show err
 
 handleEvent' ::
   BotC r =>

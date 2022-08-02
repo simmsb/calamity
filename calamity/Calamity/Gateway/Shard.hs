@@ -123,7 +123,7 @@ runWebsocket host path ma = do
 
   -- We have to do this all ourself I think?
   -- TODO: see if this isn't needed
-  let logExc e = debug [fmt|runWebsocket raised with {e:s}|]
+  let logExc e = debug $ "runWebsocket raised with " <> (T.pack . show $ e)
   logExc' <- bindSemToIO logExc
   let handler e = do
         void $ logExc' e
@@ -186,7 +186,7 @@ sendToWs data' = do
   case wsConn' of
     Just wsConn -> do
       let encodedData = A.encode data'
-      debug [fmt|sending {data':s} encoded to {encodedData:s} to gateway|]
+      debug . T.pack $ "sending " <> show data' <> " encoded to " <> show encodedData <> " to gateway"
       P.embed . sendTextData wsConn $ encodedData
     Nothing -> debug "tried to send to closed WS"
 
@@ -237,7 +237,7 @@ shardLoop = do
 
           case msg of
             Left (c, reason) -> do
-              whenJust reason (\r -> error [fmt|Shard closed with reason: {r}|])
+              whenJust reason (\r -> error . T.pack $ "Shard closed with reason: " <> show r)
               P.embed . atomically $ writeTBMQueue outqueue (Control c)
             Right msg' -> do
               -- debug [fmt|Got msg: {msg'}|]
@@ -246,7 +246,7 @@ shardLoop = do
                 Right a ->
                   P.embed . atomically $ tryWriteTBMQueue' outqueue (Discord a)
                 Left e -> do
-                  error [fmt|Failed to decode {e}: {msg'}|]
+                  error . T.pack $ "Failed to decode " <> e <> ": "<> show msg'
                   pure True
               when r inner
     outerloop :: ShardC r => Sem r ()
@@ -254,7 +254,7 @@ shardLoop = do
       shard :: Shard <- P.atomicGets (^. #shardS)
       let host = shard ^. #gateway
       let host' = fromMaybe host $ T.stripPrefix "wss://" host
-      info [fmt|starting up shard {shardID shard} of {shardCount shard}|]
+      info . T.pack $ "starting up shard " <> show (shardID shard) <> " of " <> show (shardCount shard)
 
       innerLoopVal <- runWebsocket host' "/?v=9&encoding=json" innerloop
 
@@ -284,7 +284,7 @@ shardLoop = do
 
       case (seqNum', sessionID') of
         (Just n, Just s) -> do
-          debug [fmt|Resuming shard (sessionID: {s}, seq: {n})|]
+          debug $ "Resuming shard (sessionID: " <> s <> ", seq: " <> T.pack (show n)
           sendToWs
             ( Resume
                 ResumeData
@@ -362,14 +362,14 @@ shardLoop = do
             P.embed $ threadDelay (15 * 1000 * 1000)
         P.throw ShardFlowRestart
       Hello interval -> do
-        info [fmt|Received hello, beginning to heartbeat at an interval of {interval}ms|]
+        info . T.pack $ "Received hello, beginning to heartbeat at an interval of " <> show interval <> "ms"
         startHeartBeatLoop interval
       HeartBeatAck -> do
         debug "Received heartbeat ack"
         P.atomicModify' (#hbResponse .~ True)
     handleMsg (Control msg) = case msg of
       SendPresence data' -> do
-        debug [fmt|Sending presence: ({data':s})|]
+        debug . T.pack $ "Sending presence: (" <> show data' <> ")"
         sendToWs $ StatusUpdate data'
       RestartShard -> P.throw ShardFlowRestart
       ShutDownShard -> P.throw ShardFlowShutDown
@@ -395,7 +395,7 @@ haltHeartBeat = do
 sendHeartBeat :: ShardC r => Sem r ()
 sendHeartBeat = do
   sn <- P.atomicGets (^. #seqNum)
-  debug [fmt|Sending heartbeat (seq: {sn:s})|]
+  debug . T.pack $ "Sending heartbeat (seq: " <> show sn <> ")"
   sendToWs $ HeartBeat sn
   P.atomicModify' (#hbResponse .~ False)
 

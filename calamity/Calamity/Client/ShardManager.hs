@@ -8,6 +8,7 @@ import Calamity.Internal.Utils
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
 import Control.Monad
+import qualified Data.Text as T
 import Data.Traversable
 import Optics
 import Polysemy (Sem)
@@ -38,7 +39,7 @@ shardBot initialStatus intents = (mapLeft StartupError <$>) . P.runFail $ do
   let host = gateway ^. #url
   P.embed $ putMVar numShardsVar numShards'
 
-  info [fmt|Number of shards: {numShards'}|]
+  info . T.pack $ "Number of shards: " <> show numShards'
 
   shards <- for [0 .. numShards' - 1] $ \id ->
     newShard host id numShards' token initialStatus intents inc

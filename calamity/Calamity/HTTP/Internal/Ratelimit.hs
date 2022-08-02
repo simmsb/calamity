@@ -210,7 +210,7 @@ doDiscordRequest r = do
       if
           | statusIsSuccessful status -> do
             let resp = responseBody r'
-            debug [fmt|Got good response from discord: {status:s}|]
+            debug $ "Got good response from discord: " <> (T.pack . show $ status)
             now <- P.embed getCurrentTime
             let rlHeaders = buildBucketState now r'
             pure $ Good resp rlHeaders
@@ -224,13 +224,13 @@ doDiscordRequest r = do
                 pure $ ServerError (statusCode status)
           | statusIsClientError status -> do
             let err = responseBody r'
-            error [fmt|Something went wrong: {err:s}, response: {r':s}|]
+            error . T.pack $ ("Something went wrong: " <> show err <> ", response: " <> show r')
             pure $ ClientError (statusCode status) err
           | otherwise -> do
-            debug [fmt|Got server error from discord: {statusCode status}|]
+            debug . T.pack $ "Got server error from discord: " <> (show . statusCode $ status)
             pure $ ServerError (statusCode status)
     Left e -> do
-      error [fmt|Something went wrong with the http client: {e}|]
+      error . T.pack $ "Something went wrong with the http client: " <> e
       pure . InternalResponseError $ T.pack e
 
 -- | Parse a ratelimit header returning when it unlocks
@@ -286,7 +286,7 @@ retryRequest maxRetries action = retryInner 0
       res <- action
       case res of
         Retry r | numRetries > maxRetries -> do
-          debug [fmt|Request failed after {maxRetries} retries|]
+          debug . T.pack $ "Request failed after " <> show maxRetries <> " retries"
           pure $ Left r
         Retry _ ->
           retryInner (numRetries + 1)
@@ -344,7 +344,7 @@ doSingleRequest rlstate route gl r = do
           Nothing -> pure ()
       pure $ RGood v
     Ratelimited unlockWhen False (Just (bs, bk)) -> do
-      debug [fmt|429 ratelimited on route, retrying at {unlockWhen:s}|]
+      debug . T.pack $ "429 ratelimited on route, retrying at " <> show unlockWhen
 
       P.embed . atomically $ do
         case rl of
