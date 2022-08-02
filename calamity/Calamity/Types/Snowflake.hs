@@ -19,6 +19,7 @@ import qualified Data.Vector.Unboxing as U
 import Data.Word
 import GHC.Records (HasField (getField))
 import TextShow
+import Web.HttpApiData (ToHttpApiData)
 
 -- Thanks sbrg
 -- https://github.com/saevarb/haskord/blob/d1bb07bcc4f3dbc29f2dfd3351ff9f16fc100c07/haskord-lib/src/Haskord/Types/Common.hs#L78
@@ -28,6 +29,7 @@ newtype Snowflake (t :: Type) = Snowflake
   deriving (Eq, Ord, Data)
   deriving newtype (Show, TextShow, FromJSONKey)
   deriving newtype (ToJSONKey, U.Unboxable)
+  deriving newtype (ToHttpApiData)
 
 -- I'm pretty sure that Word64's hash just being 'fromIntegral' is a bad idea when
 -- attempting to use it in a hashmap, so swizzle the bits a bit to give a good

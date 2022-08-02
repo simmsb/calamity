@@ -3,26 +3,43 @@
 -- | A User
 module Calamity.Types.Model.User (
   User (..),
+  UserBanner (..),
   Partial (PartialUser),
   StatusType (..),
 ) where
 
+import Calamity.Types.CDNAsset (CDNAsset (..))
+import Calamity.Types.Model.Avatar
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
 import Calamity.Types.Partial
 import Calamity.Types.Snowflake
+import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
 import Data.Aeson ((.:), (.:?))
 import qualified Data.Aeson as Aeson
 import Data.Text (Text)
+import qualified Data.Text as T
+import Data.Text.Read (decimal)
 import Data.Word
+import Network.HTTP.Req ((/:), (/~))
 import Optics.TH
 import TextShow.TH
+
+data UserBanner = UserBanner
+  { userID :: Snowflake User
+  , hash :: T.Text
+  }
+  deriving (Show, Eq)
+
+instance CDNAsset UserBanner where
+  assetURL UserBanner {hash, userID} =
+    cdnURL /: "banners" /~ userID /: assetHashFile hash
 
 data User = User
   { id :: Snowflake User
   , username :: Text
   , discriminator :: Text
   , bot :: Maybe Bool
-  , avatar :: Maybe Text
+  , avatar :: Avatar
   , mfaEnabled :: Maybe Bool
   , verified :: Maybe Bool
   , email :: Maybe Text
@@ -34,13 +51,20 @@ data User = User
   deriving (HasID Member) via HasIDFieldCoerce' "id" User
 
 instance Aeson.FromJSON User where
-  parseJSON = Aeson.withObject "User" $ \v ->
+  parseJSON = Aeson.withObject "User" $ \v -> do
+    uid <- v .: "id"
+    avatarHash <- v .:? "avatar"
+    discrim <- v .: "discriminator"
+    discrim' <- case decimal discrim of
+      Right (n, _) -> pure n
+      Left e -> fail e
+    let avatar = Avatar avatarHash uid discrim'
     User
-      <$> v .: "id"
+      <$> pure uid
       <*> v .: "username"
       <*> v .: "discriminator"
       <*> v .:? "bot"
-      <*> v .:? "avatar"
+      <*> pure avatar
       <*> v .:? "mfa_enabled"
       <*> v .:? "verified"
       <*> v .:? "email"

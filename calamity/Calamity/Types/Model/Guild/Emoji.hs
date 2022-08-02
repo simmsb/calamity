@@ -14,14 +14,18 @@ import Calamity.Internal.Utils (
   CalamityToJSON' (..),
   (.=),
  )
+import Calamity.Types.CDNAsset (CDNAsset (..))
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
+import Calamity.Utils.CDNUrl (cdnURL)
 import Data.Aeson ((.!=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
 import qualified Data.Text as T
 import Data.Vector.Unboxing (Vector)
+import Network.HTTP.Req ((/:))
 import Optics.TH
+import TextShow (showt)
 import qualified TextShow
 
 data Emoji = Emoji
@@ -47,6 +51,10 @@ instance Aeson.FromJSON Emoji where
       <*> v .:? "require_colons" .!= False
       <*> v .:? "managed" .!= False
       <*> v .:? "animated" .!= False
+
+instance CDNAsset Emoji where
+  assetURL Emoji {id, animated} =
+    cdnURL /: "emojis" /: (showt id <> if animated then ".gif" else ".png")
 
 emojiAsRawEmoji :: Emoji -> RawEmoji
 emojiAsRawEmoji Emoji {id, name, animated} = CustomEmoji $ PartialEmoji id name animated

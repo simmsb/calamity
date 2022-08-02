@@ -3,6 +3,10 @@
 -- | Discord Guilds
 module Calamity.Types.Model.Guild.Guild (
   Guild (..),
+  GuildIcon (..),
+  GuildSplash (..),
+  GuildDiscoverySplash (..),
+  GuildBanner (..),
   Partial (PartialGuild),
   UpdatedGuild (..),
 ) where
@@ -10,6 +14,7 @@ module Calamity.Types.Model.Guild.Guild (
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
 import qualified Calamity.Internal.SnowflakeMap as SM
 import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=))
+import Calamity.Types.CDNAsset (CDNAsset (..))
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild.Emoji
 import Calamity.Types.Model.Guild.Member
@@ -18,24 +23,68 @@ import Calamity.Types.Model.Presence.Presence
 import Calamity.Types.Model.User
 import Calamity.Types.Model.Voice.VoiceState
 import Calamity.Types.Snowflake
+import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
 import Data.Aeson ((.!=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
 import qualified Data.Aeson.Types as Aeson
 import Data.HashMap.Strict (HashMap)
 import qualified Data.HashMap.Strict as LH
 import Data.Maybe
-import Data.Text (Text)
+import qualified Data.Text as T
 import Data.Time
 import Data.Word
+import Network.HTTP.Req ((/:), (/~))
 import Optics
 import qualified TextShow
 import TextShow.TH (deriveTextShow)
 
+data GuildIcon = GuildIcon
+  { guildID :: Snowflake Guild
+  , hash :: T.Text
+  }
+  deriving (Show, Eq)
+
+instance CDNAsset GuildIcon where
+  assetURL GuildIcon {hash, guildID} =
+    cdnURL /: "icons" /~ guildID /: assetHashFile hash
+
+data GuildSplash = GuildSplash
+  { guildID :: Snowflake Guild
+  , hash :: T.Text
+  }
+  deriving (Show, Eq)
+
+instance CDNAsset GuildSplash where
+  assetURL GuildSplash {hash, guildID} =
+    cdnURL /: "splashes" /~ guildID /: assetHashFile hash
+
+data GuildDiscoverySplash = GuildDiscoverySplash
+  { guildID :: Snowflake Guild
+  , hash :: T.Text
+  }
+  deriving (Show, Eq)
+
+instance CDNAsset GuildDiscoverySplash where
+  assetURL GuildDiscoverySplash {hash, guildID} =
+    cdnURL /: "discovery-splashes" /~ guildID /: assetHashFile hash
+
+data GuildBanner = GuildBanner
+  { guildID :: Snowflake Guild
+  , hash :: T.Text
+  }
+  deriving (Show, Eq)
+
+instance CDNAsset GuildBanner where
+  assetURL GuildBanner {hash, guildID} =
+    cdnURL /: "banners" /~ guildID /: assetHashFile hash
+
 data Guild = Guild
   { id :: Snowflake Guild
-  , name :: Text
-  , icon :: Maybe Text
-  , splash :: Maybe Text
+  , name :: T.Text
+  , icon :: Maybe GuildIcon
+  , splash :: Maybe GuildSplash
+  , discoverySplash :: Maybe GuildSplash
+  , banner :: Maybe GuildBanner
   , owner :: Maybe Bool
   , ownerID :: Snowflake User
   , permissions :: Word64
@@ -48,7 +97,7 @@ data Guild = Guild
   , explicitContentFilter :: Int
   , roles :: SnowflakeMap Role
   , emojis :: SnowflakeMap Emoji
-  , features :: [Text]
+  , features :: [T.Text]
   , mfaLevel :: Int
   , applicationID :: Maybe (Snowflake User)
   , widgetEnabled :: Bool
@@ -63,7 +112,7 @@ data Guild = Guild
   , members :: SnowflakeMap Member
   , channels :: SnowflakeMap GuildChannel
   , presences :: HashMap (Snowflake User) Presence
-  , preferredLocale :: Text
+  , preferredLocale :: T.Text
   }
   deriving (Eq, Show)
   deriving (TextShow.TextShow) via TextShow.FromStringShow Guild
@@ -93,10 +142,17 @@ instance Aeson.FromJSON Guild where
           )
         $ presences'
 
+    icon <- (GuildIcon id <$>) <$> v .:? "icon"
+    splash <- (GuildSplash id <$>) <$> v .:? "splash"
+    discoverySplash <- (GuildSplash id <$>) <$> v .:? "discovery_splash"
+    banner <- (GuildBanner id <$>) <$> v .:? "banner"
+
     Guild id
       <$> v .: "name"
-      <*> v .: "icon"
-      <*> v .:? "splash"
+      <*> pure icon
+      <*> pure splash
+      <*> pure discoverySplash
+      <*> pure banner
       <*> v .:? "owner"
       <*> v .: "owner_id"
       <*> v .:? "permissions" .!= 0
@@ -127,7 +183,7 @@ instance Aeson.FromJSON Guild where
 
 data instance Partial Guild = PartialGuild
   { id :: Snowflake Guild
-  , name :: Text
+  , name :: T.Text
   }
   deriving (Eq, Show)
   deriving (HasID Guild) via HasIDField "id" (Partial Guild)
@@ -147,9 +203,11 @@ instance Aeson.FromJSON (Partial Guild) where
 
 data UpdatedGuild = UpdatedGuild
   { id :: Snowflake Guild
-  , name :: Text
-  , icon :: Maybe Text
-  , splash :: Maybe Text
+  , name :: T.Text
+  , icon :: Maybe GuildIcon
+  , splash :: Maybe GuildSplash
+  , discoverySplash :: Maybe GuildSplash
+  , banner :: Maybe GuildBanner
   , owner :: Maybe Bool
   , ownerID :: Snowflake User
   , permissions :: Maybe Word64
@@ -162,13 +220,13 @@ data UpdatedGuild = UpdatedGuild
   , explicitContentFilter :: Int
   , roles :: SnowflakeMap Role
   , emojis :: SnowflakeMap Emoji
-  , features :: [Text]
+  , features :: [T.Text]
   , mfaLevel :: Int
   , applicationID :: Maybe (Snowflake User)
   , widgetEnabled :: Maybe Bool
   , widgetChannelID :: Maybe (Snowflake GuildChannel)
   , systemChannelID :: Maybe (Snowflake GuildChannel)
-  , preferredLocale :: Text
+  , preferredLocale :: T.Text
   }
   deriving (Eq, Show)
   deriving (TextShow.TextShow) via TextShow.FromStringShow UpdatedGuild
@@ -176,11 +234,19 @@ data UpdatedGuild = UpdatedGuild
 
 instance Aeson.FromJSON UpdatedGuild where
   parseJSON = Aeson.withObject "Guild" $ \v -> do
+    id <- v .: "id"
+    icon <- (GuildIcon id <$>) <$> v .:? "icon"
+    splash <- (GuildSplash id <$>) <$> v .:? "splash"
+    discoverySplash <- (GuildSplash id <$>) <$> v .:? "discovery_splash"
+    banner <- (GuildBanner id <$>) <$> v .:? "banner"
+
     UpdatedGuild
       <$> v .: "id"
       <*> v .: "name"
-      <*> v .:? "icon"
-      <*> v .:? "splash"
+      <*> pure icon
+      <*> pure splash
+      <*> pure discoverySplash
+      <*> pure banner
       <*> v .:? "owner"
       <*> v .: "owner_id"
       <*> v .:? "permissions"
@@ -201,8 +267,10 @@ instance Aeson.FromJSON UpdatedGuild where
       <*> v .:? "system_channel_id"
       <*> v .: "preferred_locale"
 
+$(deriveTextShow ''GuildIcon)
 $(deriveTextShow 'PartialGuild)
 
 $(makeFieldLabelsNoPrefix ''Guild)
+$(makeFieldLabelsNoPrefix ''GuildIcon)
 $(makeFieldLabelsNoPrefix 'PartialGuild)
 $(makeFieldLabelsNoPrefix ''UpdatedGuild)

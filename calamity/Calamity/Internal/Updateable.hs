@@ -110,6 +110,8 @@ instance Updateable Guild where
       & setF @"name" n
       & setF @"icon" n
       & setF @"splash" n
+      & setF @"discoverySplash" n
+      & setF @"banner" n
       & setF @"owner" n
       & setF @"ownerID" n
       & mergeF @"permissions" n
@@ -135,7 +137,7 @@ instance Updateable User where
       & setF @"username" n
       & setF @"discriminator" n
       & mergeF' @"bot" n
-      & mergeF' @"avatar" n
+      & setF @"avatar" n
       & mergeF' @"mfaEnabled" n
       & mergeF' @"verified" n
       & mergeF' @"email" n

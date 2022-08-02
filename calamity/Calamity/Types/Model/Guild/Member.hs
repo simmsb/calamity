@@ -4,12 +4,14 @@
 module Calamity.Types.Model.Guild.Member (Member (..)) where
 
 import Calamity.Internal.Utils (AesonVector (unAesonVector))
+import Calamity.Types.Model.Avatar (Avatar (..))
 import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-import Data.Aeson ((.:), (.:?), (.!=))
+import Data.Aeson ((.!=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
 import Data.Text (Text)
+import Data.Text.Read (decimal)
 import Data.Time
 import Data.Vector.Unboxing (Vector)
 import qualified Data.Vector.Unboxing as V
@@ -22,7 +24,7 @@ data Member = Member
   , username :: Text
   , discriminator :: Text
   , bot :: Maybe Bool
-  , avatar :: Maybe Text
+  , avatar :: Avatar
   , mfaEnabled :: Maybe Bool
   , verified :: Maybe Bool
   , email :: Maybe Text
@@ -42,13 +44,19 @@ data Member = Member
 instance Aeson.FromJSON Member where
   parseJSON = Aeson.withObject "Member" $ \v -> do
     u :: Aeson.Object <- v .: "user"
-
+    uid <- u .: "id"
+    avatarHash <- u .:? "avatar"
+    discrim <- u .: "discriminator"
+    discrim' <- case decimal discrim of
+      Right (n, _) -> pure n
+      Left e -> fail e
+    let avatar = Avatar avatarHash uid discrim'
     Member
-      <$> u .: "id"
+      <$> pure uid
       <*> u .: "username"
       <*> u .: "discriminator"
       <*> v .:? "bot"
-      <*> v .:? "avatar"
+      <*> pure avatar
       <*> v .:? "mfa_enabled"
       <*> v .:? "verified"
       <*> v .:? "email"

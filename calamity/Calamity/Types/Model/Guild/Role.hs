@@ -1,24 +1,44 @@
 {-# LANGUAGE TemplateHaskell #-}
 
 -- | Guild roles
-module Calamity.Types.Model.Guild.Role (Role (..)) where
+module Calamity.Types.Model.Guild.Role (
+  Role (..),
+  RoleIcon (..),
+) where
 
 import Calamity.Internal.IntColour
 import Calamity.Internal.Utils
+import Calamity.Types.CDNAsset (CDNAsset (..))
+import {-# SOURCE #-} Calamity.Types.Model.Guild.Emoji
 import Calamity.Types.Model.Guild.Permissions
 import Calamity.Types.Snowflake
-import Data.Aeson ((.:))
+import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
+import Data.Aeson ((.:), (.:?))
 import qualified Data.Aeson as Aeson
 import Data.Colour
 import Data.Text (Text)
+import qualified Data.Text as T
+import Network.HTTP.Req ((/:), (/~))
 import Optics.TH
 import qualified TextShow
+
+data RoleIcon = RoleIcon
+  { roleID :: Snowflake Role
+  , hash :: T.Text
+  }
+  deriving (Show, Eq)
+
+instance CDNAsset RoleIcon where
+  assetURL RoleIcon {hash, roleID} =
+    cdnURL /: "icons" /~ roleID /: assetHashFile hash
 
 data Role = Role
   { id :: Snowflake Role
   , name :: Text
   , color :: Colour Double
   , hoist :: Bool
+  , icon :: Maybe RoleIcon
+  , emoji :: Maybe RawEmoji
   , position :: Int
   , permissions :: Permissions
   , managed :: Bool
@@ -41,12 +61,17 @@ instance CalamityToJSON' Role where
     ]
 
 instance Aeson.FromJSON Role where
-  parseJSON = Aeson.withObject "Role" $ \v ->
+  parseJSON = Aeson.withObject "Role" $ \v -> do
+    id <- v .: "id"
+    icon <- (RoleIcon id <$>) <$> v .: "icon"
+
     Role
-      <$> v .: "id"
+      <$> pure id
       <*> v .: "name"
       <*> (fromIntColour <$> v .: "color")
       <*> v .: "hoist"
+      <*> pure icon
+      <*> v .:? "unicode_emoji"
       <*> v .: "position"
       <*> v .: "permissions"
       <*> v .: "managed"
