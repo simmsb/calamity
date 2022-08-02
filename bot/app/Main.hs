@@ -20,7 +20,7 @@ module Main (main) where
 import Calamity
 import Calamity.Cache.InMemory
 import Calamity.Commands
-import Calamity.Commands.Context (useFullContext)
+import Calamity.Commands.Context (useFullContext, FullContext (FullContext))
 import qualified Calamity.Interactions as I
 import Calamity.Metrics.Noop
 import Control.Concurrent
@@ -34,6 +34,7 @@ import qualified Polysemy.Async as P
 import qualified Polysemy.State as P
 import System.Environment (getEnv)
 import TextShow
+import Calamity.Utils.CDNUrl (assetHashFile)
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -53,8 +54,16 @@ main = do
       . useFullContext
       $ runBotIO (BotToken token) defaultIntents $ do
         addCommands $ do
+          helpCommand
           -- just some examples
 
+          command @'[User] "pfp" \ctx u -> do
+            Right pfp <- fetchAsset (u ^. #avatar)
+            let name = case u ^. #avatar % #hash of
+                  Just hash -> assetHashFile hash
+                  Nothing -> "default.png"
+                file = CreateMessageAttachment name (Just "Your avatar") pfp
+            void $ tell ctx file
           command @'[User] "utest" \ctx u -> do
             void . tell @T.Text ctx $ "got user: " <> showt u
           command @'[Named "u" User, Named "u1" User] "utest2" \ctx u u1 -> do
@@ -148,3 +157,22 @@ main = do
                     I.endView ()
 
               pure ()
+
+        react @( 'CustomEvt (CtxCommandError FullContext)) \(CtxCommandError ctx e) -> do
+          DiP.info $ "Command failed with reason: " <> showt e
+          case e of
+            ParseError n r ->
+              void . tell ctx $
+                "Failed to parse parameter: " <> codeline n
+                  <> ", with reason: "
+                  <> codeblock' Nothing r
+            CheckError n r ->
+              void . tell ctx $
+                "The following check failed: " <> codeline n
+                  <> ", with reason: "
+                  <> codeblock' Nothing r
+            InvokeError n r ->
+              void . tell ctx $
+                "The command: " <> codeline n
+                  <> ", failed with reason: "
+                  <> codeblock' Nothing r
