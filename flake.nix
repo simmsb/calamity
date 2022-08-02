@@ -17,10 +17,10 @@
       let
         pkgs = nixpkgs.legacyPackages.${system};
         commands-sources = gitignore.lib.gitignoreSource ./calamity-commands/.;
-        main-sources = gitignore.lib.gitignoreSource ./calamity-commands/.;
+        main-sources = gitignore.lib.gitignoreSource ./calamity/.;
       in
-      with pkgs; rec {
-
+      with pkgs;
+      let
         calamityBuilder = hPkgs:
           let
             shell = pkg.env.overrideAttrs (old: {
@@ -34,11 +34,9 @@
                 ++ [ hPkgs.haskell-language-server ];
             });
 
-            calamity-commands = hPkgs.callCabal2nix "calamity-commands" commands-sources { };
-
             hPkgs' = hPkgs.override (old: {
               overrides = lib.composeExtensions (old.overrides or (_: _: { })) (self: super: {
-                # inherit calamity-commands;
+                calamity-commands = hPkgs.callCabal2nix "calamity-commands" commands-sources { };
               });
             });
 
@@ -51,31 +49,35 @@
             # Add the GHC version in the package name
           in
           pkg.overrideAttrs (old: { name = "calamity-ghc${hPkgs.ghc.version}"; });
-
-        packages = rec {
-          calamity_810 = calamityBuilder (haskell.packages.ghc8107.override {
-            overrides = self: super: with haskell.lib; { };
-          });
-
-          calamity_92 = calamityBuilder (haskell.packages.ghc923.override {
-            overrides = self: super: with haskell.lib; {
-              type-errors = haskell.lib.dontCheck (super.callHackage "type-errors" "0.2.0.0" { });
-              polysemy-plugin = haskell.lib.dontCheck (super.callHackage "polysemy-plugin" "0.4.3.1" { });
-              polysemy = haskell.lib.dontCheck (super.callHackage "polysemy" "1.7.1.0" { });
-            };
-          });
-
-          calamity_all = linkFarmFromDrvs "calamity_all" [
-            calamity_810
-            calamity_92
-          ];
-
-          calamity_current = calamity_92;
-          calamity = calamity_current;
+        sharedPackages = super: {
+          aeson-optics = haskell.lib.dontCheck (super.callHackage "aeson-optics" "1.2" { });
         };
+      in
+      rec {
+        packages =
+          rec {
+            calamity_810 = calamityBuilder (haskell.packages.ghc8107.override {
+              overrides = self: super: with haskell.lib; (sharedPackages super) // { };
+            });
 
-        defaultPackage = packages.calamity;
-        devShell = packages.calamity.shell_hls;
-        devShells = builtins.mapAttrs (name: value: value.shell) packages;
+            calamity_92 = calamityBuilder (haskell.packages.ghc923.override {
+              overrides = self: super: with haskell.lib; (sharedPackages super) // {
+                type-errors = haskell.lib.dontCheck (super.callHackage "type-errors" "0.2.0.0" { });
+                polysemy-plugin = haskell.lib.dontCheck (super.callHackage "polysemy-plugin" "0.4.3.1" { });
+                polysemy = haskell.lib.dontCheck (super.callHackage "polysemy" "1.7.1.0" { });
+              };
+            });
+
+            calamity_all = linkFarmFromDrvs "calamity_all" [
+              calamity_810
+              calamity_92
+            ];
+
+            calamity_current = calamity_92;
+            calamity = calamity_current;
+          };
+
+        packages.default = packages.calamity;
+        devShells.default = packages.calamity.shell_hls;
       });
 }
