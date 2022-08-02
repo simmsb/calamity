@@ -1,5 +1,31 @@
 # Changelog for Calamity
 
+## 0.7.0.0
+
++ Added the `CDNAsset` typeclass for resolving CDN asset links and fetching
+  them.
++ Added the module `Calamity.Types.Model.Avatar` with the types `Avatar` and
+  `MemberAvatar`
++ Changed the `avatar` field of `User` and `Member` to be `Avatar` (the default
+  avatar will be fetched if the user does not have one set).
++ Added the field `banner` to `User` and `Member` with type `Maybe UserBanner`.
++ Added the field `accentColour` to `User` and `Member` with type `Maybe (Colour Double)`.
++ Added the field `locale` to `User` and `Member` with type `Maybe Text`.
++ Added the field `Member.memberAvatar` with type `Text`. (discord limitation,
+  the guild id is needed to construct the member's guild avatar url, but discord
+  doesn't attach the guild id to the member...)
++ Added the type `RoleIcon` to `Calamity.Types.Model.Guild.Role`.
++ Added the field `Role.icon` with type `RoleIcon`.
++ Added the field `Role.emoji` with type `RawEmoji`.
++ Added the types `GuildIcon`, `GuildSplash`, `GuildDiscoverySplash`,
+  `GuildBanner` to `Calamity.Types.Model.Guild.Guild`.
++ Changed the type of `Guild.icon` to `Maybe GuildIcon`.
++ Changed the type of `Guild.splash` to `Maybe GuildSplash`.
++ Added the field `Guild.discoverySplash` with type `Maybe
+  GuildDiscoverySplash`.
++ Added the field `Guild.banner` with type `Maybe GuildBanner`.
+
+
 ## 0.6.0.0
 
 + Updated the events `GuildMemberAddEvt`, `GuildMemberRemoveEvt`, and

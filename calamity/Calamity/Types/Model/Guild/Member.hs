@@ -3,6 +3,7 @@
 -- | Guild Members
 module Calamity.Types.Model.Guild.Member (Member (..)) where
 
+import Calamity.Internal.IntColour
 import Calamity.Internal.Utils (AesonVector (unAesonVector))
 import Calamity.Types.Model.Avatar (Avatar (..))
 import Calamity.Types.Model.Guild.Role
@@ -10,6 +11,7 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson ((.!=), (.:), (.:?))
 import qualified Data.Aeson as Aeson
+import Data.Colour (Colour)
 import Data.Text (Text)
 import Data.Text.Read (decimal)
 import Data.Time
@@ -25,7 +27,11 @@ data Member = Member
   , discriminator :: Text
   , bot :: Maybe Bool
   , avatar :: Avatar
+  , memberAvatar :: Maybe Text
   , mfaEnabled :: Maybe Bool
+  , banner :: Maybe UserBanner
+  , accentColour :: Maybe (Colour Double)
+  , locale :: Maybe Text
   , verified :: Maybe Bool
   , email :: Maybe Text
   , flags :: Maybe Word64
@@ -51,13 +57,18 @@ instance Aeson.FromJSON Member where
       Right (n, _) -> pure n
       Left e -> fail e
     let avatar = Avatar avatarHash uid discrim'
+    banner <- (UserBanner uid <$>) <$> v .:? "banner"
     Member
       <$> pure uid
       <*> u .: "username"
       <*> u .: "discriminator"
       <*> v .:? "bot"
       <*> pure avatar
+      <*> v .:? "avatar"
       <*> v .:? "mfa_enabled"
+      <*> pure banner
+      <*> (fmap fromIntColour <$> v .:? "accent_color")
+      <*> v .:? "locale"
       <*> v .:? "verified"
       <*> v .:? "email"
       <*> v .:? "flags"

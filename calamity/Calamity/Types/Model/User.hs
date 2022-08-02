@@ -8,6 +8,7 @@ module Calamity.Types.Model.User (
   StatusType (..),
 ) where
 
+import Calamity.Internal.IntColour
 import Calamity.Types.CDNAsset (CDNAsset (..))
 import Calamity.Types.Model.Avatar
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Member
@@ -16,12 +17,14 @@ import Calamity.Types.Snowflake
 import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
 import Data.Aeson ((.:), (.:?))
 import qualified Data.Aeson as Aeson
+import Data.Colour (Colour)
 import Data.Text (Text)
 import qualified Data.Text as T
 import Data.Text.Read (decimal)
 import Data.Word
 import Network.HTTP.Req ((/:), (/~))
 import Optics.TH
+import qualified TextShow
 import TextShow.TH
 
 data UserBanner = UserBanner
@@ -41,12 +44,16 @@ data User = User
   , bot :: Maybe Bool
   , avatar :: Avatar
   , mfaEnabled :: Maybe Bool
+  , banner :: Maybe UserBanner
+  , accentColour :: Maybe (Colour Double)
+  , locale :: Maybe Text
   , verified :: Maybe Bool
   , email :: Maybe Text
   , flags :: Maybe Word64
   , premiumType :: Maybe Word64
   }
   deriving (Show, Eq)
+  deriving (TextShow.TextShow) via TextShow.FromStringShow User
   deriving (HasID User) via HasIDField "id" User
   deriving (HasID Member) via HasIDFieldCoerce' "id" User
 
@@ -59,6 +66,7 @@ instance Aeson.FromJSON User where
       Right (n, _) -> pure n
       Left e -> fail e
     let avatar = Avatar avatarHash uid discrim'
+    banner <- (UserBanner uid <$>) <$> v .:? "banner"
     User
       <$> pure uid
       <*> v .: "username"
@@ -66,6 +74,9 @@ instance Aeson.FromJSON User where
       <*> v .:? "bot"
       <*> pure avatar
       <*> v .:? "mfa_enabled"
+      <*> pure banner
+      <*> (fmap fromIntColour <$> v .:? "accent_color")
+      <*> v .:? "locale"
       <*> v .:? "verified"
       <*> v .:? "email"
       <*> v .:? "flags"
@@ -107,7 +118,6 @@ instance Aeson.ToJSON StatusType where
       Offline -> "offline"
       Invisible -> "invisible"
 
-$(deriveTextShow ''User)
 $(deriveTextShow 'PartialUser)
 $(deriveTextShow ''StatusType)
 $(makeFieldLabelsNoPrefix ''User)
