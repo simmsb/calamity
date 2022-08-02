@@ -711,10 +711,10 @@ updateCache (GuildRoleUpdate GuildRoleData {guildID, role}) =
   updateGuild guildID (#roles %~ SM.insert role)
 updateCache (GuildRoleDelete GuildRoleDeleteData {guildID, roleID}) =
   updateGuild guildID (#roles %~ sans roleID)
-updateCache (MessageCreate !msg !_ !_) =
+updateCache (MessageCreate !msg !user !_) = do
   setMessage msg
--- I think it's for the best not to cache things here, instead the end user
--- can just cache manually which users and members they want
+  whenJust user $ \u ->
+    setUser u
 updateCache (MessageUpdate msg !_ !_) =
   updateMessage (getID msg) (update msg)
 updateCache (MessageDelete MessageDeleteData {id}) = delMessage id
