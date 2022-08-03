@@ -18,6 +18,16 @@
         pkgs = nixpkgs.legacyPackages.${system};
         commands-sources = gitignore.lib.gitignoreSource ./calamity-commands/.;
         main-sources = gitignore.lib.gitignoreSource ./calamity/.;
+        calamityCommandsPkg = hPkgs: hPkgs.callCabal2nix "calamity-commands" commands-sources { };
+        calamityPkg = hPkgs:
+          let
+            hPkgs' = hPkgs.override (old: {
+              overrides = pkgs.lib.composeExtensions (old.overrides or (_: _: { })) (self: super: {
+                calamity-commands = calamityCommandsPkg hPkgs;
+              });
+            });
+          in
+          hPkgs'.callCabal2nix "calamity" main-sources { };
       in
       with pkgs;
       let
@@ -34,14 +44,8 @@
                 ++ [ hPkgs.haskell-language-server ];
             });
 
-            hPkgs' = hPkgs.override (old: {
-              overrides = lib.composeExtensions (old.overrides or (_: _: { })) (self: super: {
-                calamity-commands = hPkgs.callCabal2nix "calamity-commands" commands-sources { };
-              });
-            });
-
             pkg = (haskell.lib.buildFromSdist
-              (hPkgs'.callCabal2nix "calamity" main-sources { })).overrideAttrs
+              (calamityPkg hPkgs)).overrideAttrs
               (oldAttrs: {
                 buildInputs = oldAttrs.buildInputs;
                 passthru = oldAttrs.passthru // { inherit shell shell_hls; };
@@ -56,6 +60,8 @@
       rec {
         packages =
           rec {
+            inherit calamityCommandsPkg calamityPkg;
+
             calamity_810 = calamityBuilder (haskell.packages.ghc8107.override {
               overrides = self: super: with haskell.lib; (sharedPackages super) // { };
             });
