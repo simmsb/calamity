@@ -58,10 +58,12 @@
         };
       in
       rec {
+        lib = {
+            inherit calamityCommandsPkg calamityPkg;
+        };
+
         packages =
           rec {
-            inherit calamityCommandsPkg calamityPkg;
-
             calamity_810 = calamityBuilder (haskell.packages.ghc8107.override {
               overrides = self: super: with haskell.lib; (sharedPackages super) // { };
             });
