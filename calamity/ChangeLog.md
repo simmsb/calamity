@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.7.0.1
+
++ Fix accidental semver breakage
+
 ## 0.7.0.0
 
 + Added the `CDNAsset` typeclass for resolving CDN asset links and fetching
