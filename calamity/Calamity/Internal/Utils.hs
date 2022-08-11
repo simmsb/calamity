@@ -26,37 +26,38 @@ module Calamity.Internal.Utils (
   CalamityToJSON' (..),
 ) where
 
--- import Calamity.Internal.RunIntoIO
+import Calamity.Internal.RunIntoIO
 import Calamity.Types.LogEff
 import Control.Applicative
-import Control.Monad (when)
+import qualified Data.Aeson as Aeson
 import Data.Aeson.Encoding (null_)
 import Data.Default.Class
 import qualified Data.Map as M
+import Data.Maybe (catMaybes)
 import Data.Semigroup (Last (..))
 import Data.Text
 import qualified Data.Vector.Unboxing as VU
 import qualified DiPolysemy as Di
 import qualified Polysemy as P
 import TextShow
-import qualified Data.Aeson as Aeson
-import Data.Maybe (catMaybes)
 
 {- | Like whileM, but stateful effects are not preserved to mitigate memory leaks
 
  This means Polysemy.Error won't work to break the loop, etc.
  Instead, Error/Alternative will just result in the loop quitting.
 -}
-whileMFinalIO :: P.Sem r Bool -> P.Sem r ()
+whileMFinalIO :: P.Member (P.Final IO) r => P.Sem r Bool -> P.Sem r ()
 whileMFinalIO action = do
-  go action
+  action' <- runSemToIO action
+  P.embedFinal $ go action'
   where
-    go action = do
-      r <- action
-      when r $ go_b action
-    {-# INLINE go #-}
-    go_b = go
-    {-# NOINLINE go_b #-}
+    go action' = do
+      r <- action'
+      case r of
+        Just True ->
+          go action'
+        _ ->
+          pure ()
 
 {- | Like untilJust, but stateful effects are not preserved to mitigate memory leaks
 
@@ -65,18 +66,16 @@ whileMFinalIO action = do
 -}
 untilJustFinalIO :: P.Member (P.Final IO) r => P.Sem r (Maybe a) -> P.Sem r a
 untilJustFinalIO action = do
-  go action
+  action' <- runSemToIO action
+  P.embedFinal $ go action'
   where
-    go action = do
-      r <- action
+    go action' = do
+      r <- action'
       case r of
-        Just a ->
+        Just (Just a) ->
           pure a
         _ ->
-          go_b action
-    {-# INLINE go #-}
-    go_b = go
-    {-# NOINLINE go_b #-}
+          go action'
 
 whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
