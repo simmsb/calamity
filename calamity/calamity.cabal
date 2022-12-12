@@ -186,7 +186,7 @@ library
       QuasiQuotes
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
-      PyF ==0.10.*
+      PyF ==0.11.*
     , aeson ==2.0.*
     , async >=2.2 && <3
     , base >=4.13 && <5
