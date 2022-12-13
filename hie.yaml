@@ -1,10 +1,2 @@
 cradle:
   cabal:
-    - path: "bot/./"
-      component: "exe:bot"
-
-    - path: "calamity/./"
-      component: "lib:calamity"
-
-    - path: "calamity-commands/./"
-      component: "lib:calamity-commands"
