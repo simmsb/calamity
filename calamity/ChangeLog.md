@@ -1,5 +1,9 @@
 # Changelog for Calamity
 
+## 0.7.1.0
+
++ Fix ratelimits being effectively broken (succ -> pred)
+
 ## 0.7.0.1
 
 + Fix accidental semver breakage

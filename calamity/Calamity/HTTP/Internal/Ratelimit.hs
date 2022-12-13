@@ -62,6 +62,27 @@ getRateLimit s h = do
     Nothing ->
       pure $ UnknownRatelimit h
 
+mergeBucketStates :: BucketState -> BucketState -> BucketState
+mergeBucketStates old new =
+  new
+    { ongoing = old ^. #ongoing
+    , -- we only ignore the previous 'remaining' if we've not reset yet and the
+      -- reset time has changed
+      remaining =
+        if isJust (old ^. #resetTime) && old ^. #resetKey /= new ^. #resetKey
+          then min (old ^. #remaining) (new ^. #remaining)
+          else new ^. #remaining
+    , -- only take the new resetTime if it actually changed
+      resetTime =
+        if old ^. #resetKey /= new ^. #resetKey
+          then new ^. #resetTime
+          else old ^. #resetTime
+    }
+
+
+updateKnownBucket :: Bucket -> BucketState -> STM ()
+updateKnownBucket bucket bucketState = modifyTVar' (bucket ^. #state) (`mergeBucketStates` bucketState)
+
 {- | Knowing the bucket for a route, and the ratelimit info, map the route to
  the bucket key and retrieve the bucket
 -}
@@ -75,32 +96,23 @@ updateBucket s h b bucketState = do
       bucket <- SC.lookup bucketKey' $ buckets s
       case bucket of
         Just bucket' -> do
-          modifyTVar' (bucket' ^. #state) (`mergeStates` bucketState)
+          modifyTVar' (bucket' ^. #state) (`mergeBucketStates` bucketState)
           pure bucket'
         Nothing -> Prelude.error "Not possible"
     Nothing -> do
-      -- the bucket key wasn't known, make a new bucket and insert it
-      bs <- Bucket <$> newTVar bucketState
-      SC.insert bs b $ buckets s
+      -- we didn't know the key to this bucket, but we might know the bucket
+      -- if we truly don't know the bucket, then make a new one
+      bs <- do
+        bucket <- SC.lookup b $ buckets s
+        case bucket of
+          Just bs -> pure bs
+          Nothing -> do
+            bs <- Bucket <$> newTVar bucketState
+            SC.insert bs b $ buckets s
+            pure bs
+
       SC.insert b h $ bucketKeys s
       pure bs
-  where
-    mergeStates :: BucketState -> BucketState -> BucketState
-    mergeStates old new =
-      new
-        { ongoing = old ^. #ongoing
-        , -- we only ignore the previous 'remaining' if we've not reset yet and the
-          -- reset time has changed
-          remaining =
-            if isJust (old ^. #resetTime) && old ^. #resetKey /= new ^. #resetKey
-              then min (old ^. #remaining) (new ^. #remaining)
-              else new ^. #remaining
-        , -- only take the new resetTime if it actually changed
-          resetTime =
-            if old ^. #resetKey /= new ^. #resetKey
-              then new ^. #resetTime
-              else old ^. #resetTime
-        }
 
 resetBucket :: Bucket -> STM ()
 resetBucket bucket =
@@ -177,8 +189,6 @@ useBucketOnce bucket = go 0
             -- the bucket has expired, there are no ongoing requests because of
             -- [0] wait and then retry after we can unlock the bucket
             pure (intoWaitDelay $ s ^. #resetTime)
-
-      -- putStrLn (show now <> ": Using bucket, waiting until: " <> show mWaitDelay <> ", uses: " <> show s <> ", " <> inf)
 
       case mWaitDelay of
         WaitUntil waitUntil -> do
@@ -336,36 +346,41 @@ doSingleRequest rlstate route gl r = do
       void . P.embed . atomically $ do
         case rl of
           KnownRatelimit bucket ->
-            modifyTVar' (bucket ^. #state) (#ongoing %~ succ)
+            modifyTVar' (bucket ^. #state) (#ongoing %~ pred)
           _ -> pure ()
-        case rlHeaders of
-          Just (bs, bk) ->
+        case (rl, rlHeaders) of
+          (KnownRatelimit bucket, Just (bs, _bk)) ->
+            updateKnownBucket bucket bs
+          (_, Just (bs, bk)) ->
             void $ updateBucket rlstate (routeKey route) bk bs
-          Nothing -> pure ()
+          (_, Nothing) -> pure ()
       pure $ RGood v
+
     Ratelimited unlockWhen False (Just (bs, bk)) -> do
       debug . T.pack $ "429 ratelimited on route, retrying at " <> show unlockWhen
 
       P.embed . atomically $ do
         case rl of
-          KnownRatelimit bucket ->
-            modifyTVar' (bucket ^. #state) (#ongoing %~ succ)
-          _ -> pure ()
-        void $ updateBucket rlstate (routeKey route) bk bs
+          KnownRatelimit bucket -> do
+            modifyTVar' (bucket ^. #state) (#ongoing %~ pred)
+            updateKnownBucket bucket bs
+          _ -> void $ updateBucket rlstate (routeKey route) bk bs
 
       P.embed $ do
         threadDelayUntil unlockWhen
 
       pure $ Retry (HTTPError 429 Nothing)
+
     Ratelimited unlockWhen False _ -> do
       debug "Internal error (ratelimited but no headers), retrying"
       case rl of
         KnownRatelimit bucket ->
-          void . P.embed . atomically $ modifyTVar' (bucket ^. #state) (#ongoing %~ succ)
+          void . P.embed . atomically $ modifyTVar' (bucket ^. #state) (#ongoing %~ pred)
         _ -> pure ()
 
       P.embed $ threadDelayUntil unlockWhen
       pure $ Retry (HTTPError 429 Nothing)
+
     Ratelimited unlockWhen True bs -> do
       debug "429 ratelimited globally"
 

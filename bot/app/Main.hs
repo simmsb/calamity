@@ -35,6 +35,7 @@ import qualified Polysemy.State as P
 import System.Environment (getEnv)
 import TextShow
 import Calamity.Utils.CDNUrl (assetHashFile)
+import Calamity (RawEmoji)
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -82,6 +83,11 @@ main = do
           command @'[] "bye" \ctx -> do
             void $ tell @T.Text ctx "bye!"
             stopBot
+
+          command @'[[RawEmoji]] "reactpls" \ctx emojis -> do
+            DiP.debug @T.Text ("emojis: " <> showt emojis)
+            forM_ emojis \e ->
+              invoke $ CreateReaction ctx ctx e
 
           -- views!
 

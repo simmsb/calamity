@@ -5,7 +5,7 @@ cabal-version: 2.0
 -- see: https://github.com/sol/hpack
 
 name:           calamity
-version:        0.7.0.2
+version:        0.7.1.0
 synopsis:       A library for writing discord bots in haskell
 description:    Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
 category:       Network, Web
@@ -18,7 +18,7 @@ license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 tested-with:
-    GHC == 8.10.7, GHC == 9.2.4
+    GHC == 8.10.7, GHC == 9.2.5
 extra-source-files:
     README.md
     ChangeLog.md
@@ -187,7 +187,7 @@ library
   ghc-options: -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       PyF ==0.11.*
-    , aeson ==2.0.*
+    , aeson >=2.0 && <2.2
     , async >=2.2 && <3
     , base >=4.13 && <5
     , bytestring >=0.10 && <0.12
@@ -206,7 +206,7 @@ library
     , exceptions ==0.10.*
     , focus >=1.0 && <2
     , hashable >=1.2 && <2
-    , http-api-data >=0.4.3 && <0.5
+    , http-api-data >=0.4.3 && <0.6
     , http-client >=0.5 && <0.8
     , http-date >=0.0.8 && <0.1
     , http-types ==0.12.*
@@ -216,7 +216,7 @@ library
     , polysemy >=1.5 && <2
     , polysemy-plugin >=0.3 && <0.5
     , reflection >=2.1 && <3
-    , req >=3.9.2 && <3.11
+    , req >=3.9.2 && <3.14
     , safe-exceptions >=0.1 && <2
     , scientific ==0.3.*
     , stm >=2.5 && <3
@@ -226,11 +226,11 @@ library
     , text-show >=3.8 && <4
     , time >=1.8 && <1.13
     , tls >=1.4 && <2
-    , typerep-map >=0.3 && <0.6
+    , typerep-map >=0.5 && <0.7
     , unagi-chan ==0.4.*
     , unboxing-vector ==0.2.*
     , unordered-containers ==0.2.*
-    , vector ==0.12.*
+    , vector >=0.12 && <0.14
     , websockets >=0.12 && <0.13
     , x509-system >=1.6.6 && <1.7
     , random >=1.2 && <1.3

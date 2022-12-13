@@ -84,12 +84,14 @@
                   polysemy-plugin = haskell.lib.dontCheck (super.callHackage "polysemy-plugin" "0.4.3.1" { });
                   polysemy = haskell.lib.dontCheck (super.callHackage "polysemy" "1.7.1.0" { });
                   PyF = haskell.lib.dontCheck (super.callHackage "PyF" "0.11.0.0" { });
+                  typerep-map = haskell.lib.dontCheck (super.callHackage "typerep-map" "0.6.0.0" { });
                 };
               });
             };
 
             calamity_all = linkFarmFromDrvs "calamity_all" [
-              calamity_810
+              # calamity_810 bricked? it seems to think base doesn't exist
+
               calamity_92
             ];
 

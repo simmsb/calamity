@@ -174,17 +174,17 @@ buildRoute ::
   Route
 buildRoute (UnsafeMkRouteBuilder route ids params) =
   Route
-    (foldl' (/:) baseURL $ map goR route)
-    (T.concat (map goIdent route))
+    (foldl' (/:) baseURL $ map goRoute route)
+    (T.concat (map goKey route))
     (Snowflake <$> lookup (typeRep (Proxy @Channel)) ids)
     (Snowflake <$> lookup (typeRep (Proxy @Guild)) ids)
   where
-    goR (S' t) = t
-    goR (PS' t) = fromJust $ lookup t params
-    goR (ID' t) = TextShow.showt . fromJust $ lookup t ids
+    goRoute (S' t) = t
+    goRoute (PS' t) = fromJust $ lookup t params
+    goRoute (ID' t) = TextShow.showt . fromJust $ lookup t ids
 
-    goIdent (S' t) = t
-    goIdent (PS' s) = T.pack s
-    goIdent (ID' t) = TextShow.showt t
+    goKey (S' t) = t
+    goKey (PS' t) = T.pack t
+    goKey (ID' t) = TextShow.showt t
 
 $(makeFieldLabelsNoPrefix ''Route)
