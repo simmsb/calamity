@@ -29,7 +29,16 @@
             calamity.root = ./calamity;
           };
 
-          buildTools = hp: {
+          buildTools = hp:
+            let
+              # https://github.com/NixOS/nixpkgs/issues/140774 reoccurs in GHC 9.2
+              workaround140774 = hpkg: with pkgs.haskell.lib;
+                overrideCabal hpkg (drv: {
+                  enableSeparateBinOutput = false;
+                });
+            in
+          {
+            ghcid = workaround140774 hp.ghcid;
             treefmt = config.treefmt.build.wrapper;
           } // config.treefmt.build.programs;
           hlsCheck.enable = false;
