@@ -1,41 +1,42 @@
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
-
+{-# LANGUAGE ApplicativeDo #-}
+{-# LANGUAGE BlockArguments #-}
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE FlexibleContexts #-}
+{-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE PolyKinds #-}
 {-# LANGUAGE ScopedTypeVariables #-}
-{-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TemplateHaskell #-}
-{-# LANGUAGE BlockArguments #-}
-{-# LANGUAGE ApplicativeDo #-}
-{-# LANGUAGE FlexibleInstances #-}
-{-# LANGUAGE MultiParamTypeClasses #-}
+{-# LANGUAGE TypeApplications #-}
+{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module Main (main) where
 
 import Calamity
 import Calamity.Cache.InMemory
 import Calamity.Commands
-import Calamity.Commands.Context (useFullContext, FullContext (FullContext))
+import Calamity.Commands.Context (useFullContext, FullContext)
 import qualified Calamity.Interactions as I
 import Calamity.Metrics.Noop
+import Calamity.Utils.CDNUrl (assetHashFile)
 import Control.Concurrent
-import Optics
 import Control.Monad
 import qualified Data.Text as T
 import qualified Di
 import qualified DiPolysemy as DiP
+import Optics
 import qualified Polysemy as P
 import qualified Polysemy.Async as P
 import qualified Polysemy.State as P
 import System.Environment (getEnv)
 import TextShow
-import Calamity.Utils.CDNUrl (assetHashFile)
-import Calamity (RawEmoji)
+import Data.Foldable (for_)
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -48,21 +49,23 @@ main :: IO ()
 main = do
   token <- T.pack <$> getEnv "BOT_TOKEN"
   Di.new $ \di ->
-    void . P.runFinal . P.embedToFinal . DiP.runDiToIO di
+    void
+      . P.runFinal
+      . P.embedToFinal
+      . DiP.runDiToIO di
       . runCacheInMemory
       . runMetricsNoop
       . useConstantPrefix "!"
       . useFullContext
-      $ runBotIO (BotToken token) defaultIntents $ do
+      $ runBotIO (BotToken token) defaultIntents
+      $ do
         addCommands $ do
           helpCommand
           -- just some examples
 
           command @'[User] "pfp" \ctx u -> do
             Right pfp <- fetchAsset (u ^. #avatar)
-            let name = case u ^. #avatar % #hash of
-                  Just hash -> assetHashFile hash
-                  Nothing -> "default.png"
+            let name = maybe "default.png" assetHashFile (u ^. #avatar % #hash)
                 file = CreateMessageAttachment name (Just "Your avatar") pfp
             void $ tell ctx file
           command @'[User] "utest" \ctx u -> do
@@ -86,8 +89,7 @@ main = do
 
           command @'[[RawEmoji]] "reactpls" \ctx emojis -> do
             DiP.debug @T.Text ("emojis: " <> showt emojis)
-            forM_ emojis \e ->
-              invoke $ CreateReaction ctx ctx e
+            for_ emojis $ invoke . CreateReaction ctx ctx
 
           -- views!
 
@@ -164,21 +166,24 @@ main = do
 
               pure ()
 
-        react @( 'CustomEvt (CtxCommandError FullContext)) \(CtxCommandError ctx e) -> do
+        react @('CustomEvt (CtxCommandError FullContext)) \(CtxCommandError ctx e) -> do
           DiP.info $ "Command failed with reason: " <> showt e
           case e of
             ParseError n r ->
               void . tell ctx $
-                "Failed to parse parameter: " <> codeline n
+                "Failed to parse parameter: "
+                  <> codeline n
                   <> ", with reason: "
                   <> codeblock' Nothing r
             CheckError n r ->
               void . tell ctx $
-                "The following check failed: " <> codeline n
+                "The following check failed: "
+                  <> codeline n
                   <> ", with reason: "
                   <> codeblock' Nothing r
             InvokeError n r ->
               void . tell ctx $
-                "The command: " <> codeline n
+                "The command: "
+                  <> codeline n
                   <> ", failed with reason: "
                   <> codeblock' Nothing r

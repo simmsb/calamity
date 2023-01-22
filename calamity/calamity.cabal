@@ -1,9 +1,5 @@
 cabal-version: 2.0
 
--- This file has been generated from package.yaml by hpack version 0.34.4.
---
--- see: https://github.com/sol/hpack
-
 name:           calamity
 version:        0.7.1.0
 synopsis:       A library for writing discord bots in haskell
@@ -18,7 +14,7 @@ license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 tested-with:
-    GHC == 8.10.7, GHC == 9.2.5
+    GHC == 9.4.4
 extra-source-files:
     README.md
     ChangeLog.md

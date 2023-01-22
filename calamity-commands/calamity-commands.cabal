@@ -1,8 +1,4 @@
-cabal-version: 1.18
-
--- This file has been generated from package.yaml by hpack version 0.34.4.
---
--- see: https://github.com/sol/hpack
+cabal-version: 2.0
 
 name:           calamity-commands
 version:        0.4.0.0
@@ -18,7 +14,7 @@ license:        MIT
 license-file:   LICENSE
 build-type:     Simple
 tested-with:
-    GHC == 8.10.7, GHC == 9.2.2
+    GHC == 9.4.4
 extra-source-files:
     README.md
     ChangeLog.md

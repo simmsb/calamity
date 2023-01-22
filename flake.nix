@@ -3,75 +3,108 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
-
-    # hls.url = "github:haskell/haskell-language-server";
-    # hls.url = "github:cydparser/haskell-language-server?rev=497d2846ec4aceea8e368209d9ed2b13a405abf0";
-    
-    # flake-utils.url = "github:numtide/flake-utils";
-    gitignore = {
-      url = "github:hercules-ci/gitignore.nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
+    gitignore.url = "github:hercules-ci/gitignore.nix";
     flake-parts.url = "github:hercules-ci/flake-parts";
     haskell-flake.url = "github:srid/haskell-flake";
-    treefmt-flake.url = "github:srid/treefmt-flake";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
+    flake-root.url = "github:srid/flake-root";
+    mission-control.url = "github:Platonic-Systems/mission-control";
   };
 
-  outputs = inputs @ { self, nixpkgs, gitignore, flake-parts, haskell-flake, treefmt-flake, ... }:
-    flake-parts.lib.mkFlake { inherit self; } {
+  outputs = inputs@{ self, nixpkgs, gitignore, flake-parts, ... }:
+    flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
       imports = [
         inputs.haskell-flake.flakeModule
-        inputs.treefmt-flake.flakeModule
+        inputs.treefmt-nix.flakeModule
+        inputs.flake-root.flakeModule
+        inputs.mission-control.flakeModule
       ];
-      perSystem = { self', config, pkgs, ... }: {
-        haskellProjects.default = {
-          haskellPackages = pkgs.haskell.packages.ghc925;
+      perSystem = { self', lib, config, pkgs, ... }: {
+        haskellProjects.main = {
+          haskellPackages = pkgs.haskell.packages.ghc944;
           packages = {
             calamity-commands.root = ./calamity-commands;
             calamity.root = ./calamity;
           };
 
-          buildTools = hp:
-            let
-              # https://github.com/NixOS/nixpkgs/issues/140774 reoccurs in GHC 9.2
-              workaround140774 = hpkg: with pkgs.haskell.lib;
-                overrideCabal hpkg (drv: {
-                  enableSeparateBinOutput = false;
-                });
-            in
-            {
-              inherit (pkgs)
-                treefmt
-                nixpkgs-fmt;
-              inherit (hp)
-                cabal-fmt;
-              inherit (hp)
-                fourmolu;
-              ghcid = workaround140774 hp.ghcid;
-            } // config.treefmt.formatters;
+          buildTools = hp: {
+            treefmt = config.treefmt.build.wrapper;
+          } // config.treefmt.build.programs;
+          hlsCheck.enable = false;
+          hlintCheck.enable = true;
 
           overrides = self: super: with pkgs.haskell.lib; {
+            ghcid = dontCheck super.ghcid;
+
             ListLike = dontCheck super.ListLike;
-            type-errors = dontCheck (super.callHackage "type-errors" "0.2.0.0" { });
-            polysemy-plugin = dontCheck (super.callHackage "polysemy-plugin" "0.4.3.1" { });
-            polysemy = dontCheck (super.callHackage "polysemy" "1.7.1.0" { });
-            PyF = dontCheck (super.callHackage "PyF" "0.11.0.0" { });
+            type-errors = dontCheck (super.callHackage "type-errors" "0.2.0.1" { });
+            polysemy-plugin = dontCheck (super.callHackage "polysemy-plugin" "0.4.4.0" { });
+            polysemy = dontCheck (super.callHackage "polysemy" "1.9.0.0" { });
+            PyF = dontCheck (super.callHackage "PyF" "0.11.1.0" { });
             typerep-map = dontCheck (super.callHackage "typerep-map" "0.6.0.0" { });
             aeson-optics = dontCheck (super.callHackage "aeson-optics" "1.2.0.1" { });
+            optics = dontCheck super.optics;
+
+            http-api-data = dontCheck (super.callHackage "http-api-data" "0.5" { });
+            # this v is needed so http-api-data builds
+            attoparsec-iso8601 = dontCheck (super.callHackage "attoparsec-iso8601" "1.1.0.0" { });
           };
-          hlsCheck.enable = true;
-          hlintCheck.enable = true;
         };
-        treefmt.formatters = {
-          inherit (pkgs)
-            nixpkgs-fmt;
-          inherit (pkgs.haskellPackages)
-            cabal-fmt
-            fourmolu;
+
+        treefmt.config = {
+          inherit (config.flake-root) projectRootFile;
+          package = pkgs.treefmt;
+
+          programs.ormolu.enable = true;
+          programs.nixpkgs-fmt.enable = true;
+          programs.cabal-fmt.enable = true;
+
+          # We use fourmolu
+          programs.ormolu.package = pkgs.haskellPackages.fourmolu;
+          settings.formatter.ormolu = {
+            options = [
+              "--ghc-opt"
+              "-XImportQualifiedPost"
+            ];
+          };
         };
+
+        mission-control.scripts = {
+          docs = {
+            description = "Start Hoogle server for project dependencies";
+            exec = ''
+              echo http://127.0.0.1:8690
+              hoogle serve -p 8690 --local
+            '';
+            category = "Dev Tools";
+          };
+          repl = {
+            description = "Start the cabal repl";
+            exec = ''
+              cabal repl "$@"
+            '';
+            category = "Dev Tools";
+          };
+          fmt = {
+            description = "Format the source tree";
+            exec = "${lib.getExe config.treefmt.build.wrapper}";
+            category = "Dev Tools ";
+          };
+          run = {
+            description = "Run the project with ghcid auto-recompile";
+            exec = ''
+              ghcid -c "cabal repl exe:haskell-template" --warnings -T :main
+            '';
+            category = "Primary";
+          };
+        };
+        
         packages.default = self'.packages.calamity;
+        devShells.default =
+          config.mission-control.installToDevShell self'.devShells.main;
       };
+
+      flake.herculesCI.ciSystems = [ "x86_64-linux" ];
     };
 }
