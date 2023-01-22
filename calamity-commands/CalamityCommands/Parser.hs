@@ -18,21 +18,21 @@ module CalamityCommands.Parser (
 import CalamityCommands.ParameterInfo
 
 import Control.Monad
-import Optics
 import Data.Char (isSpace)
 import Data.Kind
 import Data.List.NonEmpty (NonEmpty (..))
 import Data.Maybe (fromMaybe)
 import Data.Semigroup
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as L
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as L
 import Data.Typeable
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
-import qualified Polysemy as P
-import qualified Polysemy.Error as P
-import qualified Polysemy.Reader as P
-import qualified Polysemy.State as P
 import Numeric.Natural (Natural)
+import Optics
+import Polysemy qualified as P
+import Polysemy.Error qualified as P
+import Polysemy.Reader qualified as P
+import Polysemy.State qualified as P
 import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char
 import Text.Megaparsec.Char.Lexer (decimal, float, signed)
@@ -48,21 +48,20 @@ data SpannedError = SpannedError T.Text !Int !Int
  that parse a parameter from anywhere in the input message.
 -}
 data ParserState = ParserState
-  { -- | The current offset, or where the next parser should start parsing at
-    off :: Int
-  , -- | The input message ot parse
-    msg :: T.Text
+  { off :: Int
+  -- ^ The current offset, or where the next parser should start parsing at
+  , msg :: T.Text
+  -- ^ The input message ot parse
   }
   deriving (Show)
 
 $(makeFieldLabelsNoPrefix ''ParserState)
 
--- |
 type ParserEffs c r =
   ( P.State ParserState
       ': P.Error (T.Text, T.Text) -- (failing parser name, error reason)
-        ': P.Reader c -- the current parser state
-          ': r -- context
+      ': P.Reader c -- the current parser state
+      ': r -- context
   )
 
 -- | Run a command parser, @ctx@ is the context, @t@ is the text input
@@ -180,12 +179,12 @@ instance ParameterParser a c r => ParameterParser [a] c r where
   type ParserResult [a] = [ParserResult a]
 
   parse = go []
-   where
-    go :: [ParserResult a] -> P.Sem (ParserEffs c r) [ParserResult a]
-    go l =
-      P.catch (Just <$> parse @a) (const $ pure Nothing) >>= \case
-        Just a -> go $ l <> [a]
-        Nothing -> pure l
+    where
+      go :: [ParserResult a] -> P.Sem (ParserEffs c r) [ParserResult a]
+      go l =
+        P.catch (Just <$> parse @a) (const $ pure Nothing) >>= \case
+          Just a -> go $ l <> [a]
+          Nothing -> pure l
 
   parameterDescription = "zero or more '" <> parameterDescription @a @c @r <> "'"
 

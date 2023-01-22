@@ -26,14 +26,14 @@ import Calamity.Types.TokenEff
 import Control.Monad
 import Data.Aeson hiding (Options)
 import Data.Aeson.Types (parseEither)
-import qualified Data.ByteString.Lazy as LB
-import qualified Data.Text as T
-import qualified Data.Text.Encoding as TS
+import Data.ByteString.Lazy qualified as LB
+import Data.Text qualified as T
+import Data.Text.Encoding qualified as TS
 import DiPolysemy hiding (debug, error, info)
 import Network.HTTP.Req
 import Optics
-import qualified Polysemy as P
-import qualified Polysemy.Error as P
+import Polysemy qualified as P
+import Polysemy.Error qualified as P
 import Web.HttpApiData
 
 throwIfLeft :: P.Member (P.Error RestError) r => Either String a -> P.Sem r a

@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 -- | Interaction endpoints
 module Calamity.HTTP.Interaction (
@@ -18,19 +19,18 @@ import Calamity.Types.Model.Channel.Embed (Embed)
 import Calamity.Types.Model.Channel.Message (Message)
 import Calamity.Types.Model.Interaction
 import Calamity.Types.Snowflake
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Bits (shiftL, (.|.))
 import Data.Default.Class
-import qualified Data.HashMap.Strict as H
+import Data.HashMap.Strict qualified as H
 import Data.Maybe (fromMaybe)
 import Data.Monoid (First (First, getFirst))
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
 import Optics
-import PyF
 
 data InteractionCallback = InteractionCallback
   { type_ :: InteractionCallbackType
@@ -110,8 +110,8 @@ instance CalamityToJSON' InteractionCallbackAutocomplete where
 data InteractionCallbackAutocompleteChoice = InteractionCallbackAutocompleteChoice
   { name :: Text
   , nameLocalizations :: H.HashMap Text Text
-  , -- | Either text or numeric
-    value :: Aeson.Value
+  , value :: Aeson.Value
+  -- ^ Either text or numeric
   }
   deriving stock (Show)
   deriving (Aeson.ToJSON) via CalamityToJSON InteractionCallbackAutocompleteChoice

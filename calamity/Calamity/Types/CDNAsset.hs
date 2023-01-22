@@ -1,15 +1,15 @@
 -- | Things that can be fetched from the discord CDN
-module Calamity.Types.CDNAsset
-  ( CDNAsset (..),
-    fetchAsset,
-    fetchAsset',
-  )
+module Calamity.Types.CDNAsset (
+  CDNAsset (..),
+  fetchAsset,
+  fetchAsset',
+)
 where
 
-import qualified Control.Exception.Safe as Ex
+import Control.Exception.Safe qualified as Ex
 import Data.ByteString.Lazy (ByteString)
-import qualified Network.HTTP.Req as Req
-import qualified Polysemy as P
+import Network.HTTP.Req qualified as Req
+import Polysemy qualified as P
 
 -- | Retrieve the asset from the CDN, like 'fetchAsset' but gives you more control
 fetchAsset' :: (CDNAsset a, Req.MonadHttp m) => a -> m ByteString

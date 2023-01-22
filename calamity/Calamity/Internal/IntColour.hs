@@ -1,3 +1,7 @@
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
+
+{-# HLINT ignore "Redundant bracket due to operator fixities" #-}
+
 -- | An internal newtype for parsing colours
 module Calamity.Internal.IntColour (
   IntColour (..),

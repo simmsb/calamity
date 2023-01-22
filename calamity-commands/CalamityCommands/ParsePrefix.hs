@@ -7,9 +7,9 @@ module CalamityCommands.ParsePrefix (
   useConstantPrefix,
 ) where
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 
-import qualified Polysemy as P
+import Polysemy qualified as P
 
 -- | An effect for parsing the prefix of a command.
 data ParsePrefix msg m a where

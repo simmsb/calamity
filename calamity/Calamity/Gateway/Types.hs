@@ -30,17 +30,17 @@ import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
 import Control.Concurrent.Async
 import Control.Concurrent.Chan.Unagi
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Optics
 import Data.Aeson.Types (parseMaybe)
-import qualified Data.Aeson.Types as AT
+import Data.Aeson.Types qualified as AT
 import Data.Text (Text)
 import GHC.Generics
 import Network.WebSockets.Connection (Connection)
 import Optics
-import qualified Polysemy as P
-import qualified Polysemy.Async as P
-import qualified Polysemy.AtomicState as P
+import Polysemy qualified as P
+import Polysemy.Async qualified as P
+import Polysemy.AtomicState qualified as P
 
 type ShardC r =
   ( P.Members

@@ -14,6 +14,7 @@
   outputs = inputs@{ self, nixpkgs, gitignore, flake-parts, ... }:
     flake-parts.lib.mkFlake { inherit inputs; } {
       systems = nixpkgs.lib.systems.flakeExposed;
+      # systems = [ "x86_64-linux" ];
       imports = [
         inputs.haskell-flake.flakeModule
         inputs.treefmt-nix.flakeModule
@@ -41,7 +42,6 @@
             type-errors = dontCheck (super.callHackage "type-errors" "0.2.0.1" { });
             polysemy-plugin = dontCheck (super.callHackage "polysemy-plugin" "0.4.4.0" { });
             polysemy = dontCheck (super.callHackage "polysemy" "1.9.0.0" { });
-            PyF = dontCheck (super.callHackage "PyF" "0.11.1.0" { });
             typerep-map = dontCheck (super.callHackage "typerep-map" "0.6.0.0" { });
             aeson-optics = dontCheck (super.callHackage "aeson-optics" "1.2.0.1" { });
             optics = dontCheck super.optics;
@@ -99,8 +99,8 @@
             category = "Primary";
           };
         };
-        
-        packages.default = self'.packages.calamity;
+
+        packages.default = self'.packages.main-calamity;
         devShells.default =
           config.mission-control.installToDevShell self'.devShells.main;
       };

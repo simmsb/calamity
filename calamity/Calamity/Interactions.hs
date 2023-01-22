@@ -23,7 +23,7 @@ import Calamity.Interactions.View
  Displaying a 'View'
 
  @
- {-# LANGUAGE ApplicativeDo #-}
+ {\-# LANGUAGE ApplicativeDo #-\}
 
  let view = 'row' $ do
        a <- 'button' 'Calamity.Types.Model.Channel.Component.ButtonPrimary' "defer"

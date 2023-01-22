@@ -13,18 +13,18 @@ module Calamity.Interactions.Utils (
 ) where
 
 import Calamity.HTTP
-import Calamity.Interactions.Eff (InteractionEff, getInteractionID, getInteractionToken, getInteractionUser, getApplicationID)
+import Calamity.Interactions.Eff (InteractionEff, getApplicationID, getInteractionID, getInteractionToken, getInteractionUser)
 import Calamity.Metrics.Eff (MetricEff)
 import Calamity.Types.LogEff (LogEff)
 import Calamity.Types.Model.Channel.Component (Component (ActionRow'))
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake (Snowflake)
 import Calamity.Types.Tellable
-import Optics
-import qualified Data.HashMap.Strict as H
+import Data.HashMap.Strict qualified as H
 import Data.Text (Text)
-import qualified Polysemy as P
-import qualified Polysemy.State as P
+import Optics
+import Polysemy qualified as P
+import Polysemy.State qualified as P
 import System.Random (getStdRandom, uniform)
 
 {- | Provide local state semantics to a running view, the state is keyed to the
@@ -50,7 +50,8 @@ userLocalState s =
       )
 
 -- | Respond to an interaction with a globally visible message
-respond :: forall t r.
+respond ::
+  forall t r.
   (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r, ToMessage t) =>
   t ->
   P.Sem r (Either RestError ())
@@ -72,7 +73,8 @@ respond (runToMessage -> msg) =
         invoke $ CreateResponseMessage interactionID interactionToken opts
 
 -- | Respond to an interaction with an ephemeral message
-respondEphemeral :: forall t r.
+respondEphemeral ::
+  forall t r.
   (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r, ToMessage t) =>
   t ->
   P.Sem r (Either RestError ())
@@ -94,7 +96,8 @@ respondEphemeral (runToMessage -> msg) =
         invoke $ CreateResponseMessage interactionID interactionToken opts
 
 -- | Respond to an interaction by editing the message that triggered the interaction
-edit :: forall t r.
+edit ::
+  forall t r.
   (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r, ToMessage t) =>
   t ->
   P.Sem r (Either RestError ())
@@ -116,7 +119,8 @@ edit (runToMessage -> msg) =
         invoke $ CreateResponseUpdate interactionID interactionToken opts
 
 -- | Create a follow up response to an interaction
-followUp :: forall t r.
+followUp ::
+  forall t r.
   (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r, ToMessage t) =>
   t ->
   P.Sem r (Either RestError ())
@@ -138,7 +142,8 @@ followUp (runToMessage -> msg) =
         invoke $ CreateFollowupMessage applicationID interactionToken opts
 
 -- | Create an ephemeral follow up response to an interaction
-followUpEphemeral :: forall t r.
+followUpEphemeral ::
+  forall t r.
   (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r, ToMessage t) =>
   t ->
   P.Sem r (Either RestError ())
@@ -166,8 +171,9 @@ defer = do
   interactionToken <- getInteractionToken
   invoke $ CreateResponseDefer interactionID interactionToken False
 
--- | Defer an interaction and show an ephemeral loading state, use @followUp@
--- later on
+{- | Defer an interaction and show an ephemeral loading state, use @followUp@
+ later on
+-}
 deferEphemeral :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => P.Sem r (Either RestError ())
 deferEphemeral = do
   interactionID <- getInteractionID

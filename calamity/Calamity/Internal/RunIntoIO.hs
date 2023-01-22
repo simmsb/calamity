@@ -1,14 +1,13 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- | Something for converting polysemy actions into IO actions
-module Calamity.Internal.RunIntoIO
-    ( runSemToIO
-    , bindSemToIO ) where
+module Calamity.Internal.RunIntoIO (
+  runSemToIO,
+  bindSemToIO,
+) where
 
-import           Data.Functor
+import Data.Functor
 
-import qualified Polysemy                         as P
-import qualified Polysemy.Final                   as P
+import Polysemy qualified as P
+import Polysemy.Final qualified as P
 
 runSemToIO :: forall r a. P.Member (P.Final IO) r => P.Sem r a -> P.Sem r (IO (Maybe a))
 runSemToIO m = P.withStrategicToFinal $ do

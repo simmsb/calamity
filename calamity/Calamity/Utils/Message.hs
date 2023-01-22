@@ -39,7 +39,7 @@ import Calamity.Types.Snowflake
 import Data.Foldable (Foldable (foldl'))
 import Data.Maybe (fromMaybe)
 import Data.String (IsString, fromString)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import GHC.Records (HasField (getField))
 import Optics
 import TextShow (TextShow (showt))
@@ -101,7 +101,9 @@ codeblock' ::
   T.Text ->
   T.Text
 codeblock' lang content =
-  "```" <> fromMaybe "" lang <> "\n"
+  "```"
+    <> fromMaybe "" lang
+    <> "\n"
     <> escapeCodeblocks content
     <> "\n```"
 
@@ -227,9 +229,8 @@ asReference ::
   -- | If discord should error when replying to deleted messages
   Bool ->
   MessageReference
-asReference msg failIfNotExists =
+asReference msg =
   MessageReference
     (Just $ getID @Message msg)
     (Just $ getID @Channel msg)
     (msg ^. #guildID)
-    failIfNotExists

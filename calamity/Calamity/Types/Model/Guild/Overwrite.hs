@@ -7,7 +7,7 @@ import Calamity.Internal.Utils
 import Calamity.Types.Model.Guild.Permissions
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Optics.TH
 import TextShow.TH
 

@@ -15,7 +15,7 @@ import Data.Data
 import Data.Hashable
 import Data.Kind
 import Data.Text.Read
-import qualified Data.Vector.Unboxing as U
+import Data.Vector.Unboxing qualified as U
 import Data.Word
 import GHC.Records (HasField (getField))
 import TextShow
@@ -26,7 +26,7 @@ import Web.HttpApiData (ToHttpApiData)
 newtype Snowflake (t :: Type) = Snowflake
   { fromSnowflake :: Word64
   }
-  deriving (Eq, Ord, Data)
+  deriving stock (Eq, Ord, Data)
   deriving newtype (Show, TextShow, FromJSONKey)
   deriving newtype (ToJSONKey, U.Unboxable)
   deriving newtype (ToHttpApiData)

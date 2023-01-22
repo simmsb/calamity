@@ -2,22 +2,22 @@
  This module exports the DSL and core types for using commands
 -}
 module Calamity.Commands (
-    module Calamity.Commands.Dsl,
-    module CalamityCommands.Error,
-    module Calamity.Commands.Help,
-    module CalamityCommands.Parser,
-    module Calamity.Commands.Utils,
-    module Calamity.Commands.Types,
+  module Calamity.Commands.Dsl,
+  module CalamityCommands.Error,
+  module Calamity.Commands.Help,
+  module CalamityCommands.Parser,
+  module Calamity.Commands.Utils,
+  module Calamity.Commands.Types,
 
-    -- * Commands
-    -- $commandDocs
+  -- * Commands
+  -- $commandDocs
 ) where
 
 import Calamity.Commands.CalamityParsers ()
 import Calamity.Commands.Dsl
 import Calamity.Commands.Help
-import Calamity.Commands.Utils
 import Calamity.Commands.Types
+import Calamity.Commands.Utils
 import CalamityCommands.Error
 import CalamityCommands.Parser
 

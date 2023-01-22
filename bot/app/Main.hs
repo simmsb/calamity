@@ -4,6 +4,7 @@
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
 {-# LANGUAGE GADTs #-}
+{-# LANGUAGE ImportQualifiedPost #-}
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE OverloadedLabels #-}
 {-# LANGUAGE OverloadedStrings #-}
@@ -13,30 +14,33 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE UndecidableInstances #-}
+{-# OPTIONS_GHC -Wno-unrecognised-pragmas #-}
 {-# OPTIONS_GHC -Wno-unused-top-binds #-}
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
+{-# HLINT ignore "Redundant $" #-}
 
 module Main (main) where
 
 import Calamity
 import Calamity.Cache.InMemory
 import Calamity.Commands
-import Calamity.Commands.Context (useFullContext, FullContext)
-import qualified Calamity.Interactions as I
+import Calamity.Commands.Context (FullContext, useFullContext)
+import Calamity.Interactions qualified as I
 import Calamity.Metrics.Noop
 import Calamity.Utils.CDNUrl (assetHashFile)
 import Control.Concurrent
 import Control.Monad
-import qualified Data.Text as T
-import qualified Di
-import qualified DiPolysemy as DiP
+import Data.Foldable (for_)
+import Data.Text qualified as T
+import Di qualified
+import DiPolysemy qualified as DiP
 import Optics
-import qualified Polysemy as P
-import qualified Polysemy.Async as P
-import qualified Polysemy.State as P
+import Polysemy qualified as P
+import Polysemy.Async qualified as P
+import Polysemy.State qualified as P
 import System.Environment (getEnv)
 import TextShow
-import Data.Foldable (for_)
 
 data MyViewState = MyViewState
   { numOptions :: Int
@@ -59,7 +63,7 @@ main = do
       . useFullContext
       $ runBotIO (BotToken token) defaultIntents
       $ do
-        addCommands $ do
+        void . addCommands $ do
           helpCommand
           -- just some examples
 
@@ -163,8 +167,6 @@ main = do
                     P.embed $ print (a, b)
                     void $ I.respond ("Thanks: " <> a <> " " <> b)
                     I.endView ()
-
-              pure ()
 
         react @('CustomEvt (CtxCommandError FullContext)) \(CtxCommandError ctx e) -> do
           DiP.info $ "Command failed with reason: " <> showt e

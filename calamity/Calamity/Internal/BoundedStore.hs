@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-incomplete-uni-patterns #-}
 
 -- | A thing for storing the last N things with IDs
 module Calamity.Internal.BoundedStore (
@@ -9,14 +10,14 @@ module Calamity.Internal.BoundedStore (
   dropItem,
 ) where
 
-import Calamity.Internal.Utils ( unlessM, whenM )
-import Calamity.Types.Snowflake ( HasID(getID), Snowflake, HasID' )
-import Control.Monad.State.Lazy ( when, execState )
-import Data.Default.Class ( Default(..) )
+import Calamity.Internal.Utils (unlessM, whenM)
+import Calamity.Types.Snowflake (HasID (getID), HasID', Snowflake)
+import Control.Monad.State.Lazy (execState, when)
+import Data.Default.Class (Default (..))
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as H
+import Data.HashMap.Strict qualified as H
 import Deque.Lazy (Deque)
-import qualified Deque.Lazy as DQ
+import Deque.Lazy qualified as DQ
 import Optics
 import Optics.State.Operators ((%=), (.=))
 

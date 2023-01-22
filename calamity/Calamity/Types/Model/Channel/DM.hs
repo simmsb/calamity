@@ -8,10 +8,10 @@ import {-# SOURCE #-} Calamity.Types.Model.Channel.Message
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Time
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 
 data DMChannel = DMChannel
   { id :: Snowflake DMChannel

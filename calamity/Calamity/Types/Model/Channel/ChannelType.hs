@@ -3,7 +3,7 @@
 -- | Types of channels
 module Calamity.Types.Model.Channel.ChannelType (ChannelType (..)) where
 
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Scientific
 import Optics.TH
 import TextShow.TH

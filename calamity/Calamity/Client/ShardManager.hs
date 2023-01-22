@@ -8,14 +8,13 @@ import Calamity.Internal.Utils
 import Control.Concurrent.MVar
 import Control.Concurrent.STM
 import Control.Monad
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Traversable
 import Optics
 import Polysemy (Sem)
-import qualified Polysemy as P
-import qualified Polysemy.Fail as P
-import qualified Polysemy.Reader as P
-import PyF
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.Reader qualified as P
 
 mapLeft :: (a -> c) -> Either a b -> Either c b
 mapLeft f (Left a) = Left $ f a

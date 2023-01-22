@@ -10,7 +10,7 @@ import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import {-# SOURCE #-} Calamity.Types.Model.User
 import Calamity.Types.Snowflake (Snowflake, fromSnowflake)
 import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Network.HTTP.Req ((/:), (/~))
 import Optics (makeFieldLabelsNoPrefix)
 import TextShow (showt)

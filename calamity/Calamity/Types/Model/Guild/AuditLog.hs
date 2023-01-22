@@ -14,11 +14,11 @@ import Calamity.Types.Model.Channel
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Scientific
 import Data.Text (Text)
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH
 
 data AuditLog = AuditLog

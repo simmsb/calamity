@@ -1,5 +1,3 @@
-{-# LANGUAGE RecursiveDo #-}
-
 {- | A DSL for generating commands and groups
 
  This is effectively just a re-export of "CalamityCommands.Dsl" but with
@@ -25,20 +23,20 @@ module Calamity.Commands.Dsl (
   fetchHandler,
 ) where
 
-import qualified CalamityCommands.Dsl as CC
+import CalamityCommands.Dsl qualified as CC
 import CalamityCommands.ParameterInfo
 
 import Calamity.Commands.Types
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 
 import CalamityCommands.CommandUtils (CommandForParsers, TypedCommandC)
-import qualified CalamityCommands.Context as CC
+import CalamityCommands.Context qualified as CC
 import CalamityCommands.Error (CommandError)
-import qualified Polysemy as P
-import qualified Polysemy.Fail as P
-import qualified Polysemy.Reader as P
-import qualified Polysemy.Tagged as P
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.Reader qualified as P
+import Polysemy.Tagged qualified as P
 
 {- $dslTutorial
 

@@ -1,8 +1,8 @@
 -- | Internal newtype for deserializing timestamps
 module Calamity.Internal.UnixTimestamp (
-    UnixTimestamp (..),
-    unixToMilliseconds,
-    millisecondsToUnix,
+  UnixTimestamp (..),
+  unixToMilliseconds,
+  millisecondsToUnix,
 ) where
 
 import Calamity.Internal.Utils ()
@@ -15,46 +15,46 @@ import Data.Word
 import TextShow
 
 newtype UnixTimestamp = UnixTimestamp
-    { unUnixTimestamp :: UTCTime
-    }
-    deriving (Show) via UTCTime
-    deriving (TextShow) via FromStringShow UTCTime
+  { unUnixTimestamp :: UTCTime
+  }
+  deriving (Show) via UTCTime
+  deriving (TextShow) via FromStringShow UTCTime
 
 unixToMilliseconds :: UnixTimestamp -> Word64
 unixToMilliseconds =
-    unUnixTimestamp
-        >>> utcTimeToPOSIXSeconds
-        >>> toRational
-        >>> (* 1000)
-        >>> round
+  unUnixTimestamp
+    >>> utcTimeToPOSIXSeconds
+    >>> toRational
+    >>> (* 1000)
+    >>> round
 
 millisecondsToUnix :: Word64 -> UnixTimestamp
 millisecondsToUnix =
-    toRational
-        >>> fromRational
-        >>> (/ 1000)
-        >>> posixSecondsToUTCTime
-        >>> UnixTimestamp
+  toRational
+    >>> fromRational
+    >>> (/ 1000)
+    >>> posixSecondsToUTCTime
+    >>> UnixTimestamp
 
 instance ToJSON UnixTimestamp where
-    toJSON =
-        unUnixTimestamp
-            >>> utcTimeToPOSIXSeconds
-            >>> toRational
-            >>> round
-            >>> toJSON @Word64
-    toEncoding =
-        unUnixTimestamp
-            >>> utcTimeToPOSIXSeconds
-            >>> toRational
-            >>> round
-            >>> word64
+  toJSON =
+    unUnixTimestamp
+      >>> utcTimeToPOSIXSeconds
+      >>> toRational
+      >>> round
+      >>> toJSON @Word64
+  toEncoding =
+    unUnixTimestamp
+      >>> utcTimeToPOSIXSeconds
+      >>> toRational
+      >>> round
+      >>> word64
 
 instance FromJSON UnixTimestamp where
-    parseJSON =
-        withScientific "UnixTimestamp" $
-            toRational
-                >>> fromRational
-                >>> posixSecondsToUTCTime
-                >>> UnixTimestamp
-                >>> pure
+  parseJSON =
+    withScientific "UnixTimestamp" $
+      toRational
+        >>> fromRational
+        >>> posixSecondsToUTCTime
+        >>> UnixTimestamp
+        >>> pure

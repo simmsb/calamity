@@ -3,13 +3,13 @@
 -- | Voice regions
 module Calamity.Types.Model.Voice.VoiceRegion (VoiceRegion (..)) where
 
+import Calamity.Internal.Utils
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Optics.TH
 import TextShow.TH
-import Calamity.Internal.Utils
 
 data VoiceRegion = VoiceRegion
   { id :: Snowflake VoiceRegion
@@ -24,13 +24,13 @@ data VoiceRegion = VoiceRegion
 
 instance CalamityToJSON' VoiceRegion where
   toPairs VoiceRegion {..} =
-      [ "id" .= id
-      , "name" .= name
-      , "vip" .= vip
-      , "optimal" .= optimal
-      , "deprecated" .= deprecated
-      , "custom" .= custom
-      ]
+    [ "id" .= id
+    , "name" .= name
+    , "vip" .= vip
+    , "optimal" .= optimal
+    , "deprecated" .= deprecated
+    , "custom" .= custom
+    ]
 
 instance Aeson.FromJSON VoiceRegion where
   parseJSON = Aeson.withObject "VoiceRegion" $ \v ->

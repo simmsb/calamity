@@ -7,11 +7,11 @@ import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.User
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 
 data Invite = Invite
   { code :: Text

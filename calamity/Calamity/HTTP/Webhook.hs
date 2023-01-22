@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 -- | Webhook endpoints
 module Calamity.HTTP.Webhook (
@@ -15,20 +16,19 @@ import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=),
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Snowflake
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Default.Class
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
 import Optics
-import PyF
 
 data CreateWebhookData = CreateWebhookData
   { username :: Maybe Text
-  , -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
-    avatar :: Maybe Text
+  , avatar :: Maybe Text
+  -- ^ The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
   }
   deriving (Show)
   deriving (Aeson.ToJSON) via CalamityToJSON CreateWebhookData
@@ -44,8 +44,8 @@ instance Default CreateWebhookData where
 
 data ModifyWebhookData = ModifyWebhookData
   { username :: Maybe Text
-  , -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
-    avatar :: Maybe Text
+  , avatar :: Maybe Text
+  -- ^ The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
   , channelID :: Maybe (Snowflake Channel)
   }
   deriving (Show)

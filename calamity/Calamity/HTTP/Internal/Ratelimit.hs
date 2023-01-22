@@ -16,16 +16,16 @@ import Calamity.Types.TokenEff
 import Control.Applicative
 import Control.Concurrent
 import Control.Concurrent.Event (Event)
-import qualified Control.Concurrent.Event as E
+import Control.Concurrent.Event qualified as E
 import Control.Concurrent.STM
-import qualified Control.Exception.Safe as Ex
+import Control.Exception.Safe qualified as Ex
 import Control.Monad
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Optics
-import qualified Data.ByteString as B
-import qualified Data.ByteString.Lazy as LB
+import Data.ByteString qualified as B
+import Data.ByteString.Lazy qualified as LB
 import Data.Maybe
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Time
 import Data.Time.Clock.POSIX
 import Network.HTTP.Client (responseStatus)
@@ -34,11 +34,10 @@ import Network.HTTP.Types
 import Optics
 import Optics.Operators.Unsafe ((^?!))
 import Polysemy (Sem, makeSem)
-import qualified Polysemy as P
-import PyF
-import qualified StmContainers.Map as SC
+import Polysemy qualified as P
+import StmContainers.Map qualified as SC
 import Prelude hiding (error)
-import qualified Prelude
+import Prelude qualified
 
 data RatelimitEff m a where
   GetRatelimitState :: RatelimitEff m RateLimitState
@@ -55,7 +54,7 @@ data Ratelimit
 getRateLimit :: RateLimitState -> RouteKey -> STM Ratelimit
 getRateLimit s h = do
   bucketKey <- SC.lookup h $ bucketKeys s
-  bucket <- join <$> sequenceA (flip SC.lookup (buckets s) <$> bucketKey)
+  bucket <- join <$> traverse (`SC.lookup` buckets s) bucketKey
   case bucket of
     Just bucket' ->
       pure $ KnownRatelimit bucket'
@@ -78,7 +77,6 @@ mergeBucketStates old new =
           then new ^. #resetTime
           else old ^. #resetTime
     }
-
 
 updateKnownBucket :: Bucket -> BucketState -> STM ()
 updateKnownBucket bucket bucketState = modifyTVar' (bucket ^. #state) (`mergeBucketStates` bucketState)
@@ -119,7 +117,8 @@ resetBucket bucket =
   modifyTVar'
     (bucket ^. #state)
     ( \bs ->
-        bs & #remaining .~ bs ^. #limit
+        bs
+          & #remaining .~ bs ^. #limit
           & #resetTime .~ Nothing
     )
 
@@ -199,14 +198,10 @@ useBucketOnce bucket = go 0
           -- if we needed to sleep, go again so that multiple concurrent requests
           -- don't exceed the bucket, to ensure we don't sit in a loop if a
           -- request dies on us, bail out after 50 loops
-          if tries < 50
-            then go (tries + 1)
-            else pure () -- print "bailing after number of retries"
+          when (tries < 50) $ go (tries + 1) -- print "bailing after number of retries"
         WaitRetrySoon -> do
           threadDelayMS 20
-          if tries < 50
-            then go (tries + 1)
-            else pure () -- print "bailing after number of retries"
+          when (tries < 50) $ go (tries + 1) -- print "bailing after number of retries"
         GoNow -> do
           -- print "ok going forward with request"
           pure ()
@@ -219,26 +214,26 @@ doDiscordRequest r = do
       let status = responseStatus . toVanillaResponse $ r'
       if
           | statusIsSuccessful status -> do
-            let resp = responseBody r'
-            debug $ "Got good response from discord: " <> (T.pack . show $ status)
-            now <- P.embed getCurrentTime
-            let rlHeaders = buildBucketState now r'
-            pure $ Good resp rlHeaders
+              let resp = responseBody r'
+              debug $ "Got good response from discord: " <> (T.pack . show $ status)
+              now <- P.embed getCurrentTime
+              let rlHeaders = buildBucketState now r'
+              pure $ Good resp rlHeaders
           | status == status429 -> do
-            now <- P.embed getCurrentTime
-            let resp = responseBody r'
-            case (resp ^? _Value, buildBucketState now r') of
-              (Just !rv, bs) ->
-                pure $ Ratelimited (parseRetryAfter now rv) (isGlobal rv) bs
-              _ ->
-                pure $ ServerError (statusCode status)
+              now <- P.embed getCurrentTime
+              let resp = responseBody r'
+              case (resp ^? _Value, buildBucketState now r') of
+                (Just !rv, bs) ->
+                  pure $ Ratelimited (parseRetryAfter now rv) (isGlobal rv) bs
+                _ ->
+                  pure $ ServerError (statusCode status)
           | statusIsClientError status -> do
-            let err = responseBody r'
-            error . T.pack $ ("Something went wrong: " <> show err <> ", response: " <> show r')
-            pure $ ClientError (statusCode status) err
+              let err = responseBody r'
+              error . T.pack $ "Something went wrong: " <> show err <> ", response: " <> show r'
+              pure $ ClientError (statusCode status) err
           | otherwise -> do
-            debug . T.pack $ "Got server error from discord: " <> (show . statusCode $ status)
-            pure $ ServerError (statusCode status)
+              debug . T.pack $ "Got server error from discord: " <> (show . statusCode $ status)
+              pure $ ServerError (statusCode status)
     Left e -> do
       error . T.pack $ "Something went wrong with the http client: " <> e
       pure . InternalResponseError $ T.pack e
@@ -255,8 +250,11 @@ parseRateLimitHeader now r = computedEnd <|> end
 
     end :: Maybe UTCTime
     end =
-      posixSecondsToUTCTime . realToFrac
-        <$> responseHeader r "X-Ratelimit-Reset" ^? _Just % _Double
+      posixSecondsToUTCTime
+        . realToFrac
+        <$> responseHeader r "X-Ratelimit-Reset"
+        ^? _Just
+        % _Double
 
 buildBucketState :: HttpResponse r => UTCTime -> r -> Maybe (BucketState, B.ByteString)
 buildBucketState now r = (,) <$> bs <*> bucketKey
@@ -355,7 +353,6 @@ doSingleRequest rlstate route gl r = do
             void $ updateBucket rlstate (routeKey route) bk bs
           (_, Nothing) -> pure ()
       pure $ RGood v
-
     Ratelimited unlockWhen False (Just (bs, bk)) -> do
       debug . T.pack $ "429 ratelimited on route, retrying at " <> show unlockWhen
 
@@ -370,7 +367,6 @@ doSingleRequest rlstate route gl r = do
         threadDelayUntil unlockWhen
 
       pure $ Retry (HTTPError 429 Nothing)
-
     Ratelimited unlockWhen False _ -> do
       debug "Internal error (ratelimited but no headers), retrying"
       case rl of
@@ -380,7 +376,6 @@ doSingleRequest rlstate route gl r = do
 
       P.embed $ threadDelayUntil unlockWhen
       pure $ Retry (HTTPError 429 Nothing)
-
     Ratelimited unlockWhen True bs -> do
       debug "429 ratelimited globally"
 

@@ -20,13 +20,13 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Calamity.Utils.CDNUrl (cdnURL)
 import Data.Aeson ((.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
-import qualified Data.Text as T
+import Data.Aeson qualified as Aeson
+import Data.Text qualified as T
 import Data.Vector.Unboxing (Vector)
 import Network.HTTP.Req ((/:))
 import Optics.TH
 import TextShow (showt)
-import qualified TextShow
+import TextShow qualified
 
 data Emoji = Emoji
   { id :: Snowflake Emoji

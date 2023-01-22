@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 -- | Emoji endpoints
 module Calamity.HTTP.Emoji (
@@ -12,7 +13,7 @@ import Calamity.HTTP.Internal.Route
 import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=))
 import Calamity.Types.Model.Guild
 import Calamity.Types.Snowflake
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Function
 import Data.Text (Text)
 import Network.HTTP.Req

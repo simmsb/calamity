@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
+
 -- | Invite endpoints
 module Calamity.HTTP.Invite (InviteRequest (..)) where
 

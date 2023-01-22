@@ -28,24 +28,24 @@ import Calamity.Interactions.Eff (InteractionEff (..))
 import Calamity.Metrics.Eff (MetricEff)
 import Calamity.Types.LogEff (LogEff)
 import Calamity.Types.Model.Channel.Component (CustomID)
-import qualified Calamity.Types.Model.Channel.Component as C
+import Calamity.Types.Model.Channel.Component qualified as C
 import Calamity.Types.Model.Channel.Message (Message)
 import Calamity.Types.Model.Interaction
 import Calamity.Types.TokenEff (TokenEff)
-import qualified Control.Concurrent.STM as STM
-import Optics
+import Control.Concurrent.STM qualified as STM
 import Control.Monad (guard, void)
-import qualified Data.Aeson as Aeson
-import qualified Data.List
-import qualified Data.Set as S
-import Data.Text (Text)
-import qualified GHC.TypeLits as E
-import qualified Polysemy as P
-import qualified Polysemy.Resource as P
-import qualified Polysemy.State as P
-import System.Random
-import Data.Aeson ((.:?), (.:))
+import Data.Aeson ((.:), (.:?))
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Optics
+import Data.List qualified
+import Data.Set qualified as S
+import Data.Text (Text)
+import GHC.TypeLits qualified as E
+import Optics
+import Polysemy qualified as P
+import Polysemy.Resource qualified as P
+import Polysemy.State qualified as P
+import System.Random
 
 data ViewComponent a = ViewComponent
   { component :: C.Component
@@ -322,14 +322,15 @@ deleteInitialMsg = do
       void . invoke $ DeleteMessage m m
     Left _ -> pure ()
 
--- | Run a 'View', returning the value passed to 'endView'
---
--- This function will not return until 'endView' is used inside the view.
--- If you want it to run in the background, consider using "Polysemy.Async".
---
--- This is async exception safe, you can use libraries such as
--- [polysemy-conc](https://hackage.haskell.org/package/polysemy-conc) to stop
--- views after a timeout.
+{- | Run a 'View', returning the value passed to 'endView'
+
+ This function will not return until 'endView' is used inside the view.
+ If you want it to run in the background, consider using "Polysemy.Async".
+
+ This is async exception safe, you can use libraries such as
+ [polysemy-conc](https://hackage.haskell.org/package/polysemy-conc) to stop
+ views after a timeout.
+-}
 runView ::
   BotC r =>
   -- | The initial view to render

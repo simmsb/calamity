@@ -22,27 +22,27 @@ import CalamityCommands.Internal.RunIntoM
 import CalamityCommands.Internal.Utils
 import CalamityCommands.ParameterInfo
 import CalamityCommands.Parser
-import Optics
 import Control.Monad
 import Data.Foldable
 import Data.Kind
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe
-import qualified Data.Text as S
-import qualified Polysemy as P
-import qualified Polysemy.Error as P
-import qualified Polysemy.Fail as P
+import Data.Text qualified as S
+import Optics
+import Polysemy qualified as P
+import Polysemy.Error qualified as P
+import Polysemy.Fail qualified as P
 
 groupPath :: Group m c a -> [S.Text]
-groupPath Group{names, parent} = foldMap groupPath parent <> [NE.head names]
+groupPath Group {names, parent} = foldMap groupPath parent <> [NE.head names]
 
 commandPath :: Command m c a -> [S.Text]
-commandPath Command{names, parent} = foldMap groupPath parent <> [NE.head names]
+commandPath Command {names, parent} = foldMap groupPath parent <> [NE.head names]
 
 -- | Format a command's parameters
 commandParams :: Command m c a -> S.Text
-commandParams Command{params} =
+commandParams Command {params} =
   let formatted =
         map
           ( \(ParameterInfo (fromMaybe "" -> name) type_ _) ->
@@ -140,7 +140,7 @@ buildCallback cb = do
 
 -- | Given an invokation Context @c@, run a command. This does not perform the command's checks.
 runCommand :: (Monad m, P.Member (P.Embed m) r) => c -> Command m c a -> P.Sem r (Either CommandError a)
-runCommand ctx Command{names = name :| _, parser, callback} =
+runCommand ctx Command {names = name :| _, parser, callback} =
   P.embed (parser ctx) >>= \case
     Left e -> pure $ Left e
     Right p' -> P.embed (callback (ctx, p')) <&> mapLeft (InvokeError name)
@@ -149,7 +149,7 @@ runCommand ctx Command{names = name :| _, parser, callback} =
  run the command if they all pass.
 -}
 invokeCommand :: (Monad m, P.Member (P.Embed m) r) => c -> Command m c a -> P.Sem r (Either CommandError a)
-invokeCommand ctx cmd@Command{checks} = P.runError $ do
+invokeCommand ctx cmd@Command {checks} = P.runError $ do
   for_ checks (P.fromEither <=< runCheck ctx)
   P.fromEither =<< runCommand ctx cmd
 

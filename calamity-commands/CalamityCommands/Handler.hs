@@ -6,17 +6,17 @@ module CalamityCommands.Handler (CommandHandler (..)) where
 import CalamityCommands.AliasType
 import CalamityCommands.Command
 import CalamityCommands.Group
-import qualified Data.HashMap.Lazy as LH
-import qualified Data.Text as S
+import Data.HashMap.Lazy qualified as LH
+import Data.Text qualified as S
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH (deriveTextShow)
 
 data CommandHandler m c a = CommandHandler
-  { -- | Top level groups
-    groups :: LH.HashMap S.Text (Group m c a, AliasType)
-  , -- | Top level commands
-    commands :: LH.HashMap S.Text (Command m c a, AliasType)
+  { groups :: LH.HashMap S.Text (Group m c a, AliasType)
+  -- ^ Top level groups
+  , commands :: LH.HashMap S.Text (Command m c a, AliasType)
+  -- ^ Top level commands
   }
 
 data CommandHandlerS m c a = CommandHandlerS

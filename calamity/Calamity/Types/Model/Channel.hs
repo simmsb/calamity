@@ -30,7 +30,7 @@ import Calamity.Types.Model.Channel.Webhook
 import Calamity.Types.Model.Guild.Permissions (Permissions)
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Optics.TH
 import TextShow.TH

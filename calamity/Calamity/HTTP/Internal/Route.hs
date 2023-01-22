@@ -28,14 +28,14 @@ import Data.Kind
 import Data.List (foldl')
 import Data.Maybe (fromJust)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Typeable
 import Data.Word
 import GHC.Generics (Generic)
 import GHC.TypeLits (KnownSymbol, Symbol, symbolVal)
 import Network.HTTP.Req
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 
 data RouteFragment
   = -- | Static string fragment
@@ -121,9 +121,9 @@ type family AddRequired k (reqs :: [(RequirementType, RouteRequirement)]) :: [(R
   AddRequired k reqs = '(k, AddRequiredInner (Lookup k reqs)) ': reqs
 
 type family AddRequiredInner (k :: Maybe RouteRequirement) :: RouteRequirement where
-  AddRequiredInner ( 'Just 'Required) = 'Required
-  AddRequiredInner ( 'Just 'Satisfied) = 'Satisfied
-  AddRequiredInner ( 'Just 'NotNeeded) = 'Required
+  AddRequiredInner ('Just 'Required) = 'Required
+  AddRequiredInner ('Just 'Satisfied) = 'Satisfied
+  AddRequiredInner ('Just 'NotNeeded) = 'Required
   AddRequiredInner 'Nothing = 'Required
 
 class Typeable a => RouteFragmentable a reqs where
@@ -138,13 +138,13 @@ instance RouteFragmentable S reqs where
     UnsafeMkRouteBuilder (r <> [S' t]) ids params
 
 instance Typeable a => RouteFragmentable (ID (a :: Type)) (reqs :: [(RequirementType, RouteRequirement)]) where
-  type ConsRes (ID a) reqs = RouteBuilder (AddRequired ( 'IDRequirement a) reqs)
+  type ConsRes (ID a) reqs = RouteBuilder (AddRequired ('IDRequirement a) reqs)
 
   (UnsafeMkRouteBuilder r ids params) // ID =
     UnsafeMkRouteBuilder (r <> [ID' $ typeRep $ Proxy @a]) ids params
 
 instance KnownSymbol s => RouteFragmentable (PS s) (reqs :: [(RequirementType, RouteRequirement)]) where
-  type ConsRes (PS s) reqs = RouteBuilder (AddRequired ( 'PSRequirement s) reqs)
+  type ConsRes (PS s) reqs = RouteBuilder (AddRequired ('PSRequirement s) reqs)
 
   (UnsafeMkRouteBuilder r ids params) // PS =
     UnsafeMkRouteBuilder (r <> [PS' $ symbolVal $ Proxy @s]) ids params

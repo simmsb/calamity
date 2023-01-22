@@ -6,11 +6,11 @@ module Calamity.Types.LogEff (
   LogC,
 ) where
 
-import qualified Df1
+import Df1 qualified
 
 import DiPolysemy
 
-import qualified Polysemy as P
+import Polysemy qualified as P
 
 type LogEff = Di Df1.Level Df1.Path Df1.Message
 

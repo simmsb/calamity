@@ -21,5 +21,4 @@ instance Request a => Request (Reason a) where
 
   route (Reason a _) = route a
 
-  action (Reason a r) = \u o ->
-    action a u (o <> header "X-Audit-Log-Reason" (encodeUtf8 r))
+  action (Reason a r) u o = action a u (o <> header "X-Audit-Log-Reason" (encodeUtf8 r))

@@ -1,9 +1,10 @@
 -- | Useful things
-module Calamity.Utils
-    ( module Calamity.Utils.Permissions
-    , module Calamity.Utils.Message
-    , module Calamity.Utils.Colour ) where
+module Calamity.Utils (
+  module Calamity.Utils.Permissions,
+  module Calamity.Utils.Message,
+  module Calamity.Utils.Colour,
+) where
 
-import           Calamity.Utils.Colour
-import           Calamity.Utils.Message
-import           Calamity.Utils.Permissions
+import Calamity.Utils.Colour
+import Calamity.Utils.Message
+import Calamity.Utils.Permissions

@@ -14,10 +14,10 @@ import Calamity.Types.Model.Interaction
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
 import Control.Applicative ((<|>))
-import Optics ((^.), (^?), _Just, (%))
 import Data.Maybe (fromJust)
+import Optics ((%), (^.), (^?), _Just)
 import Polysemy
-import qualified Polysemy as P
+import Polysemy qualified as P
 
 data InteractionEff m a where
   GetInteraction :: InteractionEff m Interaction
@@ -39,4 +39,3 @@ getInteractionUser = do
   let uid = int ^? #user % _Just % #id
       mid = int ^? #member % _Just % #id
   pure . fromJust $ uid <|> mid
-

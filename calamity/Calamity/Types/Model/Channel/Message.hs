@@ -24,15 +24,15 @@ import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson ((.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Maybe (isJust)
 import Data.Scientific
 import Data.Text (Text)
 import Data.Time
-import qualified Data.Vector.Unboxing as UV
+import Data.Vector.Unboxing qualified as UV
 import Data.Word (Word64)
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH
 
 data MessageAuthorWebhook = MessageAuthorWebhook
@@ -114,7 +114,9 @@ instance Aeson.FromJSON Message where
                 ( \v ->
                     Webhook'
                       <$> ( MessageAuthorWebhook
-                              <$> v .: "id" <*> v .: "username" <*> v .:? "avatar"
+                              <$> v .: "id"
+                              <*> v .: "username"
+                              <*> v .:? "avatar"
                           )
                 )
                 =<< v .: "author"

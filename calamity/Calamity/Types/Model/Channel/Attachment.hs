@@ -7,7 +7,7 @@ module Calamity.Types.Model.Channel.Attachment (
 
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Data.Word
 import Optics.TH

@@ -21,7 +21,7 @@ module Calamity.Types.Model.Channel.Embed (
 import Calamity.Internal.IntColour (IntColour (..))
 import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=), (.?=))
 import Data.Aeson ((.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Colour (Colour)
 import Data.Default.Class
 import Data.Semigroup
@@ -30,7 +30,7 @@ import Data.Time
 import Data.Word
 import Optics ((%~), (&), (^.))
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH
 
 data Embed = Embed

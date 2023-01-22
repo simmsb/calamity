@@ -2,25 +2,25 @@
 
 -- | A DSL for generating commands and groups
 module CalamityCommands.Dsl (
-    -- * Commands DSL
-    -- $dslTutorial
-    command,
-    command',
-    commandA,
-    commandA',
-    hide,
-    help,
-    requires,
-    requires',
-    requiresPure,
-    group,
-    group',
-    groupA,
-    groupA',
-    DSLState,
-    DSLC,
-    raiseDSL,
-    fetchHandler,
+  -- * Commands DSL
+  -- $dslTutorial
+  command,
+  command',
+  commandA,
+  commandA',
+  hide,
+  help,
+  requires,
+  requires',
+  requiresPure,
+  group,
+  group',
+  groupA,
+  groupA',
+  DSLState,
+  DSLC,
+  raiseDSL,
+  fetchHandler,
 ) where
 
 import CalamityCommands.AliasType
@@ -31,16 +31,16 @@ import CalamityCommands.Context
 import CalamityCommands.Error
 import CalamityCommands.Group hiding (help)
 import CalamityCommands.Handler
-import CalamityCommands.ParameterInfo
 import CalamityCommands.Internal.LocalWriter
-import qualified Data.HashMap.Lazy as LH
-import qualified Data.Text as T
+import CalamityCommands.ParameterInfo
+import Data.HashMap.Lazy qualified as LH
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Polysemy as P
-import qualified Polysemy.Fail as P
-import qualified Polysemy.Fixpoint as P
-import qualified Polysemy.Reader as P
-import qualified Polysemy.Tagged as P
+import Data.Text qualified as T
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.Fixpoint qualified as P
+import Polysemy.Reader qualified as P
+import Polysemy.Tagged qualified as P
 
 {- $dslTutorial
 
@@ -76,29 +76,31 @@ import qualified Polysemy.Tagged as P
 -}
 
 type DSLState m c a r =
-    ( LocalWriter (LH.HashMap T.Text (Command m c a, AliasType))
-        ': LocalWriter (LH.HashMap T.Text (Group m c a, AliasType))
-            ': P.Reader (Maybe (Group m c a))
-                ': P.Tagged "hidden" (P.Reader Bool)
-                    ': P.Reader (c -> T.Text)
-                        ': P.Tagged "original-help" (P.Reader (c -> T.Text))
-                            ': P.Reader [Check m c]
-                                ': P.Reader (CommandHandler m c a)
-                                    ': P.Fixpoint
-                                        ': r
-    )
+  ( LocalWriter (LH.HashMap T.Text (Command m c a, AliasType))
+      ': LocalWriter (LH.HashMap T.Text (Group m c a, AliasType))
+      ': P.Reader (Maybe (Group m c a))
+      ': P.Tagged "hidden" (P.Reader Bool)
+      ': P.Reader (c -> T.Text)
+      ': P.Tagged "original-help" (P.Reader (c -> T.Text))
+      ': P.Reader [Check m c]
+      ': P.Reader (CommandHandler m c a)
+      ': P.Fixpoint
+      ': r
+  )
 
-type DSLC m c a r = P.Members [
-  LocalWriter (LH.HashMap T.Text (Command m c a, AliasType))
-        , LocalWriter (LH.HashMap T.Text (Group m c a, AliasType))
-            , P.Reader (Maybe (Group m c a))
-                , P.Tagged "hidden" (P.Reader Bool)
-                    , P.Reader (c -> T.Text)
-                        , P.Tagged "original-help" (P.Reader (c -> T.Text))
-                            , P.Reader [Check m c]
-                                , P.Reader (CommandHandler m c a)
-                                    , P.Fixpoint
-                              ] r
+type DSLC m c a r =
+  P.Members
+    [ LocalWriter (LH.HashMap T.Text (Command m c a, AliasType))
+    , LocalWriter (LH.HashMap T.Text (Group m c a, AliasType))
+    , P.Reader (Maybe (Group m c a))
+    , P.Tagged "hidden" (P.Reader Bool)
+    , P.Reader (c -> T.Text)
+    , P.Tagged "original-help" (P.Reader (c -> T.Text))
+    , P.Reader [Check m c]
+    , P.Reader (CommandHandler m c a)
+    , P.Fixpoint
+    ]
+    r
 
 raiseDSL :: P.Sem r x -> P.Sem (DSLState m c a r) x
 raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise
@@ -111,17 +113,17 @@ raiseDSL = P.raise . P.raise . P.raise . P.raise . P.raise . P.raise . P.raise .
  reader context.
 -}
 command' ::
-    (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
-    -- | The name of the command
-    T.Text ->
-    -- | The command's parameter metadata
-    [ParameterInfo] ->
-    -- | The parser for this command
-    (c -> P.Sem r (Either CommandError p)) ->
-    -- | The callback for this command
-    ((c, p) -> P.Sem (P.Fail ': r) a) ->
-    P.Sem r (Command m c a)
-command' name params parser cb = commandA' name [] params parser cb
+  (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The command's parameter metadata
+  [ParameterInfo] ->
+  -- | The parser for this command
+  (c -> P.Sem r (Either CommandError p)) ->
+  -- | The callback for this command
+  ((c, p) -> P.Sem (P.Fail ': r) a) ->
+  P.Sem r (Command m c a)
+command' name = commandA' name []
 
 {- | Given the command name, aliases, and parameter names, @parser@ and @callback@
  for a command in the 'P.Sem' monad, build a command by transforming the
@@ -131,28 +133,28 @@ command' name params parser cb = commandA' name [] params parser cb
  reader context.
 -}
 commandA' ::
-    forall p c a m r.
-    (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
-    -- | The name of the command
-    T.Text ->
-    -- | The aliases for the command
-    [T.Text] ->
-    -- | The command's parameter metadata
-    [ParameterInfo] ->
-    -- | The parser for this command
-    (c -> P.Sem r (Either CommandError p)) ->
-    -- | The callback for this command
-    ((c, p) -> P.Sem (P.Fail ': r) a) ->
-    P.Sem r (Command m c a)
+  forall p c a m r.
+  (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The aliases for the command
+  [T.Text] ->
+  -- | The command's parameter metadata
+  [ParameterInfo] ->
+  -- | The parser for this command
+  (c -> P.Sem r (Either CommandError p)) ->
+  -- | The callback for this command
+  ((c, p) -> P.Sem (P.Fail ': r) a) ->
+  P.Sem r (Command m c a)
 commandA' name aliases params parser cb = do
-    parent <- P.ask @(Maybe (Group m c a))
-    hidden <- P.tag $ P.ask @Bool
-    checks <- P.ask @[Check m c]
-    help' <- P.ask @(c -> T.Text)
-    cmd <- buildCommand' (name :| aliases) parent hidden checks params help' parser cb
-    ltell $ LH.singleton name (cmd, Original)
-    ltell $ LH.fromList [(name, (cmd, Alias)) | name <- aliases]
-    pure cmd
+  parent <- P.ask @(Maybe (Group m c a))
+  hidden <- P.tag $ P.ask @Bool
+  checks <- P.ask @[Check m c]
+  help' <- P.ask @(c -> T.Text)
+  cmd <- buildCommand' (name :| aliases) parent hidden checks params help' parser cb
+  ltell $ LH.singleton name (cmd, Original)
+  ltell $ LH.fromList [(name, (cmd, Alias)) | name <- aliases]
+  pure cmd
 
 {- | Given the name of a command and a callback, and a type level list of
  the parameters, build and register a command.
@@ -175,19 +177,19 @@ commandA' name aliases params parser cb = do
  @
 -}
 command ::
-    forall ps c a m r.
-    ( Monad m
-    , P.Member (P.Final m) r
-    , DSLC m c a r
-    , TypedCommandC ps c a r
-    , CommandContext m c a
-    ) =>
-    -- | The name of the command
-    T.Text ->
-    -- | The callback for this command
-    (c -> CommandForParsers ps r a) ->
-    P.Sem r (Command m c a)
-command name cmd = commandA @ps name [] cmd
+  forall ps c a m r.
+  ( Monad m
+  , P.Member (P.Final m) r
+  , DSLC m c a r
+  , TypedCommandC ps c a r
+  , CommandContext m c a
+  ) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The callback for this command
+  (c -> CommandForParsers ps r a) ->
+  P.Sem r (Command m c a)
+command name = commandA @ps name []
 
 {- | Given the name and aliases of a command and a callback, and a type level list of
  the parameters, build and register a command.
@@ -206,37 +208,37 @@ command name cmd = commandA @ps name [] cmd
  @
 -}
 commandA ::
-    forall ps c a m r.
-    ( Monad m
-    , P.Member (P.Final m) r
-    , DSLC m c a r
-    , TypedCommandC ps c a r
-    , CommandContext m c a
-    ) =>
-    -- | The name of the command
-    T.Text ->
-    -- | The aliases for the command
-    [T.Text] ->
-    -- | The callback for this command
-    (c -> CommandForParsers ps r a) ->
-    P.Sem r (Command m c a)
+  forall ps c a m r.
+  ( Monad m
+  , P.Member (P.Final m) r
+  , DSLC m c a r
+  , TypedCommandC ps c a r
+  , CommandContext m c a
+  ) =>
+  -- | The name of the command
+  T.Text ->
+  -- | The aliases for the command
+  [T.Text] ->
+  -- | The callback for this command
+  (c -> CommandForParsers ps r a) ->
+  P.Sem r (Command m c a)
 commandA name aliases cmd = do
-    parent <- P.ask @(Maybe (Group m c a))
-    hidden <- P.tag $ P.ask @Bool
-    checks <- P.ask @[Check m c]
-    help' <- P.ask @(c -> T.Text)
-    cmd' <- buildCommand @ps (name :| aliases) parent hidden checks help' cmd
-    ltell $ LH.singleton name (cmd', Original)
-    ltell $ LH.fromList [(name, (cmd', Alias)) | name <- aliases]
-    pure cmd'
+  parent <- P.ask @(Maybe (Group m c a))
+  hidden <- P.tag $ P.ask @Bool
+  checks <- P.ask @[Check m c]
+  help' <- P.ask @(c -> T.Text)
+  cmd' <- buildCommand @ps (name :| aliases) parent hidden checks help' cmd
+  ltell $ LH.singleton name (cmd', Original)
+  ltell $ LH.fromList [(name, (cmd', Alias)) | name <- aliases]
+  pure cmd'
 
 {- | Set the visibility of any groups or commands registered inside the given
  action to hidden.
 -}
 hide ::
-    P.Member (P.Tagged "hidden" (P.Reader Bool)) r =>
-    P.Sem r x ->
-    P.Sem r x
+  P.Member (P.Tagged "hidden" (P.Reader Bool)) r =>
+  P.Sem r x ->
+  P.Sem r x
 hide = P.tag @"hidden" . P.local @Bool (const True) . P.raise
 
 {- | Set the help for any groups or commands registered inside the given action.
@@ -250,19 +252,20 @@ hide = P.tag @"hidden" . P.local @Bool (const True) . P.raise
  @
 -}
 help ::
-    P.Member (P.Reader (c -> T.Text)) r =>
-    (c -> T.Text) ->
-    P.Sem r a ->
-    P.Sem r a
+  P.Member (P.Reader (c -> T.Text)) r =>
+  (c -> T.Text) ->
+  P.Sem r a ->
+  P.Sem r a
 help = P.local . const
 
 {- | Add to the list of checks for any commands registered inside the given
  action.
 -}
-requires :: DSLC m c a r =>
-    [Check m c] ->
-    P.Sem r x ->
-    P.Sem r x
+requires ::
+  DSLC m c a r =>
+  [Check m c] ->
+  P.Sem r x ->
+  P.Sem r x
 requires = P.local . (<>)
 
 {- | Construct a check and add it to the list of checks for any commands
@@ -271,16 +274,16 @@ requires = P.local . (<>)
  Refer to 'CalamityCommands.Check.Check' for more info on checks.
 -}
 requires' ::
-    (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
-    -- | The name of the check
-    T.Text ->
-    -- | The callback for the check
-    (c -> P.Sem r (Maybe T.Text)) ->
-    P.Sem r x ->
-    P.Sem r x
+  (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
+  -- | The name of the check
+  T.Text ->
+  -- | The callback for the check
+  (c -> P.Sem r (Maybe T.Text)) ->
+  P.Sem r x ->
+  P.Sem r x
 requires' name cb m = do
-    check <- buildCheck name cb
-    requires [check] m
+  check <- buildCheck name cb
+  requires [check] m
 
 {- | Construct some pure checks and add them to the list of checks for any
  commands registered inside the given action.
@@ -296,12 +299,12 @@ requires' name cb m = do
  @
 -}
 requiresPure ::
-    (Monad m, DSLC m c a r) =>
-    [(T.Text, c -> Maybe T.Text)] ->
-    -- A list of check names and check callbacks
-    P.Sem r x ->
-    P.Sem r x
-requiresPure checks = requires $ map (uncurry buildCheckPure) checks
+  (Monad m, DSLC m c a r) =>
+  [(T.Text, c -> Maybe T.Text)] ->
+  -- A list of check names and check callbacks
+  P.Sem r x ->
+  P.Sem r x
+requiresPure checks = requires $ fmap (uncurry buildCheckPure) checks
 
 {- | Construct a group and place any commands registered in the given action
  into the new group.
@@ -310,12 +313,12 @@ requiresPure checks = requires $ map (uncurry buildCheckPure) checks
  'group'' if you don't want that (i.e. your help function is context aware).
 -}
 group ::
-    (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
-    -- | The name of the group
-    T.Text ->
-    P.Sem r x ->
-    P.Sem r x
-group name m = groupA name [] m
+  (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
+  -- | The name of the group
+  T.Text ->
+  P.Sem r x ->
+  P.Sem r x
+group name = groupA name []
 
 {- | Construct a group with aliases and place any commands registered in the
  given action into the new group.
@@ -327,29 +330,29 @@ group name m = groupA name [] m
  'group'' if you don't want that (i.e. your help function is context aware).
 -}
 groupA ::
-    forall x c m a r.
-    (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
-    -- | The name of the group
-    T.Text ->
-    -- | The aliases of the group
-    [T.Text] ->
-    P.Sem r x ->
-    P.Sem r x
+  forall x c m a r.
+  (Monad m, P.Member (P.Final m) r, DSLC m c a r) =>
+  -- | The name of the group
+  T.Text ->
+  -- | The aliases of the group
+  [T.Text] ->
+  P.Sem r x ->
+  P.Sem r x
 groupA name aliases m = mdo
-    parent <- P.ask @(Maybe (Group m c a))
-    hidden <- P.tag $ P.ask @Bool
-    checks <- P.ask @[Check m c]
-    help' <- P.ask @(c -> T.Text)
-    origHelp <- fetchOrigHelp
-    let group' = Group (name :| aliases) parent hidden commands children help' checks
-    (children, (commands, res)) <-
-        llisten @(LH.HashMap T.Text (Group m c a, AliasType)) $
-            llisten @(LH.HashMap T.Text (Command m c a, AliasType)) $
-                P.local @(Maybe (Group m c a)) (const $ Just group') $
-                    P.local @(c -> T.Text) (const origHelp) m
-    ltell $ LH.singleton name (group', Original)
-    ltell $ LH.fromList [(name, (group', Alias)) | name <- aliases]
-    pure res
+  parent <- P.ask @(Maybe (Group m c a))
+  hidden <- P.tag $ P.ask @Bool
+  checks <- P.ask @[Check m c]
+  help' <- P.ask @(c -> T.Text)
+  origHelp <- fetchOrigHelp
+  let group' = Group (name :| aliases) parent hidden commands children help' checks
+  (children, (commands, res)) <-
+    llisten @(LH.HashMap T.Text (Group m c a, AliasType)) $
+      llisten @(LH.HashMap T.Text (Command m c a, AliasType)) $
+        P.local @(Maybe (Group m c a)) (const $ Just group') $
+          P.local @(c -> T.Text) (const origHelp) m
+  ltell $ LH.singleton name (group', Original)
+  ltell $ LH.fromList [(name, (group', Alias)) | name <- aliases]
+  pure res
 
 fetchOrigHelp :: P.Member (P.Tagged "original-help" (P.Reader (c -> T.Text))) r => P.Sem r (c -> T.Text)
 fetchOrigHelp = P.tag P.ask
@@ -364,12 +367,12 @@ fetchOrigHelp = P.tag P.ask
  value.
 -}
 group' ::
-    (P.Member (P.Final m) r, DSLC m c a r) =>
-    -- | The name of the group
-    T.Text ->
-    P.Sem r x ->
-    P.Sem r x
-group' name m = groupA' name [] m
+  (P.Member (P.Final m) r, DSLC m c a r) =>
+  -- | The name of the group
+  T.Text ->
+  P.Sem r x ->
+  P.Sem r x
+group' name = groupA' name []
 
 {- | Construct a group with aliases and place any commands registered in the given action
  into the new group.
@@ -381,27 +384,27 @@ group' name m = groupA' name [] m
  value.
 -}
 groupA' ::
-    forall x c m a r.
-    (P.Member (P.Final m) r, DSLC m c a r) =>
-    -- | The name of the group
-    T.Text ->
-    -- | The aliases of the group
-    [T.Text] ->
-    P.Sem r x ->
-    P.Sem r x
+  forall x c m a r.
+  (P.Member (P.Final m) r, DSLC m c a r) =>
+  -- | The name of the group
+  T.Text ->
+  -- | The aliases of the group
+  [T.Text] ->
+  P.Sem r x ->
+  P.Sem r x
 groupA' name aliases m = mdo
-    parent <- P.ask @(Maybe (Group m c a))
-    hidden <- P.tag $ P.ask @Bool
-    checks <- P.ask @[Check m c]
-    help' <- P.ask @(c -> T.Text)
-    let group' = Group (name :| aliases) parent hidden commands children help' checks
-    (children, (commands, res)) <-
-        llisten @(LH.HashMap T.Text (Group m c a, AliasType)) $
-            llisten @(LH.HashMap T.Text (Command m c a, AliasType)) $
-                P.local @(Maybe (Group m c a)) (const $ Just group') m
-    ltell $ LH.singleton name (group', Original)
-    ltell $ LH.fromList [(name, (group', Alias)) | name <- aliases]
-    pure res
+  parent <- P.ask @(Maybe (Group m c a))
+  hidden <- P.tag $ P.ask @Bool
+  checks <- P.ask @[Check m c]
+  help' <- P.ask @(c -> T.Text)
+  let group' = Group (name :| aliases) parent hidden commands children help' checks
+  (children, (commands, res)) <-
+    llisten @(LH.HashMap T.Text (Group m c a, AliasType)) $
+      llisten @(LH.HashMap T.Text (Command m c a, AliasType)) $
+        P.local @(Maybe (Group m c a)) (const $ Just group') m
+  ltell $ LH.singleton name (group', Original)
+  ltell $ LH.fromList [(name, (group', Alias)) | name <- aliases]
+  pure res
 
 -- | Retrieve the final command handler for this block
 fetchHandler :: DSLC m c a r => P.Sem r (CommandHandler m c a)

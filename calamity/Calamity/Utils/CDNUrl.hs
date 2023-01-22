@@ -5,8 +5,8 @@ module Calamity.Utils.CDNUrl (
   isGIFAsset,
 ) where
 
-import qualified Data.Text as T
-import qualified Network.HTTP.Req as Req
+import Data.Text qualified as T
+import Network.HTTP.Req qualified as Req
 
 -- | The CDN URL
 cdnURL :: Req.Url 'Req.Https
@@ -16,7 +16,8 @@ cdnURL = Req.https "cdn.discordapp.com"
 isGIFAsset :: T.Text -> Bool
 isGIFAsset = T.isPrefixOf "a_"
 
--- | Generate \'hash.ext\' for an asset hash. @ext@ will be \'gif\' for animated
--- assets, \'png\' otherwise.
+{- | Generate \'hash.ext\' for an asset hash. @ext@ will be \'gif\' for animated
+ assets, \'png\' otherwise.
+-}
 assetHashFile :: T.Text -> T.Text
 assetHashFile h = if isGIFAsset h then h <> ".gif" else h <> ".png"

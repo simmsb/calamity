@@ -3,7 +3,7 @@ module CalamityCommands.AliasType (
   AliasType (..),
 ) where
 
-import qualified TextShow
+import TextShow qualified
 
 data AliasType
   = Alias

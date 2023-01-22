@@ -3,23 +3,23 @@
 
 -- | Discord gateway intents
 module Calamity.Gateway.Intents (
-    Intents (..),
-    defaultIntents,
-    intentGuilds,
-    intentGuildMembers,
-    intentGuildBans,
-    intentGuildEmojis,
-    intentGuildIntegrations,
-    intentGuildWebhooks,
-    intentGuildInvites,
-    intentGuildVoiceStates,
-    intentGuildPresences,
-    intentGuildMessages,
-    intentGuildMessageReactions,
-    intentGuildMessageTyping,
-    intentDirectMessages,
-    intentDirectMessageReactions,
-    intentDirectMessageTyping,
+  Intents (..),
+  defaultIntents,
+  intentGuilds,
+  intentGuildMembers,
+  intentGuildBans,
+  intentGuildEmojis,
+  intentGuildIntegrations,
+  intentGuildWebhooks,
+  intentGuildInvites,
+  intentGuildVoiceStates,
+  intentGuildPresences,
+  intentGuildMessages,
+  intentGuildMessageReactions,
+  intentGuildMessageTyping,
+  intentDirectMessages,
+  intentDirectMessageReactions,
+  intentDirectMessageTyping,
 ) where
 
 import Data.Aeson (ToJSON)
@@ -60,4 +60,4 @@ defaultIntents = allBut (intentGuildMembers .+. intentGuildPresences)
 
 -- | Default intents are all but the privileged intents: members and intents
 instance Default Intents where
-    def = defaultIntents
+  def = defaultIntents

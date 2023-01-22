@@ -6,7 +6,7 @@ module Calamity.Types.Model.Channel.Reaction (Reaction (..)) where
 import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (toPairs), (.=))
 import Calamity.Types.Model.Guild.Emoji
 import Data.Aeson ((.:))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Optics.TH
 import TextShow.TH
 

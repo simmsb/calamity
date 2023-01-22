@@ -25,11 +25,11 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Default.Class
 import Data.Monoid
-import qualified Data.Text as T
-import qualified Data.Text.Lazy as L
+import Data.Text qualified as T
+import Data.Text.Lazy qualified as L
 import Optics
-import qualified Polysemy as P
-import qualified Polysemy.Error as P
+import Polysemy qualified as P
+import Polysemy.Error qualified as P
 
 -- | A wrapper type for allowing mentions
 newtype TMention a = TMention (Snowflake a)

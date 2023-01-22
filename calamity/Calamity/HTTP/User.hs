@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 -- | User endpoints
 module Calamity.HTTP.User (
@@ -14,17 +15,17 @@ import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Default.Class
 import Data.Function ((&))
 import Data.Text (Text)
-import Optics.TH
 import Network.HTTP.Req
+import Optics.TH
 
 data ModifyUserData = ModifyUserData
   { username :: Maybe Text
-  , -- | The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
-    avatar :: Maybe Text
+  , avatar :: Maybe Text
+  -- ^ The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
   }
   deriving (Show)
   deriving (Aeson.ToJSON) via CalamityToJSON ModifyUserData
@@ -88,7 +89,8 @@ instance Request (UserRequest a) where
   action (ModifyCurrentUser o) = patchWith' $ ReqBodyJson o
   action (GetCurrentUserGuilds GetCurrentUserGuildsOptions {before, after, limit}) =
     getWithP
-      ( "before" =:? (fromSnowflake <$> before) <> "after" =:? (fromSnowflake <$> after)
+      ( "before" =:? (fromSnowflake <$> before)
+          <> "after" =:? (fromSnowflake <$> after)
           <> "limit" =:? limit
       )
   action (LeaveGuild _) = deleteWith

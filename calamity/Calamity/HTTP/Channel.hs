@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 -- | Channel endpoints
 module Calamity.HTTP.Channel (
@@ -31,19 +32,18 @@ import Calamity.Types.Model.Guild.Overwrite (Overwrite)
 import Calamity.Types.Model.Guild.Role (Role)
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as K
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as K
 import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Word
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
 import Optics
-import PyF
 import TextShow
 
 data CreateMessageAttachment = CreateMessageAttachment
@@ -474,4 +474,3 @@ instance Request (ChannelRequest a) where
   action (DeletePinnedMessage _ _) = deleteWith
   action (GroupDMAddRecipient _ _ o) = putWith' (ReqBodyJson o)
   action (GroupDMRemoveRecipient _ _) = deleteWith
-

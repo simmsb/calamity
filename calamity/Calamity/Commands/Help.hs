@@ -7,9 +7,9 @@ module Calamity.Commands.Help (
 import Calamity.Client.Types (BotC)
 import Calamity.Commands.Types
 import Calamity.Types.Tellable
-import qualified CalamityCommands.Help as CC
+import CalamityCommands.Help qualified as CC
 import Control.Monad (void)
-import qualified Polysemy as P
+import Polysemy qualified as P
 
 {- | Given a 'CommandHandler', optionally a parent 'Group', and a list of 'Check's,
  construct a help command that will provide help for all the commands and

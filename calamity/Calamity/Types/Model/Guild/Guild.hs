@@ -12,7 +12,7 @@ module Calamity.Types.Model.Guild.Guild (
 ) where
 
 import Calamity.Internal.SnowflakeMap (SnowflakeMap)
-import qualified Calamity.Internal.SnowflakeMap as SM
+import Calamity.Internal.SnowflakeMap qualified as SM
 import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=))
 import Calamity.Types.CDNAsset (CDNAsset (..))
 import Calamity.Types.Model.Channel
@@ -25,17 +25,17 @@ import Calamity.Types.Model.Voice.VoiceState
 import Calamity.Types.Snowflake
 import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
 import Data.Aeson ((.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.Types as Aeson
+import Data.Aeson qualified as Aeson
+import Data.Aeson.Types qualified as Aeson
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as LH
+import Data.HashMap.Strict qualified as LH
 import Data.Maybe
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Time
 import Data.Word
 import Network.HTTP.Req ((/:), (/~))
 import Optics
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH (deriveTextShow)
 
 data GuildIcon = GuildIcon
@@ -132,7 +132,8 @@ instance Aeson.FromJSON Guild where
 
     presences' <- do
       presences' <- v .: "presences"
-      pure . LH.fromList
+      pure
+        . LH.fromList
         . mapMaybe
           ( Aeson.parseMaybe @Aeson.Object @(Snowflake User, Presence)
               ( \m -> do

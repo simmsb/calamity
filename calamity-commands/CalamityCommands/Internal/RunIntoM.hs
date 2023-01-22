@@ -1,14 +1,13 @@
-{-# LANGUAGE TemplateHaskell #-}
-
 -- | Something for converting polysemy actions into monadic actions
-module CalamityCommands.Internal.RunIntoM
-    ( runSemToM
-    , bindSemToM ) where
+module CalamityCommands.Internal.RunIntoM (
+  runSemToM,
+  bindSemToM,
+) where
 
-import           Data.Functor
+import Data.Functor
 
-import qualified Polysemy                         as P
-import qualified Polysemy.Final                   as P
+import Polysemy qualified as P
+import Polysemy.Final qualified as P
 
 runSemToM :: forall m r a. (Monad m, P.Member (P.Final m) r) => P.Sem r a -> P.Sem r (m (Maybe a))
 runSemToM m = P.withStrategicToFinal $ do

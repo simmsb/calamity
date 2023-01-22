@@ -1,24 +1,24 @@
 -- | Things that can be upgraded from snowflakes to their full data
-module Calamity.Types.Upgradeable
-    ( Upgradeable(..) ) where
+module Calamity.Types.Upgradeable (Upgradeable (..)) where
 
-import           Calamity.Cache.Eff
-import           Calamity.Client.Types
-import           Calamity.HTTP                  as H
-import           Calamity.Internal.Utils
-import qualified Calamity.Internal.SnowflakeMap as SM
-import           Calamity.Types.Model.Channel
-import           Calamity.Types.Model.Guild
-import           Calamity.Types.Model.User
-import           Calamity.Types.Snowflake
-import           Control.Applicative
-import           Optics
-import qualified Polysemy                       as P
-import qualified Polysemy.Fail                  as P
-import qualified Polysemy.NonDet                as P
+import Calamity.Cache.Eff
+import Calamity.Client.Types
+import Calamity.HTTP as H
+import Calamity.Internal.SnowflakeMap qualified as SM
+import Calamity.Internal.Utils
+import Calamity.Types.Model.Channel
+import Calamity.Types.Model.Guild
+import Calamity.Types.Model.User
+import Calamity.Types.Snowflake
+import Control.Applicative
+import Optics
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.NonDet qualified as P
 
--- | A typeclass that represents snowflakes that can be upgraded to their
--- complete data, either through the cache or HTTP.
+{- | A typeclass that represents snowflakes that can be upgraded to their
+ complete data, either through the cache or HTTP.
+-}
 class Upgradeable a ids | a -> ids, ids -> a where
   -- | Upgrade a snowflake to its complete data.
   --
@@ -85,30 +85,34 @@ instance Upgradeable GuildChannel (Snowflake GuildChannel) where
         pure c'
 
 instance Upgradeable VoiceChannel (Snowflake VoiceChannel) where
-    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
-            Just (GuildChannel' (GuildVoiceChannel vc)) -> Just vc
-            _ -> Nothing
+  upgrade s =
+    upgrade (coerceSnowflake @_ @Channel s) <&> \case
+      Just (GuildChannel' (GuildVoiceChannel vc)) -> Just vc
+      _ -> Nothing
 
 instance Upgradeable DMChannel (Snowflake DMChannel) where
-    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
-            Just (DMChannel' dc) -> Just dc
-            _ -> Nothing
+  upgrade s =
+    upgrade (coerceSnowflake @_ @Channel s) <&> \case
+      Just (DMChannel' dc) -> Just dc
+      _ -> Nothing
 
 instance Upgradeable GroupChannel (Snowflake GroupChannel) where
-    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
-            Just (GroupChannel' gc) -> Just gc
-            _ -> Nothing
+  upgrade s =
+    upgrade (coerceSnowflake @_ @Channel s) <&> \case
+      Just (GroupChannel' gc) -> Just gc
+      _ -> Nothing
 
 instance Upgradeable TextChannel (Snowflake TextChannel) where
-    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
-            Just (GuildChannel' (GuildTextChannel tc)) -> Just tc
-            _ -> Nothing
+  upgrade s =
+    upgrade (coerceSnowflake @_ @Channel s) <&> \case
+      Just (GuildChannel' (GuildTextChannel tc)) -> Just tc
+      _ -> Nothing
 
 instance Upgradeable Category (Snowflake Category) where
-    upgrade s = upgrade (coerceSnowflake @_ @Channel s) <&> \case
-            Just (GuildChannel' (GuildCategory c)) -> Just c
-            _ -> Nothing
-
+  upgrade s =
+    upgrade (coerceSnowflake @_ @Channel s) <&> \case
+      Just (GuildChannel' (GuildCategory c)) -> Just c
+      _ -> Nothing
 
 instance Upgradeable Emoji (Snowflake Guild, Snowflake Emoji) where
   upgrade (gid, eid) = P.runNonDetMaybe (getcache <|> gethttp)

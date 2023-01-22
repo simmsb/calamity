@@ -18,13 +18,13 @@ import Calamity.Types.Model.Guild (Guild, Role)
 import Calamity.Types.Model.Guild.Member (Member)
 import Calamity.Types.Model.User (User)
 import Calamity.Types.Snowflake
-import Data.Aeson ((.:), (.:?), (.!=))
-import qualified Data.Aeson as Aeson
-import qualified Data.HashMap.Strict as H
+import Data.Aeson ((.!=), (.:), (.:?))
+import Data.Aeson qualified as Aeson
+import Data.HashMap.Strict qualified as H
 import Data.Scientific (toBoundedInteger)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH
 
 -- | Empty type to flag application IDs

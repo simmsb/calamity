@@ -10,9 +10,9 @@ module CalamityCommands.Context (
 ) where
 
 import CalamityCommands.Command
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Optics.TH
-import qualified Polysemy as P
+import Polysemy qualified as P
 
 class CommandContext m c a | c -> m, c -> a where
   -- | The prefix that was used to invoke the command

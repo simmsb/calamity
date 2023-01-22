@@ -15,13 +15,13 @@ import Calamity.Internal.UnixTimestamp
 import Calamity.Internal.Utils
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Scientific
 import Data.Text (Text)
 import Data.Time (UTCTime)
 import Data.Word
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH
 
 data ActivityType

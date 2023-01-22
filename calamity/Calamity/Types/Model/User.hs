@@ -16,15 +16,15 @@ import Calamity.Types.Partial
 import Calamity.Types.Snowflake
 import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Colour (Colour)
 import Data.Text (Text)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Text.Read (decimal)
 import Data.Word
 import Network.HTTP.Req ((/:), (/~))
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 import TextShow.TH
 
 data UserBanner = UserBanner
@@ -85,7 +85,7 @@ instance Aeson.FromJSON User where
 newtype instance Partial User = PartialUser
   { id :: Snowflake User
   }
-  deriving (Show, Eq)
+  deriving stock (Show, Eq)
   deriving (HasID User) via HasIDField "id" (Partial User)
 
 instance Aeson.FromJSON (Partial User) where

@@ -5,9 +5,9 @@ import Calamity.Internal.Utils ()
 import Calamity.Types.Snowflake
 import Data.Aeson (FromJSON (..), ToJSON (..), withArray)
 import Data.Data
-import qualified Data.Foldable as F
+import Data.Foldable qualified as F
 import Data.HashMap.Strict (HashMap)
-import qualified Data.HashMap.Strict as SH
+import Data.HashMap.Strict qualified as SH
 import Data.Hashable
 import GHC.Exts (IsList)
 import Optics

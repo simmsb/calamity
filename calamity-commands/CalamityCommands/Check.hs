@@ -12,20 +12,20 @@ import CalamityCommands.Error
 import CalamityCommands.Internal.RunIntoM
 import CalamityCommands.Internal.Utils
 import Data.Maybe
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Optics
-import qualified Polysemy as P
+import Polysemy qualified as P
 
 {- | A check for a command.
 
  Every check for a command must return Nothing for the command to be run.
 -}
 data Check m c = MkCheck
-  { -- | The name of the check.
-    name :: T.Text
-  , -- | The callback for the check, returns Nothing if it passes, otherwise
-    -- returns the reason for it not passing.
-    callback :: c -> m (Maybe T.Text)
+  { name :: T.Text
+  -- ^ The name of the check.
+  , callback :: c -> m (Maybe T.Text)
+  -- ^ The callback for the check, returns Nothing if it passes, otherwise
+  -- returns the reason for it not passing.
   }
 
 $(makeFieldLabelsNoPrefix ''Check)

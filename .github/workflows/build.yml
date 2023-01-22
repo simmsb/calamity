@@ -14,9 +14,20 @@ jobs:
         mkdir -p $HOME/.config/nix/
         echo "substituters = https://cache.nixos.org https://hydra.iohk.io" >> $HOME/.config/nix/nix.conf
         echo "trusted-public-keys = cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= hydra.iohk.io:f/Ea+s+dFdN+3Y/G+FDgSq+a5NEWhJGzdjvKNGv0/EQ=" >> $HOME/.config/nix/nix.conf
-    - uses: cachix/cachix-action@v10
+    - uses: cachix/cachix-action@v12
       with:
         name: simmsb-calamity
         authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
-    - run: nix build .#calamity
-    - run: nix flake check
+    - name: Cache Nix dependencies
+      run: |
+        nix develop -j 4 -c echo
+    - name: Build 🔨
+      id: build
+      run: |
+        nix build -j auto -L
+    - name: Flake checks 🧪
+      run: |
+        # Because 'nix flake check' is not system-aware
+        # See https://srid.ca/haskell-template/checks
+        nix run nixpkgs#sd 'systems = nixpkgs.lib.systems.flakeExposed' 'systems = [ "x86_64-linux" ]' flake.nix
+        nix flake check -L

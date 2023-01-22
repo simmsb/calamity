@@ -29,16 +29,16 @@ module Calamity.Internal.Utils (
 import Calamity.Internal.RunIntoIO
 import Calamity.Types.LogEff
 import Control.Applicative
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Aeson.Encoding (null_)
 import Data.Default.Class
-import qualified Data.Map as M
+import Data.Map qualified as M
 import Data.Maybe (catMaybes)
 import Data.Semigroup (Last (..))
 import Data.Text
-import qualified Data.Vector.Unboxing as VU
-import qualified DiPolysemy as Di
-import qualified Polysemy as P
+import Data.Vector.Unboxing qualified as VU
+import DiPolysemy qualified as Di
+import Polysemy qualified as P
 import TextShow
 
 {- | Like whileM, but stateful effects are not preserved to mitigate memory leaks

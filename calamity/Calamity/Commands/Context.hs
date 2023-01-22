@@ -17,14 +17,14 @@ import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Calamity.Types.Tellable
-import qualified CalamityCommands.Context as CC
+import CalamityCommands.Context qualified as CC
 import Control.Applicative
 import Control.Monad
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Optics
-import qualified Polysemy as P
-import qualified Polysemy.Fail as P
-import qualified TextShow
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
+import TextShow qualified
 
 class CommandContext c => CalamityCommandContext c where
   -- | The id of the channel that invoked this command
@@ -41,25 +41,25 @@ class CommandContext c => CalamityCommandContext c where
 
 -- | Invokation context for commands
 data FullContext = FullContext
-  { -- | The message that the command was invoked from
-    message :: Message
-  , -- | If the command was sent in a guild, this will be present
-    guild :: Maybe Guild
-  , -- | The member that invoked the command, if in a guild
-    --
-    -- Note: If discord sent a member with the message, this is used; otherwise
-    -- we try to fetch the member from the cache.
-    member :: Maybe Member
-  , -- | The channel the command was invoked from
-    channel :: Channel
-  , -- | The user that invoked the command
-    user :: User
-  , -- | The command that was invoked
-    command :: Command FullContext
-  , -- | The prefix that was used to invoke the command
-    prefix :: T.Text
-  , -- | The message remaining after consuming the prefix
-    unparsedParams :: T.Text
+  { message :: Message
+  -- ^ The message that the command was invoked from
+  , guild :: Maybe Guild
+  -- ^ If the command was sent in a guild, this will be present
+  , member :: Maybe Member
+  -- ^ The member that invoked the command, if in a guild
+  --
+  -- Note: If discord sent a member with the message, this is used; otherwise
+  -- we try to fetch the member from the cache.
+  , channel :: Channel
+  -- ^ The channel the command was invoked from
+  , user :: User
+  -- ^ The user that invoked the command
+  , command :: Command FullContext
+  -- ^ The command that was invoked
+  , prefix :: T.Text
+  -- ^ The prefix that was used to invoke the command
+  , unparsedParams :: T.Text
+  -- ^ The message remaining after consuming the prefix
   }
   deriving (Show)
   deriving (TextShow.TextShow) via TextShow.FromStringShow FullContext
@@ -103,24 +103,24 @@ buildContext msg usr mem prefix command unparsed = (rightToMaybe <$>) . P.runFai
 
 -- | A lightweight context that doesn't need any cache information
 data LightContext = LightContext
-  { -- | The message that the command was invoked from
-    message :: Message
-  , -- | If the command was sent in a guild, this will be present
-    guildID :: Maybe (Snowflake Guild)
-  , -- | The channel the command was invoked from
-    channelID :: Snowflake Channel
-  , -- | The user that invoked the command
-    user :: User
-  , -- | The member that triggered the command.
-    --
-    -- Note: Only sent if discord sent the member object with the message.
-    member :: Maybe Member
-  , -- | The command that was invoked
-    command :: Command LightContext
-  , -- | The prefix that was used to invoke the command
-    prefix :: T.Text
-  , -- | The message remaining after consuming the prefix
-    unparsedParams :: T.Text
+  { message :: Message
+  -- ^ The message that the command was invoked from
+  , guildID :: Maybe (Snowflake Guild)
+  -- ^ If the command was sent in a guild, this will be present
+  , channelID :: Snowflake Channel
+  -- ^ The channel the command was invoked from
+  , user :: User
+  -- ^ The user that invoked the command
+  , member :: Maybe Member
+  -- ^ The member that triggered the command.
+  --
+  -- Note: Only sent if discord sent the member object with the message.
+  , command :: Command LightContext
+  -- ^ The command that was invoked
+  , prefix :: T.Text
+  -- ^ The prefix that was used to invoke the command
+  , unparsedParams :: T.Text
+  -- ^ The message remaining after consuming the prefix
   }
   deriving (Show)
   deriving (TextShow.TextShow) via TextShow.FromStringShow LightContext

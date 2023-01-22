@@ -3,7 +3,7 @@
 -- | Command errors
 module CalamityCommands.Error (CommandError (..)) where
 
-import qualified Data.Text as T
+import Data.Text qualified as T
 import TextShow.TH (deriveTextShow)
 
 data CommandError

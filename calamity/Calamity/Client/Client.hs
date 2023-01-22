@@ -25,7 +25,7 @@ import Calamity.Gateway.Types
 import Calamity.HTTP.Internal.Ratelimit
 import Calamity.Internal.ConstructorName
 import Calamity.Internal.RunIntoIO
-import qualified Calamity.Internal.SnowflakeMap as SM
+import Calamity.Internal.SnowflakeMap qualified as SM
 import Calamity.Internal.UnixTimestamp
 import Calamity.Internal.Updateable
 import Calamity.Internal.Utils
@@ -35,7 +35,7 @@ import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.Presence (Presence (..))
 import Calamity.Types.Model.User
-import qualified Calamity.Types.Model.Voice as V
+import Calamity.Types.Model.Voice qualified as V
 import Calamity.Types.Snowflake
 import Calamity.Types.Token
 import Calamity.Types.TokenEff
@@ -50,20 +50,19 @@ import Data.Foldable
 import Data.IORef
 import Data.Maybe
 import Data.Proxy
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Time.Clock.POSIX
-import qualified Df1
-import qualified Di.Core as DC
-import qualified DiPolysemy as Di
+import Df1 qualified
+import Di.Core qualified as DC
+import DiPolysemy qualified as Di
 import Optics
-import qualified Polysemy as P
-import qualified Polysemy.Async as P
-import qualified Polysemy.AtomicState as P
-import qualified Polysemy.Error as P
-import qualified Polysemy.Fail as P
-import qualified Polysemy.Reader as P
-import qualified Polysemy.Resource as P
-import PyF
+import Polysemy qualified as P
+import Polysemy.Async qualified as P
+import Polysemy.AtomicState qualified as P
+import Polysemy.Error qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.Reader qualified as P
+import Polysemy.Resource qualified as P
 import TextShow (TextShow (showt))
 
 timeA :: P.Member (P.Embed IO) r => P.Sem r a -> P.Sem r (Double, a)
@@ -776,7 +775,8 @@ updateReactionAdd :: Bool -> RawEmoji -> Reaction -> Reaction
 updateReactionAdd isMe emoji reaction =
   if emoji == reaction ^. #emoji
     then
-      reaction & #count %~ succ
+      reaction
+        & #count %~ succ
         & #me %~ (|| isMe)
     else reaction
 
@@ -784,6 +784,7 @@ updateReactionRemove :: Bool -> RawEmoji -> Reaction -> Reaction
 updateReactionRemove isMe emoji reaction =
   if emoji == reaction ^. #emoji
     then
-      reaction & #count %~ pred
+      reaction
+        & #count %~ pred
         & #me %~ (&& not isMe)
     else reaction

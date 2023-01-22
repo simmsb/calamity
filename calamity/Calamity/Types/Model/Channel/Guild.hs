@@ -16,7 +16,7 @@ import Calamity.Types.Model.Channel.Guild.Voice
 import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Optics ((^.))
 import Optics.TH
 import TextShow.TH

@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-partial-type-signatures #-}
 
 -- | Guild endpoints
 module Calamity.HTTP.Guild (
@@ -34,8 +35,8 @@ import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Model.Voice
 import Calamity.Types.Snowflake
-import qualified Data.Aeson as Aeson
-import qualified Data.Aeson.KeyMap as K
+import Data.Aeson qualified as Aeson
+import Data.Aeson.KeyMap qualified as K
 import Data.Colour (Colour)
 import Data.Default.Class
 import Data.Text (Text)

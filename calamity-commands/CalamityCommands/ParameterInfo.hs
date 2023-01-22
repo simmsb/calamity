@@ -5,7 +5,7 @@ module CalamityCommands.ParameterInfo (
   ParameterInfo (..),
 ) where
 
-import qualified Data.Text as S
+import Data.Text qualified as S
 import Data.Typeable
 import Optics.TH (makeFieldLabelsNoPrefix)
 import TextShow.TH (deriveTextShow)

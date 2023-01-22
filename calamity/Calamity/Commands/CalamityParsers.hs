@@ -12,14 +12,14 @@ import Calamity.Types.Partial
 import Calamity.Types.Snowflake
 import CalamityCommands.ParameterInfo
 import CalamityCommands.Parser
-import Optics
 import Control.Monad
 import Control.Monad.Trans (lift)
 import Data.Maybe (fromMaybe, isJust)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Data.Typeable
-import qualified Polysemy as P
-import qualified Polysemy.Reader as P
+import Optics
+import Polysemy qualified as P
+import Polysemy.Reader qualified as P
 import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Megaparsec.Error.Builder (errFancy, fancy)
@@ -147,8 +147,8 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Emoj
 -- | Parses both discord emojis, and unicode emojis
 instance ParameterParser RawEmoji c r where
   parse = parseMP (parserName @RawEmoji) (try parseCustomEmoji <|> UnicodeEmoji <$> takeP (Just "A unicode emoji") 1)
-   where
-    parseCustomEmoji = CustomEmoji <$> partialEmoji
+    where
+      parseCustomEmoji = CustomEmoji <$> partialEmoji
   parameterDescription = "emoji"
 
 {- | ParameterParser for roles in the guild the command was invoked in, this only

@@ -12,7 +12,7 @@ import Calamity.Types.Model.Presence.Activity
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Optics.TH
 import TextShow.TH

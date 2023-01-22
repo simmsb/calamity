@@ -2,20 +2,19 @@
  This module exports the DSL and core types for using commands
 -}
 module CalamityCommands (
-    module CalamityCommands.Context,
-    module CalamityCommands.Dsl,
-    module CalamityCommands.Error,
-    module CalamityCommands.Handler,
-    module CalamityCommands.Utils,
-    module CalamityCommands.ParsePrefix,
-    module CalamityCommands.Help,
+  module CalamityCommands.Context,
+  module CalamityCommands.Dsl,
+  module CalamityCommands.Error,
+  module CalamityCommands.Handler,
+  module CalamityCommands.Utils,
+  module CalamityCommands.ParsePrefix,
+  module CalamityCommands.Help,
 
-    -- * Parameter parsers
+  -- * Parameter parsers
+  module CalamityCommands.Parser,
 
-    module CalamityCommands.Parser,
-
-    -- * Commands
-    -- $commandDocs
+  -- * Commands
+  -- $commandDocs
 ) where
 
 import CalamityCommands.Context
@@ -24,7 +23,7 @@ import CalamityCommands.Error
 import CalamityCommands.Handler
 import CalamityCommands.Help
 import CalamityCommands.ParsePrefix
-import CalamityCommands.Parser (Named, KleeneStarConcat, KleenePlusConcat, ParameterParser (..))
+import CalamityCommands.Parser (KleenePlusConcat, KleeneStarConcat, Named, ParameterParser (..))
 import CalamityCommands.Utils
 
 {- $commandDocs

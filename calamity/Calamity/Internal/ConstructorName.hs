@@ -1,9 +1,10 @@
 -- | Get the constructor name of something
-module Calamity.Internal.ConstructorName
-    ( CtorName(..)
-    , GCtorName(..) ) where
+module Calamity.Internal.ConstructorName (
+  CtorName (..),
+  GCtorName (..),
+) where
 
-import           GHC.Generics
+import GHC.Generics
 
 class GCtorName f where
   gctorName :: f a -> String

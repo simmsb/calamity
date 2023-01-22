@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -Wno-unused-top-binds #-}
 
 -- | A 'Cache' handler that operates in memory
 module Calamity.Cache.InMemory (
@@ -8,24 +9,24 @@ module Calamity.Cache.InMemory (
 ) where
 
 import Calamity.Cache.Eff
-import qualified Calamity.Internal.BoundedStore as BS
-import qualified Calamity.Internal.SnowflakeMap as SM
+import Calamity.Internal.BoundedStore qualified as BS
+import Calamity.Internal.SnowflakeMap qualified as SM
 import Calamity.Internal.Utils
 import Calamity.Types.Model.Channel
 import Calamity.Types.Model.Guild
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Control.Applicative
-import Data.Functor.Identity
 import Control.Monad.State.Strict
 import Data.Foldable
-import qualified Data.HashMap.Strict as SH
-import qualified Data.HashSet as HS
+import Data.Functor.Identity
+import Data.HashMap.Strict qualified as SH
+import Data.HashSet qualified as HS
 import Data.IORef
 import Optics
-import qualified Polysemy as P
-import qualified Polysemy.AtomicState as P
-import Optics.State.Operators ((?=), (%=))
+import Optics.State.Operators ((%=), (?=))
+import Polysemy qualified as P
+import Polysemy.AtomicState qualified as P
 
 data Cache f = Cache
   { user :: Maybe User
@@ -96,7 +97,7 @@ runCache GetBotUser = use #user
 runCache (SetGuild g) = do
   #guilds %= SM.insert g
   #guildChannels %= SH.filter (\v -> getID @Guild v /= getID @Guild g)
-  #guildChannels %= SH.union (SH.fromList $ map (, g) (SM.keys (g ^. #channels)))
+  #guildChannels %= SH.union (SH.fromList $ map (,g) (SM.keys (g ^. #channels)))
 runCache (GetGuild gid) = use (#guilds % at' gid)
 runCache (GetGuildChannel cid) = use (#guildChannels % at' cid) <&> (>>= (^. #channels % at' cid))
 runCache GetGuilds = SM.elems <$> use #guilds

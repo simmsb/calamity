@@ -10,7 +10,7 @@ import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake
 import Data.Aeson ((.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Optics.TH
 import TextShow.TH

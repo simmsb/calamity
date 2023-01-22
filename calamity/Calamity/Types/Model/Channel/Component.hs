@@ -26,14 +26,14 @@ import Calamity.Internal.Utils (CalamityToJSON (..), CalamityToJSON' (..), (.=),
 import Calamity.Types.Model.Guild.Emoji
 import Control.Monad (replicateM)
 import Data.Aeson ((.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
+import Data.Maybe (catMaybes)
 import Data.Scientific (toBoundedInteger)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import Optics.TH
 import System.Random (Uniform)
 import System.Random.Stateful (Uniform (uniformM), UniformRange (uniformRM))
 import TextShow.TH
-import Data.Maybe (catMaybes)
 
 newtype CustomID = CustomID T.Text
   deriving stock (Eq, Ord, Show)
@@ -131,7 +131,6 @@ instance CalamityToJSON' Button where
 $(deriveTextShow ''Button)
 $(makeFieldLabelsNoPrefix ''Button)
 
-
 instance Aeson.FromJSON Button where
   parseJSON = Aeson.withObject "Components.Button" $ \v ->
     Button
@@ -153,13 +152,13 @@ data LinkButton = LinkButton
 
 instance CalamityToJSON' LinkButton where
   toPairs LinkButton {..} =
-      [ "style" .= style
-      , "label" .?= label
-      , "emoji" .?= emoji
-      , "url" .= url
-      , "disabled" .= disabled
-      , "type" .= ButtonType
-      ]
+    [ "style" .= style
+    , "label" .?= label
+    , "emoji" .?= emoji
+    , "url" .= url
+    , "disabled" .= disabled
+    , "type" .= ButtonType
+    ]
 
 instance Aeson.FromJSON LinkButton where
   parseJSON = Aeson.withObject "Components.Linkbutton" $ \v ->
@@ -219,12 +218,12 @@ data SelectOption = SelectOption
 
 instance CalamityToJSON' SelectOption where
   toPairs SelectOption {..} =
-      [ "label" .= label
-      , "value" .= value
-      , "description" .?= description
-      , "emoji" .?= emoji
-      , "default" .= default_
-      ]
+    [ "label" .= label
+    , "value" .= value
+    , "description" .?= description
+    , "emoji" .?= emoji
+    , "default" .= default_
+    ]
 
 instance Aeson.FromJSON SelectOption where
   parseJSON = Aeson.withObject "Components.SelectOption" $ \v ->
@@ -251,14 +250,14 @@ data Select = Select
 
 instance CalamityToJSON' Select where
   toPairs Select {..} =
-      [ "options" .= options
-      , "placeholder" .?= placeholder
-      , "min_values" .?= minValues
-      , "max_values" .?= maxValues
-      , "disabled" .= disabled
-      , "custom_id" .= customID
-      , "type" .= SelectType
-      ]
+    [ "options" .= options
+    , "placeholder" .?= placeholder
+    , "min_values" .?= minValues
+    , "max_values" .?= maxValues
+    , "disabled" .= disabled
+    , "custom_id" .= customID
+    , "type" .= SelectType
+    ]
 
 instance Aeson.FromJSON Select where
   parseJSON = Aeson.withObject "Components.Select" $ \v ->
@@ -322,16 +321,16 @@ data TextInput = TextInput
 
 instance CalamityToJSON' TextInput where
   toPairs TextInput {..} =
-      [ "style" .= style
-      , "label" .= label
-      , "min_length" .= minLength
-      , "max_length" .= maxLength
-      , "required" .= required
-      , "value" .= value
-      , "placeholder" .= placeholder
-      , "custom_id" .= customID
-      , "type" .= TextInputType
-      ]
+    [ "style" .= style
+    , "label" .= label
+    , "min_length" .= minLength
+    , "max_length" .= maxLength
+    , "required" .= required
+    , "value" .= value
+    , "placeholder" .= placeholder
+    , "custom_id" .= customID
+    , "type" .= TextInputType
+    ]
 
 instance Aeson.FromJSON TextInput where
   parseJSON = Aeson.withObject "Components.TextInput" $ \v ->

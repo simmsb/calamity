@@ -17,7 +17,7 @@ module Calamity.Metrics.Eff (
 
 import Calamity.Metrics.Internal
 import Data.Default.Class
-import qualified Data.Map as Map
+import Data.Map qualified as Map
 import Data.Text
 import Optics.TH
 import Polysemy

@@ -14,6 +14,7 @@ module Calamity.HTTP (
   module Calamity.HTTP.Internal.Types,
   RatelimitEff (..),
   TokenEff (..),
+
   -- * HTTP
   -- $httpDocs
 ) where
@@ -33,28 +34,29 @@ import Calamity.HTTP.User
 import Calamity.HTTP.Webhook
 import Calamity.Types.TokenEff (TokenEff (..))
 
--- $httpDocs
---
--- This module contains all the http related things
---
---
--- ==== Registered Metrics
---
---     1. Gauge: @"inflight_requests" [route]@
---
---         Keeps track of how many requests are currently in-flight, the @route@
---         parameter will be the route that is currently active.
---
---     2. Counter: @"total_requests" [route]@
---
---         Incremented on every request, the @route@ parameter is the route that
---         the request was made on.
---
---
--- ==== Examples
---
--- Editing a message:
---
--- @
--- 'invoke' $ 'EditMessage' someChannel someMessage ('Just' "new content") 'Nothing'
--- @
+{- $httpDocs
+
+ This module contains all the http related things
+
+
+ ==== Registered Metrics
+
+     1. Gauge: @"inflight_requests" [route]@
+
+         Keeps track of how many requests are currently in-flight, the @route@
+         parameter will be the route that is currently active.
+
+     2. Counter: @"total_requests" [route]@
+
+         Incremented on every request, the @route@ parameter is the route that
+         the request was made on.
+
+
+ ==== Examples
+
+ Editing a message:
+
+ @
+ 'invoke' $ 'EditMessage' someChannel someMessage ('Just' "new content") 'Nothing'
+ @
+-}

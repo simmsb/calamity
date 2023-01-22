@@ -12,18 +12,18 @@ import CalamityCommands.Context
 import CalamityCommands.Dsl
 import CalamityCommands.Group
 import CalamityCommands.Handler
-import CalamityCommands.ParameterInfo
 import CalamityCommands.Internal.LocalWriter
+import CalamityCommands.ParameterInfo
 import Control.Applicative
-import Optics
-import qualified Data.HashMap.Lazy as LH
+import Data.HashMap.Lazy qualified as LH
 import Data.List.NonEmpty (NonEmpty (..))
-import qualified Data.List.NonEmpty as NE
+import Data.List.NonEmpty qualified as NE
 import Data.Maybe (mapMaybe)
-import qualified Data.Text as T
-import qualified Polysemy as P
-import qualified Polysemy.Fail as P
-import qualified Polysemy.Reader as P
+import Data.Text qualified as T
+import Optics
+import Polysemy qualified as P
+import Polysemy.Fail qualified as P
+import Polysemy.Reader qualified as P
 
 data CommandOrGroup m c a
   = Command' (Command m c a)
@@ -33,50 +33,55 @@ parameterTypeHelp :: [ParameterInfo] -> T.Text
 parameterTypeHelp pinfo =
   let dedup = LH.toList . LH.fromList $ map (\(ParameterInfo _ t d) -> (t, d)) pinfo
       typeDescs = T.unlines ["- " <> T.pack (show t) <> ": " <> d | (t, d) <- dedup]
-  in if null dedup
-      then ""
-      else "Types:\n" <> typeDescs <> "\n"
+   in if null dedup
+        then ""
+        else "Types:\n" <> typeDescs <> "\n"
 
 helpCommandHelp :: c -> T.Text
 helpCommandHelp _ = "Show help for a command or group."
 
 helpForCommand :: CommandContext m c a => c -> Command m c a -> T.Text
-helpForCommand ctx cmd@Command{names, checks, help, params} =
-  "Usage: " <> prefix' <> path' <> " " <> params' <> "\n"
+helpForCommand ctx cmd@Command {names, checks, help, params} =
+  "Usage: "
+    <> prefix'
+    <> path'
+    <> " "
+    <> params'
+    <> "\n"
     <> aliasesFmt
     <> checksFmt
     <> parameterTypeHelp params
     <> help ctx
- where
-  prefix' = ctxPrefix ctx
-  path' = T.unwords $ commandPath cmd
-  params' = commandParams cmd
-  aliases = NE.tail names
-  checks' = map (^. #name) checks
-  aliasesFmt =
-    if null aliases
-      then ""
-      else "Aliases: " <> T.unwords aliases <> "\n"
-  checksFmt =
-    if null checks'
-      then ""
-      else "Checks: " <> T.unwords checks' <> "\n\n"
+  where
+    prefix' = ctxPrefix ctx
+    path' = T.unwords $ commandPath cmd
+    params' = commandParams cmd
+    aliases = NE.tail names
+    checks' = map (^. #name) checks
+    aliasesFmt =
+      if null aliases
+        then ""
+        else "Aliases: " <> T.unwords aliases <> "\n"
+    checksFmt =
+      if null checks'
+        then ""
+        else "Checks: " <> T.unwords checks' <> "\n\n"
 
 fmtCommandWithParams :: Command m c a -> T.Text
-fmtCommandWithParams cmd@Command{names} = formatWithAliases names <> " " <> commandParams cmd
+fmtCommandWithParams cmd@Command {names} = formatWithAliases names <> " " <> commandParams cmd
 
 formatWithAliases :: NonEmpty T.Text -> T.Text
 formatWithAliases (name :| aliases) = name <> aliasesFmt
- where
-  aliasesFmt = case aliases of
-    [] -> ""
-    aliases' -> "[" <> T.intercalate "|" aliases' <> "]"
+  where
+    aliasesFmt = case aliases of
+      [] -> ""
+      aliases' -> "[" <> T.intercalate "|" aliases' <> "]"
 
 onlyOriginals :: [(a, AliasType)] -> [a]
 onlyOriginals = mapMaybe inner
- where
-  inner (_, Alias) = Nothing
-  inner (a, Original) = Just a
+  where
+    inner (_, Alias) = Nothing
+    inner (a, Original) = Just a
 
 onlyVisibleC :: [Command m c a] -> [Command m c a]
 onlyVisibleC = mapMaybe notHiddenC
@@ -86,58 +91,60 @@ onlyVisibleG = mapMaybe notHiddenG
 
 helpForGroup :: CommandContext m c a => c -> Group m c a -> T.Text
 helpForGroup ctx grp =
-  "Group: " <> path' <> "\n"
+  "Group: "
+    <> path'
+    <> "\n"
     <> aliasesFmt
     <> checksFmt
     <> (grp ^. #help) ctx
     <> "\n"
     <> groupsMsg
     <> commandsMsg
- where
-  path' = T.unwords $ groupPath grp
-  groups = onlyVisibleG . onlyOriginals . LH.elems $ grp ^. #children
-  commands = onlyVisibleC . onlyOriginals . LH.elems $ grp ^. #commands
-  groupsFmt = map formatWithAliases (groups ^.. traversed % #names)
-  groupsMsg =
-    if null groups
-      then ""
-      else "The following child groups exist:\n" <> (T.unlines . map ("- " <>) $ groupsFmt)
-  commandsMsg =
-    if null commands
-      then ""
-      else "\nThe following child commands exist:\n" <> (T.unlines . map (("- " <>) . fmtCommandWithParams) $ commands)
-  aliases = NE.tail $ grp ^. #names
-  checks' = map (^. #name) $ grp ^. #checks
-  aliasesFmt =
-    if null aliases
-      then ""
-      else "Aliases: " <> T.unwords aliases <> "\n"
-  checksFmt =
-    if null checks'
-      then ""
-      else "Checks: " <> T.unwords checks' <> "\n\n"
+  where
+    path' = T.unwords $ groupPath grp
+    groups = onlyVisibleG . onlyOriginals . LH.elems $ grp ^. #children
+    commands = onlyVisibleC . onlyOriginals . LH.elems $ grp ^. #commands
+    groupsFmt = map formatWithAliases (groups ^.. traversed % #names)
+    groupsMsg =
+      if null groups
+        then ""
+        else "The following child groups exist:\n" <> (T.unlines . map ("- " <>) $ groupsFmt)
+    commandsMsg =
+      if null commands
+        then ""
+        else "\nThe following child commands exist:\n" <> (T.unlines . map (("- " <>) . fmtCommandWithParams) $ commands)
+    aliases = NE.tail $ grp ^. #names
+    checks' = map (^. #name) $ grp ^. #checks
+    aliasesFmt =
+      if null aliases
+        then ""
+        else "Aliases: " <> T.unwords aliases <> "\n"
+    checksFmt =
+      if null checks'
+        then ""
+        else "Checks: " <> T.unwords checks' <> "\n\n"
 
 rootHelp :: CommandHandler m c a -> T.Text
 rootHelp handler = groupsMsg <> commandsMsg
- where
-  groups = onlyVisibleG . onlyOriginals . LH.elems $ handler ^. #groups
-  commands = onlyVisibleC . onlyOriginals . LH.elems $ handler ^. #commands
-  groupsFmt = map formatWithAliases (groups ^.. traversed % #names)
-  groupsMsg =
-    if null groups
-      then ""
-      else "The following groups exist:\n" <> (T.unlines . map ("- " <>) $ groupsFmt)
-  commandsMsg =
-    if null commands
-      then ""
-      else "\nThe following commands exist:\n" <> (T.unlines . map (("- " <>) . fmtCommandWithParams) $ commands)
+  where
+    groups = onlyVisibleG . onlyOriginals . LH.elems $ handler ^. #groups
+    commands = onlyVisibleC . onlyOriginals . LH.elems $ handler ^. #commands
+    groupsFmt = map formatWithAliases (groups ^.. traversed % #names)
+    groupsMsg =
+      if null groups
+        then ""
+        else "The following groups exist:\n" <> (T.unlines . map ("- " <>) $ groupsFmt)
+    commandsMsg =
+      if null commands
+        then ""
+        else "\nThe following commands exist:\n" <> (T.unlines . map (("- " <>) . fmtCommandWithParams) $ commands)
 
 renderHelp :: CommandContext m c a => CommandHandler m c a -> c -> [T.Text] -> T.Text
 renderHelp handler ctx path =
   case findCommandOrGroup handler path of
-    Just (Command' cmd@Command{names}) ->
+    Just (Command' cmd@Command {names}) ->
       "Help for command `" <> NE.head names <> "`: \n" <> helpForCommand ctx cmd
-    Just (Group' grp@Group{names} remainingPath) ->
+    Just (Group' grp@Group {names} remainingPath) ->
       let failedMsg =
             if null remainingPath
               then ""
@@ -232,22 +239,22 @@ helpCommand render = do
   pure cmd
 
 notHiddenC :: Command m c a -> Maybe (Command m c a)
-notHiddenC c@Command{hidden} = if hidden then Nothing else Just c
+notHiddenC c@Command {hidden} = if hidden then Nothing else Just c
 
 notHiddenG :: Group m c a -> Maybe (Group m c a)
-notHiddenG g@Group{hidden} = if hidden then Nothing else Just g
+notHiddenG g@Group {hidden} = if hidden then Nothing else Just g
 
 findCommandOrGroup :: CommandHandler m c a -> [T.Text] -> Maybe (CommandOrGroup m c a)
-findCommandOrGroup handler path = go (handler ^. #commands, handler ^. #groups) path
- where
-  go ::
-    (LH.HashMap T.Text (Command m c a, AliasType), LH.HashMap T.Text (Group m c a, AliasType)) ->
-    [T.Text] ->
-    Maybe (CommandOrGroup m c a)
-  go (commands, groups) (x : xs) =
-    case LH.lookup x commands of
-      Just (notHiddenC -> Just cmd, _) -> Just (Command' cmd)
-      _ -> case LH.lookup x groups of
-        Just (notHiddenG -> Just group, _) -> go (group ^. #commands, group ^. #children) xs <|> Just (Group' group xs)
-        _ -> Nothing
-  go _ [] = Nothing
+findCommandOrGroup handler = go (handler ^. #commands, handler ^. #groups)
+  where
+    go ::
+      (LH.HashMap T.Text (Command m c a, AliasType), LH.HashMap T.Text (Group m c a, AliasType)) ->
+      [T.Text] ->
+      Maybe (CommandOrGroup m c a)
+    go (commands, groups) (x : xs) =
+      case LH.lookup x commands of
+        Just (notHiddenC -> Just cmd, _) -> Just (Command' cmd)
+        _ -> case LH.lookup x groups of
+          Just (notHiddenG -> Just group, _) -> go (group ^. #commands, group ^. #children) xs <|> Just (Group' group xs)
+          _ -> Nothing
+    go _ [] = Nothing

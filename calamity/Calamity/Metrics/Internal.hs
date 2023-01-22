@@ -1,8 +1,9 @@
 -- | Internal data structures to the metrics effect
-module Calamity.Metrics.Internal
-    ( Counter(..)
-    , Gauge(..)
-    , Histogram(..) ) where
+module Calamity.Metrics.Internal (
+  Counter (..),
+  Gauge (..),
+  Histogram (..),
+) where
 
 -- | A handle to a counter
 newtype Counter = Counter

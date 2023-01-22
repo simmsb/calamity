@@ -10,16 +10,16 @@ import Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson ((.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Colour (Colour)
 import Data.Text (Text)
 import Data.Text.Read (decimal)
 import Data.Time
 import Data.Vector.Unboxing (Vector)
-import qualified Data.Vector.Unboxing as V
+import Data.Vector.Unboxing qualified as V
 import Data.Word (Word64)
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 
 data Member = Member
   { id :: Snowflake User

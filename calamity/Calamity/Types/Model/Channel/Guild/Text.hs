@@ -10,11 +10,11 @@ import {-# SOURCE #-} Calamity.Types.Model.Guild.Guild
 import Calamity.Types.Model.Guild.Overwrite
 import Calamity.Types.Snowflake
 import Data.Aeson ((.!=), (.:), (.:?))
-import qualified Data.Aeson as Aeson
+import Data.Aeson qualified as Aeson
 import Data.Text (Text)
 import Data.Time
 import Optics.TH
-import qualified TextShow
+import TextShow qualified
 
 data TextChannel = TextChannel
   { id :: Snowflake TextChannel

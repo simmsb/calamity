@@ -1,6 +1,3 @@
-{-# LANGUAGE RecursiveDo #-}
-{-# LANGUAGE TemplateHaskell #-}
-
 -- | The shard logic
 module Calamity.Gateway.Shard (
   Shard (..),
@@ -63,7 +60,7 @@ import Calamity.Types.LogEff (LogEff)
 import Calamity.Types.Token (Token, rawToken)
 import Control.Concurrent (threadDelay)
 import Control.Concurrent.Async (Async, cancel)
-import qualified Control.Concurrent.Chan.Unagi as UC
+import Control.Concurrent.Chan.Unagi qualified as UC
 import Control.Concurrent.STM (STM, atomically, retry)
 import Control.Concurrent.STM.TBMQueue (
   TBMQueue,
@@ -77,21 +74,19 @@ import Control.Exception (
   Exception (fromException),
   SomeException,
  )
-import qualified Control.Exception.Safe as Ex
-import Optics
-import Optics.State.Operators
+import Control.Exception.Safe qualified as Ex
 import Control.Monad (void, when)
 import Control.Monad.State.Lazy (runState)
-import qualified Data.Aeson as A
-import qualified Data.ByteString.Lazy as LBS
+import Data.Aeson qualified as A
+import Data.ByteString.Lazy qualified as LBS
 import Data.Default.Class (def)
 import Data.IORef (newIORef)
 import Data.Maybe (fromMaybe)
-import qualified Data.Text as T
+import Data.Text qualified as T
 import DiPolysemy (attr, push)
-import qualified Network.Connection as NC
-import qualified Network.TLS as NT
-import qualified Network.TLS.Extra as NT
+import Network.Connection qualified as NC
+import Network.TLS qualified as NT
+import Network.TLS.Extra qualified as NT
 import Network.WebSockets (
   Connection,
   ConnectionException (..),
@@ -99,16 +94,17 @@ import Network.WebSockets (
   sendCloseCode,
   sendTextData,
  )
-import qualified Network.WebSockets as NW
-import qualified Network.WebSockets.Stream as NW
+import Network.WebSockets qualified as NW
+import Network.WebSockets.Stream qualified as NW
+import Optics
+import Optics.State.Operators
 import Polysemy (Sem)
-import qualified Polysemy as P
-import qualified Polysemy.Async as P
-import qualified Polysemy.AtomicState as P
-import qualified Polysemy.Error as P
-import qualified Polysemy.Resource as P
-import PyF (fmt)
-import qualified System.X509 as X509
+import Polysemy qualified as P
+import Polysemy.Async qualified as P
+import Polysemy.AtomicState qualified as P
+import Polysemy.Error qualified as P
+import Polysemy.Resource qualified as P
+import System.X509 qualified as X509
 import TextShow (showt)
 import Prelude hiding (error)
 
@@ -226,7 +222,7 @@ shardLoop = do
     handleWSException e = pure $ case fromException e of
       Just (CloseRequest code _)
         | code `elem` [4004, 4010, 4011, 4012, 4013, 4014] ->
-          Left (ShutDownShard, Just . showt $ code)
+            Left (ShutDownShard, Just . showt $ code)
       e -> Left (RestartShard, Just . T.pack . show $ e)
 
     discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
@@ -246,7 +242,7 @@ shardLoop = do
                 Right a ->
                   P.embed . atomically $ tryWriteTBMQueue' outqueue (Discord a)
                 Left e -> do
-                  error . T.pack $ "Failed to decode " <> e <> ": "<> show msg'
+                  error . T.pack $ "Failed to decode " <> e <> ": " <> show msg'
                   pure True
               when r inner
     outerloop :: ShardC r => Sem r ()
@@ -307,7 +303,7 @@ shardLoop = do
                   , compress = False
                   , largeThreshold = Nothing
                   , shard =
-                      Just ( shard ^. #shardID , shard ^. #shardCount )
+                      Just (shard ^. #shardID, shard ^. #shardCount)
                   , presence = shard ^. #initialStatus
                   , intents = shard ^. #intents
                   }
