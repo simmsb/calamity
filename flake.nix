@@ -53,6 +53,7 @@
             polysemy = dontCheck (super.callHackage "polysemy" "1.9.0.0" { });
             typerep-map = dontCheck (super.callHackage "typerep-map" "0.6.0.0" { });
             aeson-optics = dontCheck (super.callHackage "aeson-optics" "1.2.0.1" { });
+            di-core = dontCheck super.di-core;
             optics = dontCheck super.optics;
 
             http-api-data = dontCheck (super.callHackage "http-api-data" "0.5" { });
