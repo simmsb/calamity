@@ -3,12 +3,22 @@
 
   inputs = {
     nixpkgs.url = "github:nixos/nixpkgs/nixpkgs-unstable";
+
     gitignore.url = "github:hercules-ci/gitignore.nix";
+    gitignore.inputs.nixpkgs.follows = "nixpkgs";
+
     flake-parts.url = "github:hercules-ci/flake-parts";
+
     haskell-flake.url = "github:srid/haskell-flake";
+
     treefmt-nix.url = "github:numtide/treefmt-nix";
+    treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
+
     flake-root.url = "github:srid/flake-root";
+
     mission-control.url = "github:Platonic-Systems/mission-control";
+
+    nixpkgs-140774-workaround.url = "github:srid/nixpkgs-140774-workaround";
   };
 
   outputs = inputs@{ self, nixpkgs, gitignore, flake-parts, ... }:
@@ -23,26 +33,25 @@
       ];
       perSystem = { self', lib, config, pkgs, ... }: {
         haskellProjects.main = {
-          haskellPackages = pkgs.haskell.packages.ghc944;
+          imports = [
+            inputs.nixpkgs-140774-workaround.haskellFlakeProjectModules.default
+          ];
+
+          basePackages = pkgs.haskell.packages.ghc944.override(old: { overrides =  (final: prev: { ormolu = final.ormolu_0_5_3_0; }); });
+
           packages = {
             calamity-commands.root = ./calamity-commands;
             calamity.root = ./calamity;
           };
 
-          buildTools = hp:
-            let
-              # https://github.com/NixOS/nixpkgs/issues/140774 reoccurs in GHC 9.2
-              workaround140774 = hpkg: with pkgs.haskell.lib;
-                overrideCabal hpkg (drv: {
-                  enableSeparateBinOutput = false;
-                });
-            in
-          {
-            ghcid = workaround140774 hp.ghcid;
-            treefmt = config.treefmt.build.wrapper;
-          } // config.treefmt.build.programs;
-          hlsCheck.enable = false;
-          hlintCheck.enable = true;
+          devShell = {
+            tools = hp:
+              {
+                ghcid = hp.ghcid;
+                treefmt = config.treefmt.build.wrapper;
+              } // config.treefmt.build.programs;
+            hlsCheck.enable = false;
+          };
 
           overrides = self: super: with pkgs.haskell.lib; {
             ghcid = dontCheck super.ghcid;
@@ -114,7 +123,5 @@
         devShells.default =
           config.mission-control.installToDevShell self'.devShells.main;
       };
-
-      flake.herculesCI.ciSystems = [ "x86_64-linux" ];
     };
 }
