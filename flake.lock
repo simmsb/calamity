@@ -68,21 +68,6 @@
         "type": "github"
       }
     },
-    "mission-control": {
-      "locked": {
-        "lastModified": 1675195908,
-        "narHash": "sha256-nQv35C7svZFluwy2uoZFxwPqiT16XoKAoMlIQYmvg3A=",
-        "owner": "Platonic-Systems",
-        "repo": "mission-control",
-        "rev": "feb06872ac4dc977f70f6388c87d36fc3c3c3693",
-        "type": "github"
-      },
-      "original": {
-        "owner": "Platonic-Systems",
-        "repo": "mission-control",
-        "type": "github"
-      }
-    },
     "nixpkgs": {
       "locked": {
         "lastModified": 1677383253,
@@ -138,7 +123,6 @@
         "flake-root": "flake-root",
         "gitignore": "gitignore",
         "haskell-flake": "haskell-flake",
-        "mission-control": "mission-control",
         "nixpkgs": "nixpkgs",
         "nixpkgs-140774-workaround": "nixpkgs-140774-workaround",
         "treefmt-nix": "treefmt-nix"

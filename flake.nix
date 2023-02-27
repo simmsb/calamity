@@ -16,8 +16,6 @@
 
     flake-root.url = "github:srid/flake-root";
 
-    mission-control.url = "github:Platonic-Systems/mission-control";
-
     nixpkgs-140774-workaround.url = "github:srid/nixpkgs-140774-workaround";
   };
 
@@ -29,10 +27,9 @@
         inputs.haskell-flake.flakeModule
         inputs.treefmt-nix.flakeModule
         inputs.flake-root.flakeModule
-        inputs.mission-control.flakeModule
       ];
       perSystem = { self', lib, config, pkgs, ... }: {
-        haskellProjects.main = {
+        haskellProjects.default = {
           imports = [
             inputs.nixpkgs-140774-workaround.haskellFlakeProjectModules.default
           ];
@@ -89,39 +86,16 @@
           };
         };
 
-        mission-control.scripts = {
-          docs = {
-            description = "Start Hoogle server for project dependencies";
-            exec = ''
-              echo http://127.0.0.1:8690
-              hoogle serve -p 8690 --local
-            '';
-            category = "Dev Tools";
-          };
-          repl = {
-            description = "Start the cabal repl";
-            exec = ''
-              cabal repl "$@"
-            '';
-            category = "Dev Tools";
-          };
-          fmt = {
-            description = "Format the source tree";
-            exec = "${lib.getExe config.treefmt.build.wrapper}";
-            category = "Dev Tools ";
-          };
-          run = {
-            description = "Run the project with ghcid auto-recompile";
-            exec = ''
-              ghcid -c "cabal repl exe:haskell-template" --warnings -T :main
-            '';
-            category = "Primary";
+        packages.default = self'.packages.calamity;
+      };
+
+      flake.haskellFlakeProjectModules = {
+        output = { pkgs, ... }: {
+          source-overrides = { 
+            calamity = self + /calamity;
+            calamity-commands = self + /calamity-commands;
           };
         };
-
-        packages.default = self'.packages.main-calamity;
-        devShells.default =
-          config.mission-control.installToDevShell self'.devShells.main;
       };
     };
 }
