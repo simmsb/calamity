@@ -34,7 +34,7 @@
             inputs.nixpkgs-140774-workaround.haskellFlakeProjectModules.default
           ];
 
-          basePackages = pkgs.haskell.packages.ghc944.override(old: { overrides =  (final: prev: { ormolu = final.ormolu_0_5_3_0; }); });
+          basePackages = pkgs.haskell.packages.ghc944.override (old: { overrides = (final: prev: { ormolu = final.ormolu_0_5_3_0; }); });
 
           packages = {
             calamity-commands.root = ./calamity-commands;
@@ -92,7 +92,7 @@
 
       flake.haskellFlakeProjectModules = {
         output = { pkgs, ... }: {
-          source-overrides = { 
+          source-overrides = {
             calamity = self + /calamity;
             calamity-commands = self + /calamity-commands;
           };
