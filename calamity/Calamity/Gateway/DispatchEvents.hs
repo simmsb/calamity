@@ -75,6 +75,7 @@ data DispatchData
   | VoiceServerUpdate !VoiceServerUpdateData
   | WebhooksUpdate !WebhooksUpdateData
   | InteractionCreate !Interaction
+  | UNHANDLED Text
   deriving (Show, Generic, CtorName)
 
 data ReadyData = ReadyData

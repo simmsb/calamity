@@ -662,6 +662,9 @@ handleEvent' eh evt@(VoiceStateUpdate newVoiceState@V.VoiceState {guildID = Just
 handleEvent' eh evt@(InteractionCreate interaction) = do
   updateCache evt
   pure $ map ($ interaction) (getEventHandlers @'InteractionEvt eh)
+handleEvent' _ (UNHANDLED e) = do
+  debug . T.pack $ "Not handling event: " <> show e
+  pure []
 handleEvent' _ e = fail $ "Unhandled event: " <> show e
 
 updateCache :: P.Members '[CacheEff, P.Fail] r => DispatchData -> P.Sem r ()
@@ -770,6 +773,7 @@ updateCache (VoiceServerUpdate _) = pure ()
 -- we don't update the cache from interactions
 -- TODO: should we?
 updateCache (InteractionCreate _) = pure ()
+updateCache (UNHANDLED _) = pure ()
 
 updateReactionAdd :: Bool -> RawEmoji -> Reaction -> Reaction
 updateReactionAdd isMe emoji reaction =
