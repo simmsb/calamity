@@ -9,7 +9,7 @@ module Calamity.Types.Model.Guild.Role (
 import Calamity.Internal.IntColour
 import Calamity.Internal.Utils
 import Calamity.Types.CDNAsset (CDNAsset (..))
-import {-# SOURCE #-} Calamity.Types.Model.Guild.Emoji
+import Calamity.Types.Model.Guild.Emoji
 import Calamity.Types.Model.Guild.Permissions
 import Calamity.Types.Snowflake
 import Calamity.Utils.CDNUrl (assetHashFile, cdnURL)
@@ -64,6 +64,7 @@ instance Aeson.FromJSON Role where
   parseJSON = Aeson.withObject "Role" $ \v -> do
     id <- v .: "id"
     icon <- (RoleIcon id <$>) <$> v .: "icon"
+    emoji <- (UnicodeEmoji <$>) <$> v .:? "unicode_emoji"
 
     Role
       <$> pure id
@@ -71,7 +72,7 @@ instance Aeson.FromJSON Role where
       <*> (fromIntColour <$> v .: "color")
       <*> v .: "hoist"
       <*> pure icon
-      <*> v .:? "unicode_emoji"
+      <*> pure emoji
       <*> v .: "position"
       <*> v .: "permissions"
       <*> v .: "managed"

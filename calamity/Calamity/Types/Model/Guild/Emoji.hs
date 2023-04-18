@@ -15,7 +15,7 @@ import Calamity.Internal.Utils (
   (.=),
  )
 import Calamity.Types.CDNAsset (CDNAsset (..))
-import Calamity.Types.Model.Guild.Role
+import {-# SOURCE #-} Calamity.Types.Model.Guild.Role
 import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Calamity.Utils.CDNUrl (cdnURL)
