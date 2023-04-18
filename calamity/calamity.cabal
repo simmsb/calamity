@@ -1,6 +1,6 @@
 cabal-version:      2.0
 name:               calamity
-version:            0.7.1.0
+version:            0.8.0.0
 synopsis:           A library for writing discord bots in haskell
 description:
   Please see the README on GitHub at <https://github.com/simmsb/calamity#readme>
