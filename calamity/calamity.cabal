@@ -195,7 +195,8 @@ library
     , calamity-commands     >=0.4     && <0.5
     , colour                >=2.3.5   && <2.4
     , concurrent-extra      >=0.7     && <0.8
-    , connection            >=0.2.6   && <0.4
+    , crypton-connection    >=0.2.6   && <0.4
+    , crypton-x509-system   >=1.6.6   && <1.7
     , containers            >=0.6     && <0.7
     , data-default-class    >=0.1     && <0.2
     , data-flags            >=0.0.3   && <0.1
@@ -235,6 +236,5 @@ library
     , unordered-containers  >=0.2     && <0.3
     , vector                >=0.12    && <0.14
     , websockets            >=0.12    && <0.13
-    , x509-system           >=1.6.6   && <1.7
 
   default-language:   Haskell2010
