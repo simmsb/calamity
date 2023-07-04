@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.9.0.0
+
++ Require tls >= 1.7
++ Bump dependencies to support tls-1.7
+
 ## 0.7.1.0
 
 + Fix ratelimits being effectively broken (succ -> pred)
