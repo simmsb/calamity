@@ -16,7 +16,8 @@
 
     flake-root.url = "github:srid/flake-root";
 
-    nixpkgs-140774-workaround.url = "github:srid/nixpkgs-140774-workaround";
+    req.url = "github:mrkkrp/req";
+    req.flake = false;
   };
 
   outputs = inputs@{ self, nixpkgs, gitignore, flake-parts, ... }:
@@ -30,43 +31,34 @@
       ];
       perSystem = { self', lib, config, pkgs, ... }: {
         haskellProjects.default = {
-          imports = [
-            inputs.nixpkgs-140774-workaround.haskellFlakeProjectModules.default
-          ];
-
-          basePackages = pkgs.haskell.packages.ghc944.override (old: { overrides = (final: prev: { ormolu = final.ormolu_0_5_3_0; }); });
+          basePackages = pkgs.haskell.packages.ghc944; 
 
           packages = {
-            calamity-commands.root = ./calamity-commands;
-            calamity.root = ./calamity;
+            crypton-connection.source = "0.3.1";
+            crypton-x509-system.source = "1.6.7";
+            crypton-x509.source = "1.7.6";
+            tls.source = "1.7.0";
+            req.source = inputs.req;
+            http-client-tls.source = "0.3.6.2";
+          };
+
+          settings = {
+            ListLike.check = false;
+            di-core.check = false;
+            optics.check = false;
+            crypton-x509.check = false;
+            vector.check = false;
+            ghcid.check = false;
           };
 
           devShell = {
-            tools = hp:
-              {
-                ghcid = hp.ghcid;
-                treefmt = config.treefmt.build.wrapper;
-              } // config.treefmt.build.programs;
+            tools = hp: { ghcid = null; };
+
+            hoogle = false;
             hlsCheck.enable = false;
           };
 
-          overrides = self: super: with pkgs.haskell.lib; {
-            ghcid = dontCheck super.ghcid;
-
-            ListLike = dontCheck super.ListLike;
-            type-errors = dontCheck (super.callHackage "type-errors" "0.2.0.1" { });
-            polysemy-plugin = dontCheck (super.callHackage "polysemy-plugin" "0.4.4.0" { });
-            polysemy = dontCheck (super.callHackage "polysemy" "1.9.0.0" { });
-            typerep-map = dontCheck (super.callHackage "typerep-map" "0.6.0.0" { });
-            aeson-optics = dontCheck (super.callHackage "aeson-optics" "1.2.0.1" { });
-            pretty-simple = dontCheck (super.callHackage "pretty-simple" "4.1.2.0" { });
-            di-core = dontCheck super.di-core;
-            optics = dontCheck super.optics;
-
-            http-api-data = dontCheck (super.callHackage "http-api-data" "0.5" { });
-            # this v is needed so http-api-data builds
-            attoparsec-iso8601 = dontCheck (super.callHackage "attoparsec-iso8601" "1.1.0.0" { });
-          };
+          autoWire = [ "packages" "apps" ];
         };
 
         treefmt.config = {
@@ -88,14 +80,14 @@
         };
 
         packages.default = self'.packages.calamity;
-      };
+        devShells.default = pkgs.mkShell {
+          name = "calamity-devshell";
 
-      flake.haskellFlakeProjectModules = {
-        output = { pkgs, ... }: {
-          source-overrides = {
-            calamity = self + /calamity;
-            calamity-commands = self + /calamity-commands;
-          };
+          inputsFrom = [
+            config.haskellProjects.default.outputs.devShell
+            config.flake-root.devShell
+            config.treefmt.build.devShell
+          ];
         };
       };
     };

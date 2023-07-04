@@ -2,7 +2,6 @@ cabal-version:   2.0
 name:            bot
 version:         0.0.0
 license:         MIT
-license-file:    LICENSE
 copyright:       2019 Ben Simms
 maintainer:      ben@bensimms.moe
 author:          Ben Simms
@@ -13,9 +12,6 @@ synopsis:        A discord bot
 description:     A discord bot
 category:        Bots
 build-type:      Simple
-extra-doc-files:
-  CHANGELOG.md
-  README.md
 
 source-repository head
   type:     git
