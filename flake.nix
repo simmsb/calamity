@@ -33,7 +33,7 @@
       ];
       perSystem = { self', lib, config, pkgs, ... }: {
         haskellProjects.default = {
-          basePackages = pkgs.haskell.packages.ghc944;
+          basePackages = pkgs.haskell.packages.ghc945;
 
           packages = {
             crypton-connection.source = "0.3.1";
