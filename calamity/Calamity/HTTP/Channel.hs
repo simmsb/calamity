@@ -34,12 +34,12 @@ import Calamity.Types.Model.User
 import Calamity.Types.Snowflake
 import Data.Aeson qualified as Aeson
 import Data.Aeson.KeyMap qualified as K
-import Data.ByteString.Lazy (ByteString)
 import Data.Default.Class
 import Data.Maybe (fromMaybe)
 import Data.Text (Text)
 import Data.Text qualified as T
 import Data.Word
+import Network.HTTP.Client (RequestBody)
 import Network.HTTP.Client.MultipartFormData
 import Network.HTTP.Req
 import Network.Mime
@@ -49,9 +49,17 @@ import TextShow
 data CreateMessageAttachment = CreateMessageAttachment
   { filename :: Text
   , description :: Maybe Text
-  , content :: ByteString
+  , content :: RequestBody
   }
-  deriving (Show)
+
+instance Show CreateMessageAttachment where
+  show (CreateMessageAttachment filename description _) = mconcat
+    [ "CreateMessageAttachment {filename = "
+    , show filename
+    , ", description = "
+    , show description
+    , ", content = <body>}"
+    ]
 
 data CreateMessageOptions = CreateMessageOptions
   { content :: Maybe Text
@@ -418,7 +426,7 @@ instance Request (ChannelRequest a) where
       & buildRoute
   action (CreateMessage _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
-          (partLBS @IO (T.pack $ "files[" <> show n <> "]") content)
+          (partFileRequestBody @IO (T.pack $ "files[" <> show n <> "]") "" content)
             { partFilename = Just (T.unpack filename)
             , partContentType = Just (defaultMimeLookup filename)
             }
