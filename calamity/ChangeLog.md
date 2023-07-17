@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.10.0.0
+
++ Updated `CreateMessageAttachment.content` to be a `Network.HTTP.Client.RequestBody`
+  to allow for easy streaming of uploads
+
 ## 0.9.0.0
 
 + Require tls >= 1.7

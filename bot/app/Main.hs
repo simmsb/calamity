@@ -35,6 +35,7 @@ import Data.Foldable (for_)
 import Data.Text qualified as T
 import Di qualified
 import DiPolysemy qualified as DiP
+import Network.HTTP.Client (RequestBody (RequestBodyLBS))
 import Optics
 import Polysemy qualified as P
 import Polysemy.Async qualified as P
@@ -70,7 +71,7 @@ main = do
           command @'[User] "pfp" \ctx u -> do
             Right pfp <- fetchAsset (u ^. #avatar)
             let name = maybe "default.png" assetHashFile (u ^. #avatar % #hash)
-                file = CreateMessageAttachment name (Just "Your avatar") pfp
+                file = CreateMessageAttachment name (Just "Your avatar") (Network.HTTP.Client.RequestBodyLBS pfp)
             void $ tell ctx file
           command @'[User] "utest" \ctx u -> do
             void . tell @T.Text ctx $ "got user: " <> showt u

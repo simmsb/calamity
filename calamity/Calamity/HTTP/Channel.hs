@@ -53,13 +53,14 @@ data CreateMessageAttachment = CreateMessageAttachment
   }
 
 instance Show CreateMessageAttachment where
-  show (CreateMessageAttachment filename description _) = mconcat
-    [ "CreateMessageAttachment {filename = "
-    , show filename
-    , ", description = "
-    , show description
-    , ", content = <body>}"
-    ]
+  show (CreateMessageAttachment filename description _) =
+    mconcat
+      [ "CreateMessageAttachment {filename = "
+      , show filename
+      , ", description = "
+      , show description
+      , ", content = <body>}"
+      ]
 
 data CreateMessageOptions = CreateMessageOptions
   { content :: Maybe Text

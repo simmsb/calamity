@@ -33,6 +33,7 @@ executable bot
     , di
     , di-core
     , di-polysemy
+    , http-client
     , optics
     , polysemy
     , polysemy-plugin
