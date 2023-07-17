@@ -10,6 +10,7 @@
     flake-parts.url = "github:hercules-ci/flake-parts";
 
     haskell-flake.url = "github:srid/haskell-flake";
+    check-flake.url = "github:srid/check-flake";
 
     treefmt-nix.url = "github:numtide/treefmt-nix";
     treefmt-nix.inputs.nixpkgs.follows = "nixpkgs";
@@ -28,10 +29,11 @@
         inputs.haskell-flake.flakeModule
         inputs.treefmt-nix.flakeModule
         inputs.flake-root.flakeModule
+        inputs.check-flake.flakeModule
       ];
       perSystem = { self', lib, config, pkgs, ... }: {
         haskellProjects.default = {
-          basePackages = pkgs.haskell.packages.ghc944; 
+          basePackages = pkgs.haskell.packages.ghc944;
 
           packages = {
             crypton-connection.source = "0.3.1";

@@ -1,17 +1,17 @@
-cabal-version:   2.0
-name:            bot
-version:         0.0.0
-license:         MIT
-copyright:       2019 Ben Simms
-maintainer:      ben@bensimms.moe
-author:          Ben Simms
-tested-with:     GHC ==8.10.7
-homepage:        https://github.com/nitros12/calamity-bot
-bug-reports:     https://github.com/nitros12/calamity-bot/issues
-synopsis:        A discord bot
-description:     A discord bot
-category:        Bots
-build-type:      Simple
+cabal-version: 2.0
+name:          bot
+version:       0.0.0
+license:       MIT
+copyright:     2019 Ben Simms
+maintainer:    ben@bensimms.moe
+author:        Ben Simms
+tested-with:   GHC ==8.10.7
+homepage:      https://github.com/nitros12/calamity-bot
+bug-reports:   https://github.com/nitros12/calamity-bot/issues
+synopsis:      A discord bot
+description:   A discord bot
+category:      Bots
+build-type:    Simple
 
 source-repository head
   type:     git
