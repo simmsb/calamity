@@ -12,7 +12,8 @@ module Calamity.Internal.BoundedStore (
 
 import Calamity.Internal.Utils (unlessM, whenM)
 import Calamity.Types.Snowflake (HasID (getID), HasID', Snowflake)
-import Control.Monad.State.Lazy (execState, when)
+import Control.Monad.State.Lazy (execState)
+import Control.Monad (when)
 import Data.Default.Class (Default (..))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as H
