@@ -172,15 +172,15 @@ instance Aeson.ToJSON a => Aeson.ToJSON (MaybeNull a) where
   toEncoding WasNull = null_
   toEncoding (NotNull x) = Aeson.toEncoding x
 
-(.?=) :: (Aeson.ToJSON v, Aeson.KeyValue kv) => Aeson.Key -> Maybe v -> Maybe kv
+(.?=) :: (Aeson.ToJSON v, Aeson.KeyValue e kv) => Aeson.Key -> Maybe v -> Maybe kv
 k .?= Just v = Just (k Aeson..= v)
 _ .?= Nothing = Nothing
 
-(.=) :: (Aeson.ToJSON v, Aeson.KeyValue kv) => Aeson.Key -> v -> Maybe kv
+(.=) :: (Aeson.ToJSON v, Aeson.KeyValue e kv) => Aeson.Key -> v -> Maybe kv
 k .= v = Just (k Aeson..= v)
 
 class CalamityToJSON' a where
-  toPairs :: Aeson.KeyValue kv => a -> [Maybe kv]
+  toPairs :: Aeson.KeyValue e kv => a -> [Maybe kv]
 
 newtype CalamityToJSON a = CalamityToJSON a
 

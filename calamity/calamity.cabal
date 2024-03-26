@@ -187,7 +187,7 @@ library
     -fno-warn-name-shadowing
 
   build-depends:
-      aeson                 >=2.0     && <2.2
+      aeson                 >=2.2     && <2.3
     , aeson-optics          >=1.2     && <2
     , async                 >=2.2     && <3
     , base                  >=4.13    && <5
