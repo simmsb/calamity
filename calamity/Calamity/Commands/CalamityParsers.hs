@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 -- | 'ParameterParser' instances for calamity models
 module Calamity.Commands.CalamityParsers () where
@@ -25,12 +25,12 @@ import Text.Megaparsec hiding (parse)
 import Text.Megaparsec.Char.Lexer (decimal)
 import Text.Megaparsec.Error.Builder (errFancy, fancy)
 
-parserName :: forall a c r. ParameterParser a c r => T.Text
+parserName :: forall a c r. (ParameterParser a c r) => T.Text
 parserName =
   let ParameterInfo (fromMaybe "" -> name) type_ _ = parameterInfo @a @c @r
    in name <> ":" <> T.pack (show type_)
 
-instance Typeable (Snowflake a) => ParameterParser (Snowflake a) c r where
+instance (Typeable (Snowflake a)) => ParameterParser (Snowflake a) c r where
   parse = parseMP (parserName @(Snowflake a)) snowflake
   parameterDescription = "discord id"
 
@@ -89,7 +89,7 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Memb
  'User'@ and use 'Calamity.Types.Upgradeable.upgrade' if you want to allow
  fetching from http.
 -}
-instance P.Member CacheEff r => ParameterParser User c r where
+instance (P.Member CacheEff r) => ParameterParser User c r where
   parse =
     parseMP (parserName @User @c @r) $
       mapParserMaybeM
@@ -119,7 +119,7 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Guil
  and use 'Calamity.Types.Upgradeable.upgrade' if you want to allow fetching
  from http.
 -}
-instance P.Member CacheEff r => ParameterParser Guild c r where
+instance (P.Member CacheEff r) => ParameterParser Guild c r where
   parse =
     parseMP (parserName @Guild @c @r) $
       mapParserMaybeM
@@ -172,16 +172,16 @@ instance (P.Member CacheEff r, CalamityCommandContext c) => ParameterParser Role
 -- skipN :: (Stream s, Ord e) => Int -> ParsecT e s m ()
 -- skipN n = void $ takeP Nothing n
 
-ping :: MonadParsec e T.Text m => T.Text -> m (Snowflake a)
+ping :: (MonadParsec e T.Text m) => T.Text -> m (Snowflake a)
 ping c = chunk ("<" <> c) *> optional (chunk "!") *> snowflake <* chunk ">"
 
-ping' :: MonadParsec e T.Text m => m () -> m (Snowflake a)
+ping' :: (MonadParsec e T.Text m) => m () -> m (Snowflake a)
 ping' m = chunk "<" *> m *> snowflake <* chunk ">"
 
-snowflake :: MonadParsec e T.Text m => m (Snowflake a)
+snowflake :: (MonadParsec e T.Text m) => m (Snowflake a)
 snowflake = Snowflake <$> decimal
 
-partialEmoji :: MonadParsec e T.Text m => m (Partial Emoji)
+partialEmoji :: (MonadParsec e T.Text m) => m (Partial Emoji)
 partialEmoji = do
   animated <- isJust <$> (chunk "<" *> optional (chunk "a"))
   name <- between (chunk ":") (chunk ":") (takeWhileP (Just "Emoji name") (/= ':'))
@@ -189,7 +189,7 @@ partialEmoji = do
   void $ chunk ">"
   pure (PartialEmoji id name animated)
 
-emoji :: MonadParsec e T.Text m => m (Snowflake a)
+emoji :: (MonadParsec e T.Text m) => m (Snowflake a)
 emoji = ping' (optional (chunk "a") *> between (chunk ":") (chunk ":") (void $ takeWhileP Nothing (/= ':')))
 
 -- trackOffsets :: MonadParsec e s m => m a -> m (a, Int)

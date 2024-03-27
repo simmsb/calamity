@@ -1,5 +1,6 @@
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# LANGUAGE CPP #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 -- | Internal utilities and instances
 module Calamity.Internal.Utils (
   whileMFinalIO,
@@ -48,7 +49,7 @@ import TextShow
  This means Polysemy.Error won't work to break the loop, etc.
  Instead, Error/Alternative will just result in the loop quitting.
 -}
-whileMFinalIO :: P.Member (P.Final IO) r => P.Sem r Bool -> P.Sem r ()
+whileMFinalIO :: (P.Member (P.Final IO) r) => P.Sem r Bool -> P.Sem r ()
 whileMFinalIO action = do
   action' <- runSemToIO action
   P.embedFinal $ go action'
@@ -66,7 +67,7 @@ whileMFinalIO action = do
  This means Polysemy.Error won't work to break the loop, etc.
  Instead, Error/Alternative will just result in another loop.
 -}
-untilJustFinalIO :: P.Member (P.Final IO) r => P.Sem r (Maybe a) -> P.Sem r a
+untilJustFinalIO :: (P.Member (P.Final IO) r) => P.Sem r (Maybe a) -> P.Sem r a
 untilJustFinalIO action = do
   action' <- runSemToIO action
   P.embedFinal $ go action'
@@ -79,16 +80,16 @@ untilJustFinalIO action = do
         _ ->
           go action'
 
-whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
+whenJust :: (Applicative m) => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
 
-whenM :: Monad m => m Bool -> m () -> m ()
+whenM :: (Monad m) => m Bool -> m () -> m ()
 whenM p m =
   p >>= \case
     True -> m
     False -> pure ()
 
-unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM :: (Monad m) => m Bool -> m () -> m ()
 unlessM = whenM . (not <$>)
 
 lastMaybe :: Maybe a -> Maybe a -> Maybe a
@@ -116,18 +117,18 @@ infixl 4 <<$>>
 
 infixl 4 <<*>>
 
-(<.>) :: Functor f => (a -> b) -> (c -> f a) -> (c -> f b)
+(<.>) :: (Functor f) => (a -> b) -> (c -> f a) -> (c -> f b)
 (<.>) f g x = f <$> g x
 
 infixl 4 <.>
 
-debug :: P.Member LogEff r => Text -> P.Sem r ()
+debug :: (P.Member LogEff r) => Text -> P.Sem r ()
 debug = Di.debug
 
-info :: P.Member LogEff r => Text -> P.Sem r ()
+info :: (P.Member LogEff r) => Text -> P.Sem r ()
 info = Di.info
 
-error :: P.Member LogEff r => Text -> P.Sem r ()
+error :: (P.Member LogEff r) => Text -> P.Sem r ()
 error = Di.error
 
 swap :: (a, b) -> (b, a)
@@ -163,11 +164,11 @@ data MaybeNull a
   | NotNull a
   deriving (Show)
 
-instance Aeson.FromJSON a => Aeson.FromJSON (MaybeNull a) where
+instance (Aeson.FromJSON a) => Aeson.FromJSON (MaybeNull a) where
   parseJSON Aeson.Null = pure WasNull
   parseJSON x = NotNull <$> Aeson.parseJSON x
 
-instance Aeson.ToJSON a => Aeson.ToJSON (MaybeNull a) where
+instance (Aeson.ToJSON a) => Aeson.ToJSON (MaybeNull a) where
   toJSON WasNull = Aeson.Null
   toJSON (NotNull x) = Aeson.toJSON x
 
@@ -198,6 +199,6 @@ class CalamityToJSON' a where
 
 newtype CalamityToJSON a = CalamityToJSON a
 
-instance CalamityToJSON' a => Aeson.ToJSON (CalamityToJSON a) where
+instance (CalamityToJSON' a) => Aeson.ToJSON (CalamityToJSON a) where
   toJSON (CalamityToJSON x) = Aeson.object . catMaybes . toPairs $ x
   toEncoding (CalamityToJSON x) = Aeson.pairs . mconcat . catMaybes . toPairs $ x

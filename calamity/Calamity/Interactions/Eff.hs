@@ -24,16 +24,16 @@ data InteractionEff m a where
 
 makeSem ''InteractionEff
 
-getInteractionID :: P.Member InteractionEff r => P.Sem r (Snowflake Interaction)
+getInteractionID :: (P.Member InteractionEff r) => P.Sem r (Snowflake Interaction)
 getInteractionID = (^. #id) <$> getInteraction
 
-getApplicationID :: P.Member InteractionEff r => P.Sem r (Snowflake Application)
+getApplicationID :: (P.Member InteractionEff r) => P.Sem r (Snowflake Application)
 getApplicationID = (^. #applicationID) <$> getInteraction
 
-getInteractionToken :: P.Member InteractionEff r => P.Sem r InteractionToken
+getInteractionToken :: (P.Member InteractionEff r) => P.Sem r InteractionToken
 getInteractionToken = (^. #token) <$> getInteraction
 
-getInteractionUser :: P.Member InteractionEff r => P.Sem r (Snowflake User)
+getInteractionUser :: (P.Member InteractionEff r) => P.Sem r (Snowflake User)
 getInteractionUser = do
   int <- getInteraction
   let uid = int ^? #user % _Just % #id

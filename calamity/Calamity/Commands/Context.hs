@@ -26,7 +26,7 @@ import Polysemy qualified as P
 import Polysemy.Fail qualified as P
 import TextShow qualified
 
-class CommandContext c => CalamityCommandContext c where
+class (CommandContext c) => CalamityCommandContext c where
   -- | The id of the channel that invoked this command
   ctxChannelID :: c -> Snowflake Channel
 
@@ -83,14 +83,14 @@ instance CalamityCommandContext FullContext where
 instance Tellable FullContext where
   getChannel = pure . ctxChannelID
 
-useFullContext :: P.Member CacheEff r => P.Sem (CC.ConstructContext (Message, User, Maybe Member) FullContext IO () ': r) a -> P.Sem r a
+useFullContext :: (P.Member CacheEff r) => P.Sem (CC.ConstructContext (Message, User, Maybe Member) FullContext IO () ': r) a -> P.Sem r a
 useFullContext =
   P.interpret
     ( \case
         CC.ConstructContext (pre, cmd, up) (msg, usr, mem) -> buildContext msg usr mem pre cmd up
     )
 
-buildContext :: P.Member CacheEff r => Message -> User -> Maybe Member -> T.Text -> Command FullContext -> T.Text -> P.Sem r (Maybe FullContext)
+buildContext :: (P.Member CacheEff r) => Message -> User -> Maybe Member -> T.Text -> Command FullContext -> T.Text -> P.Sem r (Maybe FullContext)
 buildContext msg usr mem prefix command unparsed = (rightToMaybe <$>) . P.runFail $ do
   guild <- join <$> getGuild `traverse` (msg ^. #guildID)
   let member = mem <|> guild ^? _Just % #members % ix (coerceSnowflake $ getID @User msg)

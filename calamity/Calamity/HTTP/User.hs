@@ -51,11 +51,11 @@ instance Default GetCurrentUserGuildsOptions where
 
 data UserRequest a where
   GetCurrentUser :: UserRequest User
-  GetUser :: HasID User u => u -> UserRequest User
+  GetUser :: (HasID User u) => u -> UserRequest User
   ModifyCurrentUser :: ModifyUserData -> UserRequest User
   GetCurrentUserGuilds :: GetCurrentUserGuildsOptions -> UserRequest [Partial Guild]
-  LeaveGuild :: HasID Guild g => g -> UserRequest ()
-  CreateDM :: HasID User u => u -> UserRequest DMChannel
+  LeaveGuild :: (HasID Guild g) => g -> UserRequest ()
+  CreateDM :: (HasID User u) => u -> UserRequest DMChannel
 
 baseRoute :: RouteBuilder _
 baseRoute = mkRouteBuilder // S "users" // S "@me"

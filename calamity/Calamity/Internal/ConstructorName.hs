@@ -9,10 +9,10 @@ import GHC.Generics
 class GCtorName f where
   gctorName :: f a -> String
 
-instance Constructor c => GCtorName (C1 c f) where
+instance (Constructor c) => GCtorName (C1 c f) where
   gctorName = conName
 
-instance GCtorName f => GCtorName (D1 d f) where
+instance (GCtorName f) => GCtorName (D1 d f) where
   gctorName (M1 a) = gctorName a
 
 instance (GCtorName f, GCtorName g) => GCtorName (f :+: g) where

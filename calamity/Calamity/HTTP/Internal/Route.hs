@@ -78,7 +78,7 @@ mkRouteBuilder = UnsafeMkRouteBuilder [] [] []
 
 giveID ::
   forall t reqs.
-  Typeable t =>
+  (Typeable t) =>
   Snowflake t ->
   RouteBuilder reqs ->
   RouteBuilder ('( 'IDRequirement t, 'Satisfied) ': reqs)
@@ -87,7 +87,7 @@ giveID (Snowflake id) (UnsafeMkRouteBuilder route ids params) =
 
 giveParam ::
   forall (s :: Symbol) reqs.
-  KnownSymbol s =>
+  (KnownSymbol s) =>
   Text ->
   RouteBuilder reqs ->
   RouteBuilder ('( 'PSRequirement s, 'Satisfied) ': reqs)
@@ -126,7 +126,7 @@ type family AddRequiredInner (k :: Maybe RouteRequirement) :: RouteRequirement w
   AddRequiredInner ('Just 'NotNeeded) = 'Required
   AddRequiredInner 'Nothing = 'Required
 
-class Typeable a => RouteFragmentable a reqs where
+class (Typeable a) => RouteFragmentable a reqs where
   type ConsRes a reqs
 
   (//) :: RouteBuilder reqs -> a -> ConsRes a reqs
@@ -137,13 +137,13 @@ instance RouteFragmentable S reqs where
   (UnsafeMkRouteBuilder r ids params) // (S t) =
     UnsafeMkRouteBuilder (r <> [S' t]) ids params
 
-instance Typeable a => RouteFragmentable (ID (a :: Type)) (reqs :: [(RequirementType, RouteRequirement)]) where
+instance (Typeable a) => RouteFragmentable (ID (a :: Type)) (reqs :: [(RequirementType, RouteRequirement)]) where
   type ConsRes (ID a) reqs = RouteBuilder (AddRequired ('IDRequirement a) reqs)
 
   (UnsafeMkRouteBuilder r ids params) // ID =
     UnsafeMkRouteBuilder (r <> [ID' $ typeRep $ Proxy @a]) ids params
 
-instance KnownSymbol s => RouteFragmentable (PS s) (reqs :: [(RequirementType, RouteRequirement)]) where
+instance (KnownSymbol s) => RouteFragmentable (PS s) (reqs :: [(RequirementType, RouteRequirement)]) where
   type ConsRes (PS s) reqs = RouteBuilder (AddRequired ('PSRequirement s) reqs)
 
   (UnsafeMkRouteBuilder r ids params) // PS =
@@ -169,7 +169,7 @@ baseURL = https "discord.com" /: "api" /: "v10"
 
 buildRoute ::
   forall (reqs :: [(RequirementType, RouteRequirement)]).
-  EnsureFulfilled reqs =>
+  (EnsureFulfilled reqs) =>
   RouteBuilder reqs ->
   Route
 buildRoute (UnsafeMkRouteBuilder route ids params) =

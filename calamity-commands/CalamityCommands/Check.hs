@@ -40,7 +40,7 @@ buildCheck name cb = do
   pure $ MkCheck name cb''
 
 -- | Given the name of a check and a pure callback function, build a check.
-buildCheckPure :: Monad m => T.Text -> (c -> Maybe T.Text) -> Check m c
+buildCheckPure :: (Monad m) => T.Text -> (c -> Maybe T.Text) -> Check m c
 buildCheckPure name cb = MkCheck name (pure . cb)
 
 {- | Given an invokation context @c@, run a check and transform the result into an

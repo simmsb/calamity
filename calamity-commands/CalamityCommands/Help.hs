@@ -42,7 +42,7 @@ parameterTypeHelp pinfo =
 helpCommandHelp :: c -> T.Text
 helpCommandHelp _ = "Show help for a command or group."
 
-helpForCommand :: CommandContext m c a => c -> Command m c a -> T.Text
+helpForCommand :: (CommandContext m c a) => c -> Command m c a -> T.Text
 helpForCommand ctx cmd@Command {names, checks, help, params} =
   "Usage: "
     <> prefix'
@@ -91,7 +91,7 @@ onlyVisibleC = mapMaybe notHiddenC
 onlyVisibleG :: [Group m c a] -> [Group m c a]
 onlyVisibleG = mapMaybe notHiddenG
 
-helpForGroup :: CommandContext m c a => c -> Group m c a -> T.Text
+helpForGroup :: (CommandContext m c a) => c -> Group m c a -> T.Text
 helpForGroup ctx grp =
   "Group: "
     <> path'
@@ -141,7 +141,7 @@ rootHelp handler = groupsMsg <> commandsMsg
         then ""
         else "\nThe following commands exist:\n" <> (T.unlines . map (("- " <>) . fmtCommandWithParams) $ commands)
 
-renderHelp :: CommandContext m c a => CommandHandler m c a -> c -> [T.Text] -> T.Text
+renderHelp :: (CommandContext m c a) => CommandHandler m c a -> c -> [T.Text] -> T.Text
 renderHelp handler ctx path =
   case findCommandOrGroup handler path of
     Just (Command' cmd@Command {names}) ->

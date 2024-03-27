@@ -320,8 +320,10 @@ data ChannelRequest a where
 
 baseRoute :: Snowflake Channel -> RouteBuilder _
 baseRoute id =
-  mkRouteBuilder // S "channels" // ID @Channel
-    & giveID id
+  mkRouteBuilder
+    // S "channels"
+    // ID @Channel
+      & giveID id
 
 renderEmoji :: RawEmoji -> Text
 renderEmoji (UnicodeEmoji e) = e
@@ -331,12 +333,15 @@ instance Request (ChannelRequest a) where
   type Result (ChannelRequest a) = a
 
   route (CreateMessage (getID -> id) _) =
-    baseRoute id // S "messages"
-      & buildRoute
+    baseRoute id
+      // S "messages"
+        & buildRoute
   route (CrosspostMessage (getID -> id) (getID @Message -> mid)) =
-    baseRoute id // S "messages" // ID @Message
-      & giveID mid
-      & buildRoute
+    baseRoute id
+      // S "messages"
+      // ID @Message
+        & giveID mid
+        & buildRoute
   route (GetChannel (getID -> id)) =
     baseRoute id
       & buildRoute
@@ -347,84 +352,131 @@ instance Request (ChannelRequest a) where
     baseRoute id
       & buildRoute
   route (GetChannelMessages (getID -> id) _ _) =
-    baseRoute id // S "messages"
-      & buildRoute
+    baseRoute id
+      // S "messages"
+        & buildRoute
   route (GetMessage (getID -> cid) (getID @Message -> mid)) =
-    baseRoute cid // S "messages" // ID @Message
-      & giveID mid
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+        & giveID mid
+        & buildRoute
   route (CreateReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // PS @"emoji" // S "@me"
-      & giveID mid
-      & giveParam @"emoji" (renderEmoji emoji)
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+      // S "reactions"
+      // PS @"emoji"
+      // S "@me"
+        & giveID mid
+        & giveParam @"emoji" (renderEmoji emoji)
+        & buildRoute
   route (DeleteOwnReaction (getID -> cid) (getID @Message -> mid) emoji) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // PS @"emoji" // S "@me"
-      & giveID mid
-      & giveParam @"emoji" (renderEmoji emoji)
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+      // S "reactions"
+      // PS @"emoji"
+      // S "@me"
+        & giveID mid
+        & giveParam @"emoji" (renderEmoji emoji)
+        & buildRoute
   route (DeleteUserReaction (getID -> cid) (getID @Message -> mid) emoji (getID @User -> uid)) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // PS @"emoji" // ID @User
-      & giveID mid
-      & giveID uid
-      & giveParam @"emoji" (renderEmoji emoji)
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+      // S "reactions"
+      // PS @"emoji"
+      // ID @User
+        & giveID mid
+        & giveID uid
+        & giveParam @"emoji" (renderEmoji emoji)
+        & buildRoute
   route (GetReactions (getID -> cid) (getID @Message -> mid) emoji _) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions" // PS @"emoji"
-      & giveID mid
-      & giveParam @"emoji" (renderEmoji emoji)
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+      // S "reactions"
+      // PS @"emoji"
+        & giveID mid
+        & giveParam @"emoji" (renderEmoji emoji)
+        & buildRoute
   route (DeleteAllReactions (getID -> cid) (getID @Message -> mid)) =
-    baseRoute cid // S "messages" // ID @Message // S "reactions"
-      & giveID mid
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+      // S "reactions"
+        & giveID mid
+        & buildRoute
   route (EditMessage (getID -> cid) (getID @Message -> mid) _) =
-    baseRoute cid // S "messages" // ID @Message
-      & giveID mid
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+        & giveID mid
+        & buildRoute
   route (DeleteMessage (getID -> cid) (getID @Message -> mid)) =
-    baseRoute cid // S "messages" // ID @Message
-      & giveID mid
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // ID @Message
+        & giveID mid
+        & buildRoute
   route (BulkDeleteMessages (getID -> cid) _) =
-    baseRoute cid // S "messages" // S "bulk-delete"
-      & buildRoute
+    baseRoute cid
+      // S "messages"
+      // S "bulk-delete"
+        & buildRoute
   route (GetChannelInvites (getID -> cid)) =
-    baseRoute cid // S "invites"
-      & buildRoute
+    baseRoute cid
+      // S "invites"
+        & buildRoute
   route (CreateChannelInvite (getID -> cid) _) =
-    baseRoute cid // S "invites"
-      & buildRoute
+    baseRoute cid
+      // S "invites"
+        & buildRoute
   route (EditChannelPermissions (getID -> cid) (getID @Overwrite -> oid)) =
-    baseRoute cid // S "permissions" // ID @Overwrite
-      & giveID oid
-      & buildRoute
+    baseRoute cid
+      // S "permissions"
+      // ID @Overwrite
+        & giveID oid
+        & buildRoute
   route (DeleteChannelPermission (getID -> cid) (getID @Overwrite -> oid)) =
-    baseRoute cid // S "permissions" // ID @Overwrite
-      & giveID oid
-      & buildRoute
+    baseRoute cid
+      // S "permissions"
+      // ID @Overwrite
+        & giveID oid
+        & buildRoute
   route (TriggerTyping (getID -> cid)) =
-    baseRoute cid // S "typing"
-      & buildRoute
+    baseRoute cid
+      // S "typing"
+        & buildRoute
   route (GetPinnedMessages (getID -> cid)) =
-    baseRoute cid // S "pins"
-      & buildRoute
+    baseRoute cid
+      // S "pins"
+        & buildRoute
   route (AddPinnedMessage (getID -> cid) (getID @Message -> mid)) =
-    baseRoute cid // S "pins" // ID @Message
-      & giveID mid
-      & buildRoute
+    baseRoute cid
+      // S "pins"
+      // ID @Message
+        & giveID mid
+        & buildRoute
   route (DeletePinnedMessage (getID -> cid) (getID @Message -> mid)) =
-    baseRoute cid // S "pins" // ID @Message
-      & giveID mid
-      & buildRoute
+    baseRoute cid
+      // S "pins"
+      // ID @Message
+        & giveID mid
+        & buildRoute
   route (GroupDMAddRecipient (getID -> cid) (getID @User -> uid) _) =
-    baseRoute cid // S "recipients" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute cid
+      // S "recipients"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (GroupDMRemoveRecipient (getID -> cid) (getID @User -> uid)) =
-    baseRoute cid // S "recipients" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute cid
+      // S "recipients"
+      // ID @User
+        & giveID uid
+        & buildRoute
   action (CreateMessage _ cm) = \u o -> do
     let filePart CreateMessageAttachment {filename, content} n =
           (partFileRequestBody @IO (T.pack $ "files[" <> show n <> "]") "" content)

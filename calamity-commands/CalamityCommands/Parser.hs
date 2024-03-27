@@ -75,7 +75,7 @@ runCommandParser ctx t = P.runReader ctx . P.runError . P.evalState (ParserState
  parameter @ps@ of 'CalamityCommands.Dsl.command',
  'CalamityCommands.CommandUtils.buildCommand', etc.
 -}
-class Typeable a => ParameterParser (a :: Type) c r where
+class (Typeable a) => ParameterParser (a :: Type) c r where
   type ParserResult a
 
   type ParserResult a = a
@@ -104,12 +104,12 @@ instance (KnownSymbol s, ParameterParser a c r) => ParameterParser (Named s a) c
 
   parse = mapE (_1 .~ parserName @(Named s a) @c @r) $ parse @a @c @r
 
-parserName :: forall a c r. ParameterParser a c r => T.Text
+parserName :: forall a c r. (ParameterParser a c r) => T.Text
 parserName =
   let ParameterInfo (fromMaybe "" -> name) type_ _ = parameterInfo @a @c @r
    in name <> ":" <> T.pack (show type_)
 
-mapE :: P.Member (P.Error e) r => (e -> e) -> P.Sem r a -> P.Sem r a
+mapE :: (P.Member (P.Error e) r) => (e -> e) -> P.Sem r a -> P.Sem r a
 mapE f m = P.catch m (P.throw . f)
 
 {- | Parse a paremeter using a MegaParsec parser.
@@ -159,7 +159,7 @@ instance ParameterParser Float c r where
   parse = parseMP (parserName @Float) (signed mempty (try float <|> decimal))
   parameterDescription = "number"
 
-instance ParameterParser a c r => ParameterParser (Maybe a) c r where
+instance (ParameterParser a c r) => ParameterParser (Maybe a) c r where
   type ParserResult (Maybe a) = Maybe (ParserResult a)
 
   parse = P.catch (Just <$> parse @a) (const $ pure Nothing)
@@ -176,7 +176,7 @@ instance (ParameterParser a c r, ParameterParser b c r) => ParameterParser (Eith
         Right <$> parse @b @c @r
   parameterDescription = "either '" <> parameterDescription @a @c @r <> "' or '" <> parameterDescription @b @c @r <> "'"
 
-instance ParameterParser a c r => ParameterParser [a] c r where
+instance (ParameterParser a c r) => ParameterParser [a] c r where
   type ParserResult [a] = [ParserResult a]
 
   parse = go []
@@ -271,23 +271,23 @@ instance ShowErrorComponent SpannedError where
 skipN :: (Stream s, Ord e) => Int -> ParsecT e s m ()
 skipN n = void $ takeP Nothing n
 
-trackOffsets :: MonadParsec e s m => m a -> m (a, Int)
+trackOffsets :: (MonadParsec e s m) => m a -> m (a, Int)
 trackOffsets m = do
   offs <- getOffset
   a <- m
   offe <- getOffset
   pure (a, offe - offs)
 
-item :: MonadParsec e T.Text m => m T.Text
+item :: (MonadParsec e T.Text m) => m T.Text
 item = try quotedString <|> someNonWS
 
-manySingle :: MonadParsec e s m => m (Tokens s)
+manySingle :: (MonadParsec e s m) => m (Tokens s)
 manySingle = takeWhileP (Just "Any character") (const True)
 
-someSingle :: MonadParsec e s m => m (Tokens s)
+someSingle :: (MonadParsec e s m) => m (Tokens s)
 someSingle = takeWhile1P (Just "any character") (const True)
 
-quotedString :: MonadParsec e T.Text m => m T.Text
+quotedString :: (MonadParsec e T.Text m) => m T.Text
 quotedString =
   try (between (chunk "'") (chunk "'") (takeWhileP (Just "any character") (/= '\'')))
     <|> between (chunk "\"") (chunk "\"") (takeWhileP (Just "any character") (/= '"'))

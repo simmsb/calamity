@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 -- | Interaction related utilities
 module Calamity.Interactions.Utils (
   respond,
@@ -33,7 +34,7 @@ import System.Random (getStdRandom, uniform)
 -}
 userLocalState ::
   forall r s a.
-  P.Member InteractionEff r =>
+  (P.Member InteractionEff r) =>
   -- | Initial state
   s ->
   P.Sem (P.State s ': r) a ->
@@ -166,7 +167,7 @@ followUpEphemeral (runToMessage -> msg) =
         invoke $ CreateFollowupMessage applicationID interactionToken opts
 
 -- | Defer an interaction and show a loading state, use @followUp@ later on
-defer :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => P.Sem r (Either RestError ())
+defer :: (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r) => P.Sem r (Either RestError ())
 defer = do
   interactionID <- getInteractionID
   interactionToken <- getInteractionToken
@@ -175,14 +176,14 @@ defer = do
 {- | Defer an interaction and show an ephemeral loading state, use @followUp@
  later on
 -}
-deferEphemeral :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => P.Sem r (Either RestError ())
+deferEphemeral :: (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r) => P.Sem r (Either RestError ())
 deferEphemeral = do
   interactionID <- getInteractionID
   interactionToken <- getInteractionToken
   invoke $ CreateResponseDefer interactionID interactionToken True
 
 -- | Defer operation
-deferComponent :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => P.Sem r (Either RestError ())
+deferComponent :: (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r) => P.Sem r (Either RestError ())
 deferComponent = do
   interactionID <- getInteractionID
   interactionToken <- getInteractionToken
@@ -196,7 +197,7 @@ fixupActionRow x = ActionRow' [x]
 
  You should probably use this with 'Calamity.Interaction.View.runView'
 -}
-pushModal :: P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r => Text -> [Component] -> P.Sem r (Either RestError ())
+pushModal :: (P.Members '[InteractionEff, RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r) => Text -> [Component] -> P.Sem r (Either RestError ())
 pushModal title c = do
   -- we don't actually use the custom id of the modal. the custom ids of the
   -- sub-components are enough to disambiguate

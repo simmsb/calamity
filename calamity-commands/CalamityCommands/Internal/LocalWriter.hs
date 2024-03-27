@@ -17,7 +17,7 @@ data LocalWriter o m a where
 
 P.makeSem ''LocalWriter
 
-runLocalWriter :: Monoid o => P.Sem (LocalWriter o ': r) a -> P.Sem r (o, a)
+runLocalWriter :: (Monoid o) => P.Sem (LocalWriter o ': r) a -> P.Sem r (o, a)
 runLocalWriter =
   P.runState mempty
     . P.reinterpretH

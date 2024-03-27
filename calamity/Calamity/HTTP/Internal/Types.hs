@@ -61,14 +61,14 @@ data DiscordResponseType
   = -- | A good response
     Good
       LB.ByteString
+      -- | The ratelimit headers if we got them
       (Maybe (BucketState, B.ByteString))
-      -- ^ The ratelimit headers if we got them
   | -- | We hit a 429, no response and ratelimited
     Ratelimited
+      -- | Retry after
       UTCTime
-      -- ^ Retry after
+      -- | Global ratelimit
       Bool
-      -- ^ Global ratelimit
       (Maybe (BucketState, B.ByteString))
   | -- | Discord's error, we should retry (HTTP 5XX)
     ServerError Int

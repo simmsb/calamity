@@ -8,20 +8,20 @@ import TextShow.TH (deriveTextShow)
 
 data CommandError
   = ParseError
+      -- | The type of the parser
       T.Text
-      -- ^ The type of the parser
+      -- | The reason that parsing failed
       T.Text
-      -- ^ The reason that parsing failed
   | CheckError
+      -- | The name of the check that failed
       T.Text
-      -- ^ The name of the check that failed
+      -- | The reason for the check failing
       T.Text
-      -- ^ The reason for the check failing
   | InvokeError
+      -- | The name of the command that failed
       T.Text
-      -- ^ The name of the command that failed
+      -- | The reason for failing
       T.Text
-      -- ^ The reason for failing
   deriving (Show)
 
 $(deriveTextShow ''CommandError)

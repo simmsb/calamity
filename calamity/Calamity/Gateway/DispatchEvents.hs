@@ -30,12 +30,12 @@ import Optics.TH
 
 data CalamityEvent
   = Dispatch
+      -- | The shard that pushed this event
       Int
-      -- ^ The shard that pushed this event
+      -- | The attached data
       DispatchData
-      -- ^ The attached data
   | -- | The data sent to the custom event
-    forall (a :: Type). Typeable a => Custom a
+    forall (a :: Type). (Typeable a) => Custom a
   | ShutDown
 
 data DispatchData

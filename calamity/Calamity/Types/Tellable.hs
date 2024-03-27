@@ -141,7 +141,7 @@ instance ToMessage CreateMessageOptions where
 class Tellable a where
   getChannel :: (BotC r, P.Member (P.Error RestError) r) => a -> P.Sem r (Snowflake Channel)
 
-runToMessage :: ToMessage a => a -> CreateMessageOptions
+runToMessage :: (ToMessage a) => a -> CreateMessageOptions
 runToMessage = flip appEndo def . intoMsg
 
 {- | Send a message to something that is messageable

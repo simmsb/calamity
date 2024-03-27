@@ -259,8 +259,11 @@ data InteractionRequest a where
 
 baseRoute :: Snowflake Application -> InteractionToken -> RouteBuilder _
 baseRoute id (InteractionToken token) =
-  mkRouteBuilder // S "webhooks" // ID @Application // S token
-    & giveID id
+  mkRouteBuilder
+    // S "webhooks"
+    // ID @Application
+    // S token
+      & giveID id
 
 foo :: Maybe a -> Maybe a -> (a -> a -> a) -> Maybe a
 foo (Just x) (Just y) f = Just (f x y)
@@ -270,29 +273,53 @@ instance Request (InteractionRequest a) where
   type Result (InteractionRequest a) = a
 
   route (CreateResponseDefer (getID @Interaction -> iid) (InteractionToken token) _) =
-    mkRouteBuilder // S "interactions" // ID @Interaction // S token // S "callback"
-      & giveID iid
-      & buildRoute
+    mkRouteBuilder
+      // S "interactions"
+      // ID @Interaction
+      // S token
+      // S "callback"
+        & giveID iid
+        & buildRoute
   route (CreateResponseDeferComponent (getID @Interaction -> iid) (InteractionToken token)) =
-    mkRouteBuilder // S "interactions" // ID @Interaction // S token // S "callback"
-      & giveID iid
-      & buildRoute
+    mkRouteBuilder
+      // S "interactions"
+      // ID @Interaction
+      // S token
+      // S "callback"
+        & giveID iid
+        & buildRoute
   route (CreateResponseMessage (getID @Interaction -> iid) (InteractionToken token) _) =
-    mkRouteBuilder // S "interactions" // ID @Interaction // S token // S "callback"
-      & giveID iid
-      & buildRoute
+    mkRouteBuilder
+      // S "interactions"
+      // ID @Interaction
+      // S token
+      // S "callback"
+        & giveID iid
+        & buildRoute
   route (CreateResponseUpdate (getID @Interaction -> iid) (InteractionToken token) _) =
-    mkRouteBuilder // S "interactions" // ID @Interaction // S token // S "callback"
-      & giveID iid
-      & buildRoute
+    mkRouteBuilder
+      // S "interactions"
+      // ID @Interaction
+      // S token
+      // S "callback"
+        & giveID iid
+        & buildRoute
   route (CreateResponseAutocomplete (getID @Interaction -> iid) (InteractionToken token) _) =
-    mkRouteBuilder // S "interactions" // ID @Interaction // S token // S "callback"
-      & giveID iid
-      & buildRoute
+    mkRouteBuilder
+      // S "interactions"
+      // ID @Interaction
+      // S token
+      // S "callback"
+        & giveID iid
+        & buildRoute
   route (CreateResponseModal (getID @Interaction -> iid) (InteractionToken token) _) =
-    mkRouteBuilder // S "interactions" // ID @Interaction // S token // S "callback"
-      & giveID iid
-      & buildRoute
+    mkRouteBuilder
+      // S "interactions"
+      // ID @Interaction
+      // S token
+      // S "callback"
+        & giveID iid
+        & buildRoute
   route (GetOriginalInteractionResponse (getID @Application -> aid) token) =
     baseRoute aid token // S "messages" // S "@original" & buildRoute
   route (EditOriginalInteractionResponse (getID @Application -> aid) token _) =

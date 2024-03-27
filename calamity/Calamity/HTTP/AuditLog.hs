@@ -24,7 +24,7 @@ instance Default GetAuditLogOptions where
   def = GetAuditLogOptions Nothing Nothing Nothing Nothing
 
 data AuditLogRequest a where
-  GetAuditLog :: HasID Guild g => g -> GetAuditLogOptions -> AuditLogRequest AuditLog
+  GetAuditLog :: (HasID Guild g) => g -> GetAuditLogOptions -> AuditLogRequest AuditLog
 
 instance Request (AuditLogRequest a) where
   type Result (AuditLogRequest a) = a

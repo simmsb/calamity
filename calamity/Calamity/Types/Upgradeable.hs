@@ -24,9 +24,9 @@ class Upgradeable a ids | a -> ids, ids -> a where
   --
   -- If it existed in the cache then it is returned from there, otherwise we
   -- fetch from HTTP and update the cache on success.
-  upgrade :: BotC r => ids -> P.Sem r (Maybe a)
+  upgrade :: (BotC r) => ids -> P.Sem r (Maybe a)
 
-maybeToAlt :: Alternative f => Maybe a -> f a
+maybeToAlt :: (Alternative f) => Maybe a -> f a
 maybeToAlt (Just x) = pure x
 maybeToAlt Nothing = empty
 
@@ -58,7 +58,7 @@ instance Upgradeable Guild (Snowflake Guild) where
         Right g <- invoke $ H.GetGuild gid
         pure g
 
-insertChannel :: BotC r => Channel -> P.Sem r ()
+insertChannel :: (BotC r) => Channel -> P.Sem r ()
 insertChannel (DMChannel' dm) = setDM dm
 insertChannel (GuildChannel' ch) =
   updateGuild (getID ch) (#channels % at (getID @GuildChannel ch) ?~ ch)

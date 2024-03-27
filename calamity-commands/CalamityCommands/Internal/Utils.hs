@@ -57,16 +57,16 @@ import Data.Semigroup (Last (..))
 --             _ ->
 --               go action'
 
-whenJust :: Applicative m => Maybe a -> (a -> m ()) -> m ()
+whenJust :: (Applicative m) => Maybe a -> (a -> m ()) -> m ()
 whenJust = flip $ maybe (pure ())
 
-whenM :: Monad m => m Bool -> m () -> m ()
+whenM :: (Monad m) => m Bool -> m () -> m ()
 whenM p m =
   p >>= \case
     True -> m
     False -> pure ()
 
-unlessM :: Monad m => m Bool -> m () -> m ()
+unlessM :: (Monad m) => m Bool -> m () -> m ()
 unlessM = whenM . (not <$>)
 
 lastMaybe :: Maybe a -> Maybe a -> Maybe a
@@ -98,7 +98,7 @@ infixl 4 <<$>>
 
 infixl 4 <<*>>
 
-(<.>) :: Functor f => (a -> b) -> (c -> f a) -> (c -> f b)
+(<.>) :: (Functor f) => (a -> b) -> (c -> f a) -> (c -> f b)
 (<.>) f g x = f <$> g x
 
 infixl 4 <.>

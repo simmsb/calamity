@@ -130,7 +130,6 @@ library
 
   hs-source-dirs:     ./
   default-extensions:
-    NoMonomorphismRestriction
     AllowAmbiguousTypes
     BangPatterns
     BinaryLiterals
@@ -162,6 +161,7 @@ library
     MultiParamTypeClasses
     MultiWayIf
     NamedFieldPuns
+    NoMonomorphismRestriction
     OverloadedLabels
     OverloadedStrings
     PartialTypeSignatures
@@ -182,10 +182,7 @@ library
     UndecidableInstances
     ViewPatterns
 
-  ghc-options:
-    -funbox-strict-fields -Wall
-    -fno-warn-name-shadowing
-
+  ghc-options:        -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       aeson                 >=2.1     && <2.3
     , aeson-optics          >=1.2     && <2

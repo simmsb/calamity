@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 module Calamity.Interactions.View (
   ViewEff (..),
@@ -63,7 +63,7 @@ instance Functor ViewComponent where
 -}
 data View a
   = NilView a
-  | SingView (forall g. RandomGen g => g -> (ViewComponent a, g))
+  | SingView (forall g. (RandomGen g) => g -> (ViewComponent a, g))
   | RowView (View a)
   | forall x. MultView (View (x -> a)) (View x)
 
@@ -93,7 +93,7 @@ type MonadViewMessage =
     'E.:$$: 'E.Text "Also, make sure you use lazy patterns: ~(a, b) instead of (a, b)"
     'E.:$$: 'E.Text "Refer to https://ghc.gitlab.haskell.org/ghc/doc/users_guide/exts/applicative_do.html"
 
-instance E.TypeError MonadViewMessage => Monad View where
+instance (E.TypeError MonadViewMessage) => Monad View where
   (>>=) = undefined -- unreachable
 
 data ExtractOkType
@@ -297,7 +297,7 @@ textInput' s l f = SingView $ \g ->
 -- componentIDS (C.TextInput' C.TextInput {customID}) = S.singleton customID
 
 -- | Generate a 'ViewInstance' of a 'View' by filling in 'CustomID's with random values
-instantiateView :: RandomGen g => g -> View a -> (ViewInstance a, g)
+instantiateView :: (RandomGen g) => g -> View a -> (ViewInstance a, g)
 instantiateView g v =
   case v of
     NilView x -> (ViewInstance (const $ ExtractOk SomeExtracted x) [], g)
@@ -333,7 +333,7 @@ deleteInitialMsg = do
  views after a timeout.
 -}
 runView ::
-  BotC r =>
+  (BotC r) =>
   -- | The initial view to render
   View inp ->
   -- | A function to send the rendered view (i.e. as a message or a modal)
@@ -353,7 +353,7 @@ runView v sendRendered m = do
  This function won't send the view, you should do that yourself
 -}
 runViewInstance ::
-  BotC r =>
+  (BotC r) =>
   -- | An initial value to act as the value of @GetSendResponse@
   --
   -- If you just sent a message, probably pass that
@@ -390,7 +390,7 @@ runViewInstance initSendResp inst m = P.resourceToIOFinal $ do
 
     interpretView ::
       forall r ret inp sendResp.
-      P.Member (P.Embed IO) r =>
+      (P.Member (P.Embed IO) r) =>
       P.Sem (ViewEff ret inp sendResp ': r) () ->
       P.Sem (P.State (Maybe ret, ViewInstance inp, sendResp) ': r) ()
     interpretView =
@@ -406,7 +406,7 @@ runViewInstance initSendResp inst m = P.resourceToIOFinal $ do
 
     innerLoop ::
       forall r ret inp sendResp.
-      P.Members '[RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r =>
+      (P.Members '[RatelimitEff, TokenEff, LogEff, MetricEff, P.Embed IO] r) =>
       sendResp ->
       ViewInstance inp ->
       STM.TQueue Interaction ->

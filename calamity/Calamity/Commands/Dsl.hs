@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 {- | A DSL for generating commands and groups
 
  This is effectively just a re-export of "CalamityCommands.Dsl" but with
@@ -204,14 +205,14 @@ commandA = CC.commandA @ps
  action to hidden.
 -}
 hide ::
-  P.Member (P.Tagged "hidden" (P.Reader Bool)) r =>
+  (P.Member (P.Tagged "hidden" (P.Reader Bool)) r) =>
   P.Sem r a ->
   P.Sem r a
 hide = CC.hide
 
 -- | Set the help for any groups or commands registered inside the given action.
 help ::
-  P.Member (P.Reader (c -> T.Text)) r =>
+  (P.Member (P.Reader (c -> T.Text)) r) =>
   (c -> T.Text) ->
   P.Sem r a ->
   P.Sem r a
@@ -221,7 +222,7 @@ help = CC.help
  action.
 -}
 requires ::
-  DSLC c r =>
+  (DSLC c r) =>
   [Check c] ->
   P.Sem r a ->
   P.Sem r a
@@ -248,7 +249,7 @@ requires' = CC.requires'
  Refer to 'CalamityCommands.Check.Check' for more info on checks.
 -}
 requiresPure ::
-  DSLC c r =>
+  (DSLC c r) =>
   [(T.Text, c -> Maybe T.Text)] ->
   -- A list of check names and check callbacks
   P.Sem r a ->
@@ -325,5 +326,5 @@ groupA' ::
 groupA' = CC.groupA'
 
 -- | Retrieve the final command handler for this block
-fetchHandler :: DSLC c r => P.Sem r (CommandHandler c)
+fetchHandler :: (DSLC c r) => P.Sem r (CommandHandler c)
 fetchHandler = P.ask

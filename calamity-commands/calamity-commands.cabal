@@ -50,7 +50,6 @@ library
 
   hs-source-dirs:     ./
   default-extensions:
-    NoMonomorphismRestriction
     AllowAmbiguousTypes
     BangPatterns
     BinaryLiterals
@@ -82,6 +81,7 @@ library
     MultiParamTypeClasses
     MultiWayIf
     NamedFieldPuns
+    NoMonomorphismRestriction
     OverloadedLabels
     OverloadedStrings
     PartialTypeSignatures
@@ -101,10 +101,7 @@ library
     UndecidableInstances
     ViewPatterns
 
-  ghc-options:
-    -funbox-strict-fields -Wall
-    -fno-warn-name-shadowing
-
+  ghc-options:        -funbox-strict-fields -Wall -fno-warn-name-shadowing
   build-depends:
       base                  >=4.13  && <5
     , megaparsec            >=8     && <10

@@ -12,8 +12,8 @@ module Calamity.Internal.BoundedStore (
 
 import Calamity.Internal.Utils (unlessM, whenM)
 import Calamity.Types.Snowflake (HasID (getID), HasID', Snowflake)
-import Control.Monad.State.Lazy (execState)
 import Control.Monad (when)
+import Control.Monad.State.Lazy (execState)
 import Data.Default.Class (Default (..))
 import Data.HashMap.Strict (HashMap)
 import Data.HashMap.Strict qualified as H
@@ -45,9 +45,9 @@ type instance Index (BoundedStore a) = Snowflake a
 
 type instance IxValue (BoundedStore a) = a
 
-instance HasID' a => Ixed (BoundedStore a)
+instance (HasID' a) => Ixed (BoundedStore a)
 
-instance HasID' a => At (BoundedStore a) where
+instance (HasID' a) => At (BoundedStore a) where
   at k = lensVL $ \f m ->
     let mv = getItem k m
      in f mv <&> \case
@@ -55,7 +55,7 @@ instance HasID' a => At (BoundedStore a) where
           Just v -> addItem v m
   {-# INLINE at #-}
 
-addItem :: HasID' a => a -> BoundedStore a -> BoundedStore a
+addItem :: (HasID' a) => a -> BoundedStore a -> BoundedStore a
 addItem m = execState $ do
   unlessM (H.member (getID m) <$> use #items) $ do
     #itemQueue %= DQ.cons (getID m)

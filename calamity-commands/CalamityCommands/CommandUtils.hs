@@ -189,7 +189,7 @@ class ApplyTup a b where
 
   applyTup :: ApplyTupRes a b -> a -> b
 
-instance ApplyTup as b => ApplyTup (a, as) b where
+instance (ApplyTup as b) => ApplyTup (a, as) b where
   type ApplyTupRes (a, as) b = a -> ApplyTupRes as b
 
   applyTup f (a, as) = applyTup (f a) as
@@ -201,7 +201,7 @@ instance ApplyTup () b where
 
 buildTypedCommandParser ::
   forall (ps :: [Type]) c r.
-  ParameterParser (ListToTup ps) c r =>
+  (ParameterParser (ListToTup ps) c r) =>
   c ->
   S.Text ->
   P.Sem r (Either CommandError (ParserResult (ListToTup ps)))

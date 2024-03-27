@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 -- | The shard logic
 module Calamity.Gateway.Shard (
   Shard (..),
@@ -110,7 +111,7 @@ import TextShow (showt)
 import Prelude hiding (error)
 
 runWebsocket ::
-  P.Members '[LogEff, P.Final IO, P.Embed IO] r =>
+  (P.Members '[LogEff, P.Final IO, P.Embed IO] r) =>
   T.Text ->
   T.Text ->
   (Connection -> P.Sem r a) ->
@@ -156,7 +157,7 @@ newShardState shard = ShardState shard Nothing Nothing False Nothing Nothing Not
 
 -- | Creates and launches a shard
 newShard ::
-  P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r =>
+  (P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO, P.Async] r) =>
   T.Text ->
   Int ->
   Int ->
@@ -177,7 +178,7 @@ newShard gateway id count token presence intents evtIn = do
 
   pure (cmdIn, thread')
 
-sendToWs :: ShardC r => SentDiscordMessage -> Sem r ()
+sendToWs :: (ShardC r) => SentDiscordMessage -> Sem r ()
 sendToWs data' = do
   wsConn' <- P.atomicGets wsConn
   case wsConn' of
@@ -195,14 +196,14 @@ tryWriteTBMQueue' q v = do
     Just True -> pure True
     Nothing -> pure False
 
-restartUnless :: P.Members '[LogEff, P.Error ShardFlowControl] r => T.Text -> Maybe a -> P.Sem r a
+restartUnless :: (P.Members '[LogEff, P.Error ShardFlowControl] r) => T.Text -> Maybe a -> P.Sem r a
 restartUnless _ (Just a) = pure a
 restartUnless msg Nothing = do
   error msg
   P.throw ShardFlowRestart
 
 -- | The loop a shard will run on
-shardLoop :: ShardC r => Sem r ()
+shardLoop :: (ShardC r) => Sem r ()
 shardLoop = do
   activeShards <- registerGauge "active_shards" mempty
   void $ modifyGauge (+ 1) activeShards
@@ -226,7 +227,7 @@ shardLoop = do
             Left (ShutDownShard, Just . showt $ code)
       e -> Left (RestartShard, Just . T.pack . show $ e)
 
-    discordStream :: P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r => Connection -> TBMQueue ShardMsg -> Sem r ()
+    discordStream :: (P.Members '[LogEff, MetricEff, P.Embed IO, P.Final IO] r) => Connection -> TBMQueue ShardMsg -> Sem r ()
     discordStream ws outqueue = inner
       where
         inner = do
@@ -246,7 +247,7 @@ shardLoop = do
                   error . T.pack $ "Failed to decode " <> e <> ": " <> show msg'
                   pure True
               when r inner
-    outerloop :: ShardC r => Sem r ()
+    outerloop :: (ShardC r) => Sem r ()
     outerloop = whileMFinalIO $ do
       shard :: Shard <- P.atomicGets (^. #shardS)
       let host = shard ^. #gateway
@@ -269,7 +270,7 @@ shardLoop = do
           info "Restarting shard (abnormal reasons?)"
           pure True
 
-    innerloop :: ShardC r => Connection -> Sem r ShardFlowControl
+    innerloop :: (ShardC r) => Connection -> Sem r ShardFlowControl
     innerloop ws = do
       debug "Entering inner loop of shard"
 
@@ -371,13 +372,13 @@ shardLoop = do
       RestartShard -> P.throw ShardFlowRestart
       ShutDownShard -> P.throw ShardFlowShutDown
 
-startHeartBeatLoop :: ShardC r => Int -> Sem r ()
+startHeartBeatLoop :: (ShardC r) => Int -> Sem r ()
 startHeartBeatLoop interval = do
   haltHeartBeat -- cancel any currently running hb thread
   thread <- P.async $ heartBeatLoop interval
   P.atomicModify' (#hbThread ?~ thread)
 
-haltHeartBeat :: ShardC r => Sem r ()
+haltHeartBeat :: (ShardC r) => Sem r ()
 haltHeartBeat = do
   thread <- P.atomicState @ShardState . (swap .) . runState $ do
     thread <- use #hbThread
@@ -389,14 +390,14 @@ haltHeartBeat = do
       P.embed (void $ cancel t)
     Nothing -> pure ()
 
-sendHeartBeat :: ShardC r => Sem r ()
+sendHeartBeat :: (ShardC r) => Sem r ()
 sendHeartBeat = do
   sn <- P.atomicGets (^. #seqNum)
   debug . T.pack $ "Sending heartbeat (seq: " <> show sn <> ")"
   sendToWs $ HeartBeat sn
   P.atomicModify' (#hbResponse .~ False)
 
-heartBeatLoop :: ShardC r => Int -> Sem r ()
+heartBeatLoop :: (ShardC r) => Int -> Sem r ()
 heartBeatLoop interval = untilJustFinalIO . (leftToMaybe <$>) . P.runError $ do
   sendHeartBeat
   P.embed . threadDelay $ interval * 1000

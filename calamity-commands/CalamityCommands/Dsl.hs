@@ -237,7 +237,7 @@ commandA name aliases cmd = do
  action to hidden.
 -}
 hide ::
-  P.Member (P.Tagged "hidden" (P.Reader Bool)) r =>
+  (P.Member (P.Tagged "hidden" (P.Reader Bool)) r) =>
   P.Sem r x ->
   P.Sem r x
 hide = P.tag @"hidden" . P.local @Bool (const True) . P.raise
@@ -253,7 +253,7 @@ hide = P.tag @"hidden" . P.local @Bool (const True) . P.raise
  @
 -}
 help ::
-  P.Member (P.Reader (c -> T.Text)) r =>
+  (P.Member (P.Reader (c -> T.Text)) r) =>
   (c -> T.Text) ->
   P.Sem r a ->
   P.Sem r a
@@ -263,7 +263,7 @@ help = P.local . const
  action.
 -}
 requires ::
-  DSLC m c a r =>
+  (DSLC m c a r) =>
   [Check m c] ->
   P.Sem r x ->
   P.Sem r x
@@ -355,7 +355,7 @@ groupA name aliases m = mdo
   ltell $ LH.fromList [(name, (group', Alias)) | name <- aliases]
   pure res
 
-fetchOrigHelp :: P.Member (P.Tagged "original-help" (P.Reader (c -> T.Text))) r => P.Sem r (c -> T.Text)
+fetchOrigHelp :: (P.Member (P.Tagged "original-help" (P.Reader (c -> T.Text))) r) => P.Sem r (c -> T.Text)
 fetchOrigHelp = P.tag P.ask
 
 {- | Construct a group and place any commands registered in the given action
@@ -408,5 +408,5 @@ groupA' name aliases m = mdo
   pure res
 
 -- | Retrieve the final command handler for this block
-fetchHandler :: DSLC m c a r => P.Sem r (CommandHandler m c a)
+fetchHandler :: (DSLC m c a r) => P.Sem r (CommandHandler m c a)
 fetchHandler = P.ask

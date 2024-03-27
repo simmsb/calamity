@@ -68,7 +68,7 @@ empty :: SnowflakeMap a
 empty = SnowflakeMap SH.empty
 {-# INLINEABLE empty #-}
 
-singleton :: HasID' a => a -> SnowflakeMap a
+singleton :: (HasID' a) => a -> SnowflakeMap a
 singleton v = SnowflakeMap $ SH.singleton (getID v) v
 {-# INLINEABLE singleton #-}
 
@@ -98,11 +98,11 @@ lookupDefault d k = SH.lookupDefault d k . unSnowflakeMap
 
 infixl 9 !
 
-insert :: HasID' a => a -> SnowflakeMap a -> SnowflakeMap a
+insert :: (HasID' a) => a -> SnowflakeMap a -> SnowflakeMap a
 insert v = overSM $ SH.insert (getID v) v
 {-# INLINEABLE insert #-}
 
-insertWith :: HasID' a => (a -> a -> a) -> a -> SnowflakeMap a -> SnowflakeMap a
+insertWith :: (HasID' a) => (a -> a -> a) -> a -> SnowflakeMap a -> SnowflakeMap a
 insertWith f v = overSM $ SH.insertWith f (getID v) v
 {-# INLINEABLE insertWith #-}
 
@@ -146,7 +146,7 @@ mapWithKey :: (Snowflake a1 -> a1 -> a2) -> SnowflakeMap a1 -> SnowflakeMap a2
 mapWithKey f = overSM $ coerceSnowflakeMap . SH.mapWithKey f
 {-# INLINEABLE mapWithKey #-}
 
-traverseWithKey :: Applicative f => (Snowflake a1 -> a1 -> f a2) -> SnowflakeMap a1 -> f (SnowflakeMap a2)
+traverseWithKey :: (Applicative f) => (Snowflake a1 -> a1 -> f a2) -> SnowflakeMap a1 -> f (SnowflakeMap a2)
 traverseWithKey f = fmap (SnowflakeMap . coerceSnowflakeMap) . SH.traverseWithKey f . unSnowflakeMap
 {-# INLINEABLE traverseWithKey #-}
 
@@ -214,11 +214,11 @@ toList :: SnowflakeMap a -> [(Snowflake a, a)]
 toList = SH.toList . unSnowflakeMap
 {-# INLINEABLE toList #-}
 
-fromList :: HasID' a => [a] -> SnowflakeMap a
+fromList :: (HasID' a) => [a] -> SnowflakeMap a
 fromList = SnowflakeMap . SH.fromList . Prelude.map (\v -> (getID v, v))
 {-# INLINEABLE fromList #-}
 
-fromListWith :: HasID' a => (a -> a -> a) -> [a] -> SnowflakeMap a
+fromListWith :: (HasID' a) => (a -> a -> a) -> [a] -> SnowflakeMap a
 fromListWith f = SnowflakeMap . SH.fromListWith f . Prelude.map (\v -> (getID v, v))
 {-# INLINEABLE fromListWith #-}
 
@@ -227,6 +227,6 @@ instance (FromJSON a, HasID' a) => FromJSON (SnowflakeMap a) where
     parsed <- traverse parseJSON l
     pure . Calamity.Internal.SnowflakeMap.fromList . F.toList $ parsed
 
-instance ToJSON a => ToJSON (SnowflakeMap a) where
+instance (ToJSON a) => ToJSON (SnowflakeMap a) where
   toJSON = toJSON . elems
   toEncoding = toEncoding . elems

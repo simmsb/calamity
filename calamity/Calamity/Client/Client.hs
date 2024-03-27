@@ -1,5 +1,5 @@
-{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 -- | The client
 module Calamity.Client.Client (
@@ -66,7 +66,7 @@ import Polysemy.Reader qualified as P
 import Polysemy.Resource qualified as P
 import TextShow (TextShow (showt))
 
-timeA :: P.Member (P.Embed IO) r => P.Sem r a -> P.Sem r (Double, a)
+timeA :: (P.Member (P.Embed IO) r) => P.Sem r a -> P.Sem r (Double, a)
 timeA m = do
   start <- P.embed getPOSIXTime
   res <- m
@@ -104,19 +104,19 @@ runBotIO ::
   P.Sem r (Maybe StartupError)
 runBotIO token intents = runBotIO' token intents Nothing
 
-resetDi :: BotC r => P.Sem r a -> P.Sem r a
+resetDi :: (BotC r) => P.Sem r a -> P.Sem r a
 resetDi m = do
   initialDi <- P.asks (^. #initialDi)
   Di.local (`fromMaybe` initialDi) m
 
-interpretRatelimitViaClient :: P.Member (P.Reader Client) r => P.Sem (RatelimitEff ': r) a -> P.Sem r a
+interpretRatelimitViaClient :: (P.Member (P.Reader Client) r) => P.Sem (RatelimitEff ': r) a -> P.Sem r a
 interpretRatelimitViaClient =
   P.interpret
     ( \case
         GetRatelimitState -> P.asks (^. #rlState)
     )
 
-interpretTokenViaClient :: P.Member (P.Reader Client) r => P.Sem (TokenEff ': r) a -> P.Sem r a
+interpretTokenViaClient :: (P.Member (P.Reader Client) r) => P.Sem (TokenEff ': r) a -> P.Sem r a
 interpretTokenViaClient =
   P.interpret
     ( \case
@@ -247,7 +247,7 @@ removeHandler id' = P.atomicModify (removeEventHandler (Proxy @s) id')
  'fire' '$' 'customEvt' @"my-event" ("aha" :: 'Data.Text.Text', msg)
  @
 -}
-fire :: BotC r => CalamityEvent -> P.Sem r ()
+fire :: (BotC r) => CalamityEvent -> P.Sem r ()
 fire e = do
   inc <- P.asks (^. #eventsIn)
   P.embed $ writeChan inc e
@@ -262,11 +262,11 @@ fire e = do
  'customEvt' (MyCustomEvent "lol")
  @
 -}
-customEvt :: forall a. Typeable a => a -> CalamityEvent
+customEvt :: forall a. (Typeable a) => a -> CalamityEvent
 customEvt = Custom
 
 -- | Get a copy of the event stream.
-events :: BotC r => P.Sem r (OutChan CalamityEvent)
+events :: (BotC r) => P.Sem r (OutChan CalamityEvent)
 events = do
   inc <- P.asks (^. #eventsIn)
   P.embed $ dupChan inc
@@ -357,20 +357,20 @@ waitUntilM f = P.resourceToIOFinal $ do
         P.embed $ putMVar result args
 
 -- | Set the bot's presence on all shards.
-sendPresence :: BotC r => StatusUpdateData -> P.Sem r ()
+sendPresence :: (BotC r) => StatusUpdateData -> P.Sem r ()
 sendPresence s = do
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
   for_ shards $ \(inc, _) ->
     P.embed $ writeChan inc (SendPresence s)
 
 -- | Initiate shutting down the bot.
-stopBot :: BotC r => P.Sem r ()
+stopBot :: (BotC r) => P.Sem r ()
 stopBot = do
   debug "stopping bot"
   inc <- P.asks (^. #eventsIn)
   P.embed $ writeChan inc ShutDown
 
-finishUp :: BotC r => P.Sem r ()
+finishUp :: (BotC r) => P.Sem r ()
 finishUp = do
   debug "finishing up"
   shards <- P.asks (^. #shards) >>= P.embed . readTVarIO
@@ -382,7 +382,7 @@ finishUp = do
 {- | main loop of the client, handles fetching the next event, processing the
  event and invoking its handler functions
 -}
-clientLoop :: BotC r => P.Sem r ()
+clientLoop :: (BotC r) => P.Sem r ()
 clientLoop = do
   outc <- P.asks (^. #eventsOut)
   whileMFinalIO $ do
@@ -401,14 +401,14 @@ handleCustomEvent d = do
 
   for_ handlers (\h -> P.async . P.embed $ h d)
 
-catchAllLogging :: BotC r => P.Sem r () -> P.Sem r ()
+catchAllLogging :: (BotC r) => P.Sem r () -> P.Sem r ()
 catchAllLogging m = do
   r <- P.errorToIOFinal . P.fromExceptionSem @SomeException $ P.raise m
   case r of
     Right _ -> pure ()
     Left e -> debug . T.pack $ "got exception: " <> show e
 
-handleEvent :: BotC r => Int -> DispatchData -> P.Sem r ()
+handleEvent :: (BotC r) => Int -> DispatchData -> P.Sem r ()
 handleEvent shardID data' = do
   debug . T.pack $ "handling an event: " <> ctorName data'
   eventHandlers <- P.atomicGet
@@ -430,7 +430,7 @@ handleEvent shardID data' = do
     Left err -> debug . T.pack $ "Failed handling actions for event: " <> show err
 
 handleEvent' ::
-  BotC r =>
+  (BotC r) =>
   EventHandlers ->
   DispatchData ->
   P.Sem (P.Fail ': r) [IO ()]
@@ -668,7 +668,7 @@ handleEvent' _ (UNHANDLED e) = do
   pure []
 handleEvent' _ e = fail $ "Unhandled event: " <> show e
 
-updateCache :: P.Members '[CacheEff, P.Fail] r => DispatchData -> P.Sem r ()
+updateCache :: (P.Members '[CacheEff, P.Fail] r) => DispatchData -> P.Sem r ()
 updateCache (Ready ReadyData {user, guilds}) = do
   setBotUser user
   for_ (map getID guilds) setUnavailableGuild
@@ -739,8 +739,11 @@ updateCache (MessageReactionRemove reaction) = do
     (getID reaction)
     ( \m ->
         m
-          & #reactions % traversed %~ updateReactionRemove isMe (reaction ^. #emoji)
-          & #reactions %~ filter (\r -> r ^. #count /= 0)
+          & #reactions
+          % traversed
+          %~ updateReactionRemove isMe (reaction ^. #emoji)
+          & #reactions
+          %~ filter (\r -> r ^. #count /= 0)
     )
 updateCache (MessageReactionRemoveAll MessageReactionRemoveAllData {messageID}) =
   updateMessage messageID (#reactions .~ mempty)
@@ -781,8 +784,10 @@ updateReactionAdd isMe emoji reaction =
   if emoji == reaction ^. #emoji
     then
       reaction
-        & #count %~ succ
-        & #me %~ (|| isMe)
+        & #count
+        %~ succ
+        & #me
+        %~ (|| isMe)
     else reaction
 
 updateReactionRemove :: Bool -> RawEmoji -> Reaction -> Reaction
@@ -790,6 +795,8 @@ updateReactionRemove isMe emoji reaction =
   if emoji == reaction ^. #emoji
     then
       reaction
-        & #count %~ pred
-        & #me %~ (&& not isMe)
+        & #count
+        %~ pred
+        & #me
+        %~ (&& not isMe)
     else reaction

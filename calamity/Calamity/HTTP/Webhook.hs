@@ -121,16 +121,16 @@ $(makeFieldLabelsNoPrefix ''ModifyWebhookData)
 $(makeFieldLabelsNoPrefix ''ExecuteWebhookOptions)
 
 data WebhookRequest a where
-  CreateWebhook :: HasID Channel c => c -> CreateWebhookData -> WebhookRequest Webhook
-  GetChannelWebhooks :: HasID Channel c => c -> WebhookRequest [Webhook]
-  GetGuildWebhooks :: HasID Guild c => c -> WebhookRequest [Webhook]
-  GetWebhook :: HasID Webhook w => w -> WebhookRequest Webhook
-  GetWebhookToken :: HasID Webhook w => w -> Text -> WebhookRequest Webhook
-  ModifyWebhook :: HasID Webhook w => w -> ModifyWebhookData -> WebhookRequest Webhook
-  ModifyWebhookToken :: HasID Webhook w => w -> Text -> ModifyWebhookData -> WebhookRequest Webhook
-  DeleteWebhook :: HasID Webhook w => w -> WebhookRequest ()
-  DeleteWebhookToken :: HasID Webhook w => w -> Text -> WebhookRequest ()
-  ExecuteWebhook :: HasID Webhook w => w -> Text -> ExecuteWebhookOptions -> WebhookRequest ()
+  CreateWebhook :: (HasID Channel c) => c -> CreateWebhookData -> WebhookRequest Webhook
+  GetChannelWebhooks :: (HasID Channel c) => c -> WebhookRequest [Webhook]
+  GetGuildWebhooks :: (HasID Guild c) => c -> WebhookRequest [Webhook]
+  GetWebhook :: (HasID Webhook w) => w -> WebhookRequest Webhook
+  GetWebhookToken :: (HasID Webhook w) => w -> Text -> WebhookRequest Webhook
+  ModifyWebhook :: (HasID Webhook w) => w -> ModifyWebhookData -> WebhookRequest Webhook
+  ModifyWebhookToken :: (HasID Webhook w) => w -> Text -> ModifyWebhookData -> WebhookRequest Webhook
+  DeleteWebhook :: (HasID Webhook w) => w -> WebhookRequest ()
+  DeleteWebhookToken :: (HasID Webhook w) => w -> Text -> WebhookRequest ()
+  ExecuteWebhook :: (HasID Webhook w) => w -> Text -> ExecuteWebhookOptions -> WebhookRequest ()
 
 baseRoute :: Snowflake Webhook -> RouteBuilder _
 baseRoute id = mkRouteBuilder // S "webhooks" // ID @Webhook & giveID id
@@ -139,38 +139,51 @@ instance Request (WebhookRequest a) where
   type Result (WebhookRequest a) = a
 
   route (CreateWebhook (getID @Channel -> cid) _) =
-    mkRouteBuilder // S "channels" // ID @Channel // S "webhooks"
-      & giveID cid
-      & buildRoute
+    mkRouteBuilder
+      // S "channels"
+      // ID @Channel
+      // S "webhooks"
+        & giveID cid
+        & buildRoute
   route (GetChannelWebhooks (getID @Channel -> cid)) =
-    mkRouteBuilder // S "channels" // ID @Channel // S "webhooks"
-      & giveID cid
-      & buildRoute
+    mkRouteBuilder
+      // S "channels"
+      // ID @Channel
+      // S "webhooks"
+        & giveID cid
+        & buildRoute
   route (GetGuildWebhooks (getID @Guild -> gid)) =
-    mkRouteBuilder // S "guilds" // ID @Guild // S "webhooks"
-      & giveID gid
-      & buildRoute
+    mkRouteBuilder
+      // S "guilds"
+      // ID @Guild
+      // S "webhooks"
+        & giveID gid
+        & buildRoute
   route (GetWebhook (getID @Webhook -> wid)) =
     baseRoute wid
       & buildRoute
   route (GetWebhookToken (getID @Webhook -> wid) t) =
-    baseRoute wid // S t
-      & buildRoute
+    baseRoute wid
+      // S t
+        & buildRoute
   route (ModifyWebhook (getID @Webhook -> wid) _) =
     baseRoute wid
       & buildRoute
   route (ModifyWebhookToken (getID @Webhook -> wid) t _) =
-    baseRoute wid // S t
-      & buildRoute
+    baseRoute wid
+      // S t
+        & buildRoute
   route (DeleteWebhook (getID @Webhook -> wid)) =
     baseRoute wid
       & buildRoute
   route (DeleteWebhookToken (getID @Webhook -> wid) t) =
-    baseRoute wid // S t
-      & buildRoute
+    baseRoute wid
+      // S t
+        & buildRoute
   route (ExecuteWebhook (getID @Webhook -> wid) t _) =
-    baseRoute wid // S t
-      & buildRoute
+    baseRoute wid
+      // S t
+        & buildRoute
 
   action (CreateWebhook _ o) = postWith' $ ReqBodyJson o
   action (GetChannelWebhooks _) = getWith

@@ -375,7 +375,7 @@ instance
         (\(EH ehs) -> EH $ filter ((/= id') . ehID) ehs)
         handlers
 
-getCustomEventHandlers :: forall a. Typeable a => EventHandlers -> [a -> IO ()]
+getCustomEventHandlers :: forall a. (Typeable a) => EventHandlers -> [a -> IO ()]
 getCustomEventHandlers (EventHandlers handlers) =
   let handlerMap =
         unwrapEventHandler @('CustomEvt Void) $

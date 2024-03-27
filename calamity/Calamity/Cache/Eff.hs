@@ -102,17 +102,17 @@ data CacheEff m a where
 
 makeSem ''CacheEff
 
-updateBotUser :: P.Member CacheEff r => (User -> User) -> Sem r ()
+updateBotUser :: (P.Member CacheEff r) => (User -> User) -> Sem r ()
 updateBotUser f = getBotUser >>= flip whenJust (setBotUser . f)
 
-updateGuild :: P.Member CacheEff r => Snowflake Guild -> (Guild -> Guild) -> Sem r ()
+updateGuild :: (P.Member CacheEff r) => Snowflake Guild -> (Guild -> Guild) -> Sem r ()
 updateGuild id f = getGuild id >>= flip whenJust (setGuild . f)
 
-updateDM :: P.Member CacheEff r => Snowflake DMChannel -> (DMChannel -> DMChannel) -> Sem r ()
+updateDM :: (P.Member CacheEff r) => Snowflake DMChannel -> (DMChannel -> DMChannel) -> Sem r ()
 updateDM id f = getDM id >>= flip whenJust (setDM . f)
 
-updateUser :: P.Member CacheEff r => Snowflake User -> (User -> User) -> Sem r ()
+updateUser :: (P.Member CacheEff r) => Snowflake User -> (User -> User) -> Sem r ()
 updateUser id f = getUser id >>= flip whenJust (setUser . f)
 
-updateMessage :: P.Member CacheEff r => Snowflake Message -> (Message -> Message) -> Sem r ()
+updateMessage :: (P.Member CacheEff r) => Snowflake Message -> (Message -> Message) -> Sem r ()
 updateMessage id f = getMessage id >>= flip whenJust (setMessage . f)

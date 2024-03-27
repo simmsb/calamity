@@ -346,26 +346,64 @@ $(makeFieldLabelsNoPrefix ''EmbedField)
 instance Semigroup EmbedFooter where
   l <> r =
     l
-      & #text %~ (<> (r ^. #text))
-      & #iconUrl %~ getLast . (<> Last (r ^. #iconUrl)) . Last
-      & #proxyIconUrl %~ getLast . (<> Last (r ^. #proxyIconUrl)) . Last
+      & #text
+      %~ (<> (r ^. #text))
+      & #iconUrl
+      %~ getLast
+      . (<> Last (r ^. #iconUrl))
+      . Last
+      & #proxyIconUrl
+      %~ getLast
+      . (<> Last (r ^. #proxyIconUrl))
+      . Last
 
 instance Semigroup Embed where
   l <> r =
     l
-      & #title %~ (<> (r ^. #title))
-      & #type_ %~ getLast . (<> Last (r ^. #type_)) . Last
-      & #description %~ (<> (r ^. #description))
-      & #url %~ getLast . (<> Last (r ^. #url)) . Last
-      & #timestamp %~ getLast . (<> Last (r ^. #timestamp)) . Last
-      & #color %~ getLast . (<> Last (r ^. #color)) . Last
-      & #footer %~ (<> (r ^. #footer))
-      & #image %~ getLast . (<> Last (r ^. #image)) . Last
-      & #thumbnail %~ getLast . (<> Last (r ^. #thumbnail)) . Last
-      & #video %~ getLast . (<> Last (r ^. #video)) . Last
-      & #provider %~ getLast . (<> Last (r ^. #provider)) . Last
-      & #author %~ getLast . (<> Last (r ^. #author)) . Last
-      & #fields %~ (<> (r ^. #fields))
+      & #title
+      %~ (<> (r ^. #title))
+      & #type_
+      %~ getLast
+      . (<> Last (r ^. #type_))
+      . Last
+      & #description
+      %~ (<> (r ^. #description))
+      & #url
+      %~ getLast
+      . (<> Last (r ^. #url))
+      . Last
+      & #timestamp
+      %~ getLast
+      . (<> Last (r ^. #timestamp))
+      . Last
+      & #color
+      %~ getLast
+      . (<> Last (r ^. #color))
+      . Last
+      & #footer
+      %~ (<> (r ^. #footer))
+      & #image
+      %~ getLast
+      . (<> Last (r ^. #image))
+      . Last
+      & #thumbnail
+      %~ getLast
+      . (<> Last (r ^. #thumbnail))
+      . Last
+      & #video
+      %~ getLast
+      . (<> Last (r ^. #video))
+      . Last
+      & #provider
+      %~ getLast
+      . (<> Last (r ^. #provider))
+      . Last
+      & #author
+      %~ getLast
+      . (<> Last (r ^. #author))
+      . Last
+      & #fields
+      %~ (<> (r ^. #fields))
 
 instance Monoid Embed where
   mempty = def

@@ -57,11 +57,11 @@
             ghcid.check = false;
 
             haskell-language-server.custom = with pkgs.haskell.lib.compose; lib.flip lib.pipe [
-                (disableCabalFlag "floskell")
-                (disableCabalFlag "ormolu")
-                (drv: drv.override { hls-ormolu-plugin = null; })
-                (drv: drv.override { hls-floskell-plugin = null; })
-              ];
+              (disableCabalFlag "floskell")
+              (disableCabalFlag "ormolu")
+              (drv: drv.override { hls-ormolu-plugin = null; })
+              (drv: drv.override { hls-floskell-plugin = null; })
+            ];
           };
 
           devShell = {

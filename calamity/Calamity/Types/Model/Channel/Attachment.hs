@@ -13,7 +13,7 @@ import Data.Word
 import Optics.TH
 import TextShow.TH
 
-fuseTup2 :: Monad f => (f a, f b) -> f (a, b)
+fuseTup2 :: (Monad f) => (f a, f b) -> f (a, b)
 fuseTup2 (a, b) = do
   !a' <- a
   !b' <- b

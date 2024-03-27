@@ -44,7 +44,7 @@ import GHC.Records (HasField (getField))
 import Optics
 import TextShow (TextShow (showt))
 
-zws :: IsString s => s
+zws :: (IsString s) => s
 zws = fromString "\x200b"
 
 -- | Replaces all occurences of @\`\`\`@ with @\`\<zws\>\`\<zws\>\`@

@@ -303,46 +303,49 @@ instance CalamityToJSON' ModifyGuildRolePositionsData where
 
 data GuildRequest a where
   CreateGuild :: CreateGuildData -> GuildRequest Guild
-  GetGuild :: HasID Guild g => g -> GuildRequest Guild
-  ModifyGuild :: HasID Guild g => g -> ModifyGuildData -> GuildRequest Guild
-  DeleteGuild :: HasID Guild g => g -> GuildRequest ()
-  GetGuildChannels :: HasID Guild g => g -> GuildRequest [Channel]
-  CreateGuildChannel :: HasID Guild g => g -> ChannelCreateData -> GuildRequest Channel
-  ModifyGuildChannelPositions :: HasID Guild g => g -> [ChannelPosition] -> GuildRequest ()
+  GetGuild :: (HasID Guild g) => g -> GuildRequest Guild
+  ModifyGuild :: (HasID Guild g) => g -> ModifyGuildData -> GuildRequest Guild
+  DeleteGuild :: (HasID Guild g) => g -> GuildRequest ()
+  GetGuildChannels :: (HasID Guild g) => g -> GuildRequest [Channel]
+  CreateGuildChannel :: (HasID Guild g) => g -> ChannelCreateData -> GuildRequest Channel
+  ModifyGuildChannelPositions :: (HasID Guild g) => g -> [ChannelPosition] -> GuildRequest ()
   GetGuildMember :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest Member
-  ListGuildMembers :: HasID Guild g => g -> ListMembersOptions -> GuildRequest [Member]
-  SearchGuildMembers :: HasID Guild g => g -> SearchMembersOptions -> GuildRequest [Member]
+  ListGuildMembers :: (HasID Guild g) => g -> ListMembersOptions -> GuildRequest [Member]
+  SearchGuildMembers :: (HasID Guild g) => g -> SearchMembersOptions -> GuildRequest [Member]
   AddGuildMember :: (HasID Guild g, HasID User u) => g -> u -> AddGuildMemberData -> GuildRequest (Maybe Member)
   ModifyGuildMember :: (HasID Guild g, HasID User u) => g -> u -> ModifyGuildMemberData -> GuildRequest ()
-  ModifyCurrentUserNick :: HasID Guild g => g -> Maybe Text -> GuildRequest ()
+  ModifyCurrentUserNick :: (HasID Guild g) => g -> Maybe Text -> GuildRequest ()
   AddGuildMemberRole :: (HasID Guild g, HasID User u, HasID Role r) => g -> u -> r -> GuildRequest ()
   RemoveGuildMemberRole :: (HasID Guild g, HasID User u, HasID Role r) => g -> u -> r -> GuildRequest ()
   RemoveGuildMember :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest ()
-  GetGuildBans :: HasID Guild g => g -> GetGuildBansOptions -> GuildRequest [BanData]
+  GetGuildBans :: (HasID Guild g) => g -> GetGuildBansOptions -> GuildRequest [BanData]
   GetGuildBan :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest BanData
   CreateGuildBan :: (HasID Guild g, HasID User u) => g -> u -> CreateGuildBanData -> GuildRequest ()
   RemoveGuildBan :: (HasID Guild g, HasID User u) => g -> u -> GuildRequest ()
-  GetGuildRoles :: HasID Guild g => g -> GuildRequest [Role]
-  CreateGuildRole :: HasID Guild g => g -> ModifyGuildRoleData -> GuildRequest Role
-  ModifyGuildRolePositions :: HasID Guild g => g -> ModifyGuildRolePositionsData -> GuildRequest [Role]
+  GetGuildRoles :: (HasID Guild g) => g -> GuildRequest [Role]
+  CreateGuildRole :: (HasID Guild g) => g -> ModifyGuildRoleData -> GuildRequest Role
+  ModifyGuildRolePositions :: (HasID Guild g) => g -> ModifyGuildRolePositionsData -> GuildRequest [Role]
   ModifyGuildRole :: (HasID Guild g, HasID Role r) => g -> r -> ModifyGuildRoleData -> GuildRequest Role
   DeleteGuildRole :: (HasID Guild g, HasID Role r) => g -> r -> GuildRequest ()
-  GetGuildPruneCount :: HasID Guild g => g -> Integer -> GuildRequest Integer
-  BeginGuildPrune :: HasID Guild g => g -> Integer -> Bool -> GuildRequest (Maybe Integer)
-  GetGuildVoiceRegions :: HasID Guild g => g -> GuildRequest [VoiceRegion]
-  GetGuildInvites :: HasID Guild g => g -> GuildRequest [Invite]
+  GetGuildPruneCount :: (HasID Guild g) => g -> Integer -> GuildRequest Integer
+  BeginGuildPrune :: (HasID Guild g) => g -> Integer -> Bool -> GuildRequest (Maybe Integer)
+  GetGuildVoiceRegions :: (HasID Guild g) => g -> GuildRequest [VoiceRegion]
+  GetGuildInvites :: (HasID Guild g) => g -> GuildRequest [Invite]
 
 baseRoute :: Snowflake Guild -> RouteBuilder _
 baseRoute id =
-  mkRouteBuilder // S "guilds" // ID @Guild
-    & giveID id
+  mkRouteBuilder
+    // S "guilds"
+    // ID @Guild
+      & giveID id
 
 instance Request (GuildRequest a) where
   type Result (GuildRequest a) = a
 
   route (CreateGuild _) =
-    mkRouteBuilder // S "guilds"
-      & buildRoute
+    mkRouteBuilder
+      // S "guilds"
+        & buildRoute
   route (GetGuild (getID -> gid)) =
     baseRoute gid
       & buildRoute
@@ -353,93 +356,136 @@ instance Request (GuildRequest a) where
     baseRoute gid
       & buildRoute
   route (GetGuildChannels (getID -> gid)) =
-    baseRoute gid // S "channels"
-      & buildRoute
+    baseRoute gid
+      // S "channels"
+        & buildRoute
   route (CreateGuildChannel (getID -> gid) _) =
-    baseRoute gid // S "channels"
-      & buildRoute
+    baseRoute gid
+      // S "channels"
+        & buildRoute
   route (ModifyGuildChannelPositions (getID -> gid) _) =
-    baseRoute gid // S "channels"
-      & buildRoute
+    baseRoute gid
+      // S "channels"
+        & buildRoute
   route (GetGuildMember (getID -> gid) (getID @User -> uid)) =
-    baseRoute gid // S "members" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (ListGuildMembers (getID -> gid) _) =
-    baseRoute gid // S "members"
-      & buildRoute
+    baseRoute gid
+      // S "members"
+        & buildRoute
   route (SearchGuildMembers (getID -> gid) _) =
-    baseRoute gid // S "members" // S "search"
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // S "search"
+        & buildRoute
   route (AddGuildMember (getID -> gid) (getID @User -> uid) _) =
-    baseRoute gid // S "members" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (ModifyGuildMember (getID -> gid) (getID @User -> uid) _) =
-    baseRoute gid // S "members" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (ModifyCurrentUserNick (getID -> gid) _) =
-    baseRoute gid // S "members" // S "@me" // S "nick"
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // S "@me"
+      // S "nick"
+        & buildRoute
   route (AddGuildMemberRole (getID -> gid) (getID @User -> uid) (getID @Role -> rid)) =
-    baseRoute gid // S "members" // ID @User // S "roles" // ID @Role
-      & giveID uid
-      & giveID rid
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // ID @User
+      // S "roles"
+      // ID @Role
+        & giveID uid
+        & giveID rid
+        & buildRoute
   route (RemoveGuildMemberRole (getID -> gid) (getID @User -> uid) (getID @Role -> rid)) =
-    baseRoute gid // S "members" // ID @User // S "roles" // ID @Role
-      & giveID uid
-      & giveID rid
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // ID @User
+      // S "roles"
+      // ID @Role
+        & giveID uid
+        & giveID rid
+        & buildRoute
   route (RemoveGuildMember (getID -> gid) (getID @User -> uid)) =
-    baseRoute gid // S "members" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute gid
+      // S "members"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (GetGuildBans (getID -> gid) _) =
-    baseRoute gid // S "bans"
-      & buildRoute
+    baseRoute gid
+      // S "bans"
+        & buildRoute
   route (GetGuildBan (getID -> gid) (getID @User -> uid)) =
-    baseRoute gid // S "bans" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute gid
+      // S "bans"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (CreateGuildBan (getID -> gid) (getID @User -> uid) _) =
-    baseRoute gid // S "bans" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute gid
+      // S "bans"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (RemoveGuildBan (getID -> gid) (getID @User -> uid)) =
-    baseRoute gid // S "bans" // ID @User
-      & giveID uid
-      & buildRoute
+    baseRoute gid
+      // S "bans"
+      // ID @User
+        & giveID uid
+        & buildRoute
   route (GetGuildRoles (getID -> gid)) =
-    baseRoute gid // S "roles"
-      & buildRoute
+    baseRoute gid
+      // S "roles"
+        & buildRoute
   route (CreateGuildRole (getID -> gid) _) =
-    baseRoute gid // S "roles"
-      & buildRoute
+    baseRoute gid
+      // S "roles"
+        & buildRoute
   route (ModifyGuildRolePositions (getID -> gid) _) =
-    baseRoute gid // S "roles"
-      & buildRoute
+    baseRoute gid
+      // S "roles"
+        & buildRoute
   route (ModifyGuildRole (getID -> gid) (getID @Role -> rid) _) =
-    baseRoute gid // S "roles" // ID @Role
-      & giveID rid
-      & buildRoute
+    baseRoute gid
+      // S "roles"
+      // ID @Role
+        & giveID rid
+        & buildRoute
   route (DeleteGuildRole (getID -> gid) (getID @Role -> rid)) =
-    baseRoute gid // S "roles" // ID @Role
-      & giveID rid
-      & buildRoute
+    baseRoute gid
+      // S "roles"
+      // ID @Role
+        & giveID rid
+        & buildRoute
   route (GetGuildPruneCount (getID -> gid) _) =
-    baseRoute gid // S "prune"
-      & buildRoute
+    baseRoute gid
+      // S "prune"
+        & buildRoute
   route (BeginGuildPrune (getID -> gid) _ _) =
-    baseRoute gid // S "prune"
-      & buildRoute
+    baseRoute gid
+      // S "prune"
+        & buildRoute
   route (GetGuildVoiceRegions (getID -> gid)) =
-    baseRoute gid // S "regions"
-      & buildRoute
+    baseRoute gid
+      // S "regions"
+        & buildRoute
   route (GetGuildInvites (getID -> gid)) =
-    baseRoute gid // S "invites"
-      & buildRoute
+    baseRoute gid
+      // S "invites"
+        & buildRoute
 
   action (CreateGuild o) = postWith' (ReqBodyJson o)
   action (GetGuild _) = getWith

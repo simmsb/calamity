@@ -118,8 +118,11 @@ resetBucket bucket =
     (bucket ^. #state)
     ( \bs ->
         bs
-          & #remaining .~ bs ^. #limit
-          & #resetTime .~ Nothing
+          & #remaining
+          .~ bs
+          ^. #limit
+          & #resetTime
+          .~ Nothing
     )
 
 canResetBucketNow :: UTCTime -> BucketState -> Bool
@@ -206,40 +209,40 @@ useBucketOnce bucket = go 0
           -- print "ok going forward with request"
           pure ()
 
-doDiscordRequest :: P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r => IO LbsResponse -> Sem r DiscordResponseType
+doDiscordRequest :: (P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r) => IO LbsResponse -> Sem r DiscordResponseType
 doDiscordRequest r = do
   r'' <- P.embed $ Ex.catchAny (Right <$> r) (pure . Left . Ex.displayException)
   case r'' of
     Right r' -> do
       let status = responseStatus . toVanillaResponse $ r'
       if
-          | statusIsSuccessful status -> do
-              let resp = responseBody r'
-              debug $ "Got good response from discord: " <> (T.pack . show $ status)
-              now <- P.embed getCurrentTime
-              let rlHeaders = buildBucketState now r'
-              pure $ Good resp rlHeaders
-          | status == status429 -> do
-              now <- P.embed getCurrentTime
-              let resp = responseBody r'
-              case (resp ^? _Value, buildBucketState now r') of
-                (Just !rv, bs) ->
-                  pure $ Ratelimited (parseRetryAfter now rv) (isGlobal rv) bs
-                _ ->
-                  pure $ ServerError (statusCode status)
-          | statusIsClientError status -> do
-              let err = responseBody r'
-              error . T.pack $ "Something went wrong: " <> show err <> ", response: " <> show r'
-              pure $ ClientError (statusCode status) err
-          | otherwise -> do
-              debug . T.pack $ "Got server error from discord: " <> (show . statusCode $ status)
-              pure $ ServerError (statusCode status)
+        | statusIsSuccessful status -> do
+            let resp = responseBody r'
+            debug $ "Got good response from discord: " <> (T.pack . show $ status)
+            now <- P.embed getCurrentTime
+            let rlHeaders = buildBucketState now r'
+            pure $ Good resp rlHeaders
+        | status == status429 -> do
+            now <- P.embed getCurrentTime
+            let resp = responseBody r'
+            case (resp ^? _Value, buildBucketState now r') of
+              (Just !rv, bs) ->
+                pure $ Ratelimited (parseRetryAfter now rv) (isGlobal rv) bs
+              _ ->
+                pure $ ServerError (statusCode status)
+        | statusIsClientError status -> do
+            let err = responseBody r'
+            error . T.pack $ "Something went wrong: " <> show err <> ", response: " <> show r'
+            pure $ ClientError (statusCode status) err
+        | otherwise -> do
+            debug . T.pack $ "Got server error from discord: " <> (show . statusCode $ status)
+            pure $ ServerError (statusCode status)
     Left e -> do
       error . T.pack $ "Something went wrong with the http client: " <> e
       pure . InternalResponseError $ T.pack e
 
 -- | Parse a ratelimit header returning when it unlocks
-parseRateLimitHeader :: HttpResponse r => UTCTime -> r -> Maybe UTCTime
+parseRateLimitHeader :: (HttpResponse r) => UTCTime -> r -> Maybe UTCTime
 parseRateLimitHeader now r = computedEnd <|> end
   where
     computedEnd :: Maybe UTCTime
@@ -253,10 +256,10 @@ parseRateLimitHeader now r = computedEnd <|> end
       posixSecondsToUTCTime
         . realToFrac
         <$> responseHeader r "X-Ratelimit-Reset"
-        ^? _Just
-        % _Double
+          ^? _Just
+          % _Double
 
-buildBucketState :: HttpResponse r => UTCTime -> r -> Maybe (BucketState, B.ByteString)
+buildBucketState :: (HttpResponse r) => UTCTime -> r -> Maybe (BucketState, B.ByteString)
 buildBucketState now r = (,) <$> bs <*> bucketKey
   where
     remaining = responseHeader r "X-RateLimit-Remaining" ^? _Just % _Integral
@@ -282,7 +285,7 @@ data ShouldRetry a b
   | RGood b
 
 retryRequest ::
-  P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r =>
+  (P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r) =>
   -- | number of retries
   Int ->
   -- | action to perform
@@ -319,7 +322,7 @@ threadDelayUntil when = do
 
 -- Run a single request
 doSingleRequest ::
-  P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r =>
+  (P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r) =>
   RateLimitState ->
   Route ->
   -- | Global lock
@@ -416,7 +419,7 @@ doSingleRequest rlstate route gl r = do
         _ -> debug "unknown ratelimit"
       pure $ RFail (HTTPError c $ Aeson.decode v)
 
-doRequest :: P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r => RateLimitState -> Route -> IO LbsResponse -> Sem r (Either RestError LB.ByteString)
+doRequest :: (P.Members '[RatelimitEff, TokenEff, LogEff, P.Embed IO] r) => RateLimitState -> Route -> IO LbsResponse -> Sem r (Either RestError LB.ByteString)
 doRequest rlstate route action =
   retryRequest
     5

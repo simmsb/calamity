@@ -1,4 +1,5 @@
 {-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 -- | Things that can be fetched from the discord CDN
 module Calamity.Types.CDNAsset (
   CDNAsset (..),

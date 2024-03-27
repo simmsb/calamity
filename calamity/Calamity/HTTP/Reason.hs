@@ -13,10 +13,10 @@ data Reason a = Reason a Text
   deriving (Show, Eq)
 
 -- | Attach a reason to a request
-reason :: Request a => Text -> a -> Reason a
+reason :: (Request a) => Text -> a -> Reason a
 reason = flip Reason
 
-instance Request a => Request (Reason a) where
+instance (Request a) => Request (Reason a) where
   type Result (Reason a) = Result a
 
   route (Reason a _) = route a
