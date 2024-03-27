@@ -1,4 +1,5 @@
 {-# LANGUAGE RecursiveDo #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 -- | A DSL for generating commands and groups
 module CalamityCommands.Dsl (

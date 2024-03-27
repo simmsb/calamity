@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# LANGUAGE TemplateHaskell #-}
 
 module Calamity.Interactions.View (

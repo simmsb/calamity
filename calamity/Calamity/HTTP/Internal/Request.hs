@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 -- | Generic Request type
 module Calamity.HTTP.Internal.Request (
   Request (..),

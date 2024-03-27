@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 -- | Interaction related utilities
 module Calamity.Interactions.Utils (
   respond,

@@ -102,7 +102,7 @@ library
     ViewPatterns
 
   ghc-options:
-    -fplugin=Polysemy.Plugin -funbox-strict-fields -Wall
+    -funbox-strict-fields -Wall
     -fno-warn-name-shadowing
 
   build-depends:
@@ -111,7 +111,7 @@ library
     , optics                >=0.4.1 && <0.5
     , polysemy              >=1.5   && <2
     , polysemy-plugin       >=0.3   && <0.5
-    , text                  >=1.2   && <2.1
+    , text                  >=1.2   && <2.2
     , text-show             >=3.8   && <4
     , unordered-containers  >=0.2   && <0.3
 

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 -- | The shard logic
 module Calamity.Gateway.Shard (
   Shard (..),

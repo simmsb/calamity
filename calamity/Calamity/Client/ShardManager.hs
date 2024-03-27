@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 -- | Contains stuff for managing shards
 module Calamity.Client.ShardManager (shardBot) where
 

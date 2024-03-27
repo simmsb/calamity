@@ -17,8 +17,8 @@
 
     flake-root.url = "github:srid/flake-root";
 
-    req.url = "github:mrkkrp/req";
-    req.flake = false;
+    # req.url = "github:mrkkrp/req";
+    # req.flake = false;
   };
 
   outputs = inputs@{ self, nixpkgs, gitignore, flake-parts, ... }:
@@ -33,24 +33,35 @@
       ];
       perSystem = { self', lib, config, pkgs, ... }: {
         haskellProjects.default = {
-          basePackages = pkgs.haskell.packages.ghc945;
+          #basePackages = pkgs.haskell.packages.ghc981;
 
           packages = {
-            crypton-connection.source = "0.3.1";
-            crypton-x509-system.source = "1.6.7";
-            crypton-x509.source = "1.7.6";
-            tls.source = "1.7.0";
-            req.source = inputs.req;
-            http-client-tls.source = "0.3.6.2";
+            type-errors.source = "0.2.0.2";
+            websockets.source = "0.13.0.0";
+            # crypton-connection.source = "0.3.1";
+            # crypton-x509-system.source = "1.6.7";
+            # crypton-x509.source = "1.7.6";
+            # tls.source = "1.7.0";
+            # req.source = inputs.req;
+            # http-client-tls.source = "0.3.6.2";
           };
 
           settings = {
+            aeson-optics.jailbreak = true;
+            type-errors.check = false;
             ListLike.check = false;
             di-core.check = false;
             optics.check = false;
             crypton-x509.check = false;
             vector.check = false;
             ghcid.check = false;
+
+            haskell-language-server.custom = with pkgs.haskell.lib.compose; lib.flip lib.pipe [
+                (disableCabalFlag "floskell")
+                (disableCabalFlag "ormolu")
+                (drv: drv.override { hls-ormolu-plugin = null; })
+                (drv: drv.override { hls-floskell-plugin = null; })
+              ];
           };
 
           devShell = {

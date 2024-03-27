@@ -1,4 +1,5 @@
 {-# LANGUAGE TemplateHaskell #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 -- | Something that can parse user input
 module CalamityCommands.Parser (

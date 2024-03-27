@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+
 -- | A default help command implementation
 module CalamityCommands.Help (
   helpCommand',

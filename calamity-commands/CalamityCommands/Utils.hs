@@ -1,4 +1,5 @@
 {-# LANGUAGE RecursiveDo #-}
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 
 -- | Command handler utilities
 module CalamityCommands.Utils (

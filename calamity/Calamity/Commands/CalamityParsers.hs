@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# OPTIONS_GHC -fno-warn-orphans #-}
 
 -- | 'ParameterParser' instances for calamity models

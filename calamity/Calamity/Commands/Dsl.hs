@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {- | A DSL for generating commands and groups
 
  This is effectively just a re-export of "CalamityCommands.Dsl" but with

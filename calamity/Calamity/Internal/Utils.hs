@@ -1,3 +1,5 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
+{-# LANGUAGE CPP #-}
 -- | Internal utilities and instances
 module Calamity.Internal.Utils (
   whileMFinalIO,
@@ -172,6 +174,7 @@ instance Aeson.ToJSON a => Aeson.ToJSON (MaybeNull a) where
   toEncoding WasNull = null_
   toEncoding (NotNull x) = Aeson.toEncoding x
 
+#if MIN_VERSION_aeson(2,2,0)
 (.?=) :: (Aeson.ToJSON v, Aeson.KeyValue e kv) => Aeson.Key -> Maybe v -> Maybe kv
 k .?= Just v = Just (k Aeson..= v)
 _ .?= Nothing = Nothing
@@ -180,7 +183,18 @@ _ .?= Nothing = Nothing
 k .= v = Just (k Aeson..= v)
 
 class CalamityToJSON' a where
-  toPairs :: Aeson.KeyValue e kv => a -> [Maybe kv]
+  toPairs :: Aeson.KeyValue kv => a -> [Maybe kv]
+#else
+(.?=) :: (Aeson.ToJSON v, Aeson.KeyValue kv) => Aeson.Key -> Maybe v -> Maybe kv
+k .?= Just v = Just (k Aeson..= v)
+_ .?= Nothing = Nothing
+
+(.=) :: (Aeson.ToJSON v, Aeson.KeyValue kv) => Aeson.Key -> v -> Maybe kv
+k .= v = Just (k Aeson..= v)
+
+class CalamityToJSON' a where
+  toPairs :: Aeson.KeyValue kv => a -> [Maybe kv]
+#endif
 
 newtype CalamityToJSON a = CalamityToJSON a
 

@@ -1,3 +1,4 @@
+{-# OPTIONS_GHC -fplugin=Polysemy.Plugin #-}
 {-# OPTIONS_GHC -Wno-name-shadowing #-}
 
 -- | The client
