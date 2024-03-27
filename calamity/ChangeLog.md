@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.11.0.0
+
++ Added support for Aeson 2.2 @Miezhiko
++ Support MTL 2.3+ @Miezhiko
+
 ## 0.10.0.0
 
 + Updated `CreateMessageAttachment.content` to be a `Network.HTTP.Client.RequestBody`
