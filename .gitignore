@@ -1,5 +1,4 @@
 .stack-work/
-yet-another-haskell-discord-library.cabal
 *~
 dist
 dist-*
@@ -25,3 +24,4 @@ TAGS
 /cabal.project.freeze
 /.hie/
 /result
+.direnv/

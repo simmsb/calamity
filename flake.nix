@@ -36,8 +36,8 @@
           #basePackages = pkgs.haskell.packages.ghc981;
 
           packages = {
-            type-errors.source = "0.2.0.2";
-            websockets.source = "0.13.0.0";
+            # type-errors.source = "0.2.0.2";
+            # websockets.source = "0.13.0.0";
             # crypton-connection.source = "0.3.1";
             # crypton-x509-system.source = "1.6.7";
             # crypton-x509.source = "1.7.6";
@@ -59,8 +59,8 @@
             haskell-language-server.custom = with pkgs.haskell.lib.compose; lib.flip lib.pipe [
               (disableCabalFlag "floskell")
               (disableCabalFlag "ormolu")
-              (drv: drv.override { hls-ormolu-plugin = null; })
-              (drv: drv.override { hls-floskell-plugin = null; })
+              # (drv: drv.override { hls-ormolu-plugin = null; })
+              # (drv: drv.override { hls-floskell-plugin = null; })
             ];
           };
 
