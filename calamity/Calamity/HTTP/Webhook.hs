@@ -26,7 +26,7 @@ import Network.Mime
 import Optics
 
 data CreateWebhookData = CreateWebhookData
-  { username :: Maybe Text
+  { name :: Maybe Text
   , avatar :: Maybe Text
   -- ^ The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
   }
@@ -35,7 +35,7 @@ data CreateWebhookData = CreateWebhookData
 
 instance CalamityToJSON' CreateWebhookData where
   toPairs CreateWebhookData {..} =
-    [ "username" .?= username
+    [ "name" .?= name
     , "avatar" .?= avatar
     ]
 
@@ -43,7 +43,7 @@ instance Default CreateWebhookData where
   def = CreateWebhookData Nothing Nothing
 
 data ModifyWebhookData = ModifyWebhookData
-  { username :: Maybe Text
+  { name :: Maybe Text
   , avatar :: Maybe Text
   -- ^ The avatar field should be in discord's image data format: https://discord.com/developers/docs/reference#image-data
   , channelID :: Maybe (Snowflake Channel)
@@ -53,7 +53,7 @@ data ModifyWebhookData = ModifyWebhookData
 
 instance CalamityToJSON' ModifyWebhookData where
   toPairs ModifyWebhookData {..} =
-    [ "username" .?= username
+    [ "name" .?= name
     , "avatar" .?= avatar
     , "channel_id" .?= channelID
     ]
@@ -66,7 +66,7 @@ data ExecuteWebhookOptions = ExecuteWebhookOptions
   , content :: Maybe Text
   , attachments :: [CreateMessageAttachment]
   , embeds :: Maybe [Embed]
-  , username :: Maybe Text
+  , name :: Maybe Text
   , avatarUrl :: Maybe Text
   , allowedMentions :: Maybe AllowedMentions
   , tts :: Maybe Bool
@@ -95,7 +95,7 @@ instance CalamityToJSON' CreateMessageAttachmentJson where
 data ExecuteWebhookJson = ExecuteWebhookJson
   { content :: Maybe Text
   , embeds :: Maybe [Embed]
-  , username :: Maybe Text
+  , name :: Maybe Text
   , avatarUrl :: Maybe Text
   , tts :: Maybe Bool
   , attachments :: [CreateMessageAttachmentJson]
@@ -207,7 +207,7 @@ instance Request (WebhookRequest a) where
         jsonBody =
           ExecuteWebhookJson
             { content = wh ^. #content
-            , username = wh ^. #username
+            , name = wh ^. #name
             , avatarUrl = wh ^. #avatarUrl
             , tts = wh ^. #tts
             , embeds = wh ^. #embeds
