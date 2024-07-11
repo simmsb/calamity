@@ -1,5 +1,10 @@
 # Changelog for Calamity
 
+## 0.12.0.0
+
++ Field names in `Calamity.HTTP.Webhook` were mistakenly `username` instead of
+  the required `name`, these fields were renamed to be correct. (Reported by @MorrowM)
+
 ## 0.11.0.0
 
 + Added support for Aeson 2.2 @Miezhiko
