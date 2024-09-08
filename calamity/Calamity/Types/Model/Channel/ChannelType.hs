@@ -28,8 +28,19 @@ $(deriveTextShow ''ChannelType)
 $(makeFieldLabelsNoPrefix ''ChannelType)
 
 instance Aeson.ToJSON ChannelType where
-  toJSON t = Aeson.toJSON (fromEnum t)
-  toEncoding t = Aeson.toEncoding (fromEnum t)
+  toJSON t = Aeson.Number $ case t of
+    GuildTextType -> 0
+    DMType -> 1
+    GuildVoiceType -> 2
+    GroupDMType -> 3
+    GuildCategoryType -> 4
+    GuildNewsType -> 5
+    GuildNewsThreadType -> 10
+    GuildPublicThreadType -> 11
+    GuildPrivateThreadType -> 12
+    GuildStageVoiceType -> 13
+    GuildDirectoryType -> 14
+    GuildForumType -> 15
 
 instance Aeson.FromJSON ChannelType where
   parseJSON = Aeson.withScientific "ChannelType" $ \n -> case toBoundedInteger @Int n of
