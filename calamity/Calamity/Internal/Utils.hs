@@ -184,7 +184,7 @@ _ .?= Nothing = Nothing
 k .= v = Just (k Aeson..= v)
 
 class CalamityToJSON' a where
-  toPairs :: Aeson.KeyValue kv => a -> [Maybe kv]
+  toPairs :: Aeson.KeyValue v kv => a -> [Maybe kv]
 #else
 (.?=) :: (Aeson.ToJSON v, Aeson.KeyValue kv) => Aeson.Key -> Maybe v -> Maybe kv
 k .?= Just v = Just (k Aeson..= v)
