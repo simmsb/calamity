@@ -14,7 +14,7 @@ copyright:          2020 Ben Simms
 license:            MIT
 license-file:       LICENSE
 build-type:         Simple
-tested-with:        GHC ==9.6.5
+tested-with:        GHC ==9.6.6
 extra-source-files:
   ChangeLog.md
   README.md

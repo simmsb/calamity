@@ -36,6 +36,10 @@
           #basePackages = pkgs.haskell.packages.ghc981;
 
           packages = {
+            hashable.source = "1.4.6.0";
+            aeson.source = "2.2.3.0";
+            websockets.source = "0.13.0.0";
+
             # type-errors.source = "0.2.0.2";
             # websockets.source = "0.13.0.0";
             # crypton-connection.source = "0.3.1";
@@ -47,6 +51,7 @@
           };
 
           settings = {
+            hashable.check = false;
             aeson-optics.jailbreak = true;
             type-errors.check = false;
             ListLike.check = false;

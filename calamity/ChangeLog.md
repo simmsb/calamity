@@ -1,5 +1,11 @@
 # Changelog for Calamity
 
+## 0.12.1.0
+
++ Fixed build with Aeson 2.2+ @L0neGamer
++ Fix ToJSON ChannelType instances @MorrowM
++ Bumped crypton-connection bounds from <0.4 to <0.5
+
 ## 0.12.0.0
 
 + Field names in `Calamity.HTTP.Webhook` were mistakenly `username` instead of
