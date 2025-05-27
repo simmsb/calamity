@@ -447,12 +447,7 @@ instance Request (InteractionRequest a) where
             , attachments = attachments
             , flags = flags
             }
-        jsonBody =
-          InteractionCallback
-            { type_ = UpdateMessageType
-            , data_ = Just . Aeson.toJSON $ jsonData
-            }
-    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonBody) : files)
+    body <- reqBodyMultipart (partLBS "payload_json" (Aeson.encode jsonData) : files)
     patchWith' body u o
   action (DeleteOriginalInteractionResponse _ _) = deleteWith
   action (CreateFollowupMessage _ _ cm) = \u o -> do
