@@ -206,7 +206,24 @@ data MessageType
   | GuildDiscoveryDisqualified
   | GuildDiscoveryRequalified
   | Reply
-  | ApplicationCommmand
+  | ChatInputCommand
+  | ThreadStartedMessage
+  | GuildInviteReminder
+  | ContextMenuCommand
+  | AutoModerationAction
+  | RoleSubscriptionPurchase
+  | InteractionPremiumUpsell
+  | StageStart
+  | StageEnd
+  | StageSpeaker
+  | StageTopic
+  | GuildApplicationPremiumSubscription
+  | GuildIncidentAlertModeEnabled
+  | GuildIncidentAlertModeDisabled
+  | GuildIncidentReportRaid
+  | GuildIncidentReportFalseAlarm
+  | PurchaseNotification
+  | PollResult
   deriving (Eq, Show, Enum)
 
 instance Aeson.FromJSON MessageType where
@@ -228,7 +245,23 @@ instance Aeson.FromJSON MessageType where
       14 -> pure GuildDiscoveryDisqualified
       15 -> pure GuildDiscoveryRequalified
       19 -> pure Reply
-      20 -> pure ApplicationCommmand
+      20 -> pure ChatInputCommand
+      21 -> pure GuildInviteReminder
+      22 -> pure ContextMenuCommand
+      23 -> pure AutoModerationAction
+      24 -> pure RoleSubscriptionPurchase
+      25 -> pure InteractionPremiumUpsell
+      26 -> pure StageStart
+      27 -> pure StageEnd
+      28 -> pure StageSpeaker
+      31 -> pure StageTopic
+      32 -> pure GuildApplicationPremiumSubscription
+      36 -> pure GuildIncidentAlertModeEnabled
+      37 -> pure GuildIncidentAlertModeDisabled
+      38 -> pure GuildIncidentReportRaid
+      39 -> pure GuildIncidentReportFalseAlarm
+      44 -> pure PurchaseNotification
+      46 -> pure PollResult
       _ -> fail $ "Invalid MessageType: " <> show n
     Nothing -> fail $ "Invalid MessageType: " <> show n
 
